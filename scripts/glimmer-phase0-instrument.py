@@ -36,7 +36,7 @@ TIMING_RE = re.compile(
 )
 SPEC_RE = re.compile(r"spec statistics:.*$")
 ACCEPT_RE = re.compile(
-    r"draft acceptance = ([0-9.]+)\s+\(\s*(\d+)\s+accepted\s+/\s+(\d+)\s+generated\),\s+mean len =\s+([0-9.]+)"
+    r"(?:draft acceptance = )?([0-9.]+)\s+\(\s*(\d+)\s+accepted\s+/\s+(\d+)\s+generated\),\s+mean len =\s+([0-9.]+)"
 )
 EVAL_RE = re.compile(
     r"([0-9.]+)\s+ms\s+/\s+(\d+)\s+tokens\s+\(\s*([0-9.]+)\s+ms per token,\s+([0-9.]+)\s+tokens per second\)"

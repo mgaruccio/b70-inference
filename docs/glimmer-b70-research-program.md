@@ -4,6 +4,7 @@ Date: 2026-08-24
 Status: ready to execute
 Host: `inference-host` / Intel Arc Pro B70 (Battlemage G31, 32 GB, `xe`, ReBAR 32G)
 Prior campaign: `docs/glimmer-b70-handoff-20260824.md`
+Phase 0 results: `docs/glimmer-b70-phase0-20260824.md`
 
 This is a two-track program. **C1** and **C4+** are different bottlenecks
 and must not share launch flags, success metrics, or kill criteria.

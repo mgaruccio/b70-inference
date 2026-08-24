@@ -24,6 +24,7 @@ block + a multi-sequence DFlash bug, not “attention bytes.”
 
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
 - **Glimmer C1 + C4+ program:** [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
+- **Glimmer Phase 0 results (2026-08-24):** [`docs/glimmer-b70-phase0-20260824.md`](docs/glimmer-b70-phase0-20260824.md)
 - Glimmer campaign log: [`docs/glimmer-b70-handoff-20260824.md`](docs/glimmer-b70-handoff-20260824.md)
 - **Qwen research plan:** [`docs/qwen38-b70-research-plan-20260824.md`](docs/qwen38-b70-research-plan-20260824.md)
 - Qwen speed handoff: [`docs/qwen38-b70-speed-improvement-handoff.md`](docs/qwen38-b70-speed-improvement-handoff.md)
