@@ -1,9 +1,9 @@
 # Glimmer B70 — next session
 
-Date: 2026-08-24 (updated after DFlash2 + process() session)
+Date: 2026-08-24
 Public repo: this one.
-Results: `docs/glimmer-b70-dflash2-process-20260824.md`.
-Phase 0: `docs/glimmer-b70-phase0-20260824.md`.
+Last results: `docs/glimmer-b70-dflash2-process-20260824.md`.
+**This session:** `docs/glimmer-b70-profiling-plan.md`.
 
 ## Live cell (leave it up)
 
@@ -13,29 +13,17 @@ Vulkan llama.cpp **#27342** `64f765f` + local packed `process()`, tmux `muse`, p
 - Draft: official DFlash Q4_K_M, `--spec-type draft-dflash --spec-draft-n-max 2`
 - `-ngl 99 -ngld 99 -c 262144 -np 2 --kv-unified -fa on -ctk q8_0 -ctv q4_1 -b 512 -ub 512 --no-mmap --jinja`
 - Binary: `~/inference/src/llama.cpp-dflash2/build/bin/llama-server`
-- Do **not** put `n_max=2` on 4+ streams. C4 production is `n_max=1`, 8×32k.
+- C4 production, when needed: official DFlash `n_max=1`, 8×32k. Not `n_max=2`.
 
-[#27342](https://github.com/ggml-org/llama.cpp/pull/27342) is still **open**. `master` cannot load DFlash2.
+[#27342](https://github.com/ggml-org/llama.cpp/pull/27342) is still **open**.
 
 ## What is true
 
-| | Decode | Card |
-|---|---:|---:|
-| C1 official n2 on 64f765f | **38.6** | 273 W |
-| C1 DFlash2 n2 | 38.4 | 273 W |
-| C1 DFlash2 n15 coding | 10.8 (mean accept **8.47**) | 132 W |
-| C4 n_max=1 | **15.7 /stream** | **243 W** |
-| C4 n_max=2, packed `process()` | **3.05 /stream** | **130 W** |
+Packed `process()` already sees 4 seqs (`unique_seq=4`, `packed=12`) and **did not** move C4 `n_max=2` (3.05 tok/s / 130 W). Same idle signature on **C1 DFlash2 `n_max=8`** (5.6 tok/s / 129 W). Serial inject is not the tax. We have **not** kernel-profiled. Host has no `iaprof` / `intel_gpu_top` / `perf`.
 
-Packed `process()` really does one encode+inject for 4 seqs (`unique_seq=4`, `packed=12`). C4 n_max=2 did not move. That tax is elsewhere.
+## Do this session
 
-## Next — do not invert this
-
-1. **Do not spend another session rewriting inject.** The serial loop is gone and C4 is still 130 W.
-2. **Attribute the 950 ms C4 n_max=2 tick** with server verbosity + `iaprof` / Xe timestamps. Rank: `llama_get_embeddings_layer_inp` sync, spec checkpoints if `seq_rm==FULL`, `draft()` noise block, 30B verify of 12 tokens.
-3. **On-device 5-layer activations** only if (2) names the host readback.
-4. **DFlash2 at C1 n_max≥8** only after (2). Quality is real; the cell is idle.
-5. Cheap: ship `reasoning_strength=low` on the Pi/agent template.
+Follow `docs/glimmer-b70-profiling-plan.md`. Attribute one C4 `n_max=2` tick. Do not rewrite inject.
 
 ## Do not
 
@@ -43,6 +31,6 @@ Packed `process()` really does one encode+inject for 4 seqs (`unique_seq=4`, `pa
 - `GGML_SYCL_DEVICE_ARCH=bmg-g31`
 - Score `completion_tokens / wall`
 - Upstream packed `process()` as a C4 speedup
-- DSpark
-- Custom Q4_K kernels before `iaprof`
+- Start `iaprof` by rebuilding patched NEO / L0 before the cheap host-timer pass
+- Custom Q4_K kernels before a named op
 - C2 / C3
