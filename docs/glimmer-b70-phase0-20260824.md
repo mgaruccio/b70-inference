@@ -93,8 +93,26 @@ B2 (`n_max=1` at 8 slots) is still the only C4 cell that keeps the GPU
 busy (244 W vs 134 W). Do not carry C1’s `n_max=2` into C4.
 
 C8 is a different problem from C4 `n_max=2`. `n_max=1` does not save C8.
-Lead hypothesis: sequential draft process / graph recapture, visible as a
-half-idle GPU, not as bad drafts.
+The GPU is waiting on **host-side DFlash KV injection**, not on the 30B
+matvecs and not on bad drafts.
+
+`common_speculative_impl_draft_dflash::process()` runs after every target
+decode, including verify (`70adb1b` `common/speculative.cpp`). For each
+sequence, serially:
+
+1. `llama_get_embeddings_layer_inp` on 5 target layers (hidden 6656) —
+   a GPU→CPU readback and sync.
+2. `llama_encode(ctx_dft)` on that chunk.
+3. `llama_decode(ctx_dft)` to inject draft KV.
+
+`draft()` itself is one batched noise-block decode. The inject path is not.
+
+That matches the power signature: clocks stay at 2800 MHz, draw falls to
+~132 W (ALUs idle between tiny submits). C4 `n_max=1` is 4 serial injects
+and still leaves the 30B verify busy (244 W). C4 `n_max=2` injects 2 rows
+per seq (more readback + more tiny graphs). C8 is 8 serial injects even at
+`n_max=1`. Tick wall went ~114 ms → ~775 ms from `n_max=1` to `n_max=2` at
+C4, for only 1.4× more accepted tokens.
 
 ## Thinking tax
 
@@ -116,8 +134,9 @@ via llama.cpp `--jinja`. Ship that on the agent cell.
 
 ## What to do next
 
-1. **Ship C4 as DFlash `n_max=1`, 8×32k.** That is the first cell that
-   beats no-spec four-wide on this card.
+1. **Ship C4 as DFlash `n_max=1`, 8×32k.** It is the only four-wide cell
+   that keeps the GPU near the power cap (244 W). Measure a split no-spec
+   C4 before claiming a spec win.
 2. **Ship `reasoning_strength=low` on the Pi/agent template.** Otherwise
    C1 “38 tok/s” is invisible.
 3. **Track B3 changes shape.** Do not hunt #27117-style KV corruption
