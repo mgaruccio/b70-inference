@@ -2,12 +2,11 @@
 
 Date: 2026-08-24
 Public repo: this one.
-Last results: `docs/glimmer-b70-dflash2-process-20260824.md`.
-**This session:** `docs/glimmer-b70-profiling-plan.md`.
+Last results: `docs/glimmer-b70-profiling-20260824.md`.
 
 ## Live cell (leave it up)
 
-Vulkan llama.cpp **#27342** `64f765f` + local packed `process()`, tmux `muse`, port 18099.
+Vulkan llama.cpp **#27342** `64f765f` + local packed `process()` + temporary `b70tick` host timers, tmux `muse`, port 18099.
 
 - Target: Meta Dynamic Q4_K_XL
 - Draft: official DFlash Q4_K_M, `--spec-type draft-dflash --spec-draft-n-max 2`
@@ -19,11 +18,13 @@ Vulkan llama.cpp **#27342** `64f765f` + local packed `process()`, tmux `muse`, p
 
 ## What is true
 
-Packed `process()` already sees 4 seqs (`unique_seq=4`, `packed=12`) and **did not** move C4 `n_max=2` (3.05 tok/s / 130 W). Same idle signature on **C1 DFlash2 `n_max=8`** (5.6 tok/s / 129 W). Serial inject is not the tax. We have **not** kernel-profiled. Host has no `iaprof` / `intel_gpu_top` / `perf`.
+C4 `n_max=2` generate tick is **793 ms p50**. **83% is 30B `llama_decode` verify** (694 ms for 12 tokens / 4 seqs). Packed `process()` is 9 ms. `seq_rm` is PART/PART. `gputop` CCS is pegged (~100%) at **130 W** — cheap GPU path, not host stall, not #27117. C4 `n_max=1` verify is 96 ms / 239 W / 15.7 tok/s.
+
+Host now has `gputop` + `perf`. `intel_gpu_top` does not support Xe. Do not start `iaprof` (L0/USDT) on this Vulkan cell.
 
 ## Do this session
 
-Follow `docs/glimmer-b70-profiling-plan.md`. Attribute one C4 `n_max=2` tick. Do not rewrite inject.
+Name the op inside the 12-token C4 n2 verify. Vulkan timestamps / ggml Vulkan perf vs C4 n1 (4×2) and C1 n2 (1×3). Do not rewrite inject.
 
 ## Do not
 
@@ -31,6 +32,6 @@ Follow `docs/glimmer-b70-profiling-plan.md`. Attribute one C4 `n_max=2` tick. Do
 - `GGML_SYCL_DEVICE_ARCH=bmg-g31`
 - Score `completion_tokens / wall`
 - Upstream packed `process()` as a C4 speedup
-- Start `iaprof` by rebuilding patched NEO / L0 before the cheap host-timer pass
+- Build patched NEO / `iaprof` for a Vulkan decode
 - Custom Q4_K kernels before a named op
 - C2 / C3
