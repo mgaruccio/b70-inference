@@ -1,35 +1,26 @@
 # Glimmer B70 — next session
 
-Date: 2026-08-24
+Date: 2026-08-25
 Public repo: this one.
-Last results: `docs/glimmer-b70-vulkan-cap12-20260824.md`.
-Prior: `docs/glimmer-b70-profiling-20260824.md`.
-**This session result:** cap=12 was exercised on the real public stream path and removed the C4 n=12 GEMM cliff, but was **not promoted**: steady C4 n=2 verify was 130.8 ms versus the C4 n=1 guard at 98.2 ms (1.33×; decisive guard is ≤1.25×). Receipt: `~/b70-evals/muse-glimmer/20260824T163018-cap12/`.
-**Next branch:** do not promote or re-run cap=12/cap=16 here. Commission the bounded split/native investigation; same-GGUF SYCL is the fair native fallback. Keep Vulkan production at cap=8 and official DFlash `n_max=2` until the next branch is measured.
+Current handoff: `docs/glimmer-b70-native-result-handoff-20260825.md`.
+Prior result: `docs/glimmer-b70-vulkan-cap12-20260824.md` (corrected metric labels and promotion gate).
+**Current authoritative state:** native SYCL+oneDNN C8/`-np 8`, no DFlash, `-c 131072`, `-b 512 -ub 512`, commit `2fcb070cf`; matched baseline is approximately 50.95 aggregate public-boundary e2e tok/s (`aggregate_e2e_tok_s`: completion tokens divided by concurrent wave/service wall time), not server-log decode; per-request log-eval is separate, after two shape-matched warmups.
+**Paused next action:** do not auto-promote the MMVQ cap-12 candidate. Regroup, then run the 12 CPU-reference `test-backend-ops` `MUL_MAT` cases (Q4/Q5/Q6 × n9..12) against remote commit `73dbcef87`.
 
 ## Live cell (leave it up)
 
-Host: `inference-host` (CachyOS, `xe` `8086:e223`). tmux `muse`, port 18099.
+Host: `inference-host` (CachyOS, `xe` `8086:e223`), tmux `muse`, port 18099.
 SSH: `inference-host` / `192.168.8.172` / tailnet `100.75.79.54`.
 
-Vulkan llama.cpp **#27342** `64f765f5adefa4620dddda436ce56f1430435536` (PR still **open**).
-Local packed `process()` + temporary `b70tick` host timers. Official DFlash, not DFlash2.
+Native SYCL + oneDNN is live with VMM0/DNN1, deferred backing off, graph/fusion/ESIMD disabled, and no DFlash. Source is llama.cpp commit `2fcb070cf4eeef907ea4d2e0abf76a8a0e740904`. Keep the existing launcher and service up:
 
-```
-~/inference/src/llama.cpp-dflash2/build/bin/llama-server
-  -m ~/inference/models/Muse-Glimmer-30B-GGUF/Muse-Glimmer-30B-KQuant-Dynamic-Q4_K_XL.gguf
-  -a muse-glimmer-30b
-  -ngl 99 -c 262144 -np 2 --kv-unified -fa on
-  -ctk q8_0 -ctv q4_1 -b 512 -ub 512 --no-mmap --jinja
-  --temp 1.0 --top-p 0.95 --top-k 64
-  --host 0.0.0.0 --port 18099
-  -md ~/inference/models/Muse-Glimmer-30B-GGUF/dflash-Muse-Glimmer-30B-Q4_K_M.gguf
-  --spec-type draft-dflash --spec-draft-n-max 2 -ngld 99
+```text
+~/inference/launchers/start-muse-glimmer-sycl.sh
 ```
 
-C4 production, when needed: official DFlash `n_max=1`, 8×32k, `-ub 512`. **Not** `n_max=2`.
+The persistent host boot state `amd_iommu=off` is required to avoid fatal platform resets. The exact launch and two-wave warmup recipe is in `docs/glimmer-b70-native-result-handoff-20260825.md`; do not restart the service during this pause.
 
-## What is already true
+## Prior Vulkan reference (not live)
 
 Do not re-litigate these. Receipts: `~/b70-evals/muse-glimmer/20260824T153825-vkperf/`.
 
@@ -61,10 +52,11 @@ Killed:
 
 ## Result and next branch
 
-Receipt: `~/b70-evals/muse-glimmer/20260824T163018-cap12/`; report: `docs/glimmer-b70-vulkan-cap12-20260824.md`. Cap=12 routed C3 n=9 and C4 n=12 through `MUL_MAT_VEC` with no assert/device loss, and C4 n=2 improved from 3.55 to 18.01 log-eval tok/s. It was not promoted because steady C4 n=2 verify was 1.33× the C4 n=1 guard, above the 1.25× decisive limit.
+Native SYCL+oneDNN is now the live C8/`-np 8` no-DFlash cell: `-c 131072`, `-b 512 -ub 512`, commit `2fcb070cf`, with matched baseline approximately 50.95 aggregate public-boundary e2e tok/s (`aggregate_e2e_tok_s`: completion tokens divided by concurrent wave/service wall time), not server-log decode; per-request log-eval is separate, after two shape-matched warmups. Fusion1 and graph1 regressed and ESIMD hard-reset at startup; all are reverted.
 
-Next: commission the bounded split/native branch. Do not rewrite inject/process or start a custom GEMM. The fair native comparison is same-GGUF SYCL; OpenVINO remains a separate IR/single-flight comparison. Keep the restored cap=8 production cell up while the next branch is measured.
-The cap=12 candidate remains only in the receipt; the host is restored to cap=8 with normal `muse` on port 18099.
+The MMVQ cap-12 candidate is remote commit `73dbcef870b1218bb806095c6036736e3beba24b` and is preserved as `patches/glimmer-b70-sycl-mmvq-cap12-73dbcef870b1218bb806095c6036736e3beba24b.patch`. It extends only Q4_K/Q5_K/Q6_K `n=9..12` cases; candidate C8/C10/C12 results were 50.762 / 53.570 / 54.858 aggregate public-boundary e2e tok/s (`aggregate_e2e_tok_s`: completion tokens divided by concurrent wave/service wall time), not server-log decode; per-request log-eval is separate. Public outputs were valid and source audit found no credible defect.
+
+Do not promote it yet. The gate is the 12 CPU-reference `test-backend-ops` `MUL_MAT` cases (Q4/Q5/Q6 × n9..12); the concurrent text-hash comparator is invalid because of cache/slot mismatch and scheduling nondeterminism, and two retries reset the host. Regroup before any GPU promotion or optimization.
 
 ## Do not
 
@@ -72,13 +64,15 @@ The cap=12 candidate remains only in the receipt; the host is restored to cap=8 
 - DFlash2 on C4
 - 128k + DFlash + `-ub 8192`
 - Custom Q4_K GEMM kernels
-- Do not promote cap=12; split/native is the next bounded branch
+- Do not auto-promote MMVQ cap=12; CPU-reference gate and regroup are next
 - `iaprof` / patched NEO
 - Score `completion_tokens / wall`
 - Shadeform / 5090
 
 ## Sources
 
-- This session: `docs/glimmer-b70-vulkan-cap12-20260824.md`
-- Host receipts: `~/b70-evals/muse-glimmer/20260824T163018-cap12/`
+- Native result/handoff: `docs/glimmer-b70-native-result-handoff-20260825.md`
+- MMVQ candidate patch: `patches/glimmer-b70-sycl-mmvq-cap12-73dbcef870b1218bb806095c6036736e3beba24b.patch`
+- Prior Vulkan result: `docs/glimmer-b70-vulkan-cap12-20260824.md`
+- Host receipts: `~/b70-evals/muse-glimmer/20260824T163018-cap12/` and native audit receipts under `~/b70-evals/muse-glimmer/`
 - VEC cap / dispatch: `ggml/src/ggml-vulkan/ggml-vulkan.cpp` (`mul_mat_vec_max_cols`, `ggml_vk_mul_mat`)

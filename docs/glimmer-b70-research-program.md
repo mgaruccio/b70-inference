@@ -155,6 +155,7 @@ already sits on our measured ceiling.
 | SGLang batching *ideas* (not CUDA kernels) | OpenVINO DFlash `assistant_tokens=8` actually wired on this IR | Ollama / LM Studio as optimizers |
 | AIwork4me ROCm C4+/C16 test matrix | SYCL+oneDNN on BMG G31 that does not pool-assert | Community AWQ/GPTQ/Marlin (no Xe path) |
 | llama.cpp SPEED-Bench + `draft acceptance` log lines | Optional later: Glimmer EAGLE / MTP / DSpark | 5090 “20K tok/s/GPU” vendor slides |
+| [z-lab/Muse-Glimmer-30B-DFlash2](https://huggingface.co/z-lab/Muse-Glimmer-30B-DFlash2) (parked; not scheduled) | Conditional future C1-only SYCL compatibility candidate; require ≥5% C1 gain | Kill C4/C8 absent new evidence |
 
 ---
 
