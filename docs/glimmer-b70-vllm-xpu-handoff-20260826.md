@@ -229,36 +229,75 @@ tokens/verify vs BF16 1.58. Receipt:
 
 ### Highest-value next slice: KV-only W4A16 context precompute
 
-The packed-QKV overlay currently runs **five full QKV** W4A16 projections on
-normalized context and discards Q. Per layer Q is 4096 channels while K+V is
-2048, so a KV-only path can avoid substantial output work and kernel-launch
-overhead. The original BF16 path fuses K/V across all five layers in one GEMM;
-the GPTQ fallback cannot yet do that.
+**RESOLVED 2026-08-26 (evening session): profiled; slice abandoned per gate.**
 
-1. Instrument time inside `DFlashQwen3Model._project_context_kv` separately
-   from verify/decode time, using the real n=20, ≥256-token public API path.
-2. Add a KV-only method that is numerically equivalent to slicing K/V from the
-   existing quantized `qkv_proj` output. Test it first against the current
-   fallback on fixed tensors; do **not** compare to BF16 as quantization itself
-   changes values.
-3. Use that method only in the packed-QKV context path. Leave the BF16 fused
-   `F.linear` path untouched and retain the target verifier as correctness
-   authority.
-4. Benchmark 8×256 with the same prompt/seed and `/metrics` counters. Keep
-   only a ≥5% gain over 52.90 tok/s with no acceptance collapse; otherwise
-   revert to the current overlay.
+Instrumented `precompute_and_store_context_kv` / `_project_context_kv` with
+device-synced timers (patch script `DFLASH_KV_MODE=timing`, marker
+`DFLASH_GPTQ_CONTEXT_KV_TIMING`) and ran the real n=20, 8×256 public API
+workload. `precompute_and_store_context_kv` runs **eagerly every step** (per
+`vllm/v1/worker/gpu/spec_decode/dflash/speculator.py`: "Runs eagerly outside
+the captured graph because the context shape varies per step"), so Python
+timers with `torch.xpu.synchronize()` measure real inference cost.
+
+Per-step evidence (12×100-call summaries, ~1099 calls):
+
+- `num_ctx` ≈ **21.6/step** in steady state (the 1+20 query block the target
+  re-verifies); 10 prefill calls at 64-128 ctx; 1 dummy at 2048.
+- `_project_context_kv` (`proj`): **0.41 ms/step avg** — five per-layer
+  `qkv_proj` W4A16 GEMMs at M≈21, K=6656, N=6144.
+- k-norm + RoPE + cache writes (`rest`): **0.25 ms/step**.
+- Whole context precompute: **0.66 ms/step**.
+- Clean step time ≈ 4.84 s / 111 steps ≈ **43.6 ms/step** → projection is
+  **~0.9%** of step time; whole precompute ~1.4%.
+
+Even eliminating the projection entirely leaves <1% end-to-end gain; the
+realistic fused KV-only gain (5 launches → 1, N 6144 → 2048) is ~0.2-0.25
+ms/step ≈ **0.5%** — an order of magnitude below the ≥5% keep gate, so the
+KV-only slice was **not implemented** (per step 4 of this handoff: profile
+first, keep only ≥5%). The v2 patch script keeps `DFLASH_KV_MODE=kvonly`
+implemented but **undeployed/validated only syntactically** (AST + container
+patch dry-runs) for future reference.
+
+Also observed: instrumented runs perturb acceptance (1.31 vs 1.56
+tokens/draft-run at the same seed) — the device syncs change step cadence and
+the draft sampling stream. Clean runs are reproducible run-to-run
+(52.903 / 52.922, 1.560 / 1.560). The instrumented throughput (47.5 tok/s)
+must **not** be compared to clean baselines; only clean-vs-clean.
+
+### Revised next slices (per the same evidence)
+
+The dominant per-step cost is the **30B GPTQ target verify** (~21 tokens ×
+~30B params ≈ 1.3 TFLOP/step at ~44 ms → ~29 TFLOPS effective on this
+kernel), not the draft context path. New ordering:
+
+1. **Improve acceptance** (biggest lever): accepted/step is 1.31-1.56 of 20
+   proposed (7-8%). Real-target-hidden-state GPTQ recalibration of the draft
+   (or draft fine-tuning) directly cuts steps → throughput scales ~1/1.56→
+   1/x. This subsumes the old follow-on #3.
+2. **Target-verify kernel efficiency**: profile the 30B GPTQ forward path
+   (W4A16 GEMM shapes at batch ~21, fp8 KV cache) for launch/tiling
+   inefficiencies vs the ~29 TFLOPS achieved.
+3. Multi-prompt long-window acceptance characterization before any adaptive
+   depth policy (unchanged).
+4. Grouped/fused KV-only W4A16 projections: only if a future path makes
+   `num_ctx` much larger (e.g., multi-request batches >8), where the
+   projection share grows; per-layer KV-only code is ready in the v2 patch
+   (`DFLASH_KV_MODE=kvonly`) behind the self-check.
 
 ### Follow-ons (in order)
 
-1. Group/fuse the five KV-only W4A16 projections to recover the former
-   cross-layer fused-K/V structure.
-2. Capture/compile fixed n=20 context precompute shapes once the custom path
-   is correct.
-3. Capture real target hidden states for GPTQ calibration. Current calibration
+1. Capture real target hidden states for GPTQ calibration. Current calibration
    is deterministic and shape-correct but synthetic; this is an acceptance
-   quality experiment, not a correctness requirement.
-4. Run a multi-prompt, long-window acceptance characterization before any
+   quality experiment, not a correctness requirement. This is now the primary
+   throughput lever (accepted/step 1.31-1.56 of 20 proposed).
+2. Profile the 30B GPTQ target-verify forward (W4A16 GEMM shapes at batch
+   ~21, fp8 KV cache) — the dominant per-step cost at ~29 TFLOPS effective.
+3. Run a multi-prompt, long-window acceptance characterization before any
    adaptive depth policy. Do not choose depth from 128-token windows.
+4. Group/fuse the five KV-only W4A16 projections **only if** target-verify or
+   batch-count changes make the projection share meaningful (already
+   implemented in `patch-vllm-dflash-gptq-context-kv.py` v2 as
+   `DFLASH_KV_MODE=kvonly`, undeployed pending the gate).
 
 **Do not:** return to SYCL DFlash2, Vulkan cap tuning, Shadeform, or another
 full-draft GPTQ metadata rewrite. The current artifact/patch is the known-good
