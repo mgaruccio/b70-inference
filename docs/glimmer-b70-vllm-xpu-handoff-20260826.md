@@ -286,19 +286,21 @@ kernel), not the draft context path. New ordering:
 
 ### Follow-ons (in order)
 
-1. Capture real target hidden states for GPTQ calibration. Current calibration
-   is deterministic and shape-correct but synthetic; this is an acceptance
-   quality experiment, not a correctness requirement. This is now the primary
-   throughput lever (accepted/step 1.31-1.56 of 20 proposed).
-2. Profile the 30B GPTQ target-verify forward (W4A16 GEMM shapes at batch
-   ~21, fp8 KV cache) — the dominant per-step cost at ~29 TFLOPS effective.
-3. Run a multi-prompt, long-window acceptance characterization before any
-   adaptive depth policy. Do not choose depth from 128-token windows.
-4. Group/fuse the five KV-only W4A16 projections **only if** target-verify or
-   batch-count changes make the projection share meaningful (already
-   implemented in `patch-vllm-dflash-gptq-context-kv.py` v2 as
-   `DFLASH_KV_MODE=kvonly`, undeployed pending the gate).
+1. Capture real target hidden states for GPTQ calibration. Mix hard (sky/coding, acc ~1.55) and easy (math, acc ~6.8) trajectories. Current calibration is synthetic. Write a **new** artifact directory; never overwrite the known-good GPTQ draft.
+2. Profile the 30B GPTQ target-verify forward (W4A16 GEMM shapes at batch ~21, fp8 KV cache) with `unitrace` / offline kernel replay — not `torch.xpu.synchronize()` on the serving cell.
+3. **DONE 2026-08-26:** multi-prompt 8×3×256 characterization. Sky/coding cluster is 1.55–1.59 accepted/run; math is 6.765 / 158 tok/s. Do not choose depth from the sky prompt. Details: `docs/dflash-acceptance-char-20260826.md`.
+4. Group/fuse the five KV-only W4A16 projections **only if** target-verify or batch-count changes make the projection share meaningful (already implemented in `patch-vllm-dflash-gptq-context-kv.py` v2 as `DFLASH_KV_MODE=kvonly`, undeployed pending the gate).
 
-**Do not:** return to SYCL DFlash2, Vulkan cap tuning, Shadeform, or another
-full-draft GPTQ metadata rewrite. The current artifact/patch is the known-good
-path; preserve the BF16 assistant as the rollback model.
+**Do not:** return to SYCL DFlash2, Vulkan cap tuning, Shadeform, or another full-draft GPTQ metadata rewrite. The current artifact/patch is the known-good path; preserve the BF16 assistant as the rollback model.
+
+---
+
+# Addendum — 2026-08-26 multi-prompt characterization
+
+Clean 8×256 sky baseline reproduced: 52.938 decode tok/s, 51.428 e2e, 1.560 accepted/draft run.
+
+Eight-prompt 3×256 characterization on the same cell: across-prompt median 59.7 tok/s / 1.89 acc/run. The gate prompt is a worst-case cluster with coding (~1.55–1.59). Tool-like 2.33; math **6.77 accepted/run and 158 decode tok/s**. n=20 is therefore content-dependent, not universally too deep.
+
+Script: `scripts/vllm-dflash-acceptance-char.py`. Receipts under `~/b70-evals/muse-glimmer/20260826T-vllm-dflash-next-opt-baseline/`.
+
+Next: do **not** retry vLLM `extract_hidden_states` on this Muse/XPU cell (HiddenStateCacheSpec page-size assert). Capture via a dedicated DFlash `aux_hidden_states` dump overlay or offline target forwards, then GPTQ into a new draft path. C1 is restored (DFlash n=20, XPUwNa16, mode=base).
