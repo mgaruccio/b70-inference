@@ -101,3 +101,54 @@ Receipts:
    cell, C1 decode vs **42.14**, kill if <5% or acceptance collapse. Keep
    shared embeddings / lm_head BF16 on the first INT4 draft slice.
 4. Do not go back to SYCL DFlash2, Vulkan cap tuning, or Shadeform 5090.
+
+---
+
+# Addendum — 2026-08-26 night session (depth + graph sweep)
+
+Status update: items 1–2 done; item 3 re-ranked but not yet run. The cell is
+restored and faster than the recorded baseline. Receipts:
+host `~/b70-evals/muse-glimmer/20260826T-vllm-dflash-depth-graph/`
+(`sweep-summary.md`, `dflash-instrument-*.json`). Launchers + instrument now
+versioned in repo `scripts/` (`start-muse-vllm-dflash-c1-graph.sh`,
+`start-muse-vllm-dflash-c1.sh`, `vllm-dflash-instrument.py`; instrument reads
+`delta.reasoning` correctly).
+
+## What was found
+
+- Host had rebooted before the session; `/tmp` launchers wiped. Cell restored
+  from lead-machine script copies. Baseline eager n=15 reproduced at **43.72**
+  tok/s client decode (prior receipt 42.14 ✓).
+- Instrumentation (`/metrics` deltas): acceptance collapses after position ~3;
+  positions 4–14 contribute ~1 extra token/step. In **eager** mode per-step
+  wall was flat (~70–75 ms) across n∈{6,15,24} — fixed overhead dominated, so
+  depth barely mattered.
+- **XPU graphs are the lever**: `--enforce-eager` removed +
+  `VLLM_XPU_ENABLE_XPU_GRAPH=1` cut step wall to ~48 ms and lifted decode
+  ~+60–85%. Under graphs the depth optimum is **n=20** (deeper loses: serial,
+  uncaptured draft forwards dominate marginal cost).
+
+| Config | 5×128 window | 8×256 window |
+|---|---:|---:|
+| eager n=15 / n=24 | 43.72 / 44.95 | — |
+| graph n=16 / n=32 | 64.27 / 53.11 | — |
+| graph n=24 | 70.48 | 44.61 |
+| **graph n=20 (final)** | **81.56** | **48.03** |
+
+- Caveat: acceptance is strongly content-dependent (λ≈3.27 on a 128-token
+  window vs λ≈1.58 on 256 tokens of the same prompt+seed). Use ≥256-token
+  windows for decisions; short windows overstate.
+- A mid-session host hard reset was investigated and is **pre-existing
+  platform instability** (5 dirty power events 00:56–02:13 EDT, no shutdown
+  wtmp rows / pstore / panic trace), not graph-mode-related: the identical
+  graph config relaunched cleanly end-to-end. Watch PSU/cables if resets
+  continue.
+
+## New decisions
+
+- Final C1 flags = prior flags minus `--enforce-eager`, plus
+  `VLLM_XPU_ENABLE_XPU_GRAPH=1`, spec `num_speculative_tokens=20`. Cell left
+  running in this state.
+- Remaining gap to Qwen MTP4 draft-INT4 (112.65) is draft-forward cost →
+  **draft-side INT4 slice is next** (handoff item 3 stands, kill rule
+  unchanged).
