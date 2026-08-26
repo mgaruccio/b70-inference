@@ -1,0 +1,103 @@
+# Glimmer B70 — vLLM-XPU GPTQ + DFlash handoff — 2026-08-26
+
+Status: **current research cell**. This is the authoritative handoff for the
+Muse GPTQ requant and vLLM-XPU C1 DFlash work. The Aug 25 native SYCL C8
+document (`glimmer-b70-native-result-handoff-20260825.md`) is a parked
+llama.cpp restore recipe, not the live research path.
+
+Transcript (intact, not compacted):
+`~/.pi/agent/sessions/--home-mike-code-local-dev-model--/2026-08-25T20-33-39-091Z_01a03aa0-e913-7f4b-a8e8-ed8d8462270c.jsonl`
+
+Gitignored Pi copy:
+`~/code/local-dev-model/.pi/handoffs/handoff-2026-08-26T04-10-34-709Z.md`
+
+## Why this was "missing"
+
+The session lived in `local-dev-model` Pi transcripts. Its handoff was written
+under gitignored `.pi/handoffs/`. Follow-up sessions started with no
+`parentSession` and treated the Aug 25 SYCL pause doc as current, then scouted
+Shadeform 5090 SGLang / reset recovery instead of vLLM-XPU C1.
+
+## Goal
+
+Two missing Muse capabilities vs Qwen3.8-27B on one Arc Pro B70:
+
+1. XMX-quality W4A16/GPTQ target path instead of mixed GGUF K-quant MMVQ.
+2. A deeper, cheaper speculative path approaching ~5 emitted tokens per target
+   verify.
+
+## Live research cell (vLLM-XPU C1)
+
+- **Host:** `inference-host` / Tailscale `100.75.79.54` / LAN `192.168.8.172`
+  (LAN often down after reset).
+- **Container:** `muse-vllm-xpu-c1`, port **8000**, served id `muse-glimmer-gptq`.
+- **Image:** `vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f`
+  (vllm `0.27.2rc1.dev77+gac7509e2b`).
+- **Kernel overlay:** `pip install vllm-xpu-kernels==0.1.13.2` at container
+  start. Stock **0.1.12.3** is insufficient: missing Muse GQA 32/2 paged-decode
+  tuples `16,128,64,false,true,false` and `16,128,16,false,false,false`.
+- **Target:** `/home/mike/inference/models/Muse-Glimmer-30B-GPTQ-Int4-sym-G128`
+  (~21 GiB). Produced on desktop RTX 5080 with gptqmodel **7.3.2** / torch
+  `2.11.0+cu128`. Contract: 4-bit, G128, symmetric, `desc_act=false`,
+  `pack_dtype=int32`, `lm_head=false`, format `gptq`. 416 text-decoder linears;
+  vision / lm_head / embeddings stay BF16. Desktop leftover:
+  `/tmp/muse-gptq-venv`, `/tmp/muse_quantize.py`.
+- **Draft:** `/home/mike/inference/models/Muse-Glimmer-30B-assistant` (4.8 GiB).
+- **Spec:** `{"method":"dflash","model":"/draft","num_speculative_tokens":15}`.
+- **Flags:** `--quantization gptq --dtype float16 --max-model-len 8192
+  --gpu-memory-utilization 0.90 --kv-cache-dtype fp8 --enforce-eager
+  --max-num-seqs 1 --max-num-batched-tokens 2048 --no-enable-prefix-caching
+  --language-model-only --reasoning-parser muse_glimmer`.
+- **Kernel path:** Muse arch resolved; `XPUwNa16LinearKernel` /
+  `torch.ops._xpu_C.int4_gemm_w4a16` selected. Model load 17.13 GiB.
+- 32k / 0.85 KV OOM'd to 0 bytes (BF16 draft ate headroom). C1 is 8k for that
+  reason.
+
+Launchers were left in host `/tmp` (`start-muse-vllm-dflash-c1.sh`,
+`start-muse-vllm-xpu-c1.sh`, `wait-vllm-health.sh`) and may not survive reboot.
+
+## Numbers (do not mix labels)
+
+| Cell | Metric | Value |
+|---|---|---:|
+| vLLM GPTQ no-spec C1 | public-boundary e2e, 5×128 | **31.46** tok/s (`chunks=0`, not decode) |
+| vLLM GPTQ + official DFlash n=15 C1 | client decode (post-first `delta.reasoning`, median of 5) | **42.14** (41.56–42.81) |
+| llama.cpp official DFlash n2 | client decode | **42.42** |
+| llama.cpp DFlash2 SYCL n2 | client decode | **29.9** (killed) |
+| llama.cpp DFlash2 SYCL n8 | client decode | **11.0** (killed) |
+| Qwen no-spec, same image neighborhood | e2e | **32.9** |
+| Qwen MTP4 | decode | **83.7** BF16-MTP4 / **112.65** draft-INT4 |
+
+Receipts:
+
+- vLLM no-spec: `~/b70-evals/muse-glimmer/20260826T-vllm-gptq-c1/`
+- vLLM DFlash: `~/b70-evals/muse-glimmer/20260826T-vllm-gptq-dflash-c1/`
+- DFlash2 SYCL: `~/b70-evals/muse-glimmer/20260826T-dflash2-sycl-c1/`
+- Decode script on host: `/tmp/vllm-decode-reps.py` (reads `delta.reasoning`)
+
+`glimmer-phase0-instrument.py` reports `median_client_decode_tok_s=null` and
+`chunks=0` against vLLM because Muse streams `delta.reasoning`, not
+`delta.reasoning_content`.
+
+## Decisions
+
+- **vLLM-XPU GPTQ-G128 is the Muse target path.** Do not write a llama.cpp
+  Q4_K GEMM first.
+- **llama.cpp DFlash2-SYCL depth bet is dead.** Do not spend another B70 window
+  widening `n_max` on that port.
+- **Official vLLM DFlash (`num_speculative_tokens=15`) is the speculation
+  vehicle.** It matched llama.cpp official n2 (~42.1 vs 42.4) and did **not**
+  reach Qwen MTP4. The remaining gap is speculation, not target W4A16.
+- Park MMVQ cap-12 and Vulkan. Restore known-good SYCL C8 only if the user
+  wants the llama.cpp cell back (recipe in the Aug 25 native handoff).
+
+## Next
+
+1. Confirm `muse-vllm-xpu-c1` still answers `http://127.0.0.1:8000/v1/models`
+   on `mike@100.75.79.54`.
+2. Instrument vLLM DFlash: tokens/verify, acceptance, draft vs target time.
+   Fix or bypass `delta.reasoning`.
+3. One slice: **draft-side INT4** of Muse assistant internals on this same
+   cell, C1 decode vs **42.14**, kill if <5% or acceptance collapse. Keep
+   shared embeddings / lm_head BF16 on the first INT4 draft slice.
+4. Do not go back to SYCL DFlash2, Vulkan cap tuning, or Shadeform 5090.
