@@ -214,8 +214,52 @@ The candidate clears the >=5% gain gate with no acceptance collapse and is
 the **active resting C1 cell**. Receipt:
 `~/b70-evals/muse-glimmer/20260826T-vllm-dflash-draft-gptq-c1/`.
 
-## Next
+## Next — packed-QKV kernel optimization handoff
 
-Draft INT4 is no longer the remaining first-order lever. Next only after a
-multi-prompt long-window acceptance characterization; do not widen DFlash
-depth based on 128-token windows.
+**Current resting cell:** `muse-vllm-xpu-c1` on `inference-host:8000`, target
+GPTQ + assistant GPTQ, XPU graph mode, DFlash
+`num_speculative_tokens=20`. It requires the candidate launcher and guarded
+packed-QKV overlay in `scripts/`; host `/tmp` is wiped by reboot, so re-push
+those scripts before restoring.
+
+**Verified current baseline:** 52.90 client decode tok/s / 51.39 e2e tok/s,
+8×256 public streaming API workload, +10.1% vs BF16 draft. Acceptance is 1.56
+tokens/verify vs BF16 1.58. Receipt:
+`~/b70-evals/muse-glimmer/20260826T-vllm-dflash-draft-gptq-c1/`.
+
+### Highest-value next slice: KV-only W4A16 context precompute
+
+The packed-QKV overlay currently runs **five full QKV** W4A16 projections on
+normalized context and discards Q. Per layer Q is 4096 channels while K+V is
+2048, so a KV-only path can avoid substantial output work and kernel-launch
+overhead. The original BF16 path fuses K/V across all five layers in one GEMM;
+the GPTQ fallback cannot yet do that.
+
+1. Instrument time inside `DFlashQwen3Model._project_context_kv` separately
+   from verify/decode time, using the real n=20, ≥256-token public API path.
+2. Add a KV-only method that is numerically equivalent to slicing K/V from the
+   existing quantized `qkv_proj` output. Test it first against the current
+   fallback on fixed tensors; do **not** compare to BF16 as quantization itself
+   changes values.
+3. Use that method only in the packed-QKV context path. Leave the BF16 fused
+   `F.linear` path untouched and retain the target verifier as correctness
+   authority.
+4. Benchmark 8×256 with the same prompt/seed and `/metrics` counters. Keep
+   only a ≥5% gain over 52.90 tok/s with no acceptance collapse; otherwise
+   revert to the current overlay.
+
+### Follow-ons (in order)
+
+1. Group/fuse the five KV-only W4A16 projections to recover the former
+   cross-layer fused-K/V structure.
+2. Capture/compile fixed n=20 context precompute shapes once the custom path
+   is correct.
+3. Capture real target hidden states for GPTQ calibration. Current calibration
+   is deterministic and shape-correct but synthetic; this is an acceptance
+   quality experiment, not a correctness requirement.
+4. Run a multi-prompt, long-window acceptance characterization before any
+   adaptive depth policy. Do not choose depth from 128-token windows.
+
+**Do not:** return to SYCL DFlash2, Vulkan cap tuning, Shadeform, or another
+full-draft GPTQ metadata rewrite. The current artifact/patch is the known-good
+path; preserve the BF16 assistant as the rollback model.
