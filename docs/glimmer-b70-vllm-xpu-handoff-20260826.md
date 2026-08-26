@@ -152,3 +152,70 @@ versioned in repo `scripts/` (`start-muse-vllm-dflash-c1-graph.sh`,
 - Remaining gap to Qwen MTP4 draft-INT4 (112.65) is draft-forward cost →
   **draft-side INT4 slice is next** (handoff item 3 stands, kill rule
   unchanged).
+
+---
+
+# Addendum — 2026-08-26 full GPTQ DFlash assistant
+
+Status: **passed and active**. The assistant GPTQ artifact and a candidate-only
+vLLM DFlash overlay are now required for C1. BF16 assistant source remains
+untouched.
+
+Research gate (2026-08-26): vLLM GPTQ/XPU support and draft quantization
+configuration were checked in
+`https://docs.vllm.ai/en/stable/features/quantization/`,
+`https://docs.vllm.ai/en/stable/models/hardware_supported_models/xpu/`, and
+`https://docs.vllm.ai/en/stable/features/speculative_decoding/draft_model/`;
+GPTQModel 4-bit/G128 configuration and module overrides were checked against
+`https://github.com/ModelCloud/GPTQModel`. These supported the GPTQ artifact
+contract and explicit draft `quantization:gptq`; vLLM source was authoritative
+for the DFlash packed-QKV compatibility patch.
+
+## Artifact
+
+- `Muse-Glimmer-30B-assistant-GPTQ-Int4-sym-G128` on desktop + host: 1.6 GiB
+  vs 4.8 GiB BF16 (-67.6%), SHA256 model file
+  `25ab1e1d04508159b44b833c31b1f74625bc1dc0486d6a9fcaeead577091fcee`.
+- GPTQ: 4-bit, G128, symmetric, `desc_act=false`, int32; 35 decoder linears
+  (five × q/k/v/o + gate/up/down); `encoder.fc`, encoder norm, final norm
+  BF16. Embeddings + lm_head remain target-shared BF16.
+- Quantization uses deterministic shape-correct DFlash calibration (256
+  batches of `noise_embeds` + target-context hidden states).
+- `quantize-muse-dflash-assistant-gptq.py` writes/validates vLLM fused-module
+  metadata: `qkv_proj`, `o_proj`, `gate_up_proj`, `down_proj`. This is needed
+  because DFlash offsets draft layer prefixes by target depth.
+
+## vLLM full-QKV patch
+
+- Full GPTQ first failed because DFlash fast context-KV precompute directly
+  reads `qkv_proj.weight`; packed GPTQ exposes `qweight` only.
+- `patch-vllm-dflash-gptq-context-kv.py` is a guarded candidate-only overlay.
+  In packed-QKV mode it invokes each existing quantized QKV projection on
+  normalized context, retains K/V, then reuses original K-norm/RoPE/cache
+  storage. BF16 retains its original single-F.linear fused fast path.
+- Candidate launcher: `start-muse-vllm-dflash-c1-graph-draft-gptq.sh`; it
+  explicitly sets draft `quantization:gptq`, applies the overlay at startup,
+  and does not alter the BF16 launcher or image.
+
+## E2E acceptance result
+
+Same real streaming OpenAI API journey, graph mode with `num_speculative_tokens=20`
+(depth) and 8 replicates × 256 completion tokens (workload), fixed prompt/seed;
+`vllm-dflash-instrument.py` reads `delta.reasoning` and `/metrics`.
+
+| Metric | BF16 draft | GPTQ draft | Delta |
+|---|---:|---:|---:|
+| client decode | 48.03 tok/s | **52.90 tok/s** | **+10.1%** |
+| e2e | 46.65 tok/s | **51.39 tok/s** | **+10.2%** |
+| TTFT | 158.7 ms | **142.6 ms** | -10.1% |
+| accepted / verify | 1.58 | **1.56** | -1.3% |
+
+The candidate clears the >=5% gain gate with no acceptance collapse and is
+the **active resting C1 cell**. Receipt:
+`~/b70-evals/muse-glimmer/20260826T-vllm-dflash-draft-gptq-c1/`.
+
+## Next
+
+Draft INT4 is no longer the remaining first-order lever. Next only after a
+multi-prompt long-window acceptance characterization; do not widen DFlash
+depth based on 128-token windows.
