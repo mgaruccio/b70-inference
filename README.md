@@ -11,14 +11,14 @@ Two models share the card. Only one is resident at a time.
 
 | Model | Engine | Spec | Current C1 decode | Notes |
 | --- | --- | --- | ---: | --- |
-| **Muse Glimmer 30B GPTQ** | vLLM XPU | DFlash n=20, GPTQ draft | **89.1 / 101.1 / 42.6** tok/s (GSM8K / HumanEval / MT-Bench, greedy, until stop) | Live cell. Writeup: [`docs/muse-glimmer-vllm-xpu-dflash.md`](docs/muse-glimmer-vllm-xpu-dflash.md) |
+| **Muse Glimmer 30B GPTQ** | vLLM XPU | DFlash n=20, GPTQ draft | **89.1 / 101.1 / 42.6** tok/s (GSM8K / HumanEval / MT-Bench, greedy, until stop) | Moved to [muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70) |
 | Qwen3.8-27B GPTQ-Int4 | vLLM XPU | MTP-4, FP8 KV | 57–62 tok/s short decode | Prefix cache helps TTFT, not decode |
 
-Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM cell is a different stack (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
+Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM stack is a different path (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
 
 ## Start here
 
-- **Post:** [`docs/muse-glimmer-vllm-xpu-dflash.md`](docs/muse-glimmer-vllm-xpu-dflash.md) — published B70 comparisons, how we got to 90 tok/s, how to replicate.
+- **Muse Glimmer post + recipe:** [mgaruccio/muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70)
 - Suite protocol: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md)
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
 - Parked llama.cpp / SYCL notes: [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
