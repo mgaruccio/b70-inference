@@ -1,5 +1,5 @@
 # Muse Glimmer at 90 tok/s on one Arc Pro B70
-![Muse Glimmer 30B decode on one Arc Pro B70: cookbook 26.8, OpenVINO 31.7, vLLM+DFlash writing 42.6 / GSM8K 89.1 / HumanEval 101.1](images/muse-glimmer-b70-decode.png)
+![Muse Glimmer 30B decode on one Arc Pro B70: cookbook 26.8, OpenVINO 31.7, vLLM+DFlash writing 42.6 / GSM8K 89.1 / HumanEval 101.1](images/muse-glimmer-b70-decode-vllm.png)
 Public numbers for Meta’s [Muse Glimmer 30B](https://huggingface.co/meta-models/Muse-Glimmer-30B) on a single Intel Arc Pro B70 have lived in the high 20s. The best documented llama.cpp recipe — [SergiioB’s B70 cookbook](https://github.com/SergiioB/intel-arc-pro-b70-inference-cookbook/blob/master/docs/muse-glimmer/MUSE-GLIMMER-B70.md) — is **26.8 tok/s** median decode (28.9 peak) at 128k context with DFlash `n_max=2`. We ran that class of config on the same card and landed in the same place.
 
 Then we changed stack. Same GPU, vLLM-XPU, GPTQ W4A16, XPU graphs, and a 20-token DFlash draft. On a suite that **finishes answers** — not a 128-token thinking window — greedy single-stream decode is:

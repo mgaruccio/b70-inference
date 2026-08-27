@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs/images/muse-glimmer-b70-decode.png"
+OUT = ROOT / "docs/images/muse-glimmer-b70-decode-vllm.png"
 
 ROWS = (
     ("Cookbook llama.cpp  ·  DFlash n=2", 26.8, "#64748b", False),
