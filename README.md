@@ -18,8 +18,8 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM ce
 
 ## Start here
 
-- **Muse vLLM-XPU + DFlash (live):** [`docs/muse-glimmer-vllm-xpu-dflash.md`](docs/muse-glimmer-vllm-xpu-dflash.md)
-- Quoteable suite: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md)
+- **Post:** [`docs/muse-glimmer-vllm-xpu-dflash.md`](docs/muse-glimmer-vllm-xpu-dflash.md) — published B70 comparisons, how we got to 90 tok/s, how to replicate.
+- Suite protocol: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md)
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
 - Parked llama.cpp / SYCL notes: [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
 - **Qwen research plan:** [`docs/qwen38-b70-research-plan-20260824.md`](docs/qwen38-b70-research-plan-20260824.md)
