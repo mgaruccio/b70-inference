@@ -11,26 +11,18 @@ Two models share the card. Only one is resident at a time.
 
 | Model | Engine | Spec | Current C1 decode | Notes |
 | --- | --- | --- | ---: | --- |
-| Muse Glimmer 30B Dynamic Q4 | llama.cpp Vulkan | DFlash `n_max=2` | 27–32 tok/s e2e; engine eval ~43 tok/s | C4 with DFlash collapses; see the research program |
+| **Muse Glimmer 30B GPTQ** | vLLM XPU | DFlash n=20, GPTQ draft | **89.1 / 101.1 / 42.6** tok/s (GSM8K / HumanEval / MT-Bench, greedy, until stop) | Live cell. Writeup: [`docs/muse-glimmer-vllm-xpu-dflash.md`](docs/muse-glimmer-vllm-xpu-dflash.md) |
 | Qwen3.8-27B GPTQ-Int4 | vLLM XPU | MTP-4, FP8 KV | 57–62 tok/s short decode | Prefix cache helps TTFT, not decode |
 
-The interesting claim: Glimmer is dense and writes *less* KV per token than
-a naive 27B transformer, but short decode on this card is weight/dequant
-bound. Qwen also only does full attention on 16 of 64 layers (the rest are
-Gated DeltaNet). The 2× gap is runtime stack + unused 16-token DFlash
-block + a multi-sequence DFlash bug, not “attention bytes.”
+Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM cell is a different stack (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
 
 ## Start here
 
+- **Muse vLLM-XPU + DFlash (live):** [`docs/muse-glimmer-vllm-xpu-dflash.md`](docs/muse-glimmer-vllm-xpu-dflash.md)
+- Quoteable suite: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md)
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
-- **Glimmer C1 + C4+ program:** [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
-- **Glimmer Phase 0 results (2026-08-24):** [`docs/glimmer-b70-phase0-20260824.md`](docs/glimmer-b70-phase0-20260824.md)
-- **Glimmer C4 n_max=2 tick profile (2026-08-24):** [`docs/glimmer-b70-profiling-20260824.md`](docs/glimmer-b70-profiling-20260824.md)
-- **Next session:** [`docs/glimmer-b70-next-session.md`](docs/glimmer-b70-next-session.md)
-- Glimmer campaign log: [`docs/glimmer-b70-handoff-20260824.md`](docs/glimmer-b70-handoff-20260824.md)
+- Parked llama.cpp / SYCL notes: [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
 - **Qwen research plan:** [`docs/qwen38-b70-research-plan-20260824.md`](docs/qwen38-b70-research-plan-20260824.md)
-- Qwen speed handoff: [`docs/qwen38-b70-speed-improvement-handoff.md`](docs/qwen38-b70-speed-improvement-handoff.md)
-
 ## Tooling
 
 - `scripts/glimmer-phase0-instrument.py` — public `/v1/chat/completions`
@@ -43,8 +35,7 @@ block + a multi-sequence DFlash bug, not “attention bytes.”
 - `scripts/compare_qwen38_b70_p0_traces.py` — offline trace compare.
 - `scripts/vllm-dflash-share-suite.py` — quoteable DFlash C1 suite (stop + content + checks). Protocol: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md).
 
-Host launchers live on the inference box under `~/inference/launchers/`,
-not in this repo.
+Muse vLLM launcher is `scripts/start-muse-vllm-dflash-c1-graph-draft-gptq.sh`. Older host copies under `~/inference/launchers/` are fallbacks if `/tmp` was wiped.
 
 ## What this is not
 
