@@ -41,6 +41,7 @@ block + a multi-sequence DFlash bug, not “attention bytes.”
 - `patches/qwen38-b70-vllm-0.27.2rc1-gac7509e2b/` — GDN metadata overlay
   and P0 MTP tracer for the pinned vLLM XPU image.
 - `scripts/compare_qwen38_b70_p0_traces.py` — offline trace compare.
+- `scripts/vllm-dflash-share-suite.py` — quoteable DFlash C1 suite (stop + content + checks). Protocol: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md).
 
 Host launchers live on the inference box under `~/inference/launchers/`,
 not in this repo.
