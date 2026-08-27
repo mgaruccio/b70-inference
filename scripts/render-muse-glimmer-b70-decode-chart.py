@@ -12,9 +12,9 @@ OUT = ROOT / "docs/images/muse-glimmer-b70-decode.png"
 ROWS = (
     ("Cookbook llama.cpp  ·  DFlash n=2", 26.8, "#64748b", False),
     ("OpenVINO official IR", 31.7, "#64748b", False),
-    ("This cell  ·  writing", 42.6, "#60a5fa", True),
-    ("This cell  ·  GSM8K", 89.1, "#34d399", True),
-    ("This cell  ·  HumanEval", 101.1, "#34d399", True),
+    ("vLLM + DFlash  ·  writing", 42.6, "#60a5fa", True),
+    ("vLLM + DFlash  ·  GSM8K", 89.1, "#34d399", True),
+    ("vLLM + DFlash  ·  HumanEval", 101.1, "#34d399", True),
 )
 
 
@@ -80,7 +80,7 @@ def main() -> None:
     )
     fig.text(
         0.06, 0.875,
-        "Same card. Public recipes vs this vLLM-XPU + DFlash cell.",
+        "Same card. Public recipes vs vLLM-XPU + DFlash.",
         fontsize=13, color="#94a3b8", ha="left", va="top",
     )
     fig.text(

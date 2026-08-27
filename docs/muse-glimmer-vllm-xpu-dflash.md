@@ -1,5 +1,5 @@
 # Muse Glimmer at 90 tok/s on one Arc Pro B70
-![Muse Glimmer 30B decode on one Arc Pro B70: cookbook 26.8, OpenVINO 31.7, this cell writing 42.6 / GSM8K 89.1 / HumanEval 101.1](images/muse-glimmer-b70-decode.png)
+![Muse Glimmer 30B decode on one Arc Pro B70: cookbook 26.8, OpenVINO 31.7, vLLM+DFlash writing 42.6 / GSM8K 89.1 / HumanEval 101.1](images/muse-glimmer-b70-decode.png)
 Public numbers for Meta’s [Muse Glimmer 30B](https://huggingface.co/meta-models/Muse-Glimmer-30B) on a single Intel Arc Pro B70 have lived in the high 20s. The best documented llama.cpp recipe — [SergiioB’s B70 cookbook](https://github.com/SergiioB/intel-arc-pro-b70-inference-cookbook/blob/master/docs/muse-glimmer/MUSE-GLIMMER-B70.md) — is **26.8 tok/s** median decode (28.9 peak) at 128k context with DFlash `n_max=2`. We ran that class of config on the same card and landed in the same place.
 
 Then we changed stack. Same GPU, vLLM-XPU, GPTQ W4A16, XPU graphs, and a 20-token DFlash draft. On a suite that **finishes answers** — not a 128-token thinking window — greedy single-stream decode is:
@@ -51,7 +51,7 @@ vLLM’s DFlash method verifies a block against the 30B target. Eager, `num_spec
 Eager mode spent ~70–75 ms every step on launch overhead, so extra draft tokens were almost free and almost useless. Turn on XPU graphs, drop `--enforce-eager`, set depth to **20**. Sky 256-token decode jumped to **48 tok/s** with a BF16 draft. n=32 got slower: the draft forwards are serial and fall out of the graph.
 
 **4. Quantize the five-layer drafter too.**
-The assistant is 4.8 GiB BF16 or 1.6 GiB GPTQ. vLLM’s fast DFlash context-KV path wants a fused `qkv_proj.weight`; GPTQ only has `qweight`, so we overlay a packed-QKV fallback that still uses the quantized kernel. GPTQ draft vs BF16 draft, same graph cell: **52.9 vs 48.0** sky decode (+10%), acceptance 1.56 vs 1.58. That is the cell that is up now.
+The assistant is 4.8 GiB BF16 or 1.6 GiB GPTQ. vLLM’s fast DFlash context-KV path wants a fused `qkv_proj.weight`; GPTQ only has `qweight`, so we overlay a packed-QKV fallback that still uses the quantized kernel. GPTQ draft vs BF16 draft, same graph setup: **52.9 vs 48.0** sky decode (+10%), acceptance 1.56 vs 1.58. That's what's running.
 
 What we did **not** keep: fused KV-only projections (~0.5% of step time), llama.cpp DFlash2, Vulkan cap tuning, and vLLM `extract_hidden_states` on this Muse/XPU build (it asserts in page-size math). Do not put `torch.xpu.synchronize()` on the serving path — it changed the acceptance stream.
 
@@ -88,4 +88,4 @@ python3 scripts/vllm-dflash-share-suite.py 3 2048 share-suite.json
 
 If any prompt fails to stop, emit content, or pass its check, the script refuses a headline. Clients that only read `delta.content` will look idle until thinking finishes — Muse streams `delta.reasoning` first.
 
-This is C1. It is not Spec-Bench, not a 5090, and not eight concurrent llama.cpp slots. It is one B70, the published recipes as a floor, and a vLLM DFlash cell that actually writes the answer.
+One stream. Not Spec-Bench, not a 5090, not eight concurrent llama.cpp slots. One B70, the published recipes as a floor, and a vLLM DFlash stack that actually writes the answer.
