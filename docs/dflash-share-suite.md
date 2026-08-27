@@ -2,7 +2,7 @@
 
 The characterization numbers from 2026-08-26 (eval 86.5 / work 100.9 tok/s) are **not** this suite. Those were 256-token windows that never left the reasoning channel.
 
-This suite is the one we can quote. The post: [`muse-glimmer-vllm-xpu-dflash.md`](muse-glimmer-vllm-xpu-dflash.md).
+This suite is the one we can quote. The post: [mgaruccio/muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70).
 
 ## Protocol
 
