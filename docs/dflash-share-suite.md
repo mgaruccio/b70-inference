@@ -18,7 +18,8 @@ Script: `scripts/vllm-dflash-share-suite.py`
 | Stop | `finish_reason=stop` required |
 | Warmup | 1 per prompt, excluded |
 | Measured reps | 3 |
-| tok/s | `completion_tokens / wall_to_stop` (reasoning + content) |
+| Decode tok/s | `completion_tokens / (last_chunk − first_generated_chunk)` |
+| E2E tok/s | `completion_tokens / wall_to_stop` (includes TTFT) |
 | Acceptance | vLLM `accepted_draft_tokens / draft_runs` (no bonus token) |
 | Quoteable row | stop + non-empty **content** + task check pass |
 
@@ -41,10 +42,10 @@ python3 /home/mike/inference/launchers/b70/vllm-dflash-share-suite.py 3 2048 \
 ```
 ## Results — 2026-08-27
 Live cell: `muse-vllm-xpu-c1`, GPTQ target + GPTQ DFlash n=20, XPU graph, C1. Receipt: `~/b70-evals/muse-glimmer/20260827T-dflash-share-suite/share-suite.json`. Quoteable **3/3**.
-| Prompt | Finish | Tokens | Time to first content | E2E tok/s | Accepted drafts / verify | Check |
-|---|---|---:|---:|---:|---:|---|
-| gsm8k-janet | stop | 586 | 6.10 s | **86.7** | 3.37 | **18 PASS** |
-| humaneval-0 | stop | 887 | 8.44 s | **99.3** | 4.14 | **doctest PASS** |
-| mtbench-81 | stop | 1585 | 8.53 s | **42.3** | 1.22 | 4670 chars |
-Quote as the table, not a single average. tok/s is all generated tokens (thinking + answer) until stop. Time to first *content* token is 6–8.5 s on this cell. Writing is the slow cluster; math/code speculate better.
+| Prompt | Finish | Tokens | Time to first content | Decode tok/s | E2E tok/s | Accepted drafts / verify | Check |
+|---|---|---:|---:|---:|---:|---:|---|
+| gsm8k-janet | stop | 586 | 6.10 s | **89.1** | 86.7 | 3.37 | **18 PASS** |
+| humaneval-0 | stop | 887 | 8.44 s | **101.1** | 99.3 | 4.14 | **doctest PASS** |
+| mtbench-81 | stop | 1585 | 8.53 s | **42.6** | 42.3 | 1.22 | 4670 chars |
+Quote as the table, not a single average. Decode is post-first-token generation rate; E2E includes TTFT. Both count all generated tokens (thinking + answer) until stop. Time to first *content* token is 6–8.5 s on this cell. Writing is the slow cluster; math/code speculate better.
 GSM8K and MT-Bench were bit-stable across the 3 greedy reps. HumanEval still passed all 3 doctests but completion length moved (1074 / 882 / 887).

@@ -12,7 +12,7 @@ Protocol (v1):
   * warmup excluded
   * a row is quoteable only if finish=stop AND content is non-empty
   * GSM8K / HumanEval have exact checks on *content*, not reasoning
-  * tok/s is completion_tokens / wall to stop (all generated tokens)
+  * decode tok/s is completion_tokens / (last − first generated chunk); e2e tok/s includes TTFT
   * acceptance is accepted draft tokens / draft runs (vLLM, no bonus)
 
 Usage:
@@ -325,6 +325,11 @@ def main() -> None:
             for row, sc in zip(rows, scored)
             if sc["quoteable"]
         ]
+        quoteable_decode = [
+            row["decode_tok_s"]
+            for row, sc in zip(rows, scored)
+            if sc["quoteable"]
+        ]
         summary = {
             "id": item["id"],
             "kind": item["kind"],
@@ -341,6 +346,7 @@ def main() -> None:
             "median_completion_tokens": median([r["completion_tokens"] for r in rows]),
             "quoteable_n": sum(1 for sc in scored if sc["quoteable"]),
             "quoteable_median_e2e_tok_s": median(quoteable_e2e),
+            "quoteable_median_decode_tok_s": median(quoteable_decode),
             "all_quoteable": all(sc["quoteable"] for sc in scored),
             "counter_deltas": deltas,
             "acceptance": acc,
@@ -351,6 +357,7 @@ def main() -> None:
             item["id"],
             "quoteable", f"{summary['quoteable_n']}/{reps}",
             "finish", ",".join(r["finish_reason"] or "?" for r in rows),
+            "decode", summary["quoteable_median_decode_tok_s"],
             "e2e", summary["quoteable_median_e2e_tok_s"],
             "ttfc", summary["median_ttft_content_s"],
             "toks", summary["median_completion_tokens"],
@@ -375,6 +382,9 @@ def main() -> None:
         "concurrency": 1,
         "prompts": prompt_results,
         "quoteable_prompt_n": len(quoteable),
+        "across_quoteable_median_decode_tok_s": median(
+            [p["quoteable_median_decode_tok_s"] for p in quoteable]
+        ),
         "across_quoteable_median_e2e_tok_s": median(
             [p["quoteable_median_e2e_tok_s"] for p in quoteable]
         ),
@@ -388,6 +398,7 @@ def main() -> None:
     }
     Path(out_path).write_text(json.dumps(out, indent=2))
     print("quoteable_prompts", f"{len(quoteable)}/{len(prompt_results)}")
+    print("across_quoteable_median_decode_tok_s", out["across_quoteable_median_decode_tok_s"])
     print("across_quoteable_median_e2e_tok_s", out["across_quoteable_median_e2e_tok_s"])
     print(
         "across_quoteable_median_accepted_per_draft_run",
