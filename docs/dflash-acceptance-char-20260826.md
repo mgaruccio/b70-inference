@@ -33,6 +33,32 @@ Across-prompt median decode **59.664** tok/s; median acc/run **1.888**; min **1.
 3. Real-target GPTQ recalibration must mix **hard** (sky/coding) and **easy** (math/tool) hidden-state trajectories. Calibrating only the gate prompt would miss the distribution that already works.
 4. Capture must use the same aux layers the live DFlash cell uses: Eagle3 IDs `(2, 14, 26, 38, 50)` from config `target_layer_ids [1, 13, 25, 37, 49]` plus vLLM's documented +1 conversion. Do not add a second +1.
 
+## Prompt set (updated)
+
+Ad-hoc prompts (sky, fake contest math, Spanish history, heap textbook) are retired from characterization. Shared list: `scripts/dflash_char_prompts.py`.
+
+* **eval** — Spec-Bench / DFlash-paper families: GSM8K test[0], HumanEval/0, MT-Bench q81 writing.
+* **work** — this C1: failing-test fix, patch review, Harbor-style debug, tool call, vLLM-XPU serve triage.
+
+The sky prompt remains the frozen **gate** in `vllm-dflash-instrument.py` only. Report `by_suite` medians; do not average eval math with work coding.
+
+### Work+eval 3×256 (same cell, after prompt fix)
+
+| Prompt | Suite | Decode tok/s | Acc / draft run |
+|---|---|---:|---:|
+| mtbench-81 | eval | 55.167 | **1.656** |
+| review-race-patch | work | 67.253 | 2.283 |
+| gsm8k-janet | eval | 86.529 | 3.151 |
+| tool-pytest | work | 99.822 | 3.925 |
+| fail-test-fix | work | 100.876 | 3.935 |
+| harbor-debug | work | 110.061 | 4.354 |
+| humaneval-0 | eval | 117.498 | 4.558 |
+| serve-oom-triage | work | 152.325 | 6.168 |
+
+Across-prompt median **100.3** tok/s / **3.93** acc/run. Suite medians: eval **86.5 / 3.15**, work **100.9 / 3.94**. Receipt: `acceptance-char-work-eval-3x256.json`.
+
+Chat/writing (MT-Bench, and the frozen sky gate at 1.56) is the hard cluster. Real GSM8K is ~3.2, not 6.8. HumanEval and Harbor-style coding sit ~4.3–4.6. The fake AIME 6.8 was an easy-algebra artifact.
+
 ## Next
 
 vLLM `extract_hidden_states` on this Muse GPTQ/XPU cell is **blocked**: after the aux-layer config is accepted, engine init asserts in `HiddenStateCacheSpec.page_size_bytes` (`page_size_padded >= unpadded_page_size_bytes`). Reproduced with fp8 and default KV. Do not keep bouncing C1 on that path.

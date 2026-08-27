@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Dump target hidden states via vLLM extract_hidden_states (non-streaming).
 
-Uses the same 8 characterization prompts so calibration mixes hard and easy
-acceptance trajectories. Writes a manifest next to the safetensors files.
+Uses the shared characterization prompts. Writes a manifest next to the
+safetensors files. extract_hidden_states is currently blocked on this Muse/XPU
+cell; keep this driver in sync anyway.
 """
 from __future__ import annotations
 
@@ -10,20 +11,13 @@ import json
 import sys
 import time
 import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dflash_char_prompts import PROMPTS
 
 BASE = "http://127.0.0.1:8000"
 MODEL = "muse-glimmer-gptq"
-
-PROMPTS = (
-    ("sky-rayleigh", "Explain in detail why the sky is blue. Cover Rayleigh scattering, wavelength dependence, and why sunsets look red. Write complete sentences."),
-    ("python-heap", "Write a complete Python 3 implementation of a binary min-heap with push, pop, and heapify. Include a short correctness argument and a few doctest-style examples. Do not skip methods."),
-    ("aime-style", "Solve step by step: a contest has 12 problems. Each problem is worth either 1, 2, or 3 points. There are twice as many 2-point problems as 1-point problems, and the total score of all problems is 25. How many 3-point problems are there? Show all algebra."),
-    ("kv-cache-systems", "Explain paged KV cache, prefix caching, and why speculative decoding changes the verify batch shape. Cover memory layout, fragmentation, and what breaks if max-num-seqs is 1. Write a thorough technical note."),
-    ("tool-json", "Produce a JSON schema and two valid example payloads for a calendar tool with actions create, update, and cancel. Include timezone, recurrence, and attendee fields. Then explain validation failure modes."),
-    ("es-history", "Explica en espanol, con oraciones completas, la diferencia entre la Reconquista y la unificacion de Castilla y Aragon. Incluye fechas clave y por que importa para la historia moderna de Espana."),
-    ("debug-race", "A Python asyncio service randomly drops websocket messages under load. Walk through a debugging plan, likely causes (backpressure, task cancellation, shared mutable state), and a patched sketch."),
-    ("agent-plan", "Plan a local-only research agent that searches files, writes a report, and asks for confirmation before deleting anything. Detail tools, failure recovery, and a 12-step runbook for a first task."),
-)
 
 
 def complete(prompt: str, max_tokens: int, save_path: str) -> dict:
@@ -67,14 +61,21 @@ def complete(prompt: str, max_tokens: int, save_path: str) -> dict:
 
 
 def main() -> None:
-    host_dir = sys.argv[1] if len(sys.argv) > 1 else "/home/mike/b70-evals/muse-glimmer/20260826T-vllm-dflash-hidden-capture/hidden_states"
+    host_dir = sys.argv[1] if len(sys.argv) > 1 else (
+        "/home/mike/b70-evals/muse-glimmer/20260826T-vllm-dflash-hidden-capture/hidden_states"
+    )
     max_tokens = int(sys.argv[2]) if len(sys.argv) > 2 else 256
     container_dir = "/hidden_states"
     rows = []
-    for name, prompt in PROMPTS:
+    for item in PROMPTS:
+        name = item["id"]
         save_path = f"{container_dir}/{name}.safetensors"
         print(f"-- {name} -> {save_path}", flush=True)
-        row = {"id": name, **complete(prompt, max_tokens, save_path)}
+        row = {
+            "id": name,
+            "suite": item.get("suite"),
+            **complete(item["prompt"], max_tokens, save_path),
+        }
         rows.append(row)
         print(json.dumps(row, sort_keys=True), flush=True)
     manifest = {

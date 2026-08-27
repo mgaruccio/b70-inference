@@ -15,84 +15,13 @@ import statistics
 import sys
 import time
 import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dflash_char_prompts import PROMPTS
 
 BASE = "http://127.0.0.1:8000"
 MODEL = "muse-glimmer-gptq"
-
-PROMPTS = (
-    {
-        "id": "sky-rayleigh",
-        "kind": "reasoning",
-        "prompt": (
-            "Explain in detail why the sky is blue. Cover Rayleigh scattering, "
-            "wavelength dependence, and why sunsets look red. Write complete sentences."
-        ),
-    },
-    {
-        "id": "python-heap",
-        "kind": "coding",
-        "prompt": (
-            "Write a complete Python 3 implementation of a binary min-heap with "
-            "push, pop, and heapify. Include a short correctness argument and a "
-            "few doctest-style examples. Do not skip methods."
-        ),
-    },
-    {
-        "id": "aime-style",
-        "kind": "math",
-        "prompt": (
-            "Solve step by step: a contest has 12 problems. Each problem is worth "
-            "either 1, 2, or 3 points. There are twice as many 2-point problems as "
-            "1-point problems, and the total score of all problems is 25. How many "
-            "3-point problems are there? Show all algebra."
-        ),
-    },
-    {
-        "id": "kv-cache-systems",
-        "kind": "long-form",
-        "prompt": (
-            "Explain paged KV cache, prefix caching, and why speculative decoding "
-            "changes the verify batch shape. Cover memory layout, fragmentation, "
-            "and what breaks if max-num-seqs is 1. Write a thorough technical note."
-        ),
-    },
-    {
-        "id": "tool-json",
-        "kind": "tool-like",
-        "prompt": (
-            "Produce a JSON schema and two valid example payloads for a calendar "
-            "tool with actions create, update, and cancel. Include timezone, "
-            "recurrence, and attendee fields. Then explain validation failure modes."
-        ),
-    },
-    {
-        "id": "es-history",
-        "kind": "multilingual",
-        "prompt": (
-            "Explica en espanol, con oraciones completas, la diferencia entre "
-            "la Reconquista y la unificacion de Castilla y Aragon. Incluye fechas "
-            "clave y por que importa para la historia moderna de Espana."
-        ),
-    },
-    {
-        "id": "debug-race",
-        "kind": "coding",
-        "prompt": (
-            "A Python asyncio service randomly drops websocket messages under "
-            "load. Walk through a debugging plan, likely causes (backpressure, "
-            "task cancellation, shared mutable state), and a patched sketch."
-        ),
-    },
-    {
-        "id": "agent-plan",
-        "kind": "agentic",
-        "prompt": (
-            "Plan a local-only research agent that searches files, writes a "
-            "report, and asks for confirmation before deleting anything. Detail "
-            "tools, failure recovery, and a 12-step runbook for a first task."
-        ),
-    },
-)
 
 
 def chat(prompt: str, max_tokens: int) -> dict:
@@ -206,7 +135,7 @@ def main() -> None:
     prompt_results = []
     print(f"== characterization prompts={len(PROMPTS)} reps={reps} max_tokens={max_tokens} ==")
     for item in PROMPTS:
-        print(f"-- {item['id']} ({item['kind']}) warmup --", flush=True)
+        print(f"-- {item['id']} ({item.get('suite', '?')}/{item['kind']}) warmup --", flush=True)
         chat(item["prompt"], max_tokens)
         pre = scrape_spec_counters()
         print(f"-- {item['id']} measured --", flush=True)
@@ -216,7 +145,9 @@ def main() -> None:
         acc = acceptance_stats(deltas)
         summary = {
             "id": item["id"],
+            "suite": item.get("suite"),
             "kind": item["kind"],
+            "source": item.get("source"),
             "rows": rows,
             "median_decode_tok_s": median([r["decode_tok_s"] for r in rows]),
             "median_e2e_tok_s": median([r["e2e_tok_s"] for r in rows]),
@@ -240,6 +171,23 @@ def main() -> None:
         for p in prompt_results
         if p["acceptance"]["accepted_per_draft_run"] is not None
     ]
+    by_suite = {}
+    for p in prompt_results:
+        suite = p.get("suite") or "unknown"
+        by_suite.setdefault(suite, {"decode": [], "acc": []})
+        if p["median_decode_tok_s"] is not None:
+            by_suite[suite]["decode"].append(p["median_decode_tok_s"])
+        acc = p["acceptance"]["accepted_per_draft_run"]
+        if acc is not None:
+            by_suite[suite]["acc"].append(acc)
+    suite_summary = {
+        suite: {
+            "median_decode_tok_s": median(vals["decode"]),
+            "median_accepted_per_draft_run": median(vals["acc"]),
+            "n": len(vals["acc"]),
+        }
+        for suite, vals in by_suite.items()
+    }
     out = {
         "reps": reps,
         "max_tokens": max_tokens,
@@ -252,6 +200,7 @@ def main() -> None:
         "across_prompt_median_accepted_per_draft_run": median(accs),
         "across_prompt_min_accepted_per_draft_run": round(min(accs), 4) if accs else None,
         "across_prompt_max_accepted_per_draft_run": round(max(accs), 4) if accs else None,
+        "by_suite": suite_summary,
     }
     with open(out_path, "w") as f:
         json.dump(out, f, indent=2)
@@ -259,6 +208,7 @@ def main() -> None:
     print("across_prompt_median_accepted_per_draft_run", out["across_prompt_median_accepted_per_draft_run"])
     print("across_prompt_min_accepted_per_draft_run", out["across_prompt_min_accepted_per_draft_run"])
     print("across_prompt_max_accepted_per_draft_run", out["across_prompt_max_accepted_per_draft_run"])
+    print("by_suite", json.dumps(suite_summary, sort_keys=True))
     print("saved", out_path)
 
 
