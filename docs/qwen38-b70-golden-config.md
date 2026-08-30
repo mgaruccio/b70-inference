@@ -26,19 +26,22 @@ A public streaming `/v1/chat/completions` test with thinking disabled, 256 gener
 
 ## Maximum-context proven profile — temporary C1 experiment
 
-Receipt: `~/b70-evals/qwen38-b70-gptq-int4-mtp4/20260830T193253Z-champion-max-context/`.
+Receipts:
+
+- KV-offload: `~/b70-evals/qwen38-b70-gptq-int4-mtp4/20260830T193253Z-champion-max-context/`
+- No-offload: `~/b70-evals/qwen38-b70-gptq-int4-mtp4/20260830T201650Z-champion-max-context-nooffload-high/`
 
 - Highest **tested** successful `max-model-len`: **212,992** (the boundary between this and 229,376 was not narrowed).
-- Required changes from the performance golden: `gpu-memory-utilization=0.95`, `max-num-seqs=1`, native KV offload (`--kv-offloading-backend native --kv-offloading-size 8`) with the filesystem tier mounted at `/kv-offload`, and `--mamba-cache-mode align`.
+- Required changes from the performance golden: `gpu-memory-utilization=0.95`, `max-num-seqs=1`, and `--mamba-cache-mode align`.
 - Keeps the performance golden's model, image, MTP-4, Draft-INT4 S+M1, v5 mixed-split, FP8 KV, prefix cache, XPU graph, and 230 W cap.
-- A streamed near-limit request used 212,222 prompt tokens and generated 106 tokens (212,328 total): TTFT 447.948 s, prefill **473.765 tok/s**, post-first decode **37.598 tok/s**.
-- `262144`, `245760`, and `229376` failed initialization; do not claim native 262k support on this B70 profile.
+- **KV offload is not required for 212,992:** with and without native 8 GiB KV offload, 262,144, 245,760, and 229,376 failed initialization while 212,992 succeeded. It did not extend the tested context boundary.
+- No-offload near-limit result: 212,222 prompt + 106 completion tokens (212,328 total), TTFT 444.738 s, prefill **477.184 tok/s**, post-first decode **36.026 tok/s**.
 
 The experiment restores the performance golden afterward. Do not serve this C1/context profile as the normal 64-sequence endpoint.
 
 ## Why these profiles differ
 
-`max-model-len` includes prompt and generated tokens. The long-context profile reserves more KV capacity and uses C1/offload; an active ~212k request therefore cannot retain short-context decode speed.
+`max-model-len` includes prompt and generated tokens. The long-context profile reserves more GPU KV capacity and uses C1; an active ~212k request therefore cannot retain short-context decode speed. KV offload did not raise the tested boundary on this stack.
 
 References used when defining the experiment:
 
