@@ -23,8 +23,9 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM st
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
 - Parked llama.cpp / SYCL notes: [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
 - **Qwen research plan:** [`docs/qwen38-b70-research-plan-20260824.md`](docs/qwen38-b70-research-plan-20260824.md)
-## Tooling
+- **Qwen 200k context (2026-08-30):** [`docs/qwen38-b70-200k-context-20260830.md`](docs/qwen38-b70-200k-context-20260830.md) — live stays 131k @ 0.88 / 64 seqs; C1 @ 0.95 filled **195,992 + 32** tokens
 
+## Tooling
 - `scripts/glimmer-phase0-instrument.py` — public `/v1/chat/completions`
   SSE client. Splits TTFT / prefill / decode, reasoning vs content, and
   per-slot DFlash acceptance from the llama-server log.
@@ -34,6 +35,7 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM st
   and P0 MTP tracer for the pinned vLLM XPU image.
 - `scripts/compare_qwen38_b70_p0_traces.py` — offline trace compare.
 - `scripts/vllm-dflash-share-suite.py` — quoteable DFlash C1 suite (stop + content + checks). Protocol: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md).
+- `scripts/qwen38-ctx-ceiling-sweep.sh` / `scripts/qwen38-200k-fill.sh` — host-only Qwen KV ceiling and 200k filled-completion soak.
 
 Muse vLLM launcher is `scripts/start-muse-vllm-dflash-c1-graph-draft-gptq.sh`. Older host copies under `~/inference/launchers/` are fallbacks if `/tmp` was wiped.
 

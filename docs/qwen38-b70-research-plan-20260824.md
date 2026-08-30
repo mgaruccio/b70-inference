@@ -4,6 +4,9 @@ This plan turns the GPT-pro B70/Qwen 3.8 backlog into executable research
 tracks. It is grounded in the 2026-08-23 handoff, not a blank-slate Yukon
 port.
 
+Context ceiling measured 2026-08-30 (live launcher still 131k @ 0.88):
+[`qwen38-b70-200k-context-20260830.md`](qwen38-b70-200k-context-20260830.md).
+
 ## Authority
 
 - Original request: produce a research plan for each GPT-pro possibility.

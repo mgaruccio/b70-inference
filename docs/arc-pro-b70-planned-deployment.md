@@ -31,7 +31,7 @@ tmux new -s qwen38 '~/inference/launchers/start-qwen38.sh'
 tmux new -s muse '~/inference/launchers/start-muse-glimmer.sh'
 ```
 
-Qwen uses fp8 KV cache, 131,072-token maximum context, a 0.88 GPU-memory target, and MTP-4. Muse uses full Vulkan offload (`-ngl 99`), Meta's Dynamic Q4 GGUF, multimodal projector, and DFlash drafter. Both settings need actual-host validation; do not treat third-party benchmark claims as results for this machine.
+Qwen **live** uses fp8 KV cache, **131,072**-token maximum context, a **0.88** GPU-memory target, MTP-4, and `--max-num-seqs 64`. A disposable C1 profile at **0.95 / 200,000 / max-num-seqs 1** booted and completed a **195,992 + 32** token request (see [`qwen38-b70-200k-context-20260830.md`](qwen38-b70-200k-context-20260830.md)). That is not the live launcher. Muse uses full Vulkan offload (`-ngl 99`), Meta's Dynamic Q4 GGUF, multimodal projector, and DFlash drafter. Do not treat third-party benchmark claims as results for this machine.
 
 ## Evaluation procedure
 

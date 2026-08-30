@@ -79,3 +79,4 @@ offloaded (volatility). Target/prefix blocks are.
 - [vLLM KV offloading](https://github.com/vllm-project/vllm/blob/main/docs/features/kv_offloading_usage.md) — native CPU tier, XPU supported.
 - B70 cookbook Qwen recipe: default characterization is cache-off; agentic/concurrent launch adds `--enable-prefix-caching`.
 - This pin exposes `mamba_cache_mode` in `{all, align, none}` (`align` for hybrid GDN) and `kv_offloading_size` in GiB.
+- 200k C1 soak and `/dev/shm` offload leak: [`qwen38-b70-200k-context-20260830.md`](qwen38-b70-200k-context-20260830.md).
