@@ -23,7 +23,7 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM st
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
 - Parked llama.cpp / SYCL notes: [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
 - **Qwen research plan:** [`docs/qwen38-b70-research-plan-20260824.md`](docs/qwen38-b70-research-plan-20260824.md)
-- **Qwen 200k context (2026-08-30):** [`docs/qwen38-b70-200k-context-20260830.md`](docs/qwen38-b70-200k-context-20260830.md) — live stays 131k @ 0.88 / 64 seqs; C1 @ 0.95 filled **195,992 + 32** tokens
+- **Qwen B70 golden configurations:** [`docs/qwen38-b70-golden-config.md`](docs/qwen38-b70-golden-config.md) — verified 95.806 tok/s performance profile and 212,992-token C1 profile.
 
 ## Tooling
 - `scripts/glimmer-phase0-instrument.py` — public `/v1/chat/completions`
