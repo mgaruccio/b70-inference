@@ -24,6 +24,19 @@ The host launcher is `~/inference/launchers/start-qwen38.sh`. Do not replace it 
 
 A public streaming `/v1/chat/completions` test with thinking disabled and 256 generated tokens measured client post-first-token decode as `(completion_tokens - 1) / (stream end - first SSE choices chunk)`: **95.432 tok/s median** across five runs (95.419–95.458). It excludes TTFT but remains client-side, not pure engine decode; this is a short-prompt `g256` measurement.
 
+### C1 active-context sweep
+
+Receipt: `~/b70-evals/qwen38-b70-gptq-int4-mtp4/20260830T214516Z-champion-context-sweep/`.
+
+Each point used a unique leading prefix to prevent inter-point cache reuse, thinking disabled, and 256 generated tokens. Decode uses `(completion_tokens - 1) / (stream end - first SSE choices chunk)`; prefill is `prompt_tokens / TTFT`.
+
+| Active prompt tokens | Prefill tok/s | Post-first decode tok/s |
+| ---: | ---: | ---: |
+| 32,016 | 1,396.507 | 81.007 |
+| 64,776 | 1,107.730 | 71.717 |
+| 97,546 | 833.241 | 63.699 |
+| 129,547 | 719.508 | 57.346 |
+
 ## Maximum-context proven profile — temporary C1 experiment
 
 Receipts:
