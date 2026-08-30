@@ -22,7 +22,7 @@ The host launcher is `~/inference/launchers/start-qwen38.sh`. Do not replace it 
 
 ### Verification
 
-A public streaming `/v1/chat/completions` test with thinking disabled, 256 generated tokens, measured client post-first-token decode at **95.806 tok/s median** across five runs (95.793–95.832). This is a short-prompt `g256` measurement, not a long-context claim.
+A public streaming `/v1/chat/completions` test with thinking disabled and 256 generated tokens measured client post-first-token decode as `(completion_tokens - 1) / (stream end - first SSE choices chunk)`: **95.432 tok/s median** across five runs (95.419–95.458). It excludes TTFT but remains client-side, not pure engine decode; this is a short-prompt `g256` measurement.
 
 ## Maximum-context proven profile — temporary C1 experiment
 
@@ -35,7 +35,7 @@ Receipts:
 - Required changes from the performance golden: `gpu-memory-utilization=0.95`, `max-num-seqs=1`, and `--mamba-cache-mode align`.
 - Keeps the performance golden's model, image, MTP-4, Draft-INT4 S+M1, v5 mixed-split, FP8 KV, prefix cache, XPU graph, and 230 W cap.
 - **KV offload is not required for 212,992:** with and without native 8 GiB KV offload, 262,144, 245,760, and 229,376 failed initialization while 212,992 succeeded. It did not extend the tested context boundary.
-- No-offload near-limit result: 212,222 prompt + 106 completion tokens (212,328 total), TTFT 444.738 s, prefill **477.184 tok/s**, post-first decode **36.026 tok/s**.
+- No-offload near-limit result: 212,222 prompt + 106 completion tokens (212,328 total), TTFT 444.738 s, prefill **477.184 tok/s**, client post-first decode **35.686 tok/s** using `(completion_tokens - 1) / (stream end - first SSE choices chunk)`.
 
 The experiment restores the performance golden afterward. Do not serve this C1/context profile as the normal 64-sequence endpoint.
 
