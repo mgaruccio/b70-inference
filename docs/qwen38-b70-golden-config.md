@@ -11,6 +11,7 @@ This is the active service on port 8000.
 - Model: `SergiioB/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16`
 - Image: `vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f`
 - Served model ID: `qwen38`
+- API base URL: `http://inference-host:8000/v1`; no API-key authentication is configured.
 - Power: `power/control=on`, Xe `power1_cap=230000000`
 - Context: `131072`; GPU-memory utilization: `0.88`; `max-num-seqs=64`; `max-num-batched-tokens=8192`
 - FP8 KV cache, MTP-4, XPU graph enabled, prefix caching enabled.
