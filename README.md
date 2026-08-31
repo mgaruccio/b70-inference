@@ -12,7 +12,7 @@ Two models share the card. Only one is resident at a time.
 | Model | Engine | Spec | Current C1 decode | Notes |
 | --- | --- | --- | ---: | --- |
 | **Muse Glimmer 30B GPTQ** | vLLM XPU | DFlash n=20, GPTQ draft | **89.1 / 101.1 / 42.6** tok/s (GSM8K / HumanEval / MT-Bench, greedy, until stop) | Moved to [muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70) |
-| Qwen3.8-27B GPTQ-Int4 | vLLM XPU | MTP-4, FP8 KV | 57–62 tok/s short decode | Prefix cache helps TTFT, not decode |
+| Qwen3.8-27B GPTQ-Int4 | vLLM XPU | MTP-4, FP8 KV | **35.686** tok/s at 212k active context; **95.432** short-context reference | Default: 212,992-token C1, no KV offload |
 
 Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM stack is a different path (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
 
@@ -23,7 +23,7 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM st
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
 - Parked llama.cpp / SYCL notes: [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
 - **Qwen research plan:** [`docs/qwen38-b70-research-plan-20260824.md`](docs/qwen38-b70-research-plan-20260824.md)
-- **Qwen B70 golden configurations:** [`docs/qwen38-b70-golden-config.md`](docs/qwen38-b70-golden-config.md) — verified 95.806 tok/s performance profile and 212,992-token C1 profile.
+- **Qwen B70 default configuration:** [`docs/qwen38-b70-golden-config.md`](docs/qwen38-b70-golden-config.md) — active 212,992-token C1 no-offload profile; 95.432 tok/s short-context reference.
 
 ## Tooling
 - `scripts/glimmer-phase0-instrument.py` — public `/v1/chat/completions`
