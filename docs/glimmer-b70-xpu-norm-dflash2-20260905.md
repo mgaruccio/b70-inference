@@ -138,11 +138,79 @@ python /experiment/glimmer_xpu_w4a16.py --check --bench \
 
 Artifacts: `kernel-micro/` and `kernel-micro-transposed/` under the same campaign
 root, including exact source variants, results, stderr and Triton JIT caches.
-The next credible kernel investigation is exact-version oneDNN/Xe2 GEMM strategy
-specialization. Local source reconnaissance found `GEMM_KERNEL` selection gated
-by `DNNL_DEV_MODE`; release builds ignore it. That requires matching the shipped
-oneDNN revision and an isolated dev build, neither established by this prototype.
 Do not infer that a generic Triton replacement will beat the current kernel.
+
+## Matched oneDNN/Xe2 strategy sweep: no substantial gain
+
+Binary inspection of the installed 0.1.13.2 `_xpu_C.abi3.so` found embedded
+oneDNN revision `0e2a5bfeef1bfbffc3137464606540233086ce9b`. This establishes the
+oneDNN revision, not the exact wrapper source or a full wheel reproduction.
+An isolated development build of that revision succeeded using
+`intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04` (icpx 2026.0.0):
+
+```bash
+cmake -S /work/src -B /work/build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx \
+  -DDNNL_CPU_RUNTIME=NONE -DDNNL_GPU_RUNTIME=SYCL \
+  -DDNNL_GPU_VENDOR=INTEL -DDNNL_DEV_MODE=ON \
+  -DDNNL_BUILD_GRAPH=OFF -DDNNL_BUILD_EXAMPLES=OFF \
+  -DDNNL_BUILD_TESTS=ON -DDNNL_ENABLE_PRIMITIVE_GPU_ISA=XE2 \
+  -DDNNL_ENABLE_WORKLOAD=INFERENCE -DDNNL_LIBRARY_TYPE=SHARED
+cmake --build /work/build --target benchdnn -j4
+```
+
+The disposable GPU container used `/dev/dri`, its render group,
+`ONEAPI_DEVICE_SELECTOR=level_zero:gpu`, `ZE_AFFINITY_MASK=0` and
+`ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE`. No vLLM service ran concurrently.
+Benchdnn arguments preserved unsigned INT4 weights, group-128 FP16 scales,
+zero point 8, FP16 input/output and the physical weight layout:
+
+```bash
+/work/build/tests/benchdnn/benchdnn --matmul --mode=C --engine=gpu \
+  --dt=f16:u4:f16 --stag=ab --wtag=ba --dtag=ab \
+  --attr-scales=wei:3:f16:128x1 --attr-zero-points=wei:common:8:s8 \
+  --attr-fpmath=f16:true --attr-scratchpad=user 32x6656:6656x39936
+# Repeat with --mode=P only after correctness passes.
+# Other shapes: 2x128:128x64 (preflight), 32x19968:19968x6656 (down).
+```
+
+Separate correctness and performance modes are required in this revision;
+`--mode=CP` is rejected. Unforced correctness passed all three shapes; average
+performance was **277.664 µs gate/up**, **147.369 µs down**, close to the shipped
+operator. The selected Xe2 strategy used 16×16 subgroup tiles.
+
+Development-only `GEMM_KERNEL` overrides must preserve the actual external
+types: use `gemm fH[SH] T@16N@16N ...`, not the generic catalog's `FHS` string.
+Here `f` is unsigned INT4 and `[SH]` preserves FP32 accumulation with FP16 output.
+The forced control passed correctness and reproduced the unforced timings.
+
+Eight strategies tested larger tiles, 256 GRFs and local-K workgroup sizes.
+Every strategy passed tiny, gate/up and down correctness checks before timing.
+Average microseconds for the sweep control versus the best candidate:
+
+- Control 16×16, workgroup 8×1×2: **277.953 gate/up**, **147.605 down**.
+- 16×32, workgroup 8×1×4, GRF256: **274.986 gate/up**, **145.433 down**.
+
+These approximately **1.1% / 1.5%** microbenchmark improvements are too small,
+and not independently repeated, to justify a serving integration. Other variants
+were effectively tied or slower. The 350 tok/s goal requires about 8.5% less
+end-to-end time than the retained 320.3 tok/s result. GEMM dominance identifies a
+bottleneck; it does not prove a comparable amount of removable inefficiency.
+No kernel variant was promoted or claimed to improve public-API throughput.
+
+Artifacts: `onednn-source/binary-inspection.txt`, `onednn-dev/build.log`,
+`onednn-dev/*correctness.log`, `onednn-dev/*performance.log`, and
+`onednn-dev/strategy-sweep/` under the campaign root. Exact overrides, individual
+C/P logs and `results.json` are retained there; `onednn-dev/sweep.py` reproduces
+the eight-case sequence. Performance-only rows' `correctness_pass: false` means
+that mode prints no correctness result; the preceding separate C rows passed.
+The build and benchmark containers were removed automatically; `docker ps` was
+empty after the sweep. Source/build caches remain available for further work.
+
+Primary sources at the matched revision:
+- [Build options](https://github.com/uxlfoundation/oneDNN/blob/0e2a5bfeef1bfbffc3137464606540233086ce9b/cmake/options.cmake): enable developer mode in an isolated build.
+- [Matmul driver](https://github.com/uxlfoundation/oneDNN/blob/0e2a5bfeef1bfbffc3137464606540233086ce9b/tests/benchdnn/doc/driver_matmul.md) and [attribute knobs](https://github.com/uxlfoundation/oneDNN/blob/0e2a5bfeef1bfbffc3137464606540233086ce9b/tests/benchdnn/doc/knobs_attr.md): reproduce the quantized operator's layout and attributes.
+- [Kernel strategy override](https://github.com/uxlfoundation/oneDNN/blob/0e2a5bfeef1bfbffc3137464606540233086ce9b/src/gpu/intel/gemm/jit/gen_kernel.cpp): explicit types and strategy selection are necessary for a safe forced-kernel test.
 
 ## Commands and artifacts
 
