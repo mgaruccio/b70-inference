@@ -18,11 +18,12 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM st
 
 ## New Glimmer concurrency profile — 2026-09-05
 
-**C8 / DFlash K3 / native 131072 context:** **303.1 aggregate e2e tok/s** at eight clients after long-context stress, on the matched 256-output-token workload. The same-session K4 baseline was **282.2** (**+7.4%**); the earlier native-context K4 result was 278.1. This is not per-stream decode and is separate from the completed-answer table above.
+**C8 / DFlash K3 / native 131072 context:** **303.1 aggregate e2e tok/s** at eight clients after long-context stress, on the matched 256-output-token workload. The same-session K4 baseline was **282.2** (**+7.4%**); the earlier native-context K4 result was 278.1. This is not per-stream decode and is separate from the completed-answer table above. A later 350 tok/s attempt did not beat this bar with a reproducible launcher change.
 
 K3 passed 16/16 completed-answer smoke checks, eight concurrently resident ~64k prompts, dynamic queue/drain, and single-request ~129k retrieval, with zero preemptions. **Known limit:** the earlier K4 forced-length, near-capacity six-request empty-response failure was not retested or fixed. Keep this as a research profile, not an unrestricted production-safety claim.
 
 - [K3 hill-climb, repeated measurements, and exact validation](docs/glimmer-b70-hillclimb-20260905.md)
+- [350 attempt: scheduler/kernel sweep, 350 not reached](docs/glimmer-b70-hillclimb-350-20260905.md)
 - [Original public K4 configuration and reproduction](https://github.com/mgaruccio/muse-glimmer-b70/blob/main/docs/concurrency.md)
 - [Original K4 concurrency/context measurements and caveats](docs/glimmer-b70-concurrency-20260905.md)
 - [Separate C8/K3 launcher](scripts/start-muse-vllm-concurrent.sh) — localhost port 18080; original C1 and Qwen defaults unchanged.
