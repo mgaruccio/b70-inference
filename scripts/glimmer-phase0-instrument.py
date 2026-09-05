@@ -181,7 +181,7 @@ def stream_once(
             choice = (data.get("choices") or [{}])[0]
             finish = choice.get("finish_reason") or finish
             delta = choice.get("delta") or {}
-            reason = delta.get("reasoning_content") or ""
+            reason = delta.get("reasoning") or delta.get("reasoning_content") or ""
             content = delta.get("content") or ""
             now = time.monotonic()
             if reason:
