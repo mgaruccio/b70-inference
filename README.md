@@ -18,13 +18,14 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM st
 
 ## New Glimmer concurrency profile — 2026-09-05
 
-**C8 / DFlash K4 / native 131072 context:** **278.1 aggregate e2e tok/s** at eight clients on the matched 256-output-token workload, versus **48.1** with the original C1/K20 scheduler (**5.8×**). This is not per-stream decode and is separate from the completed-answer table above.
+**C8 / DFlash K3 / native 131072 context:** **303.1 aggregate e2e tok/s** at eight clients after long-context stress, on the matched 256-output-token workload. The same-session K4 baseline was **282.2** (**+7.4%**); the earlier native-context K4 result was 278.1. This is not per-stream decode and is separate from the completed-answer table above.
 
-Eight ~64k prompts were concurrently resident with zero preemptions; dynamic admission/queue drain and six ordinary ~129k requests also passed. **Known limit:** a forced-length, near-capacity six-request test produced two empty responses. Keep this as a research profile, not an unrestricted production-safety claim.
+K3 passed 16/16 completed-answer smoke checks, eight concurrently resident ~64k prompts, dynamic queue/drain, and single-request ~129k retrieval, with zero preemptions. **Known limit:** the earlier K4 forced-length, near-capacity six-request empty-response failure was not retested or fixed. Keep this as a research profile, not an unrestricted production-safety claim.
 
-- [Public configuration and reproduction](https://github.com/mgaruccio/muse-glimmer-b70/blob/main/docs/concurrency.md)
-- [Detailed measurements, exact test commands, and caveats](docs/glimmer-b70-concurrency-20260905.md)
-- [Separate C8/K4 launcher](scripts/start-muse-vllm-concurrent.sh) — localhost port 18080; original C1 and Qwen defaults unchanged.
+- [K3 hill-climb, repeated measurements, and exact validation](docs/glimmer-b70-hillclimb-20260905.md)
+- [Original public K4 configuration and reproduction](https://github.com/mgaruccio/muse-glimmer-b70/blob/main/docs/concurrency.md)
+- [Original K4 concurrency/context measurements and caveats](docs/glimmer-b70-concurrency-20260905.md)
+- [Separate C8/K3 launcher](scripts/start-muse-vllm-concurrent.sh) — localhost port 18080; original C1 and Qwen defaults unchanged.
 
 ## Start here
 
@@ -49,7 +50,7 @@ Eight ~64k prompts were concurrently resident with zero preemptions; dynamic adm
 - `scripts/reset-b70-gpu.sh` — manual B70 PCI-reset recovery for a stuck fan. Run `--status` first, then run `sudo scripts/reset-b70-gpu.sh --reset` only after every GPU workload has stopped.
 - `scripts/set-b70-headless.sh` — make `multi-user.target` the host default and disable Plasma Login so it cannot block a B70 reset; run once with `sudo scripts/set-b70-headless.sh --apply`.
 
-Original Muse C1/K20 launcher: `scripts/start-muse-vllm-dflash-c1-graph-draft-gptq.sh`. New C8/K4 native-context research launcher: `scripts/start-muse-vllm-concurrent.sh`. Older host copies under `~/inference/launchers/` are fallbacks if `/tmp` was wiped.
+Original Muse C1/K20 launcher: `scripts/start-muse-vllm-dflash-c1-graph-draft-gptq.sh`. New C8/K3 native-context research launcher: `scripts/start-muse-vllm-concurrent.sh`. Older host copies under `~/inference/launchers/` are fallbacks if `/tmp` was wiped.
 
 ## What this is not
 

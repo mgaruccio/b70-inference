@@ -1,5 +1,9 @@
 # Glimmer B70 concurrency and native context — 2026-09-05
 
+> Historical K4 measurements below. The launcher now defaults to K3 after the
+> [validated >300 tok/s hill-climb](glimmer-b70-hillclimb-20260905.md). Set
+> `num_speculative_tokens` back to 4 to reproduce this report's retained cell.
+
 ## Retained candidate
 
 `scripts/start-muse-vllm-concurrent.sh`: the established pinned vLLM-XPU image,

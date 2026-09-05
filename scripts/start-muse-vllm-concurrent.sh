@@ -1,5 +1,5 @@
 #!/bin/bash
-# B70 concurrency cell: GPTQ target/draft, XPU graphs, eight sequences, DFlash K4.
+# B70 concurrency cell: GPTQ target/draft, XPU graphs, eight sequences, DFlash K3.
 # Separate from the published C1/K20 recipe. Stop this container before Qwen.
 set -euo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,6 +33,6 @@ test -f "$PATCH"
       --port 8000 --max-num-seqs 8 --max-num-batched-tokens 2048 \
       --no-enable-prefix-caching --served-model-name muse-glimmer-gptq \
       --language-model-only --reasoning-parser muse_glimmer \
-      --speculative-config '\''{"method":"dflash","model":"/draft","num_speculative_tokens":4,"quantization":"gptq"}'\''
+      --speculative-config '\''{"method":"dflash","model":"/draft","num_speculative_tokens":3,"quantization":"gptq"}'\''
   '
-echo "Started $NAME: http://127.0.0.1:$PORT/v1 (C8, DFlash K4, 131072 context)"
+echo "Started $NAME: http://127.0.0.1:$PORT/v1 (C8, DFlash K3, 131072 context)"
