@@ -102,12 +102,56 @@ Profiled device-duration sums are not clean end-to-end latency or additive
 speedup guarantees. Any alternative GEMM must pass numerical comparison and
 then improve the original graph-enabled public C8 workload.
 
+## Experimental M32 Triton filter: rejected for serving
+
+`scripts/experimental/glimmer_xpu_w4a16.py` is a standalone experiment, not a
+serving patch. It implements the actual K-packed GPTQ layout, six bounded
+configurations, FP32 accumulation and deterministic split-K reduction. It loads
+the pinned oneDNN operator through `vllm._xpu_ops`, not bare Torch.
+
+Executed on an otherwise idle B70 in a temporary container from the original
+image, with kernels 0.1.13.2. All six configurations passed the full awkward
+`M13/K384/N77` reference and selected-column checks at the observed shapes.
+Observed maximum absolute FP32-reference errors were approximately 0.00023
+on the tail and 0.00082–0.00104 on the large shapes. References sample columns,
+not every large output element; the theoretical error bound is conservative,
+so these measured errors are reported separately. This is not model equivalence.
+
+Best original kernel, warm / three-bank rotating-weight median microseconds:
+
+- Gate/up: oneDNN **281.8 / 285.2**, Triton **1452.1 / 1458.5**.
+- Down: oneDNN **143.3 / 142.8**, Triton **810.0 / 814.7**.
+
+The oneDNN microbenchmark reproduces the profiled kernel cost reasonably well.
+The prototype is 5–6x slower and fails its 1.10x improvement filter. A remote-only
+algebraically equivalent transposed-dot variant also passed numerical checks
+but remained 4.2–4.7x slower. Neither was integrated into serving.
+
+Both drivers completed their checks/sweeps in about 11 seconds, excluding
+container/package startup, using this CLI (script mounted at `/experiment`):
+
+```bash
+python /experiment/glimmer_xpu_w4a16.py --check --bench \
+  --check-observed down --bench-shapes both --rotate-bank 3 \
+  --max-seconds 285 --pretty
+```
+
+Artifacts: `kernel-micro/` and `kernel-micro-transposed/` under the same campaign
+root, including exact source variants, results, stderr and Triton JIT caches.
+The next credible kernel investigation is exact-version oneDNN/Xe2 GEMM strategy
+specialization. Local source reconnaissance found `GEMM_KERNEL` selection gated
+by `DNNL_DEV_MODE`; release builds ignore it. That requires matching the shipped
+oneDNN revision and an isolated dev build, neither established by this prototype.
+Do not infer that a generic Triton replacement will beat the current kernel.
+
 ## Commands and artifacts
 
 Host: `mike@100.75.79.54` (`inference-host`, Intel Arc Pro B70); original image
 `vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f`.
 GPU was idle initially. Only session-owned `muse-b70-350-next` was restarted.
 No driver, power, persistent-service, or production-provider configuration changed.
+At cleanup both `muse-b70-350-next` and `muse-b70-kernel-micro` were absent,
+`docker ps` was empty, and the integrated writing worktree was removed.
 
 Artifacts on that host:
 `~/b70-evals/muse-glimmer/350-next-20260905T150730Z/`.
