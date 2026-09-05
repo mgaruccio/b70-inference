@@ -23,7 +23,9 @@ Usage inside the vLLM container:
   DFLASH_KV_MODE=timing python /patch-vllm-dflash-gptq-context-kv.py \
       /opt/venv/lib/python3.12/site-packages/vllm/model_executor/models/qwen3_dflash.py
 
-Modes: none (base only, v1 behavior) | timing | kvonly | kvonly+timing
+All modes also apply per-layer context K normalization on XPU to work around
+stacked RMSNorm weight indexing in vllm-xpu-kernels #573.
+Modes: none (base + XPU norm fix) | timing | kvonly | kvonly+timing
 """
 
 import os
@@ -44,9 +46,8 @@ if not orig_backup.exists():
     print(f"backup: saved pristine original to {orig_backup}")
 
 if MODE == "none":
-    # Restore the pristine vLLM file, then re-apply only the base fallback so
-    # the candidate keeps v1 behavior (per-layer packed-QKV loop), with all
-    # timing/fused markers stripped.
+    # Restore pristine vLLM, then re-apply the base packed-QKV fallback and
+    # XPU layerwise K normalization, with timing/fused markers stripped.
     path.write_text(orig_backup.read_text())
     print(f"restored pristine original from {orig_backup}")
     MODE = "base"  # apply base patch below from the clean file
@@ -146,6 +147,45 @@ else:
         raise RuntimeError("qwen3_dflash.py: project-context anchor missing or ambiguous")
     source = source.replace(old_project, new_project)
     applied.append("base")
+
+# XPU's pinned RMSNorm kernel accepts stacked weights but reads only row zero.
+# Keep the CUDA grouped path; use each layer's actual weight on XPU (#573).
+norm_marker = "# DFLASH_XPU_LAYERWISE_CONTEXT_K_NORM"
+if norm_marker not in source:
+    old_norm = '''        all_k_normed = torch.empty_like(all_k)
+        ops.rms_norm(
+            all_k_normed,
+            all_k,
+            self._k_norm_weights,
+            self._rms_norm_eps,
+        )
+        return all_k_normed
+'''
+    new_norm = '''        all_k_normed = torch.empty_like(all_k)
+        # DFLASH_XPU_LAYERWISE_CONTEXT_K_NORM
+        if all_k.device.type == "xpu" and self._k_norm_weights.ndim == 2:
+            if self._k_norm_weights.shape != (all_k.shape[0], all_k.shape[-1]):
+                raise ValueError("DFlash context K norm weights must match layers/head_dim")
+            for layer_idx in range(all_k.shape[0]):
+                ops.rms_norm(
+                    all_k_normed[layer_idx],
+                    all_k[layer_idx],
+                    self._k_norm_weights[layer_idx],
+                    self._rms_norm_eps,
+                )
+        else:
+            ops.rms_norm(
+                all_k_normed,
+                all_k,
+                self._k_norm_weights,
+                self._rms_norm_eps,
+            )
+        return all_k_normed
+'''
+    if source.count(old_norm) != 1:
+        raise RuntimeError("qwen3_dflash.py: context K norm anchor missing or ambiguous")
+    source = source.replace(old_norm, new_norm)
+    applied.append("xpu-layerwise-norm")
 
 # ----------------------------------------------------------------- timing
 timing_marker = "# DFLASH_GPTQ_CONTEXT_KV_TIMING"
