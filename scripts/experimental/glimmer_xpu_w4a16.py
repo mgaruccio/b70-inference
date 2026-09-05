@@ -308,9 +308,18 @@ def _validate_runtime() -> None:
     if not hasattr(torch, "xpu") or not torch.xpu.is_available():
         raise RuntimeError("an available PyTorch XPU device is required")
     if not hasattr(torch.ops._xpu_C, "int4_gemm_w4a16"):
+        try:
+            from vllm._xpu_ops import xpu_ops as _xpu_ops_registration
+        except Exception as exc:
+            raise RuntimeError(
+                "failed to register torch.ops._xpu_C.int4_gemm_w4a16 via "
+                "vllm._xpu_ops.xpu_ops"
+            ) from exc
+        del _xpu_ops_registration
+    if not hasattr(torch.ops._xpu_C, "int4_gemm_w4a16"):
         raise RuntimeError(
-            "torch.ops._xpu_C.int4_gemm_w4a16 is unavailable; run in the "
-            "specified vLLM XPU image"
+            "torch.ops._xpu_C.int4_gemm_w4a16 remained unavailable after "
+            "importing vllm._xpu_ops.xpu_ops"
         )
 
 
