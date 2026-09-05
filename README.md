@@ -16,6 +16,16 @@ Two models share the card. Only one is resident at a time.
 
 Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM stack is a different path (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
 
+## New Glimmer concurrency profile — 2026-09-05
+
+**C8 / DFlash K4 / native 131072 context:** **278.1 aggregate e2e tok/s** at eight clients on the matched 256-output-token workload, versus **48.1** with the original C1/K20 scheduler (**5.8×**). This is not per-stream decode and is separate from the completed-answer table above.
+
+Eight ~64k prompts were concurrently resident with zero preemptions; dynamic admission/queue drain and six ordinary ~129k requests also passed. **Known limit:** a forced-length, near-capacity six-request test produced two empty responses. Keep this as a research profile, not an unrestricted production-safety claim.
+
+- [Public configuration and reproduction](https://github.com/mgaruccio/muse-glimmer-b70/blob/main/docs/concurrency.md)
+- [Detailed measurements, exact test commands, and caveats](docs/glimmer-b70-concurrency-20260905.md)
+- [Separate C8/K4 launcher](scripts/start-muse-vllm-concurrent.sh) — localhost port 18080; original C1 and Qwen defaults unchanged.
+
 ## Start here
 
 - **Muse Glimmer post + recipe:** [mgaruccio/muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70)
@@ -39,7 +49,7 @@ Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM st
 - `scripts/reset-b70-gpu.sh` — manual B70 PCI-reset recovery for a stuck fan. Run `--status` first, then run `sudo scripts/reset-b70-gpu.sh --reset` only after every GPU workload has stopped.
 - `scripts/set-b70-headless.sh` — make `multi-user.target` the host default and disable Plasma Login so it cannot block a B70 reset; run once with `sudo scripts/set-b70-headless.sh --apply`.
 
-Muse vLLM launcher is `scripts/start-muse-vllm-dflash-c1-graph-draft-gptq.sh`. Older host copies under `~/inference/launchers/` are fallbacks if `/tmp` was wiped.
+Original Muse C1/K20 launcher: `scripts/start-muse-vllm-dflash-c1-graph-draft-gptq.sh`. New C8/K4 native-context research launcher: `scripts/start-muse-vllm-concurrent.sh`. Older host copies under `~/inference/launchers/` are fallbacks if `/tmp` was wiped.
 
 ## What this is not
 
