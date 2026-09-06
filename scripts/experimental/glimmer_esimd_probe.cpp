@@ -6,7 +6,7 @@
 // https://raw.githubusercontent.com/intel/llm-scaler/ede4320a24a67f664fb53081d2623f9efe9a75b7/vllm/custom-esimd-kernels-vllm/csrc/xpu/esimd_kernels/int4_GEMM.h
 //
 // Example build in intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04:
-//   icpx -O2 -std=c++17 -fsycl -fsycl-targets=spir64_gen \
+//   icpx -O2 -std=c++17 -fsycl \
 //     -I"$LLM_SCALER_SRC/vllm/custom-esimd-kernels-vllm/csrc/xpu/esimd_kernels" \
 //     scripts/experimental/glimmer_esimd_probe.cpp -o glimmer_esimd_probe
 // Quick compile/run screen (the default also runs the two exact large shapes):

@@ -649,6 +649,7 @@ class CaptureRecorder:
         self.topk = _parse_int(topk, "topk", minimum=1)
         self.step = 0
         self.saved_steps = 0
+        self._label_counts: dict[str | None, tuple[int, int]] = {}
         if self.artifact_dir is not None and self.label is not None:
             self.artifact_dir.mkdir(parents=True, exist_ok=True)
 
@@ -658,8 +659,13 @@ class CaptureRecorder:
 
     def record(self, hidden_states: Any, logits: Any) -> None:
         torch = _require_torch()
+        label = resolve_label(self.label_file)
+        if label != self.label:
+            self.label = label
+            self.step, self.saved_steps = self._label_counts.get(label, (0, 0))
         step = self.step
         self.step += 1
+        self._label_counts[self.label] = (self.step, self.saved_steps)
         if not self.enabled or self.saved_steps >= self.max_steps:
             return
         if step % self.sample_stride:
@@ -682,12 +688,14 @@ class CaptureRecorder:
             "hidden_size": int(hidden_states.shape[-1]),
             "topk": topk,
         }
+        self.artifact_dir.mkdir(parents=True, exist_ok=True)
         filename = f"{self.label}-step{step:06d}-part{self.saved_steps:04d}.pt"
         destination = self.artifact_dir / filename
         temporary = destination.with_suffix(destination.suffix + ".tmp")
         torch.save(payload, temporary)
         os.replace(temporary, destination)
         self.saved_steps += 1
+        self._label_counts[self.label] = (self.step, self.saved_steps)
 
 
 @dataclass
@@ -787,6 +795,7 @@ def _validate_existing_contract(model: Any, vllm_config: Any, *, vocab_size: int
             )
 
     mapping_paths = (
+        "draft_id_to_target_id",
         "draft_to_target_token_mapping",
         "token_id_mapping",
         "vocab_mapping",
@@ -817,6 +826,7 @@ def _validate_existing_contract(model: Any, vllm_config: Any, *, vocab_size: int
             "heterogeneous draft vocabularies require an explicit mapping and are unsupported"
         )
     draft_vocab = _first_value(
+        (model, "config.draft_vocab_size"),
         (vllm_config, "speculative_config.draft_vocab_size"),
         (vllm_config, "draft_vocab_size"),
         (model, "draft_vocab_size"),
@@ -1122,7 +1132,8 @@ def _load_safetensors_head(index_path: Path, key: str) -> Any:
         if len(matches) != 1:
             raise DraftHeadError(f"head key {key!r} is absent from shard {shard}")
         key = matches[0]
-    weight = tensors[key]
+    # The checkpoint is BF16; the retained server explicitly loads FP16.
+    weight = tensors[key].to(dtype=_require_torch().float16)
     _validate_weight_tensor(weight, expected_shape=(VOCAB_SIZE, HIDDEN_SIZE))
     return weight
 
@@ -1155,14 +1166,16 @@ def _timing(
     k_values: Sequence[int],
     warmup: int,
     repeats: int,
+    representative_hidden: Any,
 ) -> list[dict[str, Any]]:
     torch = _require_torch()
-    generator = torch.Generator(device="cpu").manual_seed(42)
+    if warmup < 0 or repeats < 1 or representative_hidden.shape[0] < 1:
+        raise DraftHeadError("timing needs nonempty captures and positive repeats")
     rows: list[dict[str, Any]] = []
     for m in m_values:
-        hidden = torch.randn(
-            (m, hidden_size), generator=generator, dtype=torch.float16
-        ).to(device)
+        hidden = representative_hidden.repeat(
+            (math.ceil(m / representative_hidden.shape[0]), 1)
+        )[:m].to(device=device, dtype=torch.float16).contiguous()
         for k in k_values:
             for _ in range(warmup):
                 for _ in range(k):
@@ -1183,6 +1196,7 @@ def _timing(
                     "repeats": repeats,
                     "us_per_call": elapsed * 1e6 / calls,
                     "device": str(device),
+                    "input_source": "captured_draft_hidden_states",
                 }
             )
     return rows
@@ -1232,6 +1246,13 @@ def _probe(args: argparse.Namespace) -> dict[str, Any]:
         if not isinstance(hidden, torch.Tensor):
             hidden = torch.as_tensor(hidden)
         hidden = hidden.to(device=device)
+        saved_top1 = _payload_vector(payload.get("baseline_top1"))
+        if hidden.ndim != 2 or hidden.shape[0] < 1 or hidden.shape[1] != HIDDEN_SIZE:
+            raise DraftHeadError(f"empty or malformed hidden capture: {path}")
+        if len(saved_top1) != hidden.shape[0]:
+            raise DraftHeadError(f"saved top1 length does not match captured rows: {path}")
+        if not bool(torch.isfinite(hidden).all().item()):
+            raise DraftHeadError(f"nonfinite captured hidden states: {path}")
         dense_logits = torch.nn.functional.linear(hidden, weight)
         int4_logits = int4_head.logits(hidden)
         dequant_logits = _dequant_linear(
@@ -1241,13 +1262,17 @@ def _probe(args: argparse.Namespace) -> dict[str, Any]:
             logit_scale=1.0,
         )
         diff = (int4_logits.to(torch.float32) - dequant_logits.to(torch.float32)).abs()
+        for value in (dense_logits, int4_logits, dequant_logits):
+            if not bool(torch.isfinite(value).all().item()):
+                raise DraftHeadError(f"nonfinite probe logits: {path}")
+        if not torch.allclose(int4_logits.float(), dequant_logits.float(), atol=0.05, rtol=0.01):
+            raise DraftHeadError(f"INT4/dequant numerical mismatch at {path}: max_abs={diff.max().item()}")
         int4_dequant_abs_sum += float(diff.sum().item())
         int4_dequant_count += int(diff.numel())
         int4_dequant_max = max(int4_dequant_max, float(diff.max().item()))
         dense_top1 = dense_logits.argmax(dim=-1).detach().cpu()
         int4_top1 = int4_logits.argmax(dim=-1).detach().cpu()
         dequant_top1 = dequant_logits.argmax(dim=-1).detach().cpu()
-        saved_top1 = _payload_vector(payload.get("baseline_top1"))
         for expected, dense_id, int4_id, dequant_id in zip(
             saved_top1,
             dense_top1.tolist(),
@@ -1269,11 +1294,20 @@ def _probe(args: argparse.Namespace) -> dict[str, Any]:
                 heldout_coverage += int(dense_id in (shortlist_ids or ()))
                 heldout_agree += int(dense_id == short_id)
 
+    if baseline_total == 0 or dense_saved_agree != baseline_total:
+        raise DraftHeadError(
+            f"dense reference invalid: {dense_saved_agree}/{baseline_total} saved choices reproduced"
+        )
+    if shortlist_head is not None and heldout_total == 0:
+        raise DraftHeadError("shortlist probe needs nonempty held-out captures")
     report: dict[str, Any] = {
         "format": "glimmer-draft-head-probe-v1",
         "model_index": str(Path(args.model_index).expanduser()),
         "device": str(device),
         "captures": len(captures),
+        "rows": baseline_total,
+        "numerical_screen_passed": True,
+        "reference_tolerance": {"atol": 0.05, "rtol": 0.01},
         "dense_memory": {
             "shape": list(weight.shape),
             "dtype": str(weight.dtype),
@@ -1316,27 +1350,21 @@ def _probe(args: argparse.Namespace) -> dict[str, Any]:
     k_values = tuple(int(value) for value in args.k_values.split(",") if value)
     if not m_values or not k_values or any(value <= 0 for value in (*m_values, *k_values)):
         raise DraftHeadError("m-values and k-values must be positive comma-separated integers")
-    report["timing"] = {
-        "int4": _timing(
-            int4_head,
-            hidden_size=HIDDEN_SIZE,
-            device=device,
-            m_values=m_values,
-            k_values=k_values,
-            warmup=args.warmup,
-            repeats=args.repeats,
-        )
+    heads = {
+        "dense": lambda hidden: torch.nn.functional.linear(hidden, weight).argmax(dim=-1),
+        "int4": int4_head,
     }
     if shortlist_head is not None:
-        report["timing"]["shortlist"] = _timing(
-            shortlist_head,
-            hidden_size=HIDDEN_SIZE,
-            device=device,
-            m_values=m_values,
-            k_values=k_values,
-            warmup=args.warmup,
-            repeats=args.repeats,
+        heads["shortlist"] = shortlist_head
+    report["timing"] = {
+        name: _timing(
+            head, hidden_size=HIDDEN_SIZE, device=device,
+            m_values=m_values, k_values=k_values,
+            warmup=args.warmup, repeats=args.repeats,
+            representative_hidden=captures[0]["hidden_states"],
         )
+        for name, head in heads.items()
+    }
     return report
 
 

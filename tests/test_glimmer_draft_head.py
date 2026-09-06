@@ -201,3 +201,81 @@ def test_calibration_uses_calibration_labels_only_when_torch_is_available(
     assert artifact["heldout_labels"] == ["heldout"]
     assert artifact["token_ids"] == [0, 1, 2]
     assert artifact["not_spec_vocab_replication"] is True
+
+
+def test_capture_labels_appear_after_load_and_keep_independent_caps(draft_head, tmp_path):
+    torch = pytest.importorskip("torch")
+    label = tmp_path / "label.txt"
+    recorder = draft_head.CaptureRecorder(
+        artifact_dir=tmp_path / "captures", label_file=label,
+        max_steps=1, sample_stride=1, topk=2,
+    )
+    hidden = torch.ones((2, 4), dtype=torch.float16)
+    logits = torch.tensor([[1., 2., 3.], [3., 2., 1.]])
+    recorder.record(hidden, logits)  # Dummy initialization has no live label.
+    assert not (tmp_path / "captures").exists()
+    for name in ("cal", "heldout", "cal"):
+        label.write_text(name)
+        recorder.record(hidden, logits)
+    files = sorted((tmp_path / "captures").glob("*.pt"))
+    assert len(files) == 2
+    assert {torch.load(p, weights_only=True)["label"] for p in files} == {"cal", "heldout"}
+
+
+def test_checkpoint_head_is_cast_like_fp16_server(draft_head, tmp_path, monkeypatch):
+    torch = pytest.importorskip("torch")
+    safetensors = pytest.importorskip("safetensors.torch")
+    monkeypatch.setattr(draft_head, "VOCAB_SIZE", 4)
+    monkeypatch.setattr(draft_head, "HIDDEN_SIZE", 128)
+    source = torch.arange(512, dtype=torch.bfloat16).reshape(4, 128)
+    path = tmp_path / "head.safetensors"
+    safetensors.save_file({"lm_head.weight": source}, str(path))
+    loaded = draft_head._load_safetensors_head(path, "lm_head.weight")
+    assert loaded.dtype == torch.float16
+    assert torch.equal(loaded, source.to(torch.float16))
+    assert safetensors.load_file(str(path))["lm_head.weight"].dtype == torch.bfloat16
+
+
+def test_pinned_dflash_mapping_and_config_fields_are_guarded(draft_head):
+    with pytest.raises(draft_head.UnsupportedDraftHeadConfiguration, match="mapping"):
+        draft_head._validate_existing_contract(
+            SimpleNamespace(draft_id_to_target_id=[0, 1]), SimpleNamespace(), vocab_size=10,
+        )
+    with pytest.raises(draft_head.UnsupportedDraftHeadConfiguration, match="vocab size"):
+        draft_head._validate_existing_contract(
+            SimpleNamespace(config=SimpleNamespace(draft_vocab_size=9)),
+            SimpleNamespace(), vocab_size=10,
+        )
+
+
+@pytest.mark.parametrize("case", ["valid", "empty", "wrong_count", "wrong_dense", "nonfinite"])
+def test_probe_references_fail_closed(draft_head, tmp_path, monkeypatch, case):
+    torch = pytest.importorskip("torch")
+    monkeypatch.setattr(draft_head, "VOCAB_SIZE", 4)
+    monkeypatch.setattr(draft_head, "HIDDEN_SIZE", 128)
+    weight = torch.linspace(-1, 1, 512, dtype=torch.float16).reshape(4, 128)
+    monkeypatch.setattr(draft_head, "_load_safetensors_head", lambda *_: weight)
+    hidden = torch.ones((0 if case == "empty" else 2, 128), dtype=torch.float16)
+    saved = torch.nn.functional.linear(hidden, weight).argmax(dim=-1)
+    if case == "wrong_count":
+        saved = saved[:1]
+    elif case == "wrong_dense":
+        saved = torch.full_like(saved, -1)
+    elif case == "nonfinite":
+        hidden[0, 0] = float("nan")
+    torch.save({
+        "label": "cal", "hidden_states": hidden, "baseline_top1": saved,
+        "baseline_topk_ids": saved.reshape(-1, 1),
+    }, tmp_path / "capture.pt")
+    args = SimpleNamespace(
+        device="cpu", model_index="unused", head_key="lm_head.weight",
+        chunk_rows=2, captures=str(tmp_path), heldout_label_file=None, shortlist=None,
+        m_values="2", k_values="1", warmup=0, repeats=1,
+    )
+    if case == "valid":
+        report = draft_head._probe(args)
+        assert report["rows"] == 2 and report["numerical_screen_passed"]
+        assert set(report["timing"]) == {"dense", "int4"}
+    else:
+        with pytest.raises(draft_head.DraftHeadError):
+            draft_head._probe(args)
