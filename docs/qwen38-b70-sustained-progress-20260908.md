@@ -2,7 +2,7 @@
 
 Started 2026-09-08 UTC. This is a working research log for a later public post, not a claim of a new record.
 
-**Latest outcome:** short-context decode is GEMM-bound. On the production graph path, `gemm_kernel` is **93.39%** of Self XPU; that time splits about evenly between INT4 W4A16 (**47.29%**, 1.095 ms avg) and the unquantized target `lm_head` `aten::mm` of shape `[5,5120]×[5120,248320]` (**46.10%**, 4.271 ms avg). Compiled no-graph traces show GDN and flash-attn as a few percent at this prompt length. Glimmer was restored after a first-restart segfault. **No kernel or launcher was changed.**
+**Latest outcome:** the dense target `lm_head` is a real 4.3 ms/step kernel, and RTN INT4 G128 is **3.77× faster** (1.14 ms) on the same weights, but it is **not lossless**. On real decode hiddens, M=5 argmax matched on 18/19 calls and failed one call at 80%; M=1 had a 0% miss. Do not enable target INT4. Glimmer was left down by request. **No launcher or kernel was promoted.**
 
 ## Request and first-pass scope
 
@@ -382,3 +382,44 @@ Dominant compiled INT4 shapes at verify width M=5 (G128 packed `K/8`):
 - First Glimmer restore after the 212k Qwen cell segfaulted (`Segfault encountered` after model load, before KV ready). A later `docker start` on an idle GPU succeeded. Future Qwen jobs should treat Glimmer bring-up as a health gate, not a single `docker start`.
 
 No persistent Qwen/Glimmer launcher, weight, power, or kernel change was made.
+
+
+## Follow-up: target `lm_head`
+
+The user asked to look into the dense target head and to leave Glimmer down while Qwen work continues.
+
+Fresh external check: [vLLM GPTQModel](https://docs.vllm.ai/en/latest/features/quantization/gptqmodel.html) supports GPTQ including per-module extras; this checkpoint sets `lm_head: false`, so vLLM builds `ParallelLMHead` with a dense FP16 `lm_head.weight` of shape `[248320, 5120]` (2.54 GB). The existing cookbook patch `patch_draft_lmhead_int4.py` already RTN-packs **only the draft copy** and leaves the target FP16 on purpose. SGLang's Qwen3.8 notes also treat quantized vs dense `lm_head` as a quality/memory fork, not a free speed switch.
+
+### Isolated kernel
+
+Artifact: `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260908T220619Z-lmhead-micro/`. Same image, real checkpoint weights, same INT4 G128 pack as the draft helper (`qweight` `[640,248320]` NT, scales `[40,248320]`, zero 8). Glimmer was stopped and not restarted.
+
+| M | FP16 `aten::mm` median | INT4 `int4_gemm_w4a16` median | Speedup | randn argmax vs FP16 | embed-row argmax vs FP16 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 4292 µs | 1124 µs | 3.82× | 0.0 | 1.0 |
+| 5 | **4305 µs** | **1142 µs** | **3.77×** | 0.6 | 1.0 |
+
+M=5 FP16 time matches the graph-profile `aten::mm` 4.271 ms. The shape is memory-bound: M=1 and M=5 are essentially the same. FP16 vs FP32 reference kept argmax 1.0 (max abs ~0.002). Gaussian activations are a harsh test; using `lm_head` rows as hidden states matched argmax 1.0, so the pack is not a transpose bug.
+
+### Real decode hiddens
+
+Artifact: `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260908T220926Z-lmhead-compare/`. Guarded MTP4 Qwen, existing five patches plus the prefill guard, plus a compare-only overlay that still **returns FP16 logits**. Three canaries passed. One forced 32-token LRU request. 25 `compute_logits` records:
+
+| Hidden | Calls | Argmax mean | Perfect calls | Worst call |
+| --- | ---: | ---: | ---: | ---: |
+| `[5, 5120]` (verify width) | 19 | 0.989 | 18/19 | 0.80 |
+| `[1, 5120]` | 6 | 0.833 | 5/6 | **0.00** |
+
+Mean top-5 overlap 0.930; worst max-abs 1.82. One wrong argmax in a 5-row verify step is enough to change greedy MTP accept/reject. RTN INT4 is therefore **not** a drop-in target-head replacement.
+
+### Keep/kill
+
+- **Keep** dense target `lm_head` on the serving path.
+
+- **Kill** runtime RTN INT4 G128 for the target head. Speed is real; greedy token identity is not.
+
+- **Do not** treat the already-on draft INT4 head as evidence that the target can follow. Draft proposals are verified against FP16 target logits.
+
+- Next lossless cut, if authorized: oneDNN/Xe2 strategy for the dense `[5,5120]×[5120,248320]` FP16 GEMM. Next lossy cut: a **calibrated** GPTQ `lm_head` (not RTN) with the same public-API greedy/canary gate.
+
+Qwen was stopped after the compare cell. Glimmer was left down as requested. No persistent launcher, weight, or default change.
