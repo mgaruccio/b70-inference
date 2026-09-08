@@ -2,7 +2,7 @@
 
 Started 2026-09-08 UTC. This is a working research log for a later public post, not a claim of a new record.
 
-**Latest outcome:** the presumed eight-row decode-padding opportunity was disproved by runtime evidence. We reproduced a cold-start NaN and validated the existing community prefill-classification guard in a disposable container: 132/132 finite-logprob probes and 3/3 canaries passed. Guarded short sustained controls measured 90.398 tok/s code / 74.648 prose at the unchanged 275 W cap; no speed gain is established. Greedy variation also occurs without MTP and remains unresolved. Glimmer is restored; **the default Qwen launcher is unchanged and does not yet contain this guard**. Detailed chronology and raw-artifact locations follow.
+**Latest outcome:** guarded MTP6 produced a workload-specific code win: **95.678 tok/s**, **+4.38–5.20%** against matching output-token sequences in the bracketing MTP4 controls. It regressed the identical prose output by **6.78–6.83%** (69.532 versus 74.585–74.631 tok/s), so MTP4 remains the general research baseline. All 700 finite-logprob probes and 15 canaries in the depth sweep passed. Earlier work rejected the graph-padding hypothesis and validated a community guard for the reproduced cold-start NaN; greedy variation remains unresolved. Glimmer is restored. **No persistent default was changed; the default Qwen launcher still lacks the guard.** These are local 275 W measurements, not a matched win over the 210 W community reference.
 
 ## Request and first-pass scope
 
@@ -255,3 +255,56 @@ Observed real-API results:
 **Deployment status:** guard and exact test runner are retained in the host experiment directory; no permanent model, launcher, kernel, power or context change was made. The existing default Qwen launcher still lacks this guard and must not be described as having passed the new cold-order regression. Do not silently resume optimization from that unguarded default. A future default promotion needs the guard explicitly included in the maintained launcher/patch source; it is not implied by this temporary test.
 
 **Next performance cut:** use the guarded cell as the controlled research baseline and investigate MTP acceptance/depth on fixed sustained prompts, rather than adding a graph size that runtime already uses. Keep 210 W community results separate from our 275 W data, preserve the same prompts/output lengths, and make any gain content- and acceptance-aware. No further optimization campaign was launched in this pass.
+
+## Follow-up: guarded MTP-depth sweep
+
+The user authorized this next experiment with “ok cool do it”. This tests depths, not a permanent default promotion.
+
+Fresh external check: https://docs.vllm.ai/en/latest/features/speculative_decoding/ — `num_speculative_tokens` is the number proposed per step, not the accepted length; more speculation is not guaranteed faster. Gains depend on hardware, model and sampling. Lossless-speculation theory does not imply bit-identical online results, and latest docs do not prove compatibility with this older XPU build. Local source/runtime checks remain required.
+
+### Frozen protocol
+
+- Order: **K4-A → K2 → K3 → K6 → K4-B**. The final K4 repeat bounds baseline drift; rejected candidates are not ranked as speed results.
+- Same pinned image, original launcher, GPTQ target/draft settings, validated prefill-classification guard, FP8 KV, **212992-token C1**, batched-token cap 8192, observed **275 W** cap, `performance-mode=balanced`, explicit graph list `[1,2,4,8]` and built-in graph-stat logging. Only `num_speculative_tokens` changes; resulting internal graph/state geometry is a consequence of that depth. Do not confuse the static graph list with observed replay descriptors.
+- Assert original launcher hash and the exact previously validated guard hash. Keep original launcher/weights/power untouched; mount the guard into disposable containers as in the successful guard trial.
+- Before timing each cell: three natural-stop canaries and the **same 140 finite-logprob raw probes**. Lengths are 1–128 plus the union of `128/192/256 + (K+1)` for K=2,3,4,6. This covers all candidate aliases without changing pre-benchmark request order between depths.
+- Then use the identical earlier code/prose chat payloads (p68/p63, g512, temperature0, seed42, thinkingfalse, forced output, returned token IDs): one warmup and five measured trials per prompt. Salt labels match between freshly started cells and are unique within each cell. Verify actual prefix-cache hits rather than assuming cache state.
+- Save per-request draft/acceptance/cache counters, actual token IDs and timings. Compare code against code and prose against prose, with output-trajectory differences exposed. Do not average unlike prompts into a headline or count a faster but incorrect candidate as a win.
+- Reject a failed candidate, preserving its error and log. Stop it before another cell; abort the matrix on failed K4 control, device-loss/hang evidence, unsafe cleanup, or exhausted runtime budget. Restore the original Glimmer container and verify its model endpoint in `finally`.
+- Entry point: `ssh -o BatchMode=yes -o ConnectTimeout=10 inference-host 'python3 -u /tmp/qwen-b70-mtp-depth-sweep-20260908.py'`. Exact runner/guard, per-cell launchers, requests, SSE/token outputs, metrics, finite-probe responses and logs are retained under a timestamped host `*-mtp-depth-sweep/` directory.
+
+Supplemental preflight passed: Python and generated Bash syntax; parsed CLI arguments are identical after replacing only the MTP-depth JSON value with a common sentinel; all cells preserve context/C1/graph flags. The 140-probe union is unique and identical across cells. These checks do not substitute for live startup and API gates.
+
+**Sweep completed:** task `b171acb70`, host directory `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260908T132303Z-mtp-depth-sweep/`, exit 0. All five cells completed; none were rejected. Glimmer restoration passed.
+
+### Depth results
+
+All numbers are client post-first-content decode tok/s, median of five measured trials after one warmup. Code is p68/g512; prose is p63/g512; forced 512-token outputs, not complete-answer benchmark scores.
+
+| Guarded cell | Code median (range) | Prose median (range) |
+| --- | ---: | ---: |
+| K4-A | **90.949** (90.273–91.602) | **74.585** (74.498–74.597) |
+| K2 | 74.826 (72.598–74.887) | 66.893 (66.840–66.901) |
+| K3 | 85.998 (84.892–86.020) | 70.732 (70.686–70.742) |
+| K6 | **95.678** (94.851–97.278) | 69.532 (69.521–69.558) |
+| K4-B | **91.558** (88.511–91.666) | **74.631** (74.570–74.651) |
+
+### Content-matched interpretation
+
+- K6's five code outputs all shared token hash `54d4bf7e847a…`, matching all five K4-A outputs and three of five K4-B outputs. Restricting K4-B to those three gives **91.661 tok/s**, rather than its mixed-content 91.558 median. K6's gain is therefore **+5.20% versus K4-A** and **+4.38% versus content-matched K4-B**. This range describes two controls, **not** a statistical confidence interval or a general coding-workload claim.
+- Matched-code baseline drift was **+0.783%** from A to B, smaller than the observed K6 gain. K6's observed range also remained above the matched K4 rates in this run; independent-session reproduction and a broader coding cohort remain untested.
+- K6 and both K4 prose cells generated the **same full token sequence** (`31616e525564…`). K6 was **6.78–6.83% slower**. Prose baseline drift was only **+0.061%**, so this is a real counterexample to claiming a general K6 win from these samples.
+- K2/K3 were slower on both fixed prompts. Their prose outputs shared a different hash (`63229b9a3b87…`), so do not label those prose differences as content-matched throughput deltas. Their common-code-hash subsets were also slower than K4: K2 **74.861** (n=3), K3 **86.005** (n=4).
+- Code variation persists in some cells (K4-A/K2/K3/K6/K4-B: **1/3/2/1/3** distinct measured token sequences). Passing canaries is not universal greedy parity.
+- Accepted draft tokens per draft cycle, measured over the five cold trials, increased more for code (**2.627 at K4-A → 3.305 at K6**) than prose (**1.971 → 2.097**). That supports the interpretation that extra drafting pays off on this code prompt but adds insufficient accepted prose tokens. These ratios are not component-level profiling or guaranteed emitted tokens per cycle.
+
+### Verification and disposition
+
+- **700/700 finite-logprob probes** and **15/15 natural-stop canaries** passed. In particular K3 started and passed on this guarded recipe; older startup failures are not reproduced here.
+- All **50 measured requests** returned exactly 512 token IDs matching server usage, nonempty content, `finish_reason=length` and completed SSE. Prompt token-ID arrays matched across every cell within each family. Every measured request reported **zero prefix-cache hits**.
+- Power cap stayed **275 W** before/after every cell. The retained guard hash stayed `baa4647398874c19175ea74fe6f5d8dd6c2d83fc4bd0e5f2a68558afd983f5ad`; original model/launcher bytes were unchanged.
+- Runtime logs confirmed the requested MTP depths and actual FULL replay groups: K2 **3→3**, K3 **4→4**, K4 **5→5**, K6 **7→7**. The static capture-size header alone was not used as execution evidence.
+- **Keep K4 as the general guarded research baseline.** Retain K6 as a promising **code-prompt-specific candidate**, not an unrestricted replacement. K2/K3 do not win these cells. Do not select a universal winner by averaging code and prose.
+- No persistent launcher promotion, power increase, shorter context, new model conversion or dependency upgrade was made. Original Glimmer was restored healthy; the default Qwen launcher still does not contain the validated guard. A wider coding-quality/long-session test would be required before treating K6 as a deployment-ready coding profile.
+
+The result is a modest local optimization opportunity with a measured downside, **not a community leaderboard claim**: the external sustained reference uses a different prompt, quantized target and 210 W cap.
