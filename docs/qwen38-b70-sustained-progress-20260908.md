@@ -2,7 +2,7 @@
 
 Started 2026-09-08 UTC. This is a working research log for a later public post, not a claim of a new record.
 
-**Latest outcome:** guarded MTP6 produced a workload-specific code win: **95.678 tok/s**, **+4.38–5.20%** against matching output-token sequences in the bracketing MTP4 controls. It regressed the identical prose output by **6.78–6.83%** (69.532 versus 74.585–74.631 tok/s), so MTP4 remains the general research baseline. All 700 finite-logprob probes and 15 canaries in the depth sweep passed. Earlier work rejected the graph-padding hypothesis and validated a community guard for the reproduced cold-start NaN; greedy variation remains unresolved. Glimmer is restored. **No persistent default was changed; the default Qwen launcher still lacks the guard.** These are local 275 W measurements, not a matched win over the 210 W community reference.
+**Latest outcome:** short-context decode is GEMM-bound. On the production graph path, `gemm_kernel` is **93.39%** of Self XPU; that time splits about evenly between INT4 W4A16 (**47.29%**, 1.095 ms avg) and the unquantized target `lm_head` `aten::mm` of shape `[5,5120]×[5120,248320]` (**46.10%**, 4.271 ms avg). Compiled no-graph traces show GDN and flash-attn as a few percent at this prompt length. Glimmer was restored after a first-restart segfault. **No kernel or launcher was changed.**
 
 ## Request and first-pass scope
 
@@ -308,3 +308,77 @@ All numbers are client post-first-content decode tok/s, median of five measured 
 - No persistent launcher promotion, power increase, shorter context, new model conversion or dependency upgrade was made. Original Glimmer was restored healthy; the default Qwen launcher still does not contain the validated guard. A wider coding-quality/long-session test would be required before treating K6 as a deployment-ready coding profile.
 
 The result is a modest local optimization opportunity with a measured downside, **not a community leaderboard claim**: the external sustained reference uses a different prompt, quantized target and 210 W cap.
+
+
+## Follow-up: kernel profile
+
+The user asked to profile Qwen and look for kernel-level headroom. This is a diagnostic, not a speed run. Profiled tok/s must not be used as a promotion metric.
+
+Fresh external check: [vLLM profiling](https://docs.vllm.ai/en/latest/contributing/profiling/) warns that profiling slows inference; traces are for developers. Older env-var docs: [v0.11.0 profiling](https://docs.vllm.ai/en/v0.11.0/contributing/profiling.html). This image already accepts `--profiler-config.profiler=torch` plus `/start_profile` and `/stop_profile`, as used on Glimmer 2026-09-05. PyTorch records `ProfilerActivity.XPU` as Self XPU. Inner kernels can be hidden inside graph replay, so a compiled no-graph cell is diagnostic only.
+
+### Frozen protocol
+
+- Same pinned image, original Qwen launcher, GPTQ target, validated prefill guard, MTP-4, FP8 KV, **212992-token C1**, observed **275 W** cap. Only profiler flags and, in the second cell, graph disablement change.
+
+- Order: **graph** (production XPU graphs, `delay_iterations=4`, `max_iterations=20`) then **compiled** (`VLLM_XPU_ENABLE_XPU_GRAPH=0`, `cudagraph_mode=NONE`, 4+4 iterations). Skip eager: it also disables compilation and is a worse proxy of serving.
+
+- Workload: LRU-cache code prompt, thinking off, temperature 0, seed 42, unique salts. Three natural-stop canaries, one 32-token warmup, then on the graph cell an unprofiled 32-token decode before `/start_profile`. Profiled forced lengths: 64 graph / 32 compiled.
+
+- Rank **Self XPU** from `profiler_out_0.txt`. Do not sum `gemm_kernel` with its wrappers: `gemm_kernel` is the device body of both `_xpu_C::int4_gemm_w4a16` and `aten::mm`. Chrome-trace CPU ops (`aten::to`, `empty_strided`) are not device time.
+
+- Restore original Glimmer and verify `muse-glimmer-gptq`.
+
+### Results
+
+Host artifact: `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260908T211205Z-kernel-profile/`. Lead task `b688c9981` (profiling completed; first Glimmer `docker start` segfaulted during KV setup). Retry `bc3f7c4d6` restored the container. Live check: `GET /v1/models` returned `muse-glimmer-gptq` / 131072; a non-stream `POST /v1/chat/completions` with `max_tokens=8` returned `finish_reason=length` and 8 completion tokens (`chatcmpl-80b78acf125a5bf6`).
+
+Graph log: FULL replay **5→5**. Compiled log: XPU graph disabled and CUDA graph capture skipped. All six graph canaries/requests and five compiled canaries/requests passed transport checks. Unprofiled graph 32-token decode: **87.059 tok/s**. Profiled graph 64-token decode: 72.384 tok/s (profiler tax). Compiled warmup 80.259 tok/s; compiled profiled 7.088 tok/s. Those profiled rates are not a new baseline.
+
+**Production graph, Self XPU (do not add parent+child):**
+
+| Name | Self XPU | Calls | Avg | Role |
+| --- | ---: | ---: | ---: | --- |
+| `gemm_kernel` | **93.39%** (155.752 ms) | 90 | 1.731 ms | device body of both GEMMs |
+| `_xpu_C::int4_gemm_w4a16` | **47.29%** (78.873 ms) | 72 | 1.095 ms | GPTQ W4A16 |
+| `aten::mm` | **46.10%** (76.879 ms) | 18 | **4.271 ms** | dense target `lm_head` `[5,5120]×[5120,248320]` |
+| `_vllm_fa2_C::varlen_fwd` | 0.91% | 72 | 21 µs | full attention |
+
+Graph chrome also recorded draft-looking INT4 vocab shapes `[1,5120]→248320` (`B70_DRAFT_LMHEAD_INT4=1`). Target `lm_head` is unquantized (`quantization_config.lm_head: false`).
+
+**Compiled no-graph, Self XPU (kernel visibility, not serving):**
+
+| Name | Self XPU | Calls | Avg | Role |
+| --- | ---: | ---: | ---: | --- |
+| `gemm_kernel` | **91.01%** (138.260 ms) | 1316 | 105 µs | device body |
+| `_xpu_C::int4_gemm_w4a16` | **79.15%** (120.246 ms) | 1120 | 107 µs | GPTQ W4A16 |
+| `aten::mm` | **11.86%** (18.013 ms) | 196 | 92 µs | mostly `[5,5120]×[5120,96]`, not the vocab matmul |
+| `_xpu_C::gdn_attention` | 3.29% | 192 | 26 µs | GDN wrapper |
+| `gdn::gated_delta_rule_spec_kernel` | 2.23% | 192 | 18 µs | spec GDN |
+| `gdn::causal_conv1d_spec_kernel` | 1.05% | 192 | 8 µs | spec conv |
+| `_vllm_fa2_C::varlen_fwd` | 1.03% | 80 | 20 µs | full attention |
+
+Dominant compiled INT4 shapes at verify width M=5 (G128 packed `K/8`):
+
+- `[5,6144]×[768,5120]` — GDN output / value path, 18.2 ms chrome, 260 calls
+
+- `[5,5120]×[640,34816]` — fused MLP gate+up (`17408×2`), 17.7 ms, 260 calls
+
+- `[5,17408]×[2176,5120]` — MLP down, 17.4 ms, 260 calls
+
+- `[5,5120]×[640,16384]` — GDN in-proj, 12.8 ms, 260 calls
+
+260 calls ≈ 4 profiled decode steps × 65 layer-like launches. Full-attention INT4 `[5,5120]→14336` is far smaller (4.5 ms, 68 calls). At this ~68-token prompt, GDN and flash are not the bottleneck.
+
+### Keep/kill and next cut
+
+- **Keep** the guarded MTP4 graph cell as the research baseline. This profile does not change depth or default launchers.
+
+- **Largest serving-path opportunity:** the dense target `lm_head` (`[5,5120]×[5120,248320]`, 4.271 ms/call, ~46% of graph Self XPU). Next bounded test, if authorized: isolate that matmul (quantize vs keep dense, numerical check, then public-API decode). Do not assume GPTQ `lm_head` is free.
+
+- **Second opportunity:** oneDNN INT4 W4A16 at M=5 for MLP/GDN projections (~47% of graph Self XPU). Glimmer already found strategy-override gains of ~1% on similar kernels; do not expect a large serving win without new evidence.
+
+- **Kill as short-context kernel targets:** GDN spec kernels and flash-attn. They matter at long context; they are a few percent here.
+
+- First Glimmer restore after the 212k Qwen cell segfaulted (`Segfault encountered` after model load, before KV ready). A later `docker start` on an idle GPU succeeded. Future Qwen jobs should treat Glimmer bring-up as a health gate, not a single `docker start`.
+
+No persistent Qwen/Glimmer launcher, weight, power, or kernel change was made.
