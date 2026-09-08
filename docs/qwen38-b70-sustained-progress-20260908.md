@@ -2,6 +2,8 @@
 
 Started 2026-09-08 UTC. This is a working research log for a later public post, not a claim of a new record.
 
+**Latest outcome:** the presumed eight-row decode-padding opportunity was disproved by runtime evidence. We reproduced a cold-start NaN and validated the existing community prefill-classification guard in a disposable container: 132/132 finite-logprob probes and 3/3 canaries passed. Guarded short sustained controls measured 90.398 tok/s code / 74.648 prose at the unchanged 275 W cap; no speed gain is established. Greedy variation also occurs without MTP and remains unresolved. Glimmer is restored; **the default Qwen launcher is unchanged and does not yet contain this guard**. Detailed chronology and raw-artifact locations follow.
+
 ## Request and first-pass scope
 
 > ok let's take a shot at qwen 3.8 and see if we can get performance up. start by figuring out current best performance on the B70 and then let's make that our target. this will be a lot more saturated than glimmer but shouls still be some room to improve on what the community has done.
@@ -134,3 +136,122 @@ Observed facts:
 ## First candidate after baseline
 
 The startup configuration confirms graph sizes `[1, 2, 4, 8]`, with no exact size-5 graph. Confirm actual five-token MTP verifier dispatch and support for `--performance-mode interactivity` in the pinned image, then compare an isolated exact-graph candidate with the unchanged control. The community's +1.19% result is a small, already-known opportunity, not a new discovery. First bound the observed greedy continuation variation so that output-content changes cannot masquerade as a kernel win. Keep prompts, power, weights, context, cache semantics and quality checks matched; do not silently increase power, shorten context or swap quantizations. No such A/B has been launched in this pass.
+
+## Follow-up: repeatability and exact-five graphs
+
+User authorized continuation after the baseline milestone. No permanent service change is planned for this experiment.
+
+### Fresh research and pinned-source checks
+
+- https://docs.vllm.ai/en/stable/usage/reproducibility/ — fixed seed/greedy sampling alone does not guarantee online reproducibility. The earlier `/serving/reproducibility/` URL returned 404; the correct section is `usage`.
+- https://github.com/vllm-project/vllm/blob/ac7509e2b1db40fec2f03dde1ed4e9dfdc2338c9/docs/usage/reproducibility.md — pinned documentation is NVIDIA-only for batch invariance. Current XPU support uses a newer/different Triton-attention path; do not import it into this native-XPU experiment.
+- https://github.com/vllm-project/vllm/blob/ac7509e2b1db40fec2f03dde1ed4e9dfdc2338c9/vllm/v1/worker/xpu_model_runner.py — pinned XPU graph adapter.
+- https://docs.vllm.ai/en/stable/design/prefix_caching/ — salt participates in cache identity. Distinct cold salts prevent prefix reuse; repeated fixed salt is a separate warm-cache diagnostic.
+- https://github.com/vllm-project/vllm/pull/34936 — performance-mode behavior; `interactivity` captures more than only size 5.
+- https://github.com/vllm-project/vllm/issues/54698 — pinned-stack graph-replay report; inspect actual local dispatch, not just configuration labels.
+
+Read-only inspection inside the existing pinned-image container confirmed:
+
+- `config/vllm.py:1914–1922,1953–1993`: explicit capture sizes override the generated list; dispatch uses the nearest padded captured size. `interactivity` includes every small size, so it is a broader change.
+- `config/compilation.py:648–651,692–700`: explicit list supported, with maximum inferred from the largest entry.
+- `engine/arg_utils.py:1642–1660`: `--compilation-config` and `--performance-mode` are accepted.
+- `entrypoints/openai/chat_completion/protocol.py:415–423`: `return_token_ids=true` exposes prompt IDs and streamed generated-token deltas.
+- `compilation/cuda_graph.py:33–123`: built-in graph statistics report unpadded tokens, padded tokens, runtime mode and count. Enable `cudagraph_metrics=true` equally in all cells rather than adding a custom tracing patch.
+
+A transient SSH banner timeout cleared on the bounded retry. A remote Fish heredoc inspection failed before executing; the corrected `python -c` inspection succeeded. Neither changed services.
+
+### Predeclared experiment
+
+- **A1 / A2:** balanced, explicit `[1,2,4,8]`.
+- **B:** balanced, explicit `[1,2,4,5,8]`. Only the presence of size 5 changes relative to A.
+- **N:** diagnostic no-MTP control; remove only `--speculative-config` from A's launcher. Not a speed competitor and not assumed to have identical execution numerics.
+- All use the same original launcher/weights/patches, observed 275 W cap, C1/212992/FP8 KV settings, plus the same existing graph-stat logging option. Assert the launcher hash and power cap before proceeding. No new batch-invariance mode, eager execution, kernel changes, quantization or context reduction.
+- Sequence: **A1 → N → B → A2**. Before speed work in each cell: natural-stop canaries plus exact raw token-ID prompt lengths **1–128, 133, 197, 261** (131 probes), using `/v1/completions`, token ID 42 repeated N times, `max_tokens=1`, `ignore_eos=true`, `logprobs=1`. Require reported prompt count N and a finite selected-token logprob. Failure aborts the experiment and restores Glimmer; passing is a bounded shape check, not broad semantic parity.
+- A1/B/A2: prior exact code/prose prompts, one warmup and five measured 512-token trials per prompt. N: the same code prompt, one warmup/five trials. A1 also runs one warmup/five code trials with one fixed salt, separate from cold measurements.
+- Requests retain `temperature=0`, `seed=42`, thinking disabled and forced 512 output tokens. Enable `return_token_ids=true`; require token-ID counts to match usage. Use matching per-trial cold salt labels across freshly started cells, unique within each cell. Save per-request accepted/drafted/cache-counter deltas, output sequences and hashes.
+- Compare **within the same prompt**, not code versus prose. Exclude warmups. Check B against both A1 and A2 for drift; group by token sequence if outputs differ. Do not attribute small rate differences to the graph when content differs. Inspect actual `5 → 5` versus padded `5 → 8` graph statistics before claiming the mechanism.
+- Run entrypoint: `ssh -o BatchMode=yes -o ConnectTimeout=10 inference-host 'python3 -u /tmp/qwen-b70-exact-five-20260908.py'`. The complete disposable runner copies itself into the timestamped host `*-exact-five/runner.py`; each cell retains its exact launcher, request/result JSON, timed SSE, boundary responses and server log. No new persistent testing service or source patch.
+- Cleanup: stop temporary Qwen and restart/health-check the preserved Glimmer container in `finally`, including after failed gates. No candidate promotion during this run.
+
+Local preflight checks passed Python syntax and `bash -n` on all three launcher variants; parsed shell arguments confirmed valid JSON and isolated graph/spec flag changes. These are supplemental checks, not substitutes for the real API experiment.
+
+**Attempt 1:** task `bdda7ac20`, host directory `20260908T054736Z-exact-five/`, failed before inference: the pinned CLI rejected `--observability-config {"cudagraph_metrics":true}`. The first local syntax/JSON checks did not catch unsupported CLI flags. Glimmer restoration passed. Corrected to the actual `--cudagraph-metrics` flag (`engine/arg_utils.py:1480`), validated both graph configurations with the pinned `EngineArgs` parser inside the running container, and made readiness fail fast if the launcher exits. The rejected attempt is a harness error, not a Qwen graph result.
+
+**Attempt 2:** corrected task `b74df0aea`, host directory `20260908T055830Z-exact-five/`, started A1 successfully. Three natural-stop canaries passed with returned token counts matching usage. Raw prompt lengths 1–4 returned HTTP 200 with finite logprobs; exact length **5 returned HTTP 400**, aborting the candidate campaign. The first runner did not retain that error body, so its cause is not yet asserted. Glimmer restoration passed.
+
+**Hypothesis rejected before A/B:** A1's native graph-stat table at 06:01:20 reports **unpadded 5 / padded 5 / zero padding / FULL / count 9**, despite the displayed capture-size configuration `[1,2,4,8]`. This disproves our assumption that ordinary C1 MTP4 verifier replay was padded to eight in this cell. Do not carry the community's +1.19% `interactivity` gain over to our setup or launch a redundant exact-five performance sweep. Configuration lists alone were insufficient evidence.
+
+### Narrow diagnostic continuation
+
+No candidate was deployed. The next run intentionally diagnoses the baseline rather than treating a failing gate as a performance pass:
+
+- Two cells, **D-MTP4** and **N-no-MTP**, same weights/power/context/graph-stat instrumentation. Remove only the speculative-config flag for N; compare it as a diagnostic, not a speed improvement.
+- Each cell: the three natural-stop canaries, then one warmup/five cold code repeats and one warmup/five fixed-salt code repeats, retaining complete prompt/output token IDs and per-request cache/acceptance deltas.
+- Raw exact lengths **4/5/6, 68/69/70, 132/133/134**, using the earlier token-ID payload. Record HTTP status and full error body as well as finite selected-token logprobs. Failed probes stay failed; only continue diagnostic probes while `/health` responds, abort on server-side failure. No graph candidate or promotion follows these diagnostics.
+- Entry point: `ssh -o BatchMode=yes -o ConnectTimeout=10 inference-host 'python3 -u /tmp/qwen-b70-mtp-diagnostic-20260908.py'`; copied runner and raw artifacts live in a timestamped `*-mtp-diagnostic/` directory. Restore Glimmer in `finally` as before.
+- Parallel read-only source follow-up examines the community's prefill/decode-classification fix; no patch application is authorized by a source suggestion alone.
+
+**Diagnostic completed:** task `b52fa4149`, host directory `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260908T060708Z-mtp-diagnostic/`, exit 0; Glimmer restoration passed. Both cells kept the observed 275 W cap before/after. All six natural-stop canaries passed. This completes the diagnostic protocol, not a claim that the earlier failure was fixed.
+
+| Code p68/g512 control, five measured trials | Median tok/s | Range | Distinct output-token sequences |
+| --- | ---: | ---: | ---: |
+| MTP4, distinct salts | **91.599** | 90.964–91.649 | 1 |
+| MTP4, fixed salt | **90.295** | 89.593–90.944 | 2 |
+| No MTP, distinct salts | **33.842** | 33.822–33.847 | 3 |
+| No MTP, fixed salt | **33.842** | 33.817–33.844 | 1 |
+
+Interpretation:
+
+- **Variation is not MTP-only.** No-MTP distinct-salt trials also varied, with identical 68 prompt token IDs. Compared with their first output, divergences began at zero-based output positions 245 or 60. Two common output hashes occurred in both the MTP and no-MTP cells. This does not prove universal speculative/non-speculative parity or identify the underlying numerical cause.
+- **The intended warm-cache control did not establish a warm cache.** Every measured fixed-salt request still reported **zero prefix-cache hits / 68 queried tokens**, just like distinct-salt requests. The artifact labels `warm-code-*` describe intent, not observed cache reuse. Call these *fixed-salt repeats*, not cached-turn measurements; no cache-on/off causal conclusion is supported.
+- MTP distinct-salt output tokens were identical across five trials, but draft counts still varied (564–568 proposed, 373–374 accepted per request). Small timing changes can reflect speculative acceptance without changing final content.
+- All nine neighboring-length probes passed in **both** cells, including 5/69/133. These probes ran **after** the longer generation workload; unlike the original failure they were not the first short-prompt sequence after startup. The previous HTTP 400 remains real but unexplained; success under a different history does not clear it.
+- The MTP graph log again showed **FULL 5→5**, including intervals with 147 and 245 such steps. The exact-five padding opportunity remains rejected.
+- This is an unchanged-stack characterization, not a 91.599-versus-89.647 optimization gain. Request history, instrumentation and returned token tracing differ from the first baseline. No new configuration was promoted.
+
+**Cold-order reproduction completed:** task `be338efa0`, host directory `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260908T062117Z-cold-order-repro/`, replayed the original fresh-server order—three canaries, then exact raw lengths 1–128/133/197/261. No long-generation warmup or classifier patch. Canaries and lengths 1–4 passed; **length 5 failed again**, now retaining the HTTP 400 body: `{"error":{"message":"Out of range float values are not JSON compliant: nan","type":"BadRequestError","param":null,"code":400}}`. This is a repeated NaN response failure, not an unsupported request field. The run stopped at the first failed probe and restored Glimmer. Entry point: `ssh -o BatchMode=yes -o ConnectTimeout=10 inference-host 'python3 -u /tmp/qwen-b70-cold-order-repro-20260908.py'`.
+
+### Source follow-up: possible prefill/decode alias
+
+The public investigation identifies a legacy-runner classifier that uses only batch shape. An MTP4 five-token prefill can therefore look like a five-token decode verification group; aligned chunking can expose the same alias at `64*N+5`. This began as a candidate explanation; the subsequent local guarded trial below corroborates the classification defect on our reproduced input.
+
+Sources read in the focused follow-up:
+
+- https://github.com/vllm-project/vllm-xpu-kernels/issues/548
+- https://github.com/vllm-project/vllm/pull/53059
+- https://raw.githubusercontent.com/AnnoyingTechnology/intel-arc-b70-llm-inference/main/docs/gdn-64n5-investigation-pause-2026-08-25.md
+- https://raw.githubusercontent.com/AnnoyingTechnology/intel-arc-b70-llm-inference/main/docker/patches/patch_uniform_decode_prefill.py
+
+The community runtime patch was fetched and read directly. It strictly matches the old `_is_uniform_decode` implementation and one live call site, adds `has_prefill` from `num_computed_tokens_cpu < num_prompt_tokens`, and requires `not has_prefill` before shape-based classification. It preserves intentional `force_uniform_decode` overrides. It compiles the modified source before writing and fails closed on changed anchors. It targets legacy `gpu_model_runner.py`, not Model Runner V2. Upstream call-site/regression coverage still needs checking before local use.
+
+This is materially different from adding a space to troublesome prompts: dispatch correction preserves input tokens, whereas prompt-padding containment changes the model trajectory. At this source-review stage, no patch had been applied. The reported upstream regression coverage includes neighboring/exhaustive prompt lengths, chunked and mixed prefills, no-spec one-token aliases, genuine decode, forced capture, quality canaries and repeat checks.
+
+The runtime graph table, rather than the static size list, remains our evidence that the measured baseline's ordinary MTP4 steps were already FULL 5→5. The source review does not claim to have fully reconstructed how the header's list became that effective descriptor inventory.
+
+### Temporary classifier-guard validation
+
+The reproduced cold-order NaN and the public prefill-alias investigation justify testing the minimal guard, not assuming that it will fix all nondeterminism. **No permanent launcher change or prompt-padding workaround.**
+
+- The directly fetched community script is retained as `/tmp/qwen-b70-patch-uniform-decode-prefill.py`, with source attribution. At runtime it is copied into the experiment directory and mounted read-only into a disposable Qwen container, applied after the existing five patch layers and before `vllm serve`.
+- A read-only snapshot of the actual installed pinned `gpu_model_runner.py` contains one `_is_uniform_decode` call (line 4066), with keyword arguments. Its classifier and call-site strings each match the community patch exactly; this is not a blind apply to an arbitrary vLLM version.
+- Local tests against a temporary fake-package copy of that installed source passed: exactly the two intended replacements, whole-module compile, idempotent reapply, and fail-without-writing for separately changed classifier/call anchors. Nine pure-classifier cases cover genuine MTP/no-spec decode, five-token and one-token prefills, chunked/mixed aliases, nonuniform batches, and true/false forced-capture overrides.
+- Supplemental runner checks passed Python syntax, `bash -n`, read-only patch-mount validation, and preservation of MTP4/graph arguments. The independent read-only review completed: the single keyword call, source wiring, CPU-counter timing and forced-capture override were checked, with no untracked contract break found. This is source review, not a substitute for the live API gates.
+- Public-API validation keeps **275 W, same weights/patches, MTP4, C1/212992, FP8 KV and `[1,2,4,8]`**. Sequence: same cold-order three canaries → exhaustive raw **1–128,133,197,261** finite-logprob probes → prior code/prose p68/p63 g512 warmup plus five trials → a **49,925-token** raw prefill with one output token/finite logprob. No input padding. Stop on any failed probe and restore Glimmer.
+- Entry point: `ssh -o BatchMode=yes -o ConnectTimeout=10 inference-host 'python3 -u /tmp/qwen-b70-prefill-guard-trial-20260908.py'`. Each timestamped `*-prefill-guard-trial/` directory retains the exact runner, patch, launcher, payloads, response/token/metric data and logs.
+
+**Guard validation completed:** task `b207376dc`, host directory `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260908T063104Z-prefill-guard-trial/`, exit 0. The log confirms the guard was applied to the installed `vllm/v1/worker/gpu_model_runner.py`. Retained patch SHA-256: `baa4647398874c19175ea74fe6f5d8dd6c2d83fc4bd0e5f2a68558afd983f5ad`.
+
+Observed real-API results:
+
+- **132/132 finite-logprob probes passed:** raw exact lengths 1–128,133,197,261, then 49,925. The cold-start order that repeatedly failed at length 5 now passes without padding or changing its five prompt tokens.
+- Representative selected-token logprobs: p5 **−2.526634693**, p69 **−1.365266681**, p133 **−0.487957239**, p49925 **−0.010509976**. Each returned the exact requested prompt-token count plus one output token and HTTP 200. The 49,925-token request completed in **36.466 s**; one output token is not a decode-throughput benchmark.
+- **3/3 natural-stop canaries passed** (arithmetic, JSON and exact Python AST).
+- Runtime mechanism evidence: the five-token prefill now records **5→5, zero padding, PIECEWISE**; genuine MTP decode still records **5→5, FULL**. This changes classification, not verifier graph width or input length.
+- Code p68/g512: **90.398 tok/s median**, 89.154–91.720, n=5, two output-token sequences. Prose p63/g512: **74.648 tok/s median**, 74.640–74.670, n=5, one sequence. All ten measured requests had zero prefix-cache hits and exact 512-token output. Warmups excluded.
+- Power cap remained **275 W** before/after. The container was removed and original Glimmer restored healthy with `muse-glimmer-gptq`.
+
+**Keep/kill decision:** keep this **already-published community guard as a validated prerequisite for subsequent experiments**; kill the speculative five-versus-eight graph speed hypothesis. The guarded code/prose rates remain in the previous range, with different request history and code trajectories, so no improvement or formal no-regression percentage is claimed. The guard does **not** fix all greedy variation, prove broad model quality, validate warm prefix reuse, or establish mixed-concurrency safety.
+
+**Deployment status:** guard and exact test runner are retained in the host experiment directory; no permanent model, launcher, kernel, power or context change was made. The existing default Qwen launcher still lacks this guard and must not be described as having passed the new cold-order regression. Do not silently resume optimization from that unguarded default. A future default promotion needs the guard explicitly included in the maintained launcher/patch source; it is not implied by this temporary test.
+
+**Next performance cut:** use the guarded cell as the controlled research baseline and investigate MTP acceptance/depth on fixed sustained prompts, rather than adding a graph size that runtime already uses. Keep 210 W community results separate from our 275 W data, preserve the same prompts/output lengths, and make any gain content- and acceptance-aware. No further optimization campaign was launched in this pass.
