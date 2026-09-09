@@ -1,0 +1,62 @@
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:251: UserWarning: Can't initialize Level Zero Sysman
+  return _enum_zes_device_infos(visible_mask)
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:278: UserWarning: XPU device count is zero! (Triggered internally at /__w/pytorch/pytorch/c10/xpu/XPUFunctions.cpp:117.)
+  count = torch._C._xpu_getDeviceCount() if zes_count < 0 else zes_count
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:251: UserWarning: Can't initialize Level Zero Sysman
+  return _enum_zes_device_infos(visible_mask)
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:251: UserWarning: Can't initialize Level Zero Sysman
+  return _enum_zes_device_infos(visible_mask)
+INFO 09-09 16:28:58 [importing.py:74] Triton is installed but 0 active driver(s) found (expected 1). Disabling Triton to prevent runtime errors.
+INFO 09-09 16:28:58 [importing.py:98] Triton not installed or not compatible; certain GPU-related functions will not be available.
+INFO 09-09 16:29:00 [main.py:71] Unspecified platform detected, switching to CPU Platform instead.
+WARNING 09-09 16:29:00 [cpu.py:580] Failed to import from vllm._C_AVX2: ModuleNotFoundError("No module named 'vllm._C_AVX2'")
+WARNING 09-09 16:29:00 [cpu.py:580] Failed to import from vllm._C_AVX2: ModuleNotFoundError("No module named 'vllm._C_AVX2'")
+WARNING 09-09 16:29:00 [cpu.py:580] Failed to import from vllm._C_AVX2: ModuleNotFoundError("No module named 'vllm._C_AVX2'")
+usage: vllm bench serve [options]
+
+Benchmark the online serving throughput.
+
+Config Groups:
+  options                 
+  custom dataset options  
+  spec bench dataset options
+  sonnet dataset options  
+  sharegpt dataset options
+  timed-trace dataset options
+  blazedit dataset options
+  asr dataset options     
+  random dataset options  
+  random multimodal dataset options extended from random dataset
+  hf dataset options      
+  BFCL dataset options    Berkeley Function Calling Leaderboard dataset.
+  
+      https://huggingface.co/datasets/gorilla-llm/Berkeley-Function-Calling-Leaderboard
+  
+      BFCL ships one JSON-lines file per category at the repo root (e.g.
+      ``BFCL_v3_simple.json``, ``BFCL_v3_live_simple.json``) rather than a
+      single HuggingFace split. Each record has ``{id, question, function}``
+      where ``function`` uses a non-OpenAI schema dialect (``"type": "dict"``).
+  
+      This dataset loader:
+        - downloads the selected per-category files via ``hf_hub_download``
+          and interleaves rows round-robin so sampling is balanced
+        - translates BFCL function schemas to OpenAI tool format
+        - sets :attr:`SampleRequest.chat_messages` directly and attaches
+          ``tools`` / ``tool_choice`` via :attr:`SampleRequest.request_overrides`,
+          producing production-alike tool calling traffic when used with an
+          ``openai-chat`` backend
+      
+  prefix repetition dataset options
+  speed bench dataset options
+      SPEED-Bench dataset: https://huggingface.co/datasets/nvidia/SPEED-Bench
+  
+      Download the dataset using:
+  
+      `curl -LsSf https://raw.githubusercontent.com/NVIDIA-NeMo/Skills/refs/heads/main/nemo_skills/dataset/speed-bench/prepare.py | python3 -`
+      
+  sampling parameters     
+
+For full list:            vllm bench serve --help=all
+For a section:            vllm bench serve --help=ModelConfig    (case-insensitive)
+For a flag:               vllm bench serve --help=max-model-len  (_ or - accepted)
+Documentation:            https://docs.vllm.ai

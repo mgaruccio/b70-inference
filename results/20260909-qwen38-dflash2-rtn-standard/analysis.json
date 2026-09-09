@@ -1,0 +1,2937 @@
+{
+  "method": "Sequential runs; medians and inclusive IQR; sample CV. No significance/quality claim.",
+  "clients": {
+    "bf16-clients": {
+      "source": "bf16-clients/betterbench/results.json",
+      "status": "benchmark_clients_completed",
+      "weighted_category_median_tps": 100.790230268498,
+      "categories": {
+        "chat": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 99.39802731930345,
+            "iqr": 54.9588815681102,
+            "cv_percent": 32.32715619522902
+          }
+        },
+        "code": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 122.32128964631762,
+            "iqr": 48.41283040758496,
+            "cv_percent": 24.329804054667406
+          }
+        },
+        "file_edit": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 110.91759033607812,
+            "iqr": 36.75889008092193,
+            "cv_percent": 14.541195172048866
+          }
+        },
+        "json": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 147.64339031202556,
+            "iqr": 14.47894957898933,
+            "cv_percent": 12.981333291918864
+          }
+        },
+        "math": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 126.7071001540044,
+            "iqr": 8.552766320860613,
+            "cv_percent": 10.101046808476488
+          }
+        },
+        "prose": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 53.43238060767653,
+            "iqr": 5.609570037886336,
+            "cv_percent": 13.811051207013682
+          }
+        },
+        "reasoning": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 73.92741610428428,
+            "iqr": 22.28223261235027,
+            "cv_percent": 21.994927309309883
+          }
+        },
+        "summarization": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 80.5523548218272,
+            "iqr": 6.686613777973008,
+            "cv_percent": 5.787500469644707
+          }
+        }
+      },
+      "prefill": [
+        {
+          "nominal_depth": 2000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 1516.0,
+            "iqr": 1.0,
+            "cv_percent": 0.04665062056318968
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 783.2632060017204,
+            "iqr": 0.38514626066898927,
+            "cv_percent": 0.07811789524989121
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1935.2130465408522,
+            "iqr": 0.5920504548539611,
+            "cv_percent": 0.06839263275736462
+          }
+        },
+        {
+          "nominal_depth": 8000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 5919.5,
+            "iqr": 1.25,
+            "cv_percent": 0.017917691944672527
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 3005.769465016783,
+            "iqr": 1.0779647418530658,
+            "cv_percent": 0.0394774878147097
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1969.3866769468555,
+            "iqr": 0.9438128421961665,
+            "cv_percent": 0.0446275873713577
+          }
+        },
+        {
+          "nominal_depth": 16000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 11795.5,
+            "iqr": 1.25,
+            "cv_percent": 0.008992169996967635
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 6266.211355497944,
+            "iqr": 1.6230992405326106,
+            "cv_percent": 0.0339363300748483
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1882.376375812049,
+            "iqr": 0.5192156547298055,
+            "cv_percent": 0.03446780742699181
+          }
+        },
+        {
+          "nominal_depth": 32000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 23545.0,
+            "iqr": 1.0,
+            "cv_percent": 0.00300318230295515
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 13827.562240505358,
+            "iqr": 5.140879991813563,
+            "cv_percent": 0.029240148446026425
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1702.7606242751895,
+            "iqr": 0.6299658146990623,
+            "cv_percent": 0.028971965214166014
+          }
+        },
+        {
+          "nominal_depth": 64000,
+          "skipped": true,
+          "reason": "exceeds max context 32768 (needs ~64272 tok)",
+          "prompt_tokens": {
+            "n": 0
+          },
+          "ttft_ms": {
+            "n": 0
+          },
+          "prefill_proxy_tps": {
+            "n": 0
+          }
+        }
+      ],
+      "concurrency": [
+        {
+          "level": 1,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 82.28889039668235,
+          "ttft_ms": {
+            "n": 48,
+            "median": 165.11932348657865,
+            "iqr": 11.027794505935162,
+            "cv_percent": 10.749559868824408
+          }
+        },
+        {
+          "level": 2,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 82.16548798235934,
+          "ttft_ms": {
+            "n": 48,
+            "median": 2729.2627104907297,
+            "iqr": 3109.8398699978134,
+            "cv_percent": 102.8460586442526
+          }
+        },
+        {
+          "level": 4,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 83.12335723377781,
+          "ttft_ms": {
+            "n": 48,
+            "median": 8806.550488487119,
+            "iqr": 6762.88272326201,
+            "cv_percent": 67.39979993046298
+          }
+        },
+        {
+          "level": 8,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 82.80615284933963,
+          "ttft_ms": {
+            "n": 48,
+            "median": 19519.959918499808,
+            "iqr": 12384.825431741774,
+            "cv_percent": 54.599764037120075
+          }
+        },
+        {
+          "level": 16,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 80.91450710808459,
+          "ttft_ms": {
+            "n": 48,
+            "median": 41466.955704498105,
+            "iqr": 30191.59668474458,
+            "cv_percent": 50.34269698428042
+          }
+        }
+      ],
+      "vllm_serving": {
+        "1": {
+          "duration": 97.52683858800447,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.49217221325888305,
+          "output_throughput": 62.99804329713703,
+          "total_token_throughput": 314.99021648568515,
+          "spec_decode_acceptance_rate": 38.27795581042334,
+          "spec_decode_acceptance_length": 3.679456906729634,
+          "spec_decode_num_drafts": 1694,
+          "spec_decode_draft_tokens": 11858,
+          "spec_decode_accepted_tokens": 4539,
+          "spec_decode_per_position_acceptance_rates": [
+            0.6782762691853601,
+            0.4793388429752066,
+            0.39669421487603307,
+            0.31286894923258557,
+            0.2886658795749705,
+            0.26859504132231404,
+            0.2550177095631641
+          ],
+          "mean_ttft_ms": 298.62841866755235,
+          "median_ttft_ms": 306.71188549604267,
+          "p25_ttft_ms": 306.40422950091306,
+          "p75_ttft_ms": 306.8640877609141,
+          "mean_tpot_ms": 13.646016027730262,
+          "median_tpot_ms": 11.611281279644079,
+          "p25_tpot_ms": 8.133893470485203,
+          "p75_tpot_ms": 18.84998453152641,
+          "mean_itl_ms": 49.1063295365986,
+          "median_itl_ms": 49.09329100337345,
+          "p25_itl_ms": 49.00009225093527,
+          "p75_itl_ms": 49.21239550458267,
+          "mean_e2el_ms": 2031.6724541892959,
+          "median_e2el_ms": 1762.6563770172652,
+          "p25_e2el_ms": 1339.719117997447,
+          "p75_e2el_ms": 2692.9335899985745,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "2": {
+          "duration": 99.12158823799109,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.4842537418261693,
+          "output_throughput": 61.98447895374967,
+          "total_token_throughput": 309.92239476874835,
+          "spec_decode_acceptance_rate": 37.16433941997852,
+          "spec_decode_acceptance_length": 3.601503759398496,
+          "spec_decode_num_drafts": 1729,
+          "spec_decode_draft_tokens": 12103,
+          "spec_decode_accepted_tokens": 4498,
+          "spec_decode_per_position_acceptance_rates": [
+            0.6732215153267784,
+            0.470213996529786,
+            0.38519375361480623,
+            0.30133024869866976,
+            0.27530364372469635,
+            0.2550607287449393,
+            0.24117987275882014
+          ],
+          "mean_ttft_ms": 2315.468045247447,
+          "median_ttft_ms": 2061.535623506643,
+          "p25_ttft_ms": 1638.4469464901485,
+          "p75_ttft_ms": 3078.6347770117573,
+          "mean_tpot_ms": 13.930677445539894,
+          "median_tpot_ms": 12.573472421256985,
+          "p25_tpot_ms": 8.137246956656904,
+          "p75_tpot_ms": 19.68861239371953,
+          "mean_itl_ms": 49.115915134789645,
+          "median_itl_ms": 49.093202978838235,
+          "p25_itl_ms": 48.99492999538779,
+          "p75_itl_ms": 49.216785992030054,
+          "mean_e2el_ms": 4084.664080831014,
+          "median_e2el_ms": 4143.067117998726,
+          "p25_e2el_ms": 3084.6652637483203,
+          "p75_e2el_ms": 4807.3502942570485,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "4": {
+          "duration": 94.99320240801899,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5052993138796215,
+          "output_throughput": 64.67831217659155,
+          "total_token_throughput": 323.3915608829577,
+          "spec_decode_acceptance_rate": 39.850538755648245,
+          "spec_decode_acceptance_length": 3.789537712895377,
+          "spec_decode_num_drafts": 1644,
+          "spec_decode_draft_tokens": 11508,
+          "spec_decode_accepted_tokens": 4586,
+          "spec_decode_per_position_acceptance_rates": [
+            0.677007299270073,
+            0.4927007299270073,
+            0.41605839416058393,
+            0.3290754257907543,
+            0.3077858880778589,
+            0.29014598540145986,
+            0.2767639902676399
+          ],
+          "mean_ttft_ms": 6032.746024977921,
+          "median_ttft_ms": 6234.078536494053,
+          "p25_ttft_ms": 5327.248527239135,
+          "p75_ttft_ms": 7159.304908258491,
+          "mean_tpot_ms": 13.24743598723078,
+          "median_tpot_ms": 10.428376303225807,
+          "p25_tpot_ms": 8.137291907465753,
+          "p75_tpot_ms": 18.854116352435888,
+          "mean_itl_ms": 49.12188411682151,
+          "median_itl_ms": 49.097875991719775,
+          "p25_itl_ms": 49.010423506842926,
+          "p75_itl_ms": 49.20542649779236,
+          "mean_e2el_ms": 7715.170395356229,
+          "median_e2el_ms": 8003.359487498528,
+          "p25_e2el_ms": 6960.662522513303,
+          "p75_e2el_ms": 8549.69418651308,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "8": {
+          "duration": 98.14782235899474,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.48905822713448155,
+          "output_throughput": 62.59945307321364,
+          "total_token_throughput": 312.9972653660682,
+          "spec_decode_acceptance_rate": 37.74198931909212,
+          "spec_decode_acceptance_length": 3.6419392523364484,
+          "spec_decode_num_drafts": 1712,
+          "spec_decode_draft_tokens": 11984,
+          "spec_decode_accepted_tokens": 4523,
+          "spec_decode_per_position_acceptance_rates": [
+            0.6682242990654206,
+            0.4807242990654206,
+            0.38960280373831774,
+            0.30490654205607476,
+            0.2821261682242991,
+            0.2651869158878505,
+            0.25116822429906543
+          ],
+          "mean_ttft_ms": 13294.300995225058,
+          "median_ttft_ms": 13695.15432449407,
+          "p25_ttft_ms": 12510.463308251929,
+          "p75_ttft_ms": 15406.302965988289,
+          "mean_tpot_ms": 13.78983167965602,
+          "median_tpot_ms": 10.845078118044635,
+          "p25_tpot_ms": 8.139858944946534,
+          "p75_tpot_ms": 19.688475893718266,
+          "mean_itl_ms": 49.1021158055429,
+          "median_itl_ms": 49.10019101225771,
+          "p25_itl_ms": 48.99854449467966,
+          "p75_itl_ms": 49.22395801986568,
+          "mean_e2el_ms": 15045.609618541372,
+          "median_e2el_ms": 15401.903638005024,
+          "p25_e2el_ms": 14132.859189005103,
+          "p75_e2el_ms": 17300.50404350186,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        }
+      },
+      "betterbench_speculation_including_warmups_all_phases": {
+        "draft_steps": 31731.0,
+        "proposed": 222117.0,
+        "accepted": 98101.0,
+        "acceptance_percent": 44.16636277277291,
+        "mean_acceptance_length_including_bonus": 4.091645394094104,
+        "accepted_by_zero_based_position": {
+          "0": 25723.0,
+          "1": 19630.0,
+          "2": 15215.0,
+          "3": 11966.0,
+          "4": 9904.0,
+          "5": 8537.0,
+          "6": 7126.0
+        }
+      }
+    },
+    "int4-clients": {
+      "source": "int4-clients/betterbench/results.json",
+      "status": "benchmark_clients_completed",
+      "weighted_category_median_tps": 109.50958493314774,
+      "categories": {
+        "chat": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 104.17119323932337,
+            "iqr": 59.60296720433287,
+            "cv_percent": 32.30904385803056
+          }
+        },
+        "code": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 131.92798516810208,
+            "iqr": 45.3711311473963,
+            "cv_percent": 23.37139897357124
+          }
+        },
+        "file_edit": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 123.23314803100186,
+            "iqr": 39.80457181407132,
+            "cv_percent": 14.2043193036681
+          }
+        },
+        "json": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 159.0377646970971,
+            "iqr": 15.433243923168334,
+            "cv_percent": 13.001141741657312
+          }
+        },
+        "math": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 136.44400904182862,
+            "iqr": 14.352204122114358,
+            "cv_percent": 9.209597565400275
+          }
+        },
+        "prose": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 56.547809965938754,
+            "iqr": 6.74118541923999,
+            "cv_percent": 9.89245658859059
+          }
+        },
+        "reasoning": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 80.2600980531401,
+            "iqr": 18.561753978978274,
+            "cv_percent": 20.721751452106627
+          }
+        },
+        "summarization": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 92.18018769533533,
+            "iqr": 7.487962096503324,
+            "cv_percent": 4.398872237491996
+          }
+        }
+      },
+      "prefill": [
+        {
+          "nominal_depth": 2000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 1516.0,
+            "iqr": 1.0,
+            "cv_percent": 0.04665062056318968
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 778.1050044868607,
+            "iqr": 0.46634498721687123,
+            "cv_percent": 0.0747703469125578
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1948.1160979913063,
+            "iqr": 0.8666414776487272,
+            "cv_percent": 0.04045408647022998
+          }
+        },
+        {
+          "nominal_depth": 8000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 5919.5,
+            "iqr": 1.25,
+            "cv_percent": 0.017917691944672527
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 2998.970170490793,
+            "iqr": 3.7219827427179553,
+            "cv_percent": 0.08766243012641799
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1973.8443392314662,
+            "iqr": 2.3601581787875148,
+            "cv_percent": 0.09534304815518023
+          }
+        },
+        {
+          "nominal_depth": 16000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 11795.5,
+            "iqr": 1.25,
+            "cv_percent": 0.008992169996967635
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 6256.127738990472,
+            "iqr": 2.4436042294837534,
+            "cv_percent": 0.031217257051768962
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1885.2716097191128,
+            "iqr": 0.8888728699037074,
+            "cv_percent": 0.03754839202313459
+          }
+        },
+        {
+          "nominal_depth": 32000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 23545.0,
+            "iqr": 1.0,
+            "cv_percent": 0.00300318230295515
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 13818.009705501026,
+            "iqr": 2.355553486268036,
+            "cv_percent": 0.012872067336622195
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1704.0080683519413,
+            "iqr": 0.3010900244298682,
+            "cv_percent": 0.014476942058092178
+          }
+        },
+        {
+          "nominal_depth": 64000,
+          "skipped": true,
+          "reason": "exceeds max context 32768 (needs ~64272 tok)",
+          "prompt_tokens": {
+            "n": 0
+          },
+          "ttft_ms": {
+            "n": 0
+          },
+          "prefill_proxy_tps": {
+            "n": 0
+          }
+        }
+      ],
+      "concurrency": [
+        {
+          "level": 1,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 86.4481268581167,
+          "ttft_ms": {
+            "n": 48,
+            "median": 157.87360299145803,
+            "iqr": 9.0299352814327,
+            "cv_percent": 12.122636729186683
+          }
+        },
+        {
+          "level": 2,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 87.73355795543625,
+          "ttft_ms": {
+            "n": 48,
+            "median": 2500.7626745064044,
+            "iqr": 2866.707393237448,
+            "cv_percent": 101.93379266812534
+          }
+        },
+        {
+          "level": 4,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 88.59084228354567,
+          "ttft_ms": {
+            "n": 48,
+            "median": 8242.116171502857,
+            "iqr": 6102.683536242694,
+            "cv_percent": 66.91146342008743
+          }
+        },
+        {
+          "level": 8,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 87.89508195840243,
+          "ttft_ms": {
+            "n": 48,
+            "median": 17925.428422997356,
+            "iqr": 11974.685708504694,
+            "cv_percent": 54.26704353532992
+          }
+        },
+        {
+          "level": 16,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 87.17035639033271,
+          "ttft_ms": {
+            "n": 48,
+            "median": 38525.041465007234,
+            "iqr": 27820.583190754405,
+            "cv_percent": 50.0653715075766
+          }
+        }
+      ],
+      "vllm_serving": {
+        "1": {
+          "duration": 93.34673355799168,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5142118869127862,
+          "output_throughput": 65.81912152483663,
+          "total_token_throughput": 329.0956076241831,
+          "spec_decode_acceptance_rate": 36.94382761740275,
+          "spec_decode_acceptance_length": 3.5860679332181924,
+          "spec_decode_num_drafts": 1737,
+          "spec_decode_draft_tokens": 12159,
+          "spec_decode_accepted_tokens": 4492,
+          "spec_decode_per_position_acceptance_rates": [
+            0.6597582037996546,
+            0.47092688543465744,
+            0.385146804835924,
+            0.2941853770869315,
+            0.27288428324697755,
+            0.256188831318365,
+            0.2469775474956822
+          ],
+          "mean_ttft_ms": 293.96357968592685,
+          "median_ttft_ms": 299.8627279885113,
+          "p25_ttft_ms": 299.5787952604587,
+          "p75_ttft_ms": 300.06843074806966,
+          "mean_tpot_ms": 12.99704000558304,
+          "median_tpot_ms": 10.251533393734354,
+          "p25_tpot_ms": 7.815844635799983,
+          "p75_tpot_ms": 18.108291163553364,
+          "mean_itl_ms": 45.61310505119024,
+          "median_itl_ms": 45.59772499487735,
+          "p25_itl_ms": 45.49821300315671,
+          "p75_itl_ms": 45.721998991211876,
+          "mean_e2el_ms": 1944.5876603949728,
+          "median_e2el_ms": 1602.237661005347,
+          "p25_e2el_ms": 1292.4852454962092,
+          "p75_e2el_ms": 2600.316972253495,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "2": {
+          "duration": 92.16609359998256,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5207988982187814,
+          "output_throughput": 66.66225897200403,
+          "total_token_throughput": 333.3112948600201,
+          "spec_decode_acceptance_rate": 37.570762570762575,
+          "spec_decode_acceptance_length": 3.62995337995338,
+          "spec_decode_num_drafts": 1716,
+          "spec_decode_draft_tokens": 12012,
+          "spec_decode_accepted_tokens": 4513,
+          "spec_decode_per_position_acceptance_rates": [
+            0.6625874125874126,
+            0.47785547785547783,
+            0.3951048951048951,
+            0.30128205128205127,
+            0.27855477855477856,
+            0.26107226107226106,
+            0.2534965034965035
+          ],
+          "mean_ttft_ms": 2144.607420980416,
+          "median_ttft_ms": 1847.9265960049815,
+          "p25_ttft_ms": 1552.0660734982812,
+          "p75_ttft_ms": 2803.9667875054874,
+          "mean_tpot_ms": 12.838514032968463,
+          "median_tpot_ms": 10.244611062899628,
+          "p25_tpot_ms": 7.560350775661856,
+          "p75_tpot_ms": 18.004114397569545,
+          "mean_itl_ms": 45.60815201347923,
+          "median_itl_ms": 45.58672849088907,
+          "p25_itl_ms": 45.49579923332203,
+          "p75_itl_ms": 45.705431744863745,
+          "mean_e2el_ms": 3775.098703167411,
+          "median_e2el_ms": 3907.3323695047293,
+          "p25_e2el_ms": 2895.782271727512,
+          "p75_e2el_ms": 4499.060374248074,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "4": {
+          "duration": 92.63128822899307,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5181834444679165,
+          "output_throughput": 66.32748089189332,
+          "total_token_throughput": 331.63740445946655,
+          "spec_decode_acceptance_rate": 37.281826453800974,
+          "spec_decode_acceptance_length": 3.6097278517660683,
+          "spec_decode_num_drafts": 1727,
+          "spec_decode_draft_tokens": 12089,
+          "spec_decode_accepted_tokens": 4507,
+          "spec_decode_per_position_acceptance_rates": [
+            0.6664736537348003,
+            0.46902142443543715,
+            0.3943254198031268,
+            0.30110017371163866,
+            0.2762015055008686,
+            0.25709322524609146,
+            0.24551244933410538
+          ],
+          "mean_ttft_ms": 5844.94209535175,
+          "median_ttft_ms": 5664.7125120071,
+          "p25_ttft_ms": 5055.006692738971,
+          "p75_ttft_ms": 6865.680296250503,
+          "mean_tpot_ms": 12.92008316831591,
+          "median_tpot_ms": 11.141703732441892,
+          "p25_tpot_ms": 7.554118738186135,
+          "p75_tpot_ms": 17.680802809174896,
+          "mean_itl_ms": 45.6055785720184,
+          "median_itl_ms": 45.58770201401785,
+          "p25_itl_ms": 45.49361548561137,
+          "p75_itl_ms": 45.70555999816861,
+          "mean_e2el_ms": 7485.79265772787,
+          "median_e2el_ms": 7533.124515990494,
+          "p25_e2el_ms": 6441.165057003673,
+          "p75_e2el_ms": 8369.849549992068,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "8": {
+          "duration": 90.38323630901868,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.531071932807195,
+          "output_throughput": 67.97720739932096,
+          "total_token_throughput": 339.8860369966048,
+          "spec_decode_acceptance_rate": 38.84861407249467,
+          "spec_decode_acceptance_length": 3.719402985074627,
+          "spec_decode_num_drafts": 1675,
+          "spec_decode_draft_tokens": 11725,
+          "spec_decode_accepted_tokens": 4555,
+          "spec_decode_per_position_acceptance_rates": [
+            0.6710447761194029,
+            0.4871641791044776,
+            0.408955223880597,
+            0.3164179104477612,
+            0.2937313432835821,
+            0.2764179104477612,
+            0.2656716417910448
+          ],
+          "mean_ttft_ms": 12407.406898375484,
+          "median_ttft_ms": 12768.939010507893,
+          "p25_ttft_ms": 12031.361482506327,
+          "p75_ttft_ms": 14165.232711748104,
+          "mean_tpot_ms": 12.535145939129743,
+          "median_tpot_ms": 10.247376177269292,
+          "p25_tpot_ms": 7.553523944807239,
+          "p75_tpot_ms": 16.608474431085074,
+          "mean_itl_ms": 45.620451507492184,
+          "median_itl_ms": 45.58973200619221,
+          "p25_itl_ms": 45.499369996832684,
+          "p75_itl_ms": 45.71161049534567,
+          "mean_e2el_ms": 13999.37043264496,
+          "median_e2el_ms": 14429.972028490738,
+          "p25_e2el_ms": 13526.435001003847,
+          "p75_e2el_ms": 15705.519932002062,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        }
+      },
+      "betterbench_speculation_including_warmups_all_phases": {
+        "draft_steps": 31960.0,
+        "proposed": 223720.0,
+        "accepted": 97555.0,
+        "acceptance_percent": 43.605846593956734,
+        "mean_acceptance_length_including_bonus": 4.052409261576971,
+        "accepted_by_zero_based_position": {
+          "0": 25887.0,
+          "1": 19548.0,
+          "2": 15039.0,
+          "3": 11798.0,
+          "4": 9745.0,
+          "5": 8414.0,
+          "6": 7124.0
+        }
+      }
+    },
+    "mtp4-clients": {
+      "source": "mtp4-clients/betterbench/results.json",
+      "status": "benchmark_clients_completed",
+      "weighted_category_median_tps": 94.0471010680024,
+      "categories": {
+        "chat": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 87.25580016133107,
+            "iqr": 32.39889443000468,
+            "cv_percent": 20.47275863285261
+          }
+        },
+        "code": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 104.75157934730547,
+            "iqr": 22.014966233440205,
+            "cv_percent": 14.868680645719431
+          }
+        },
+        "file_edit": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 113.47435042159327,
+            "iqr": 12.097712771710121,
+            "cv_percent": 6.149003974840941
+          }
+        },
+        "json": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 114.66977307252583,
+            "iqr": 8.48680607041905,
+            "cv_percent": 6.145542493280869
+          }
+        },
+        "math": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 107.46866058533064,
+            "iqr": 2.6136106829504655,
+            "cv_percent": 3.5588574146230663
+          }
+        },
+        "prose": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 59.05502985897744,
+            "iqr": 6.7941331390954645,
+            "cv_percent": 9.17111654570061
+          }
+        },
+        "reasoning": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 82.67482558747534,
+            "iqr": 17.813570996210203,
+            "cv_percent": 15.257475484668088
+          }
+        },
+        "summarization": {
+          "measured": 20,
+          "failed": 0,
+          "decode_tps": {
+            "n": 20,
+            "median": 86.80506664430877,
+            "iqr": 4.4470456526855315,
+            "cv_percent": 2.7523215089353017
+          }
+        }
+      },
+      "prefill": [
+        {
+          "nominal_depth": 2000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 1516.0,
+            "iqr": 1.0,
+            "cv_percent": 0.04665062056318968
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 777.8599695011508,
+            "iqr": 0.6827280012657866,
+            "cv_percent": 0.051272817604489554
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1948.8337430708984,
+            "iqr": 1.6488683191482778,
+            "cv_percent": 0.05836503749802354
+          }
+        },
+        {
+          "nominal_depth": 8000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 5919.5,
+            "iqr": 1.25,
+            "cv_percent": 0.017917691944672527
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 3038.0119635228766,
+            "iqr": 1.1718894966179505,
+            "cv_percent": 0.05084876832756313
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1948.3135930429562,
+            "iqr": 0.8502067089598313,
+            "cv_percent": 0.06246338804604699
+          }
+        },
+        {
+          "nominal_depth": 16000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 11795.5,
+            "iqr": 1.25,
+            "cv_percent": 0.008992169996967635
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 6369.949112995528,
+            "iqr": 2.2628695078310557,
+            "cv_percent": 0.030258106855129856
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1851.8186518788827,
+            "iqr": 0.601134218353991,
+            "cv_percent": 0.02983026464157453
+          }
+        },
+        {
+          "nominal_depth": 32000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 23545.0,
+            "iqr": 1.0,
+            "cv_percent": 0.00300318230295515
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 14086.796665505972,
+            "iqr": 2.64008273370564,
+            "cv_percent": 0.015221027609318817
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1671.4587829043057,
+            "iqr": 0.26633455508090265,
+            "cv_percent": 0.013071730781423955
+          }
+        },
+        {
+          "nominal_depth": 64000,
+          "skipped": false,
+          "reason": null,
+          "prompt_tokens": {
+            "n": 8,
+            "median": 47057.5,
+            "iqr": 1.0,
+            "cv_percent": 0.0028820347223944037
+          },
+          "ttft_ms": {
+            "n": 8,
+            "median": 34045.583626502776,
+            "iqr": 2.0434579710126854,
+            "cv_percent": 0.011116609650406492
+          },
+          "prefill_proxy_tps": {
+            "n": 8,
+            "median": 1382.1960948582228,
+            "iqr": 0.08151269773611602,
+            "cv_percent": 0.009511635590403078
+          }
+        }
+      ],
+      "concurrency": [
+        {
+          "level": 1,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 80.7284932595402,
+          "ttft_ms": {
+            "n": 48,
+            "median": 149.86115948704537,
+            "iqr": 10.014367013354786,
+            "cv_percent": 11.543138712543653
+          }
+        },
+        {
+          "level": 2,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 81.97944494175725,
+          "ttft_ms": {
+            "n": 48,
+            "median": 2780.6961669994052,
+            "iqr": 3651.2742249760777,
+            "cv_percent": 93.32680117360138
+          }
+        },
+        {
+          "level": 4,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 81.09447500678549,
+          "ttft_ms": {
+            "n": 48,
+            "median": 10092.107439995743,
+            "iqr": 5779.478086755262,
+            "cv_percent": 62.368605784573006
+          }
+        },
+        {
+          "level": 8,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 81.47260533468855,
+          "ttft_ms": {
+            "n": 48,
+            "median": 19723.82020149962,
+            "iqr": 10111.058161513938,
+            "cv_percent": 47.78961448001163
+          }
+        },
+        {
+          "level": 16,
+          "requests": 48,
+          "ok": 48,
+          "aggregate_tps": 81.01192944139632,
+          "ttft_ms": {
+            "n": 48,
+            "median": 43065.60472448473,
+            "iqr": 27069.38424526743,
+            "cv_percent": 45.91035923919276
+          }
+        }
+      ],
+      "vllm_serving": {
+        "1": {
+          "duration": 87.7124802560138,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5472425344705606,
+          "output_throughput": 70.04704441223176,
+          "total_token_throughput": 350.23522206115877,
+          "spec_decode_acceptance_rate": 57.952713594841484,
+          "spec_decode_acceptance_length": 3.3181085437936595,
+          "spec_decode_num_drafts": 1861,
+          "spec_decode_draft_tokens": 7444,
+          "spec_decode_accepted_tokens": 4314,
+          "spec_decode_per_position_acceptance_rates": [
+            0.7796883396023643,
+            0.6114991939817302,
+            0.5163890381515315,
+            0.4105319720580333
+          ],
+          "mean_ttft_ms": 293.06072002024547,
+          "median_ttft_ms": 293.12185049639083,
+          "p25_ttft_ms": 292.6863190077711,
+          "p75_ttft_ms": 293.515574245248,
+          "mean_tpot_ms": 12.079845238337013,
+          "median_tpot_ms": 11.285351897547695,
+          "p25_tpot_ms": 9.40650044870517,
+          "p75_tpot_ms": 14.25794481102049,
+          "mean_itl_ms": 39.56944841643746,
+          "median_itl_ms": 39.76915898965672,
+          "p25_itl_ms": 39.70724900136702,
+          "p75_itl_ms": 39.84526198473759,
+          "mean_e2el_ms": 1827.2010652890458,
+          "median_e2el_ms": 1725.6566004944034,
+          "p25_e2el_ms": 1487.5660367397359,
+          "p75_e2el_ms": 2104.394507507095,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "2": {
+          "duration": 87.2106999969983,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5503911790829807,
+          "output_throughput": 70.45007092262153,
+          "total_token_throughput": 352.2503546131077,
+          "spec_decode_acceptance_rate": 58.36933045356372,
+          "spec_decode_acceptance_length": 3.3347732181425487,
+          "spec_decode_num_drafts": 1852,
+          "spec_decode_draft_tokens": 7408,
+          "spec_decode_accepted_tokens": 4324,
+          "spec_decode_per_position_acceptance_rates": [
+            0.7829373650107991,
+            0.6166306695464363,
+            0.5199784017278618,
+            0.4152267818574514
+          ],
+          "mean_ttft_ms": 2069.1048395638063,
+          "median_ttft_ms": 1955.0835605041357,
+          "p25_ttft_ms": 1754.1717467538547,
+          "p75_ttft_ms": 2353.8304732501274,
+          "mean_tpot_ms": 12.023299386324709,
+          "median_tpot_ms": 11.285299181115015,
+          "p25_tpot_ms": 9.406382555218126,
+          "p75_tpot_ms": 13.963536606351276,
+          "mean_itl_ms": 39.575616462769304,
+          "median_itl_ms": 39.77610400761478,
+          "p25_itl_ms": 39.71086200181162,
+          "p75_itl_ms": 39.857113239122555,
+          "mean_e2el_ms": 3596.0638616270444,
+          "median_e2el_ms": 3588.622621507966,
+          "p25_e2el_ms": 3090.034241504327,
+          "p75_e2el_ms": 4044.334718506434,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "4": {
+          "duration": 87.12847996299388,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5509105635767669,
+          "output_throughput": 70.51655213782617,
+          "total_token_throughput": 352.5827606891308,
+          "spec_decode_acceptance_rate": 58.44138303619665,
+          "spec_decode_acceptance_length": 3.337655321447866,
+          "spec_decode_num_drafts": 1851,
+          "spec_decode_draft_tokens": 7404,
+          "spec_decode_accepted_tokens": 4327,
+          "spec_decode_per_position_acceptance_rates": [
+            0.7806591031874662,
+            0.6158833063209076,
+            0.5224203133441383,
+            0.41869259859535385
+          ],
+          "mean_ttft_ms": 5517.368218729946,
+          "median_ttft_ms": 5641.126959002577,
+          "p25_ttft_ms": 5013.701258998481,
+          "p75_ttft_ms": 6233.647089509759,
+          "mean_tpot_ms": 12.009587726548927,
+          "median_tpot_ms": 11.288951885772825,
+          "p25_tpot_ms": 9.408342692814035,
+          "p75_tpot_ms": 13.960118171143414,
+          "mean_itl_ms": 39.55183917939434,
+          "median_itl_ms": 39.76919598062523,
+          "p25_itl_ms": 39.70876550010871,
+          "p75_itl_ms": 39.8578034946695,
+          "mean_e2el_ms": 7042.585860001661,
+          "median_e2el_ms": 7154.541107986006,
+          "p25_e2el_ms": 6678.179410744633,
+          "p75_e2el_ms": 7633.024649745494,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        },
+        "8": {
+          "duration": 87.53954181901645,
+          "completed": 48,
+          "failed": 0,
+          "request_throughput": 0.5483236375538446,
+          "output_throughput": 70.18542560689211,
+          "total_token_throughput": 350.92712803446057,
+          "spec_decode_acceptance_rate": 57.997311827956985,
+          "spec_decode_acceptance_length": 3.3198924731182795,
+          "spec_decode_num_drafts": 1860,
+          "spec_decode_draft_tokens": 7440,
+          "spec_decode_accepted_tokens": 4315,
+          "spec_decode_per_position_acceptance_rates": [
+            0.7827956989247312,
+            0.6118279569892473,
+            0.513978494623656,
+            0.4112903225806452
+          ],
+          "mean_ttft_ms": 12025.699133626404,
+          "median_ttft_ms": 12415.417458498268,
+          "p25_ttft_ms": 11909.212112484965,
+          "p75_ttft_ms": 13680.89047025569,
+          "mean_tpot_ms": 12.076889176504785,
+          "median_tpot_ms": 11.284047133870438,
+          "p25_tpot_ms": 9.407628210619876,
+          "p75_tpot_ms": 14.511308801226596,
+          "mean_itl_ms": 39.58103401665902,
+          "median_itl_ms": 39.77743900031783,
+          "p25_itl_ms": 39.71245475986507,
+          "p75_itl_ms": 39.87193525972543,
+          "mean_e2el_ms": 13559.464059042512,
+          "median_e2el_ms": 14087.527212002897,
+          "p25_e2el_ms": 13160.403759247856,
+          "p75_e2el_ms": 15037.648696015822,
+          "input_lens": {
+            "n": 48,
+            "median": 512.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          },
+          "output_lens": {
+            "n": 48,
+            "median": 128.0,
+            "iqr": 0.0,
+            "cv_percent": 0.0
+          }
+        }
+      },
+      "betterbench_speculation_including_warmups_all_phases": {
+        "draft_steps": 39343.0,
+        "proposed": 157372.0,
+        "accepted": 90538.0,
+        "acceptance_percent": 57.53119995933203,
+        "mean_acceptance_length_including_bonus": 3.301247998373281,
+        "accepted_by_zero_based_position": {
+          "0": 32556.0,
+          "1": 24540.0,
+          "2": 18794.0,
+          "3": 14648.0
+        }
+      }
+    }
+  },
+  "cold": {
+    "int4-long": {
+      "source": "int4-long/long-context/summary.json",
+      "status": "aborted",
+      "errors": [
+        {
+          "message": "/health returned HTTP 503",
+          "type": "UnhealthyServer"
+        }
+      ],
+      "points": [
+        {
+          "requested_length": 512,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 512,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.07950596801674692,
+              "decode_tps_post_first": 3.3533566212772996,
+              "e2e_tps": 3.04350590056125,
+              "prefill_proxy_input_tps": 114.46424605530342,
+              "total_time_s": 0.09614335950755049,
+              "ttft_s": 0.016742386244004592
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 1.7170982999814441,
+              "decode_tps_post_first": 73.97495531730243,
+              "e2e_tps": 63.94501077449145,
+              "prefill_proxy_input_tps": 1798.604613888776,
+              "total_time_s": 2.0019734104862437,
+              "ttft_s": 0.28466512099839747
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 228.0,
+            "proposed": 1596.0,
+            "accepted": 546.0,
+            "acceptance_percent": 34.21052631578947,
+            "mean_acceptance_length_including_bonus": 3.3947368421052633,
+            "accepted_by_zero_based_position": {
+              "0": 172.0,
+              "1": 137.0,
+              "2": 101.0,
+              "3": 62.0,
+              "4": 39.0,
+              "5": 25.0,
+              "6": 10.0
+            }
+          }
+        },
+        {
+          "requested_length": 8192,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 8192,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.14595802650001133,
+              "decode_tps_post_first": 4.277614737181871,
+              "e2e_tps": 0.5244909504418835,
+              "prefill_proxy_input_tps": 7.845805734413261,
+              "total_time_s": 0.1615070077459677,
+              "ttft_s": 0.016848618739459198
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.0799869795009727,
+              "decode_tps_post_first": 61.127259762884975,
+              "e2e_tps": 20.37368226648532,
+              "prefill_proxy_input_tps": 1950.7169567838932,
+              "total_time_s": 6.283435933000874,
+              "ttft_s": 4.199484830009169
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 261.0,
+            "proposed": 1827.0,
+            "accepted": 522.0,
+            "acceptance_percent": 28.571428571428573,
+            "mean_acceptance_length_including_bonus": 3.0,
+            "accepted_by_zero_based_position": {
+              "0": 191.0,
+              "1": 123.0,
+              "2": 82.0,
+              "3": 52.0,
+              "4": 29.0,
+              "5": 24.0,
+              "6": 21.0
+            }
+          }
+        },
+        {
+          "requested_length": 16384,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 16384,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.22552258276118664,
+              "decode_tps_post_first": 5.725704676922945,
+              "e2e_tps": 0.2357299692708068,
+              "prefill_proxy_input_tps": 2.3003294297259345,
+              "total_time_s": 0.23240387748955982,
+              "ttft_s": 0.01135693302785512
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.289238107507117,
+              "decode_tps_post_first": 55.47697295317366,
+              "e2e_tps": 11.336394452218585,
+              "prefill_proxy_input_tps": 1822.3465671268646,
+              "total_time_s": 11.291079031507252,
+              "ttft_s": 8.990606011997443
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 265.0,
+            "proposed": 1855.0,
+            "accepted": 511.0,
+            "acceptance_percent": 27.547169811320753,
+            "mean_acceptance_length_including_bonus": 2.928301886792453,
+            "accepted_by_zero_based_position": {
+              "0": 207.0,
+              "1": 127.0,
+              "2": 79.0,
+              "3": 49.0,
+              "4": 26.0,
+              "5": 15.0,
+              "6": 8.0
+            }
+          }
+        },
+        {
+          "requested_length": 32640,
+          "status": "failed",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 32640,
+            "supported": true
+          },
+          "statistics": null,
+          "failure": "warmup_failed",
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        }
+      ]
+    },
+    "bf16-long": {
+      "source": "bf16-long/long-context/summary.json",
+      "status": "aborted",
+      "errors": [
+        {
+          "message": "/health returned HTTP 503",
+          "type": "UnhealthyServer"
+        }
+      ],
+      "points": [
+        {
+          "requested_length": 512,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 512,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.11829186249087797,
+              "decode_tps_post_first": 4.194034154519002,
+              "e2e_tps": 3.192709407675892,
+              "prefill_proxy_input_tps": 168.50685189841556,
+              "total_time_s": 0.11869030747766374,
+              "ttft_s": 0.025535977765684947
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 1.8936049104959238,
+              "decode_tps_post_first": 67.08162993559145,
+              "e2e_tps": 59.279555790587196,
+              "prefill_proxy_input_tps": 1840.8936783288364,
+              "total_time_s": 2.159598753991304,
+              "ttft_s": 0.2786940619844245
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 232.0,
+            "proposed": 1624.0,
+            "accepted": 548.0,
+            "acceptance_percent": 33.74384236453202,
+            "mean_acceptance_length_including_bonus": 3.3620689655172415,
+            "accepted_by_zero_based_position": {
+              "0": 166.0,
+              "1": 135.0,
+              "2": 105.0,
+              "3": 67.0,
+              "4": 38.0,
+              "5": 24.0,
+              "6": 13.0
+            }
+          }
+        },
+        {
+          "requested_length": 8192,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 8192,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.17062596976029454,
+              "decode_tps_post_first": 3.578970338900241,
+              "e2e_tps": 0.46890053088094774,
+              "prefill_proxy_input_tps": 1.7358132552672032,
+              "total_time_s": 0.16305457424459746,
+              "ttft_s": 0.003758196282433346
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.3889047090051463,
+              "decode_tps_post_first": 53.1682593789493,
+              "e2e_tps": 19.39382445808937,
+              "prefill_proxy_input_tps": 1944.9312891690138,
+              "total_time_s": 6.600119561000611,
+              "ttft_s": 4.211974327001371
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 280.0,
+            "proposed": 1960.0,
+            "accepted": 491.0,
+            "acceptance_percent": 25.051020408163264,
+            "mean_acceptance_length_including_bonus": 2.7535714285714286,
+            "accepted_by_zero_based_position": {
+              "0": 192.0,
+              "1": 112.0,
+              "2": 77.0,
+              "3": 53.0,
+              "4": 25.0,
+              "5": 19.0,
+              "6": 13.0
+            }
+          }
+        },
+        {
+          "requested_length": 16384,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 16384,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.1994068182684714,
+              "decode_tps_post_first": 4.743560654402643,
+              "e2e_tps": 0.21922760692767262,
+              "prefill_proxy_input_tps": 4.386226473066927,
+              "total_time_s": 0.2195344610227039,
+              "ttft_s": 0.021726036502514035
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.398369393995381,
+              "decode_tps_post_first": 52.95264953616343,
+              "e2e_tps": 11.209728725544046,
+              "prefill_proxy_input_tps": 1817.3632566174238,
+              "total_time_s": 11.418652905995259,
+              "ttft_s": 9.015261083492078
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 259.0,
+            "proposed": 1813.0,
+            "accepted": 518.0,
+            "acceptance_percent": 28.571428571428573,
+            "mean_acceptance_length_including_bonus": 3.0,
+            "accepted_by_zero_based_position": {
+              "0": 203.0,
+              "1": 128.0,
+              "2": 81.0,
+              "3": 55.0,
+              "4": 25.0,
+              "5": 15.0,
+              "6": 11.0
+            }
+          }
+        },
+        {
+          "requested_length": 32640,
+          "status": "failed",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 32640,
+            "supported": true
+          },
+          "statistics": null,
+          "failure": "warmup_failed",
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        }
+      ]
+    },
+    "int4-long-32000": {
+      "source": "int4-long-32000/long-context/summary.json",
+      "status": "completed",
+      "errors": [],
+      "points": [
+        {
+          "requested_length": 512,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 512,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.14309471398155438,
+              "decode_tps_post_first": 5.7667519468131445,
+              "e2e_tps": 4.849561407446416,
+              "prefill_proxy_input_tps": 113.65753786974324,
+              "total_time_s": 0.15930855798796983,
+              "ttft_s": 0.016678551270160824
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 1.717390867008362,
+              "decode_tps_post_first": 73.96220988162592,
+              "e2e_tps": 63.91658651274224,
+              "prefill_proxy_input_tps": 1795.694991942431,
+              "total_time_s": 2.0028621419915,
+              "ttft_s": 0.2851264924975112
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 230.0,
+            "proposed": 1610.0,
+            "accepted": 543.0,
+            "acceptance_percent": 33.72670807453416,
+            "mean_acceptance_length_including_bonus": 3.360869565217391,
+            "accepted_by_zero_based_position": {
+              "0": 170.0,
+              "1": 136.0,
+              "2": 103.0,
+              "3": 62.0,
+              "4": 38.0,
+              "5": 23.0,
+              "6": 11.0
+            }
+          }
+        },
+        {
+          "requested_length": 8192,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 8192,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.17825127574178623,
+              "decode_tps_post_first": 4.785256769279613,
+              "e2e_tps": 0.5495860240244781,
+              "prefill_proxy_input_tps": 3.8487288033848017,
+              "total_time_s": 0.17513762747694273,
+              "ttft_s": 0.008315454768307973
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.2555970055109356,
+              "decode_tps_post_first": 56.30439041497191,
+              "e2e_tps": 19.80945878617122,
+              "prefill_proxy_input_tps": 1946.7691956629114,
+              "total_time_s": 6.461561224001343,
+              "ttft_s": 4.207998398997006
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 271.0,
+            "proposed": 1897.0,
+            "accepted": 501.0,
+            "acceptance_percent": 26.410121244069583,
+            "mean_acceptance_length_including_bonus": 2.848708487084871,
+            "accepted_by_zero_based_position": {
+              "0": 189.0,
+              "1": 122.0,
+              "2": 81.0,
+              "3": 52.0,
+              "4": 24.0,
+              "5": 19.0,
+              "6": 14.0
+            }
+          }
+        },
+        {
+          "requested_length": 16384,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 16384,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.25026202050503343,
+              "decode_tps_post_first": 6.289379451384399,
+              "e2e_tps": 0.2594375590823912,
+              "prefill_proxy_input_tps": 4.039061227150796,
+              "total_time_s": 0.2566457114808145,
+              "ttft_s": 0.019985661492682993
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.3414553594921017,
+              "decode_tps_post_first": 54.26552276996569,
+              "e2e_tps": 11.28102611189168,
+              "prefill_proxy_input_tps": 1819.787805326716,
+              "total_time_s": 11.34662498551188,
+              "ttft_s": 9.003254815994296
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 268.0,
+            "proposed": 1876.0,
+            "accepted": 509.0,
+            "acceptance_percent": 27.13219616204691,
+            "mean_acceptance_length_including_bonus": 2.8992537313432836,
+            "accepted_by_zero_based_position": {
+              "0": 202.0,
+              "1": 128.0,
+              "2": 78.0,
+              "3": 51.0,
+              "4": 25.0,
+              "5": 17.0,
+              "6": 8.0
+            }
+          }
+        },
+        {
+          "requested_length": 32000,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 32000,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.4604127110069385,
+              "decode_tps_post_first": 10.52163694025868,
+              "e2e_tps": 0.11828275833446433,
+              "prefill_proxy_input_tps": 0.35777945953600465,
+              "total_time_s": 0.46380527528526727,
+              "ttft_s": 0.004483726508624386
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.5742686570010846,
+              "decode_tps_post_first": 49.334400305146524,
+              "e2e_tps": 5.666618663035619,
+              "prefill_proxy_input_tps": 1597.8574661325188,
+              "total_time_s": 22.588435590005247,
+              "ttft_s": 20.026817622492672
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 261.0,
+            "proposed": 1827.0,
+            "accepted": 514.0,
+            "acceptance_percent": 28.133552271483307,
+            "mean_acceptance_length_including_bonus": 2.969348659003831,
+            "accepted_by_zero_based_position": {
+              "0": 189.0,
+              "1": 127.0,
+              "2": 84.0,
+              "3": 58.0,
+              "4": 36.0,
+              "5": 16.0,
+              "6": 4.0
+            }
+          }
+        },
+        {
+          "requested_length": 32768,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "prompt_plus_output_exceeds_max_model_len",
+            "requested_length": 32768,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 32768 input tokens, for a total of 32896 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=32768)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "375",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:15:47 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        },
+        {
+          "requested_length": 65536,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "requested_prompt_exceeds_max_model_len",
+            "requested_length": 65536,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 65536 input tokens, for a total of 65664 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=65536)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "375",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:15:47 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        },
+        {
+          "requested_length": 120000,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "requested_prompt_exceeds_max_model_len",
+            "requested_length": 120000,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 120000 input tokens, for a total of 120128 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=120000)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "378",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:15:47 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        },
+        {
+          "requested_length": 160000,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "requested_prompt_exceeds_max_model_len",
+            "requested_length": 160000,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 160000 input tokens, for a total of 160128 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=160000)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "378",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:15:47 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        }
+      ]
+    },
+    "bf16-long-32000": {
+      "source": "bf16-long-32000/long-context/summary.json",
+      "status": "completed",
+      "errors": [],
+      "points": [
+        {
+          "requested_length": 512,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 512,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.0847455484981765,
+              "decode_tps_post_first": 3.0870589559579855,
+              "e2e_tps": 2.8890847984042836,
+              "prefill_proxy_input_tps": 2.5661009981993175,
+              "total_time_s": 0.10415140027180314,
+              "ttft_s": 0.0004277475018170662
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 1.8435876375151565,
+              "decode_tps_post_first": 68.896362057825,
+              "e2e_tps": 59.93297345363524,
+              "prefill_proxy_input_tps": 1752.8303346645316,
+              "total_time_s": 2.1359343255026033,
+              "ttft_s": 0.2920990724960575
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 224.0,
+            "proposed": 1568.0,
+            "accepted": 545.0,
+            "acceptance_percent": 34.75765306122449,
+            "mean_acceptance_length_including_bonus": 3.4330357142857144,
+            "accepted_by_zero_based_position": {
+              "0": 167.0,
+              "1": 135.0,
+              "2": 103.0,
+              "3": 67.0,
+              "4": 40.0,
+              "5": 21.0,
+              "6": 12.0
+            }
+          }
+        },
+        {
+          "requested_length": 8192,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 8192,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.13065720647136914,
+              "decode_tps_post_first": 3.0284654554400277,
+              "e2e_tps": 0.4089108099976215,
+              "prefill_proxy_input_tps": 2.980301478234651,
+              "total_time_s": 0.13765944848273648,
+              "ttft_s": 0.006474744230217766
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.3877103915147018,
+              "decode_tps_post_first": 53.195675306705624,
+              "e2e_tps": 19.410912789708256,
+              "prefill_proxy_input_tps": 1941.4897682487049,
+              "total_time_s": 6.5944548354891594,
+              "ttft_s": 4.219440750486683
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 270.0,
+            "proposed": 1890.0,
+            "accepted": 514.0,
+            "acceptance_percent": 27.195767195767196,
+            "mean_acceptance_length_including_bonus": 2.9037037037037035,
+            "accepted_by_zero_based_position": {
+              "0": 196.0,
+              "1": 120.0,
+              "2": 84.0,
+              "3": 55.0,
+              "4": 25.0,
+              "5": 19.0,
+              "6": 15.0
+            }
+          }
+        },
+        {
+          "requested_length": 16384,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 16384,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.18639027998870006,
+              "decode_tps_post_first": 4.1339714502756095,
+              "e2e_tps": 0.1929843587136375,
+              "prefill_proxy_input_tps": 4.163350131318566,
+              "total_time_s": 0.19592679601191776,
+              "ttft_s": 0.0206393087428296
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.3921070020005573,
+              "decode_tps_post_first": 53.11936183031746,
+              "e2e_tps": 11.220701798941132,
+              "prefill_proxy_input_tps": 1819.8198464847374,
+              "total_time_s": 11.407857536003576,
+              "ttft_s": 9.00308971501363
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 260.0,
+            "proposed": 1820.0,
+            "accepted": 520.0,
+            "acceptance_percent": 28.571428571428573,
+            "mean_acceptance_length_including_bonus": 3.0,
+            "accepted_by_zero_based_position": {
+              "0": 207.0,
+              "1": 129.0,
+              "2": 81.0,
+              "3": 53.0,
+              "4": 25.0,
+              "5": 15.0,
+              "6": 10.0
+            }
+          }
+        },
+        {
+          "requested_length": 32000,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 32000,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.5030040630081203,
+              "decode_tps_post_first": 11.170030334275651,
+              "e2e_tps": 0.1281130954184393,
+              "prefill_proxy_input_tps": 1.5727797253705376,
+              "total_time_s": 0.5032569577451795,
+              "ttft_s": 0.01971499049977865
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.4017984664969845,
+              "decode_tps_post_first": 53.25892897777804,
+              "e2e_tps": 5.703556959724783,
+              "prefill_proxy_input_tps": 1596.856816847672,
+              "total_time_s": 22.44403509599215,
+              "ttft_s": 20.039367128003505
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 242.0,
+            "proposed": 1694.0,
+            "accepted": 531.0,
+            "acceptance_percent": 31.345926800472256,
+            "mean_acceptance_length_including_bonus": 3.1942148760330578,
+            "accepted_by_zero_based_position": {
+              "0": 184.0,
+              "1": 130.0,
+              "2": 90.0,
+              "3": 64.0,
+              "4": 39.0,
+              "5": 16.0,
+              "6": 8.0
+            }
+          }
+        },
+        {
+          "requested_length": 32768,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "prompt_plus_output_exceeds_max_model_len",
+            "requested_length": 32768,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 32768 input tokens, for a total of 32896 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=32768)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "375",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:24:50 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        },
+        {
+          "requested_length": 65536,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "requested_prompt_exceeds_max_model_len",
+            "requested_length": 65536,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 65536 input tokens, for a total of 65664 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=65536)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "375",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:24:50 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        },
+        {
+          "requested_length": 120000,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "requested_prompt_exceeds_max_model_len",
+            "requested_length": 120000,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 120000 input tokens, for a total of 120128 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=120000)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "378",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:24:50 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        },
+        {
+          "requested_length": 160000,
+          "status": "unsupported",
+          "classification": {
+            "configured_max_model_len": 32768,
+            "output_tokens": 128,
+            "reason": "requested_prompt_exceeds_max_model_len",
+            "requested_length": 160000,
+            "supported": false
+          },
+          "statistics": null,
+          "probe_error": {
+            "body": "{\"error\":{\"message\":\"This model's maximum context length is 32768 tokens. However, you requested 128 output tokens and your prompt contains 160000 input tokens, for a total of 160128 tokens. Please reduce the length of the input prompt or the number of requested output tokens. (parameter=input_tokens, value=160000)\",\"type\":\"BadRequestError\",\"param\":\"input_tokens\",\"code\":400}}",
+            "headers": {
+              "connection": "close",
+              "content-length": "378",
+              "content-type": "application/json",
+              "date": "Wed, 09 Sep 2026 16:24:50 GMT",
+              "server": "uvicorn"
+            },
+            "message": "HTTP 400 from /v1/completions",
+            "path": "/v1/completions",
+            "status": 400,
+            "type": "APIError"
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 0,
+            "proposed": 0,
+            "accepted": 0,
+            "acceptance_percent": null,
+            "mean_acceptance_length_including_bonus": null,
+            "accepted_by_zero_based_position": {}
+          }
+        }
+      ]
+    },
+    "mtp4-long": {
+      "source": "mtp4-long/long-context/summary.json",
+      "status": "completed",
+      "errors": [],
+      "points": [
+        {
+          "requested_length": 512,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 512,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.030000234248291235,
+              "decode_tps_post_first": 1.1602909458097201,
+              "e2e_tps": 0.8904698557323485,
+              "prefill_proxy_input_tps": 3.3706695100286197,
+              "total_time_s": 0.03073742201377172,
+              "ttft_s": 0.0005528670008061454
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 1.794351128002745,
+              "decode_tps_post_first": 70.77770604126866,
+              "e2e_tps": 61.40928802563383,
+              "prefill_proxy_input_tps": 1765.4586751373104,
+              "total_time_s": 2.084376049984712,
+              "ttft_s": 0.29000964149599895
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 272.0,
+            "proposed": 1088.0,
+            "accepted": 508.0,
+            "acceptance_percent": 46.69117647058823,
+            "mean_acceptance_length_including_bonus": 2.8676470588235294,
+            "accepted_by_zero_based_position": {
+              "0": 198.0,
+              "1": 144.0,
+              "2": 99.0,
+              "3": 67.0
+            }
+          }
+        },
+        {
+          "requested_length": 8192,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 8192,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.032722489966545254,
+              "decode_tps_post_first": 1.054308493022866,
+              "e2e_tps": 0.12135846300082775,
+              "prefill_proxy_input_tps": 1.3967528083310299,
+              "total_time_s": 0.036306333509855904,
+              "ttft_s": 0.003010903012182098
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.0068679719988722,
+              "decode_tps_post_first": 63.28268829248816,
+              "e2e_tps": 20.62578862581908,
+              "prefill_proxy_input_tps": 1949.4396488526447,
+              "total_time_s": 6.2058245794905815,
+              "ttft_s": 4.202233364005224
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 279.0,
+            "proposed": 1116.0,
+            "accepted": 494.0,
+            "acceptance_percent": 44.2652329749104,
+            "mean_acceptance_length_including_bonus": 2.770609318996416,
+            "accepted_by_zero_based_position": {
+              "0": 209.0,
+              "1": 151.0,
+              "2": 85.0,
+              "3": 49.0
+            }
+          }
+        },
+        {
+          "requested_length": 16384,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 16384,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.12487700576457428,
+              "decode_tps_post_first": 3.8296573302696615,
+              "e2e_tps": 0.12764648086861996,
+              "prefill_proxy_input_tps": 0.6852186319270004,
+              "total_time_s": 0.12426823849818902,
+              "ttft_s": 0.003484854503767565
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.0179885219986318,
+              "decode_tps_post_first": 62.96377222027466,
+              "e2e_tps": 11.482355271662946,
+              "prefill_proxy_input_tps": 1794.877476781452,
+              "total_time_s": 11.147715871004038,
+              "ttft_s": 9.128199785001925
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 273.0,
+            "proposed": 1092.0,
+            "accepted": 502.0,
+            "acceptance_percent": 45.97069597069597,
+            "mean_acceptance_length_including_bonus": 2.8388278388278385,
+            "accepted_by_zero_based_position": {
+              "0": 205.0,
+              "1": 144.0,
+              "2": 90.0,
+              "3": 63.0
+            }
+          }
+        },
+        {
+          "requested_length": 32768,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 32768,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.048185693987761624,
+              "decode_tps_post_first": 1.4602302076140106,
+              "e2e_tps": 0.011823563790220426,
+              "prefill_proxy_input_tps": 0.07623671002284027,
+              "total_time_s": 0.04961264750454575,
+              "ttft_s": 0.0010386132635176182
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.047875385003863,
+              "decode_tps_post_first": 62.02341194545728,
+              "e2e_tps": 5.523112060440339,
+              "prefill_proxy_input_tps": 1550.8911491431109,
+              "total_time_s": 23.175366481984383,
+              "ttft_s": 21.128497650512145
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 258.0,
+            "proposed": 1032.0,
+            "accepted": 517.0,
+            "acceptance_percent": 50.0968992248062,
+            "mean_acceptance_length_including_bonus": 3.003875968992248,
+            "accepted_by_zero_based_position": {
+              "0": 214.0,
+              "1": 157.0,
+              "2": 86.0,
+              "3": 60.0
+            }
+          }
+        },
+        {
+          "requested_length": 65536,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 65536,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.09540345298592001,
+              "decode_tps_post_first": 2.3873552733739274,
+              "e2e_tps": 0.0038016567467797913,
+              "prefill_proxy_input_tps": 0.02192529251101405,
+              "total_time_s": 0.0935748237388907,
+              "ttft_s": 0.0009711035090731457
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.2782967164966976,
+              "decode_tps_post_first": 55.75015540178511,
+              "e2e_tps": 2.2794151466942885,
+              "prefill_proxy_input_tps": 1216.4089149857286,
+              "total_time_s": 56.154766963998554,
+              "ttft_s": 53.87661928200396
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 248.0,
+            "proposed": 992.0,
+            "accepted": 520.0,
+            "acceptance_percent": 52.41935483870968,
+            "mean_acceptance_length_including_bonus": 3.096774193548387,
+            "accepted_by_zero_based_position": {
+              "0": 200.0,
+              "1": 154.0,
+              "2": 102.0,
+              "3": 64.0
+            }
+          }
+        },
+        {
+          "requested_length": 120000,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 120000,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.05044517626083689,
+              "decode_tps_post_first": 1.2488269939234655,
+              "e2e_tps": 0.0003549770273475472,
+              "prefill_proxy_input_tps": 0.021670300813298127,
+              "total_time_s": 0.05174190250545507,
+              "ttft_s": 0.003258534496126231
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.232772526986082,
+              "decode_tps_post_first": 56.87995640638498,
+              "e2e_tps": 0.9373100523122375,
+              "prefill_proxy_input_tps": 893.3324969256355,
+              "total_time_s": 136.56100209748547,
+              "ttft_s": 134.32848398048372
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 215.0,
+            "proposed": 860.0,
+            "accepted": 549.0,
+            "acceptance_percent": 63.83720930232558,
+            "mean_acceptance_length_including_bonus": 3.5534883720930233,
+            "accepted_by_zero_based_position": {
+              "0": 175.0,
+              "1": 145.0,
+              "2": 124.0,
+              "3": 105.0
+            }
+          }
+        },
+        {
+          "requested_length": 160000,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 160000,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.10991778249444906,
+              "decode_tps_post_first": 1.8678695572142843,
+              "e2e_tps": 0.00033997880517089296,
+              "prefill_proxy_input_tps": 0.07765198014453745,
+              "total_time_s": 0.1246542689987109,
+              "ttft_s": 0.02220567152107833
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 2.737433698013774,
+              "decode_tps_post_first": 46.39381940038941,
+              "e2e_tps": 0.5908422557704163,
+              "prefill_proxy_input_tps": 748.005654989214,
+              "total_time_s": 216.6398885045055,
+              "ttft_s": 213.90212634649652
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 229.0,
+            "proposed": 916.0,
+            "accepted": 542.0,
+            "acceptance_percent": 59.1703056768559,
+            "mean_acceptance_length_including_bonus": 3.3668122270742358,
+            "accepted_by_zero_based_position": {
+              "0": 191.0,
+              "1": 148.0,
+              "2": 115.0,
+              "3": 88.0
+            }
+          }
+        },
+        {
+          "requested_length": 190000,
+          "status": "complete",
+          "classification": {
+            "configured_max_model_len": 212992,
+            "output_tokens": 128,
+            "reason": "within_prompt_and_output_capacity",
+            "requested_length": 190000,
+            "supported": true
+          },
+          "statistics": {
+            "complete": true,
+            "invalid_count": 0,
+            "iqr_inclusive": {
+              "decode_elapsed_s": 0.3024898982475861,
+              "decode_tps_post_first": 3.514199412568935,
+              "e2e_tps": 0.0004572657261953661,
+              "prefill_proxy_input_tps": 0.05329832707695914,
+              "total_time_s": 0.29854637874814216,
+              "ttft_s": 0.02290871724835597
+            },
+            "measured_count": 6,
+            "median": {
+              "decode_elapsed_s": 3.349681223000516,
+              "decode_tps_post_first": 37.91405556610485,
+              "e2e_tps": 0.4427632186133239,
+              "prefill_proxy_input_tps": 664.8690783400657,
+              "total_time_s": 289.0935746405012,
+              "ttft_s": 285.7705468044878
+            },
+            "required_valid_measurements": 6,
+            "statistics": "median and inclusive IQR over six valid measured rows only",
+            "valid_count": 6,
+            "warmups_excluded": true
+          },
+          "measured_speculation_excluding_warmup": {
+            "draft_steps": 250.0,
+            "proposed": 1000.0,
+            "accepted": 523.0,
+            "acceptance_percent": 52.3,
+            "mean_acceptance_length_including_bonus": 3.092,
+            "accepted_by_zero_based_position": {
+              "0": 202.0,
+              "1": 140.0,
+              "2": 104.0,
+              "3": 77.0
+            }
+          }
+        }
+      ]
+    }
+  },
+  "output_variation": {
+    "betterbench_output_length_differences_per_20": {
+      "chat": 1,
+      "code": 2,
+      "file_edit": 0,
+      "json": 0,
+      "math": 0,
+      "prose": 2,
+      "reasoning": 4,
+      "summarization": 3
+    },
+    "vllm_exact_text_matches_across_arms_per_48": {
+      "1": 40,
+      "2": 42,
+      "4": 40,
+      "8": 39
+    },
+    "vllm_exact_text_matches_vs_same_arm_c1_per_48": {
+      "bf16-clients": {
+        "2": 45,
+        "4": 41,
+        "8": 41
+      },
+      "int4-clients": {
+        "2": 45,
+        "4": 42,
+        "8": 43
+      }
+    },
+    "quality_suite_run": false,
+    "cause_of_variation_established": false
+  }
+}

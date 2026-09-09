@@ -1,0 +1,124 @@
+{
+  "status": "benchmark_clients_completed",
+  "head": "dense",
+  "suite": "standard",
+  "cascade_enabled": false,
+  "cascade_probability_ratio": 0,
+  "mode": "mtp4-reference",
+  "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+  "context": 212992,
+  "model_runner": "pinned reference default",
+  "graph": true,
+  "audit": false,
+  "target_dtype": "float16",
+  "draft_dtype": null,
+  "draft_quantization": "S+M1 INT4",
+  "speculative_tokens": 4,
+  "started_utc": "2026-09-09T16:24:55.158779+00:00",
+  "betterbench_commit": "1de941d256ddd633a8c117963ba72aebe4b4d5e4",
+  "client_concurrency": [
+    1,
+    2,
+    4,
+    8,
+    16
+  ],
+  "server_max_num_seqs": 1,
+  "comparison_order": "sequential, not interleaved",
+  "tier": "pending",
+  "reference_patch_sha256": {
+    "patch_mtp_nightly.py": "4d7a02c4ea10ca7c00dc89ad927fa3dafa747dbf0553d2adf24e30a3c53e9c14",
+    "patch_mtp_boundary.py": "41d2f74e5fef1f074b76b5a90dd1016de437228431802cfb1fa7bd7ce4cc9b50",
+    "patch_gdn_mixed_split_v5.py": "8e4a3cbe5f424f308af74ff215d0fcb8d31f63ac3f07cf359ed2269956c3fc80",
+    "patch_draft_lmhead_int4.py": "ffae41926d5f05f4f38bb985301b5e572092441d06d6063c8820a63a39b8cefc",
+    "patch_draft_mtp_int4.py": "4df179c3e77fd7a248f9b9c0b60217c60caea14ebfd16b7860536fbff3b2a1e9"
+  },
+  "prefill_guard_sha256": "baa4647398874c19175ea74fe6f5d8dd6c2d83fc4bd0e5f2a68558afd983f5ad",
+  "glimmer_running_before": "false",
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "qwen38",
+        "object": "model",
+        "created": 1788971251,
+        "owned_by": "vllm",
+        "root": "/model",
+        "parent": null,
+        "max_model_len": 212992,
+        "permission": [
+          {
+            "id": "modelperm-bf5c29f88e229193",
+            "object": "model_permission",
+            "created": 1788971251,
+            "allow_create_engine": false,
+            "allow_sampling": true,
+            "allow_logprobs": true,
+            "allow_search_indices": false,
+            "allow_view": true,
+            "allow_fine_tuning": false,
+            "organization": "*",
+            "group": null,
+            "is_blocking": false
+          }
+        ]
+      }
+    ]
+  },
+  "canaries": [
+    true,
+    true,
+    true
+  ],
+  "finite_boundaries": 131,
+  "functional": [
+    {
+      "label": "gcd",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    },
+    {
+      "label": "merge",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    },
+    {
+      "label": "brackets",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    },
+    {
+      "label": "lowerbound",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    },
+    {
+      "label": "chunks",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    },
+    {
+      "label": "dedup",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    },
+    {
+      "label": "transpose",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    },
+    {
+      "label": "rle",
+      "pass": true,
+      "stdout": "FUNCTIONAL_PASS\n"
+    }
+  ],
+  "remaining": [
+    "long-context sweep",
+    "artifact analysis and publication checklist"
+  ],
+  "finished_utc": "2026-09-09T17:13:01.430251+00:00",
+  "launcher_unchanged": true,
+  "power_unchanged": true,
+  "glimmer_running_after": "false"
+}

@@ -1,0 +1,1 @@
+docker run --rm --network host -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-clients:/profile -v /home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16:/model:ro --entrypoint vllm vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4 bench serve --help

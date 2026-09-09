@@ -1,0 +1,118 @@
+{
+  "run_id": "20260909-qwen38-dflash2-rtn-standard",
+  "status": "execution_complete_with_preserved_failures",
+  "tier": "development_not_publication_ready",
+  "runtime_scope": "pre-boundary-fix",
+  "mtp4_reference": {
+    "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+    "vllm_version": "0.27.2rc1.dev77+gac7509e2b",
+    "vllm_commit": "ac7509e2b1db40fec2f03dde1ed4e9dfdc2338c9",
+    "xpu_kernels_version": "0.1.12.3",
+    "torch_version": "2.13.0+xpu",
+    "configured_max_model_len": 212992,
+    "speculative_tokens": 4,
+    "draft_quantization": "S+M1 INT4",
+    "largest_successful_tested_prompt_tokens": 190000,
+    "comparison": "stack/configuration bundle, not isolated quantization"
+  },
+  "standard_commit": "64baade",
+  "protocol": "../../docs/qwen38-benchmark-process-20260909.md",
+  "host_artifact_root": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard",
+  "target": {
+    "repository": "SergiioB/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16",
+    "revision": "9d189a60e4c0ad7f9f47cd94bfa393ca10b3924e",
+    "quantization": "symmetric GPTQ INT4 G128",
+    "compute_dtype": "float16",
+    "kv_dtype": "fp8"
+  },
+  "drafter": {
+    "repository": "incoai/Qwen3.8-27B-DFlash2",
+    "revision": "dedf8df68adfb1afeaf7b7480c0a0243108177b4",
+    "baseline": "native bfloat16",
+    "candidate": "partial RTN INT4 G128; QKV and conditioning/selector/other retained tensors remain BF16",
+    "kv_dtype": "bfloat16 storage, auto dispatch",
+    "algorithm": "dflash",
+    "speculative_tokens": 7,
+    "acceptance": "standard strict rejection; no relaxed or cascade acceptance"
+  },
+  "matched_runtime": {
+    "image": "vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4",
+    "vllm_commit": "73029d42441321b631779db3475031f5ec26dd6c",
+    "vllm_version": "0.28.1rc1.dev278+g73029d424",
+    "xpu_kernels_version": "0.1.14.1",
+    "torch_version": "2.13.0+xpu",
+    "model_runner": "legacy V1, VLLM_USE_V2_MODEL_RUNNER=0",
+    "configured_max_model_len": 32768,
+    "server_max_num_seqs": 1,
+    "max_num_batched_tokens": 8192,
+    "gpu_memory_utilization": 0.95,
+    "prefix_cache": false,
+    "thinking": false,
+    "audit_hooks": false,
+    "graph_capture_sizes": [1, 2, 4, 8]
+  },
+  "hardware": {
+    "gpu": "Intel Arc Pro B70",
+    "gpu_count": 1,
+    "cpu": "AMD Ryzen 7 5800XT 8-Core Processor",
+    "host_ram_bytes": 33563914240,
+    "host_os": "CachyOS",
+    "host_kernel": "7.2.0-1-cachyos",
+    "gpu_driver": "xe",
+    "power_cap_watts": 275,
+    "power_draw_measured": false,
+    "pcie_reported_by_sysfs_and_lspci": "2.5 GT/s x1",
+    "peak_workload_device_memory_measured": false
+  },
+  "betterbench": {
+    "repository": "https://github.com/GGZ14/BetterBench",
+    "commit": "1de941d256ddd633a8c117963ba72aebe4b4d5e4",
+    "version": "0.4.0",
+    "corpus_version": "1.0",
+    "phases": ["decode", "prefill", "concurrency"],
+    "warmups_per_category": 3,
+    "measured_passes_per_category": 20,
+    "client_concurrency": [1, 2, 4, 8, 16],
+    "requests_per_concurrency_level": 48,
+    "temperature": 0,
+    "seed": 42,
+    "order": ["int4-clients", "bf16-clients", "mtp4-clients"],
+    "interleaved": false,
+    "paired_confidence_interval_claimed": false
+  },
+  "vllm_bench": {
+    "dataset": "random",
+    "input_tokens": 512,
+    "output_tokens": 128,
+    "measured_requests": 48,
+    "warmups": 3,
+    "client_concurrency": [1, 2, 4, 8],
+    "request_rate": "inf",
+    "temperature": 0,
+    "seed": 42,
+    "ignore_eos": true
+  },
+  "artifact_cells": {
+    "int4-clients": "benchmark_clients_completed",
+    "bf16-clients": "benchmark_clients_completed",
+    "int4-long": "aborted: engine shape assertion at 32640 prompt tokens",
+    "bf16-long": "aborted: same engine shape assertion at 32640 prompt tokens",
+    "int4-long-32000": "completed: 6 measured successes at 512/8192/16384/32000, real HTTP 400 at 32768/65536/120000/160000",
+    "bf16-long-32000": "completed: same exact 24 measured payloads and expected HTTP 400 rejections",
+    "mtp4-clients": "benchmark_clients_completed",
+    "mtp4-long": "completed: 6 measured successes at 512/8192/16384/32768/65536/120000/160000/190000"
+  },
+  "unmet_publication_gates": [
+    "Unresolved greedy-output variation; Section 9 divergence/regression suites not run",
+    "Exact-boundary DFlash stability failure; subsequent fix is a separate runtime",
+    "Peak device-memory measurement missing",
+    "Sequential rather than interleaved A/B; no drift-cancelled confidence interval"
+  ],
+  "limitations": [
+    "Configured context, runtime KV estimates and successful real-context measurements are distinct.",
+    "These cells used the pre-fix runtime; subsequent boundary-fix results are a separate configuration.",
+    "Greedy output was not universally bit-identical, including within each arm across client loads; quality invariance is not established.",
+    "Section 9 divergence and regression tests remain an outstanding publication gate while quality sensitivity is unresolved; no fidelity or drift-cancelled speedup CI is claimed.",
+    "Raw upstream vLLM JSON may use Infinity for the unbounded request-rate setting; preserved unchanged."
+  ]
+}

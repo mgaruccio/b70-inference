@@ -1,0 +1,15 @@
+B70_XPU_GDN_PARTIAL_BLOCK: /opt/venv/lib/python3.12/site-packages/vllm/_xpu_ops.py
+{"test": "C1 K7 partial GDN state continuation", "torch": "2.13.0+xpu", "vllm": "0.28.1rc1.dev278+g73029d424", "xpu_kernels": "0.1.14.1", "device": "Intel(R) Arc(TM) Pro B70 Graphics", "config": "/model/config.json", "tp_size": 1, "gqa_interleaved": false, "conv_shape": [12, 10, 10240], "ssm_shape": [12, 48, 128, 128], "state_dtypes": ["torch.float16", "torch.float32"], "qkvz_shape": [8, 16384], "ba_shape": [8, 96], "seed": 73029, "rtol": 0, "atol": 0}
+BEGIN L=1 previous=1
+Traceback (most recent call last):
+  File "/code/scripts/check-qwen38-xpu-boundary-state.py", line 218, in <module>
+    main()
+  File "/code/scripts/check-qwen38-xpu-boundary-state.py", line 179, in main
+    compare(zero, different, length, label + " suffix independence")
+  File "/code/scripts/check-qwen38-xpu-boundary-state.py", line 165, in compare
+    same(left[valid_slots[:length]], right[valid_slots[:length]], f"{label}: {name}")
+  File "/code/scripts/check-qwen38-xpu-boundary-state.py", line 159, in same
+    torch.testing.assert_close(a, b, rtol=0, atol=0, msg=label)
+  File "/opt/venv/lib/python3.12/site-packages/torch/testing/_comparison.py", line 1631, in assert_close
+    raise error_metas[0].to_error(msg)
+AssertionError: L=1 previous=1 suffix independence: conv
