@@ -31,7 +31,8 @@ K3 passed 16/16 completed-answer smoke checks, eight concurrently resident ~64k 
 ## Start here
 
 - **Muse Glimmer post + recipe:** [mgaruccio/muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70)
-- Suite protocol: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md)
+- **Performance comparisons:** [`BENCHMARKING_STANDARDS.md`](BENCHMARKING_STANDARDS.md) — required protocol and publication checklist; earlier exploratory measurements are not retroactively standard-compliant.
+- DFlash suite tooling: [`docs/dflash-share-suite.md`](docs/dflash-share-suite.md)
 - Host contract: [`docs/arc-pro-b70-planned-deployment.md`](docs/arc-pro-b70-planned-deployment.md)
 - Parked llama.cpp / SYCL notes: [`docs/glimmer-b70-research-program.md`](docs/glimmer-b70-research-program.md)
 - **Qwen research plan:** [`docs/qwen38-b70-research-plan-20260824.md`](docs/qwen38-b70-research-plan-20260824.md)
