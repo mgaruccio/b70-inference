@@ -2,7 +2,7 @@
 """Research-only mixed-dtype DFlash2 overlay for the pinned B70 XPU image.
 
 Run B70_DFLASH2_BF16=1 python /overlay.py before starting vLLM. --root accepts
-an exported vllm package directory for offline tests. All six source files must
+an exported vllm package directory for offline tests. All seven source files must
 match the actual 73029d424 image, or this exact overlay, before any are written.
 No target parameter is cast, copied, or quantized. vLLM's temporary draft vocab
 allocations before sharing are unchanged (upstream #53612); no vocab remapping.
@@ -33,6 +33,7 @@ from pathlib import Path
 
 PINNED_SHA256 = {
     "config/speculative.py": "4e3d0a9b93f54fc0f25897e8c7bba5412e3851dd819950964c201ed6376e08b7",
+    "config/vllm.py": "06b918459d5ab7694bd32fbf4e2b16a576757502d737db7197e8b0d2a1076c6e",
     "v1/spec_decode/llm_base_proposer.py": "7b404e8de2a0068510cbda29d3b36c16fb7515a5e5260ab26be9f381692d3c91",
     "v1/spec_decode/dflash.py": "38c10f7b922905562f1af9b64eb98be71c398a7c79e94b40124f4496cab905af",
     "model_executor/models/qwen3_dflash.py": "51d2b55f883d34393e9b732952fc866ae0308b2a39cfcc58243e0990802afcfd",
@@ -58,10 +59,10 @@ def _b70_dflash2_requested(spec):
 
     if not current_platform.is_xpu() or spec.method != "dflash":
         raise ValueError("B70 DFlash2 BF16 requires XPU and explicit method=dflash")
-    if _b70_os.environ.get("VLLM_USE_V2_MODEL_RUNNER", "0") != "0":
+    if _b70_os.environ.get("VLLM_USE_V2_MODEL_RUNNER") != "0":
         raise ValueError("B70 DFlash2 BF16 supports only the legacy model runner")
     target = spec.target_model_config
-    if target.dtype != torch.float16 or target.quantization != "gptq":
+    if target.dtype != torch.float16 or target.quantization not in ("gptq", "auto_gptq"):
         raise ValueError("B70 DFlash2 requires the FP16-compute GPTQ target")
     if getattr(target, "head_dtype", None) not in (None, torch.float16):
         raise ValueError("B70 DFlash2 requires a dense FP16 shared target head")
@@ -206,6 +207,15 @@ DRAFT_METHODS = '''
             attn = layer.self_attn.attn
             if attn.dtype != torch.bfloat16 or attn.kv_cache_torch_dtype != torch.bfloat16:
                 raise RuntimeError("B70 DFlash2 attention compute AND KV cache must be BF16")
+            # XPU 0.1.14.1 accepts only 'auto' for an unquantized cache. Keep
+            # the already-resolved BF16 allocation/spec; normalize dispatch only.
+            if attn.kv_cache_dtype not in ("bfloat16", "auto"):
+                raise RuntimeError("B70 DFlash2 expected unquantized draft KV dispatch")
+            if attn.impl.kv_cache_dtype not in ("bfloat16", "auto"):
+                raise RuntimeError("B70 DFlash2 expected unquantized backend KV dispatch")
+            attn.kv_cache_dtype = attn.impl.kv_cache_dtype = "auto"
+            if _B70_DFLASH2_AUDIT:
+                print("B70_DFLASH2_AUDIT draft_kv: storage=torch.bfloat16 dispatch=auto", flush=True)
         for name in ("_fused_kv_weight", "_k_norm_weights", "_hidden_norm_weight"):
             tensor = getattr(self.model, name)
             if tensor.dtype != torch.bfloat16:
@@ -289,6 +299,15 @@ def transformations():
             ('                    config_format=self.target_model_config.config_format,\n                )\n',
              '                    config_format=self.target_model_config.config_format,\n                )\n'
              '                _b70_dflash2_validate(self)\n'),
+        ],
+        "config/vllm.py": [
+            ('        if self._is_dflash2_draft():\n'
+             '            unsupported.append("dflash2 drafts")\n',
+             '        if self._is_dflash2_draft():\n'
+             '            from vllm.config.speculative import _b70_dflash2_enabled\n'
+             '            # Only this guarded overlay supplies the legacy selector walk.\n'
+             '            if not _b70_dflash2_enabled(self.speculative_config):\n'
+             '                unsupported.append("dflash2 drafts")\n'),
         ],
         "v1/spec_decode/llm_base_proposer.py": [
             ('class SpecDecodeBaseProposer:\n',

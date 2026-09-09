@@ -199,6 +199,40 @@ class TensorTests(unittest.TestCase):
         self.assertEqual(scope["_b70_dflash2_dtype"](vc), torch.float16)
         scope["_b70_dflash2_validate"](spec)  # Disabled overlay does not validate/change ordinary runs.
 
+    def test_normalized_xpu_gptq_alias_and_explicit_runner_selection(self):
+        scope, spec = self.config()
+        spec.target_model_config.quantization = "auto_gptq"
+        platform = NS(current_platform=NS(is_xpu=lambda: True))
+        with patch.dict(sys.modules, {"vllm.platforms": platform}), \
+                patch.dict(os.environ, {"VLLM_USE_V2_MODEL_RUNNER": "0"}):
+            scope["_b70_dflash2_validate"](spec)
+            for value in (None, "1"):
+                if value is None:
+                    os.environ.pop("VLLM_USE_V2_MODEL_RUNNER", None)
+                else:
+                    os.environ["VLLM_USE_V2_MODEL_RUNNER"] = value
+                with self.assertRaisesRegex(ValueError, "legacy"):
+                    scope["_b70_dflash2_validate"](spec)
+            os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"
+            spec.target_model_config.quantization = "awq"
+            with self.assertRaisesRegex(ValueError, "GPTQ"):
+                scope["_b70_dflash2_validate"](spec)
+
+
+    def test_legacy_support_gate_requires_opt_in_selector_overlay(self):
+        scope, spec = self.config()
+        source = ast.parse(self.sources["config/vllm.py"])
+        gate = next(n for n in ast.walk(source) if isinstance(n, ast.If)
+                    and ast.unparse(n.test) == "self._is_dflash2_draft()")
+        module = NS(_b70_dflash2_enabled=scope["_b70_dflash2_enabled"])
+        for enabled, expected in ((False, ["dflash2 drafts"]), (True, [])):
+            scope["_B70_DFLASH2_BF16"] = enabled
+            runtime = {"self": NS(_is_dflash2_draft=lambda: True, speculative_config=spec),
+                       "unsupported": []}
+            with patch.dict(sys.modules, {"vllm.config.speculative": module}):
+                execute([deepcopy(gate)], runtime)
+            self.assertEqual(runtime["unsupported"], expected)
+
     def test_audit_requires_eager_and_finite_checks_are_off_by_default(self):
         scope, spec = self.config(audit=True)
         with patch.dict(sys.modules, {"vllm.platforms": NS(current_platform=NS(is_xpu=lambda: True))}), \
@@ -324,13 +358,22 @@ class TensorTests(unittest.TestCase):
         draft.lm_head.quant_method = Unquantized()
         draft.model.embed_tokens.quant_method = Unquantized()
         target = NS(lm_head=draft.lm_head, model=NS(embed_tokens=draft.model.embed_tokens))
-        draft.model.layers = [NS(self_attn=NS(attn=NS(dtype=torch.bfloat16, kv_cache_torch_dtype=torch.bfloat16)))]
+        attn = NS(dtype=torch.bfloat16, kv_cache_torch_dtype=torch.bfloat16,
+                  kv_cache_dtype="bfloat16", impl=NS(kv_cache_dtype="bfloat16"))
+        draft.model.layers = [NS(self_attn=NS(attn=attn))]
         for name in ("_fused_kv_weight", "_k_norm_weights", "_hidden_norm_weight"):
             setattr(draft.model, name, torch.ones(2, 4, dtype=torch.bfloat16))
         self.scope["_B70_DFLASH2_AUDIT"] = True
         with patch.dict(sys.modules, modules), redirect_stdout(io.StringIO()) as output:
             draft._b70_validate_shared(target)
             self.assertTrue(draft._b70_shared_checked)
+            self.assertEqual(attn.kv_cache_torch_dtype, torch.bfloat16)
+            self.assertEqual(attn.kv_cache_dtype, "auto")
+            self.assertEqual(attn.impl.kv_cache_dtype, "auto")
+            attn.impl.kv_cache_dtype = "fp8"
+            with self.assertRaisesRegex(RuntimeError, "backend KV dispatch"):
+                draft._b70_validate_shared(target)
+            attn.impl.kv_cache_dtype = "auto"
             draft.model.fc.weight = nn.Parameter(draft.model.fc.weight.half())
             with self.assertRaisesRegex(RuntimeError, "loaded parameter model.fc.weight"):
                 draft._b70_validate_shared(target)
