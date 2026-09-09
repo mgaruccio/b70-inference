@@ -1,0 +1,84 @@
+
+$ /usr/bin/python3 -m unittest discover -s tests -p test_qwen38_xpu_boundary.py -v
+test_cli_offline_copy_replay_and_no_write_on_drift (test_qwen38_xpu_boundary.PatchTests.test_cli_offline_copy_replay_and_no_write_on_drift) ... ok
+test_compile_checked_on_first_apply_and_replay (test_qwen38_xpu_boundary.PatchTests.test_compile_checked_on_first_apply_and_replay) ... ok
+test_drift_fails_closed (test_qwen38_xpu_boundary.PatchTests.test_drift_fails_closed) ... ok
+test_real_pinned_source_read_only (test_qwen38_xpu_boundary.PatchTests.test_real_pinned_source_read_only) ... ok
+test_transform_replay_syntax_and_scope (test_qwen38_xpu_boundary.PatchTests.test_transform_replay_syntax_and_scope) ... ok
+test_full_width_fast_path_and_metadata_free_warmup_unchanged (test_qwen38_xpu_boundary.RoutingTests.test_full_width_fast_path_and_metadata_free_warmup_unchanged) ... ok
+test_inconsistent_partial_c1_metadata_fails_before_native_call (test_qwen38_xpu_boundary.RoutingTests.test_inconsistent_partial_c1_metadata_fails_before_native_call) ... ok
+test_non_spec_mixed_and_multi_request_paths_not_reclassified (test_qwen38_xpu_boundary.RoutingTests.test_non_spec_mixed_and_multi_request_paths_not_reclassified) ... ok
+test_partial_prefix_all_lengths_previous_acceptance_and_padding (test_qwen38_xpu_boundary.RoutingTests.test_partial_prefix_all_lengths_previous_acceptance_and_padding) ... ok
+test_reproduces_fixed_width_contract_before_fix (test_qwen38_xpu_boundary.RoutingTests.test_reproduces_fixed_width_contract_before_fix) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.338s
+
+OK
+
+$ /usr/bin/python3 -m unittest discover -s tests -p test_qwen38_dflash2_probe.py -v
+test_acceptance_uses_measured_requests (test_qwen38_dflash2_probe.RunnerTests.test_acceptance_uses_measured_requests) ... ok
+test_control_is_unmodified_fp16_target (test_qwen38_dflash2_probe.RunnerTests.test_control_is_unmodified_fp16_target) ... ok
+test_draft_is_explicit_and_separate (test_qwen38_dflash2_probe.RunnerTests.test_draft_is_explicit_and_separate) ... ok
+test_graph_is_opt_in (test_qwen38_dflash2_probe.RunnerTests.test_graph_is_opt_in) ... ok
+test_int4_is_only_an_explicit_draft_override (test_qwen38_dflash2_probe.RunnerTests.test_int4_is_only_an_explicit_draft_override) ... ok
+test_int4_rejects_control_and_original_weights_before_start (test_qwen38_dflash2_probe.RunnerTests.test_int4_rejects_control_and_original_weights_before_start) ... usage: probe [-h] --out OUT --mode {control,dflash2} [--patch PATCH]
+             [--draft-int4 DRAFT_INT4] [--guard GUARD]
+             --prefill-patch PREFILL_PATCH [--context CONTEXT] [--graph]
+             [--audit] [--suite {smoke,compare,long}]
+probe: error: --draft-int4 is drafter-only, never a target/control option
+usage: probe [-h] --out OUT --mode {control,dflash2} [--patch PATCH]
+             [--draft-int4 DRAFT_INT4] [--guard GUARD]
+             --prefill-patch PREFILL_PATCH [--context CONTEXT] [--graph]
+             [--audit] [--suite {smoke,compare,long}]
+probe: error: --draft-int4 must name a separate disposable checkpoint
+usage: probe [-h] --out OUT --mode {control,dflash2} [--patch PATCH]
+             [--draft-int4 DRAFT_INT4] [--guard GUARD]
+             --prefill-patch PREFILL_PATCH [--context CONTEXT] [--graph]
+             [--audit] [--suite {smoke,compare,long}]
+probe: error: --draft-int4 must name a separate disposable checkpoint
+ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.002s
+
+OK
+
+$ /usr/bin/python3 -m unittest discover -s tests -p test_qwen38_long_context_bench.py -v
+test_capacity_classification_distinguishes_supported_and_unsupported (test_qwen38_long_context_bench.LongContextProtocolTests.test_capacity_classification_distinguishes_supported_and_unsupported) ... ok
+test_explicit_practical_point_does_not_hide_required_lengths (test_qwen38_long_context_bench.LongContextProtocolTests.test_explicit_practical_point_does_not_hide_required_lengths) ... ok
+test_forced_prompt_and_output_count_validation (test_qwen38_long_context_bench.LongContextProtocolTests.test_forced_prompt_and_output_count_validation) ... ok
+test_near_limit_selection_leaves_output_room_and_uses_190k_for_large_config (test_qwen38_long_context_bench.LongContextProtocolTests.test_near_limit_selection_leaves_output_room_and_uses_190k_for_large_config) ... ok
+test_nonce_is_deterministic_and_varies_by_point_and_trial (test_qwen38_long_context_bench.LongContextProtocolTests.test_nonce_is_deterministic_and_varies_by_point_and_trial) ... ok
+test_quantiles_are_inclusive (test_qwen38_long_context_bench.LongContextProtocolTests.test_quantiles_are_inclusive) ... ok
+test_rendered_prompt_is_exact_and_preserves_actual_template_framing (test_qwen38_long_context_bench.LongContextProtocolTests.test_rendered_prompt_is_exact_and_preserves_actual_template_framing) ... ok
+test_sse_burst_rate_uses_n_minus_one_after_first_chunk (test_qwen38_long_context_bench.LongContextProtocolTests.test_sse_burst_rate_uses_n_minus_one_after_first_chunk) ... ok
+test_sse_server_error_is_not_success (test_qwen38_long_context_bench.LongContextProtocolTests.test_sse_server_error_is_not_success) ... ok
+test_stream_requires_done_and_length_finish (test_qwen38_long_context_bench.LongContextProtocolTests.test_stream_requires_done_and_length_finish) ... ok
+test_summary_excludes_warmup_and_requires_six_valid_measurements (test_qwen38_long_context_bench.LongContextProtocolTests.test_summary_excludes_warmup_and_requires_six_valid_measurements) ... ok
+test_unsupported_requires_context_http_400_not_arbitrary_error (test_qwen38_long_context_bench.LongContextProtocolTests.test_unsupported_requires_context_http_400_not_arbitrary_error) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.001s
+
+OK
+
+$ /usr/bin/python3 -m unittest discover -s tests -p test_qwen38_standard_bench.py -v
+test_command_output_and_argv_are_retained (test_qwen38_standard_bench.StandardBenchmarkTests.test_command_output_and_argv_are_retained) ... COMMAND=/usr/bin/python3 -c 'print('"'"'observed'"'"')'
+ok
+test_dflash_context_default_and_explicit_limits (test_qwen38_standard_bench.StandardBenchmarkTests.test_dflash_context_default_and_explicit_limits) ... ok
+test_failed_commands_are_not_successful (test_qwen38_standard_bench.StandardBenchmarkTests.test_failed_commands_are_not_successful) ... COMMAND=/usr/bin/python3 -c 'raise SystemExit(7)'
+ok
+test_invalid_context_rejected_before_host_start (test_qwen38_standard_bench.StandardBenchmarkTests.test_invalid_context_rejected_before_host_start) ... ok
+test_long_context_keeps_standard_points_and_adds_one_token_over (test_qwen38_standard_bench.StandardBenchmarkTests.test_long_context_keeps_standard_points_and_adds_one_token_over) ... ok
+test_metrics_snapshot_preserves_raw_text (test_qwen38_standard_bench.StandardBenchmarkTests.test_metrics_snapshot_preserves_raw_text) ... ok
+test_mtp_cannot_take_dflash_checkpoint (test_qwen38_standard_bench.StandardBenchmarkTests.test_mtp_cannot_take_dflash_checkpoint) ... ok
+test_mtp_rejects_context_override (test_qwen38_standard_bench.StandardBenchmarkTests.test_mtp_rejects_context_override) ... ok
+test_reference_is_cold_localhost_and_original_unchanged (test_qwen38_standard_bench.StandardBenchmarkTests.test_reference_is_cold_localhost_and_original_unchanged) ... ok
+test_reference_quotes_output_path (test_qwen38_standard_bench.StandardBenchmarkTests.test_reference_quotes_output_path) ... ok
+test_reference_rejects_changed_launcher (test_qwen38_standard_bench.StandardBenchmarkTests.test_reference_rejects_changed_launcher) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.021s
+
+OK

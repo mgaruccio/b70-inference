@@ -1,0 +1,22 @@
+usage: qwen38_standard_bench.py [-h] --out OUT --betterbench BETTERBENCH
+                                [--draft-int4 DRAFT_INT4] [--reference-mtp]
+                                [--context CONTEXT] [--long-context-only]
+                                [--near-limit NEAR_LIMIT] [--patch PATCH]
+                                [--prefill-patch PREFILL_PATCH] --guard GUARD
+
+Run standard benchmark clients against disposable Qwen DFlash2 or MTP4 cells.
+
+options:
+  -h, --help            show this help message and exit
+  --out OUT
+  --betterbench BETTERBENCH
+  --draft-int4 DRAFT_INT4
+  --reference-mtp
+  --context CONTEXT     DFlash total context limit (default: 32768); not valid
+                        for the fixed MTP reference
+  --long-context-only
+  --near-limit NEAR_LIMIT
+                        explicit practical prompt length for the cold sweep
+  --patch PATCH
+  --prefill-patch PREFILL_PATCH
+  --guard GUARD

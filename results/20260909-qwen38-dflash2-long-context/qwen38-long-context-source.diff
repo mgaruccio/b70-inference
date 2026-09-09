@@ -1,0 +1,111 @@
+diff --git a/scripts/experiments/qwen38_standard_bench.py b/scripts/experiments/qwen38_standard_bench.py
+index 0a9363e..9bcd00e 100644
+--- a/scripts/experiments/qwen38_standard_bench.py
++++ b/scripts/experiments/qwen38_standard_bench.py
+@@ -12,6 +12,7 @@ import subprocess
+ import urllib.error
+ 
+ import qwen38_dflash2_probe as dflash
++import qwen38_long_context_bench as cold
+ 
+ 
+ def run_logged(argv, destination, *, check=True, timeout=7200):
+@@ -34,14 +35,22 @@ def main():
+     parser.add_argument("--betterbench", type=Path, required=True)
+     parser.add_argument("--draft-int4", type=Path)
+     parser.add_argument("--reference-mtp", action="store_true")
++    parser.add_argument("--context", type=int,
++                        help="DFlash total context limit (default: 32768); not valid for the fixed MTP reference")
+     parser.add_argument("--long-context-only", action="store_true")
+     parser.add_argument("--near-limit", type=int, help="explicit practical prompt length for the cold sweep")
+     parser.add_argument("--patch", type=Path)
+     parser.add_argument("--prefill-patch", type=Path)
+     parser.add_argument("--guard", type=Path, required=True)
+     args = parser.parse_args()
+-    # These are the already-validated configurations, not new tuning knobs.
+-    args.mode, args.context = ("control", 212992) if args.reference_mtp else ("dflash2", 32768)
++    # Preserve the validated defaults; larger DFlash limits are explicit trials.
++    if args.reference_mtp and args.context is not None:
++        parser.error("the MTP reference has a fixed 212992-token context")
++    args.mode = "control" if args.reference_mtp else "dflash2"
++    if args.context is None:
++        args.context = 212992 if args.reference_mtp else 32768
++    if not 512 <= args.context <= 212992:
++        parser.error("context must be between 512 and 212992")
+     args.graph, args.audit, args.suite = True, False, "standard"
+     if args.reference_mtp and args.draft_int4:
+         parser.error("the MTP reference does not use the DFlash2 checkpoint")
+@@ -83,6 +92,10 @@ def main():
+             shutil.copy2(long_script, cell.out / long_script.name)
+             long_argv = ["python3", str(long_script), "--out", str(cell.out / "long-context"),
+                          "--confirm-prefix-cache-disabled"]
++            if not args.reference_mtp:
++                # Exercise the exact rejection boundary as well as the supported near-limit point.
++                over_limit = args.context - cold.OUTPUT_TOKENS + 1
++                long_argv += ["--lengths", *map(str, (*cold.DEFAULT_LENGTHS, over_limit))]
+             if args.near_limit is not None:
+                 long_argv += ["--near-limit", str(args.near_limit)]
+             run_logged(long_argv, cell.out / "long-context-console.txt", timeout=14400)
+diff --git a/tests/test_qwen38_standard_bench.py b/tests/test_qwen38_standard_bench.py
+index bbb48ef..4cef9b4 100644
+--- a/tests/test_qwen38_standard_bench.py
++++ b/tests/test_qwen38_standard_bench.py
+@@ -75,6 +75,58 @@ class StandardBenchmarkTests(unittest.TestCase):
+                 bench.main()
+         self.assertEqual(error.exception.code, 2)
+ 
++    def test_dflash_context_default_and_explicit_limits(self):
++        base = ["benchmark", "--out", "/unused", "--betterbench", "/unused",
++                "--guard", "/unused", "--patch", "/unused", "--prefill-patch", "/unused"]
++        for extra, expected in (([], 32768), (["--context", "49152"], 49152),
++                                (["--context", "65536"], 65536)):
++            with self.subTest(context=expected), patch.object(sys, "argv", base + extra), \
++                    patch.object(bench.signal, "signal"), \
++                    patch.object(bench.dflash, "DFlashCell", side_effect=RuntimeError("stop before host start")) as cell:
++                with self.assertRaisesRegex(RuntimeError, "stop before host start"):
++                    bench.main()
++                self.assertEqual(cell.call_args.args[0].context, expected)
++                self.assertEqual(cell.call_args.args[0].mode, "dflash2")
++
++    def test_invalid_context_rejected_before_host_start(self):
++        for value in ("511", "212993", "not-an-integer"):
++            argv = ["benchmark", "--out", "/unused", "--betterbench", "/unused",
++                    "--guard", "/unused", "--context", value]
++            with self.subTest(value=value), patch.object(sys, "argv", argv), \
++                    contextlib.redirect_stderr(io.StringIO()):
++                with self.assertRaises(SystemExit) as error:
++                    bench.main()
++                self.assertEqual(error.exception.code, 2)
++
++    def test_mtp_rejects_context_override(self):
++        for value in ("49152", "212992"):
++            argv = ["benchmark", "--out", "/unused", "--betterbench", "/unused",
++                    "--guard", "/unused", "--reference-mtp", "--context", value]
++            with self.subTest(value=value), patch.object(sys, "argv", argv), \
++                    contextlib.redirect_stderr(io.StringIO()):
++                with self.assertRaises(SystemExit) as error:
++                    bench.main()
++                self.assertEqual(error.exception.code, 2)
++
++    def test_long_context_keeps_standard_points_and_adds_one_token_over(self):
++        for limit in (49152, 65536):
++            with self.subTest(limit=limit), tempfile.TemporaryDirectory() as tmp:
++                argv = ["benchmark", "--out", tmp, "--betterbench", "/unused",
++                        "--guard", "/unused", "--patch", "/unused", "--prefill-patch", "/unused",
++                        "--long-context-only", "--context", str(limit)]
++                with patch.object(sys, "argv", argv), patch.object(bench.signal, "signal"), \
++                        patch.object(bench.dflash, "DFlashCell") as constructor, \
++                        patch.object(bench, "run_logged") as run, contextlib.redirect_stdout(io.StringIO()):
++                    cell = constructor.return_value
++                    cell.out, cell.summary = Path(tmp), {}
++                    bench.main()
++                    command = run.call_args.args[0]
++                    self.assertEqual(command[command.index("--lengths") + 1:],
++                                     list(map(str, (*bench.cold.DEFAULT_LENGTHS,
++                                                    limit - bench.cold.OUTPUT_TOKENS + 1))))
++                    self.assertEqual(constructor.call_args.args[0].context, limit)
++                    cell.close.assert_called_once()
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
