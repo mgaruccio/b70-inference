@@ -92,6 +92,7 @@ def _fixture_config():
         "vocab_size": 248320,
         "torch_dtype": "bfloat16",
         "tie_word_embeddings": False,
+        "max_position_embeddings": 262144,
         "native_fixture_field": {"kept": True},
         "dflash_config": {
             "target_layer_ids": [5, 19, 33, 47, 61],
@@ -222,6 +223,7 @@ class ContractAndPathTests(unittest.TestCase):
         self.assertEqual(converter.EXPECTED_PARAMETER_COUNT, 1_924_404_480)
     def test_config_only_adds_the_standard_gptq_contract(self):
         source = _fixture_config()
+        converter._validate_source_config(source)
         original = copy.deepcopy(source)
         output = converter._output_config(source)
         self.assertEqual(source, original)

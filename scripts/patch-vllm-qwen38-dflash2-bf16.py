@@ -7,11 +7,13 @@ match the actual 73029d424 image, or this exact overlay, before any are written.
 No target parameter is cast, copied, or quantized. vLLM's temporary draft vocab
 allocations before sharing are unchanged (upstream #53612); no vocab remapping.
 
-Only the legacy DFlashProposer, TP=PP=DP=1, K=7, unquantized native BF16 draft,
+Only the legacy DFlashProposer, TP=PP=DP=1, K=7, native BF16 draft activations,
 greedy draft proposals and STANDARD rejection are supported. Target sampling is
 untouched. The legacy proposer otherwise ignores DFlash2's learned selector;
 the bounded greedy walk here follows the pinned V2 DFlash2Speculator, without
 porting its probabilistic sampler. Audit is opt-in, synchronous, eager-only.
+B70_DFLASH2_INT4=1 additionally permits the explicit RTN W4A16/G128 MLP/o-proj
+checkpoint. QKV, conditioning, selector, convolutions and norms stay BF16.
 
 Primary sources consulted by the lead / this implementation:
 https://github.com/vllm-project/vllm/issues/55250 (FP16 draft collapse)
@@ -47,12 +49,14 @@ import os as _b70_os
 
 _B70_DFLASH2_BF16 = _b70_os.environ.get("B70_DFLASH2_BF16") == "1"
 _B70_DFLASH2_AUDIT = _b70_os.environ.get("B70_DFLASH2_AUDIT") == "1"
+_B70_DFLASH2_INT4 = _b70_os.environ.get("B70_DFLASH2_INT4") == "1"
+_B70_DFLASH2_INT4_MODULES = ("self_attn.o_proj", "mlp.gate_up_proj", "mlp.down_proj")
 
 
 def _b70_dflash2_requested(spec):
     if not _B70_DFLASH2_BF16:
-        if _B70_DFLASH2_AUDIT:
-            raise ValueError("B70_DFLASH2_AUDIT requires B70_DFLASH2_BF16=1")
+        if _B70_DFLASH2_AUDIT or _B70_DFLASH2_INT4:
+            raise ValueError("B70_DFLASH2_AUDIT/INT4 requires B70_DFLASH2_BF16=1")
         return False
     import torch
     from vllm.platforms import current_platform
@@ -66,7 +70,8 @@ def _b70_dflash2_requested(spec):
         raise ValueError("B70 DFlash2 requires the FP16-compute GPTQ target")
     if getattr(target, "head_dtype", None) not in (None, torch.float16):
         raise ValueError("B70 DFlash2 requires a dense FP16 shared target head")
-    if (spec.quantization is not None or spec.num_speculative_tokens != 7
+    allowed_quant = ("gptq", "auto_gptq") if _B70_DFLASH2_INT4 else (None,)
+    if (spec.quantization not in allowed_quant or spec.num_speculative_tokens != 7
             or spec.draft_sample_method != "greedy"
             or spec.rejection_sample_method != "standard"
             or spec.use_heterogeneous_vocab or spec.use_local_argmax_reduction
@@ -93,7 +98,7 @@ def _b70_dflash2_validate(spec):
     hf = draft.hf_config
     dc = getattr(hf, "dflash_config", {})
     if (not _b70_dflash2_enabled(spec) or draft.dtype != torch.bfloat16
-            or draft.quantization is not None
+            or draft.quantization not in (("gptq", "auto_gptq") if _B70_DFLASH2_INT4 else (None,))
             or str(getattr(hf, "dtype", None)) not in ("bfloat16", "torch.bfloat16")
             or hf.num_hidden_layers != 5 or hf.hidden_size != 5120
             or hf.vocab_size != spec.target_model_config.get_vocab_size()
@@ -106,6 +111,18 @@ def _b70_dflash2_validate(spec):
             or not dc.get("use_aux_hidden_state", getattr(hf, "use_aux_hidden_state", True))
             or getattr(hf, "tie_word_embeddings", False)):
         raise ValueError("B70 overlay requires the native BF16 Qwen3.8-27B DFlash2 config")
+    if _B70_DFLASH2_INT4:
+        qc = getattr(hf, "quantization_config", {})
+        required = {"quant_method": "gptq", "bits": 4, "group_size": 128,
+                    "desc_act": False, "sym": True, "lm_head": False,
+                    "checkpoint_format": "gptq",
+                    "modules_in_block_to_quantize": list(_B70_DFLASH2_INT4_MODULES)}
+        if (not isinstance(qc, dict) or any(qc.get(k) != v for k, v in required.items())
+                or set(qc) - set(required) - {"meta"}
+                or qc.get("desc_act") is not False or qc.get("sym") is not True
+                or qc.get("lm_head") is not False):
+            raise ValueError("B70 DFlash2 INT4 requires symmetric GPTQ-format W4A16 G128, "
+                             "no act-order, and ONLY o_proj/gate_up_proj/down_proj")
 
 
 def _b70_dflash2_dtype(vllm_config):
@@ -116,10 +133,10 @@ def _b70_dflash2_dtype(vllm_config):
 
 '''
 
-MODEL_HELPERS = '''
+MODEL_HELPERS = r'''
 # B70_DFLASH2_BF16: no hooks, tensor retention, or synchronization when audit is off.
 from vllm.config.speculative import (
-    _B70_DFLASH2_AUDIT, _b70_dflash2_dtype, _b70_dflash2_enabled,
+    _B70_DFLASH2_AUDIT, _B70_DFLASH2_INT4, _b70_dflash2_dtype, _b70_dflash2_enabled,
 )
 
 
@@ -135,6 +152,71 @@ def _b70_audit_tensor(name, tensor, dtype=None):
           f"shape={tuple(tensor.shape)} finite={finite}", flush=True)
     if not finite:
         raise RuntimeError(f"B70 DFlash2 nonfinite tensor: {name}")
+
+
+def _b70_checkpoint_dtype(name):
+    import re
+    if _B70_DFLASH2_INT4:
+        module, suffix = name.rsplit(".", 1)
+        if re.fullmatch(r"layers\.[0-4]\.(self_attn\.o_proj|mlp\.(gate_proj|up_proj|down_proj))", module):
+            if suffix not in ("qweight", "qzeros", "g_idx", "scales"):
+                raise ValueError(f"B70 DFlash2 expected packed INT4 checkpoint tensor: {name}")
+            return torch.bfloat16 if suffix == "scales" else torch.int32
+    return torch.bfloat16
+
+
+def _b70_audit_int4_input(module, inputs):
+    _b70_audit_tensor("int4.input." + module.prefix, inputs[0], torch.bfloat16)
+
+
+def _b70_audit_int4_output(module, inputs, output):
+    tensor = output[0] if isinstance(output, tuple) else output
+    _b70_audit_tensor("int4.output." + module.prefix, tensor, torch.bfloat16)
+
+
+def _b70_int4_parameters(model):
+    from vllm.model_executor.layers.linear import UnquantizedLinearMethod
+    from vllm.model_executor.layers.quantization.auto_gptq import AutoGPTQLinearMethod
+    from vllm.model_executor.kernels.linear.mixed_precision.xpu import XPUwNa16LinearKernel
+    if len(model.layers) != 5:
+        raise RuntimeError("B70 DFlash2 INT4 requires exactly five draft layers")
+    expected_dtypes = {}
+    for index, layer in enumerate(model.layers):
+        if (not isinstance(layer.self_attn.qkv_proj.quant_method, UnquantizedLinearMethod)
+                or layer.self_attn.qkv_proj.weight.dtype != torch.bfloat16):
+            raise RuntimeError("B70 DFlash2 QKV/context projection must remain dense BF16")
+        for name, module, k, n in (
+            ("o_proj", layer.self_attn.o_proj, 4096, 5120),
+            ("gate_up_proj", layer.mlp.gate_up_proj, 5120, 34816),
+            ("down_proj", layer.mlp.down_proj, 17408, 5120),
+        ):
+            method = module.quant_method
+            if (not isinstance(method, AutoGPTQLinearMethod)
+                    or not isinstance(method.kernel, XPUwNa16LinearKernel)
+                    or method.quant_config.weight_bits != 4 or method.quant_config.group_size != 128
+                    or method.quant_config.desc_act or not method.quant_config.is_sym
+                    or method.input_dtype is not None or hasattr(module, "weight")
+                    or module.g_idx is not None):
+                raise RuntimeError(f"B70 DFlash2 INT4 wrong kernel/layout: layer {index} {name}")
+            for key, dtype, shape in (
+                ("qweight", torch.int32, (n, k // 8)),
+                ("scales", torch.bfloat16, (k // 128, n)),
+                ("qzeros", torch.int8, (1,)),
+            ):
+                param = getattr(module, key)
+                if param.dtype != dtype or tuple(param.shape) != shape:
+                    raise RuntimeError(f"B70 DFlash2 INT4 invalid {index}.{name}.{key}")
+                expected_dtypes[id(param)] = dtype
+            if (module.qzeros.item() != 8 or not bool(torch.isfinite(module.scales).all().item())
+                    or not bool((module.scales > 0).all().item())):
+                raise RuntimeError("B70 DFlash2 INT4 requires zero point 8 and finite positive scales")
+            print(f"B70_DFLASH2_INT4 layer={index} module={name} kernel={type(method.kernel).__name__} "
+                  "weights=int4 activations=bfloat16 group_size=128", flush=True)
+            if _B70_DFLASH2_AUDIT and not getattr(module, "_b70_audit_hooks", False):
+                module.register_forward_pre_hook(_b70_audit_int4_input)
+                module.register_forward_hook(_b70_audit_int4_output)
+                module._b70_audit_hooks = True
+    return expected_dtypes
 
 '''
 
@@ -173,8 +255,9 @@ DRAFT_METHODS = '''
                 if self.model._b70_dflash2_bf16:
                     if any(part in name for part in ("embed_tokens", "lm_head", "d2t", "t2d")):
                         raise ValueError("B70 DFlash2 expects shared target vocab weights, no remapping")
-                    if weight.dtype != torch.bfloat16:
-                        raise ValueError(f"B70 DFlash2 checkpoint tensor {name} is not native BF16")
+                    expected = _b70_checkpoint_dtype(name)
+                    if weight.dtype != expected:
+                        raise ValueError(f"B70 DFlash2 checkpoint tensor {name} must be {expected}")
                 yield name, weight
         return super().load_weights(checked())
 
@@ -197,12 +280,14 @@ DRAFT_METHODS = '''
             if _B70_DFLASH2_AUDIT:
                 print(f"B70_DFLASH2_AUDIT {name}: shared=True dtype={module.weight.dtype} "
                       f"shape={tuple(module.weight.shape)}", flush=True)
+        quantized = _b70_int4_parameters(self.model) if _B70_DFLASH2_INT4 else {}
         for name, param in self.named_parameters():
             if id(param) in shared_ids:
                 continue
-            if param.dtype != torch.bfloat16:
-                raise RuntimeError(f"B70 DFlash2 loaded parameter {name} is {param.dtype}, not BF16")
-            _b70_audit_tensor("parameter." + name, param, torch.bfloat16)
+            expected = quantized.get(id(param), torch.bfloat16)
+            if param.dtype != expected:
+                raise RuntimeError(f"B70 DFlash2 loaded parameter {name} is {param.dtype}, expected {expected}")
+            _b70_audit_tensor("parameter." + name, param, expected)
         for layer in self.model.layers:
             attn = layer.self_attn.attn
             if attn.dtype != torch.bfloat16 or attn.kv_cache_torch_dtype != torch.bfloat16:
@@ -367,7 +452,8 @@ def transformations():
         "model_executor/models/qwen3_dflash2.py": [
             ('    DFlashQwen3Model,\n',
              '    DFlashQwen3Model,\n    _b70_audit_tensor,\n'
-             '    _b70_dflash2_dtype,\n    _B70_DFLASH2_AUDIT,\n'),
+             '    _b70_dflash2_dtype,\n    _B70_DFLASH2_AUDIT,\n    _B70_DFLASH2_INT4,\n'
+             '    _b70_checkpoint_dtype,\n    _b70_int4_parameters,\n'),
             ('\n            params_dtype=vllm_config.model_config.dtype,\n',
              '\n            params_dtype=_b70_dflash2_dtype(vllm_config),\n'),
             ('                params_dtype=vllm_config.model_config.dtype,\n',

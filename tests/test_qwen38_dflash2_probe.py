@@ -16,8 +16,8 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
-    def argv(self, mode, graph=False):
-        args = SimpleNamespace(mode=mode, context=32768, graph=graph, audit=False)
+    def argv(self, mode, graph=False, draft_int4=None):
+        args = SimpleNamespace(mode=mode, context=32768, graph=graph, audit=False, draft_int4=draft_int4)
         with patch.object(Path, "stat", return_value=SimpleNamespace(st_gid=109)):
             return runner.server_command(args, Path("/tmp/test with spaces"))
 
@@ -41,6 +41,31 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(serve[serve.index("--dtype") + 1], "float16")
         self.assertNotIn("cascade", argv[-1])
         self.assertNotIn("lmhead", argv[-1])
+        self.assertNotIn("B70_DFLASH2_INT4=1", argv)
+
+    def test_int4_is_only_an_explicit_draft_override(self):
+        argv = self.argv("dflash2", draft_int4=Path("/tmp/disposable draft"))
+        self.assertIn("/tmp/disposable draft:/draft:ro", argv)
+        self.assertIn(f"{runner.TARGET}:/model:ro", argv)
+        self.assertIn("B70_DFLASH2_INT4=1", argv)
+        serve = shlex.split(argv[-1].split("exec ", 1)[1])
+        spec = json.loads(serve[serve.index("--speculative-config") + 1])
+        self.assertEqual(spec["quantization"], "gptq")
+        self.assertEqual(spec["num_speculative_tokens"], 7)
+        self.assertEqual(spec["kv_cache_dtype"], "auto")
+        self.assertEqual(serve[serve.index("--dtype") + 1], "float16")
+        self.assertEqual(serve[serve.index("--kv-cache-dtype") + 1], "fp8")
+
+    def test_int4_rejects_control_and_original_weights_before_start(self):
+        for mode, path in (("control", "/tmp/quant"), ("dflash2", str(runner.TARGET)),
+                           ("dflash2", str(runner.DRAFT))):
+            with patch.object(sys, "argv", ["probe", "--mode", mode, "--out", "/tmp/unused",
+                                           "--prefill-patch", "/tmp/unused", "--draft-int4", path]), \
+                    patch.object(runner, "DFlashCell") as cell:
+                with self.assertRaises(SystemExit) as error:
+                    runner.main()
+                self.assertEqual(error.exception.code, 2)
+                cell.assert_not_called()
 
     def test_graph_is_opt_in(self):
         argv = self.argv("dflash2", graph=True)

@@ -151,13 +151,16 @@ class TensorTests(unittest.TestCase):
 
     def setUp(self):
         torch.manual_seed(12)
-        self.scope = {"torch": torch, "nn": nn, "F": F, "_B70_DFLASH2_AUDIT": False}
-        actual_function(self.sources["model_executor/models/qwen3_dflash.py"], "_b70_audit_tensor", self.scope)
+        self.scope = {"torch": torch, "nn": nn, "F": F, "_B70_DFLASH2_AUDIT": False,
+                      "_B70_DFLASH2_INT4": False}
+        for name in ("_b70_audit_tensor", "_b70_checkpoint_dtype", "_b70_int4_parameters",
+                     "_b70_audit_int4_input", "_b70_audit_int4_output"):
+            actual_function(self.sources["model_executor/models/qwen3_dflash.py"], name, self.scope)
 
-    def config(self, enabled=True, audit=False):
+    def config(self, enabled=True, audit=False, int4=False):
         scope = {}
         exec(overlay.CONFIG_HELPERS, scope)
-        scope.update(_B70_DFLASH2_BF16=enabled, _B70_DFLASH2_AUDIT=audit)
+        scope.update(_B70_DFLASH2_BF16=enabled, _B70_DFLASH2_AUDIT=audit, _B70_DFLASH2_INT4=int4)
         hf = NS(architectures=["DFlash2DraftModel"], dtype="bfloat16", num_hidden_layers=5,
                 hidden_size=5120, vocab_size=248320, tie_word_embeddings=False,
                 dflash_config=dict(block_size=8, selector_rank=256, selector_top_k=16,
@@ -169,7 +172,104 @@ class TensorTests(unittest.TestCase):
                   quantization=None), method="dflash", quantization=None, num_speculative_tokens=7,
                   draft_sample_method="greedy", rejection_sample_method="standard", use_heterogeneous_vocab=False,
                   use_local_argmax_reduction=False, kv_cache_dtype="auto", enforce_eager=None)
+        if int4:
+            spec.quantization = "gptq"
+            spec.draft_model_config.quantization = "auto_gptq"
+            hf.quantization_config = dict(quant_method="gptq", bits=4, group_size=128,
+                                         desc_act=False, sym=True, lm_head=False, checkpoint_format="gptq",
+                                         modules_in_block_to_quantize=["self_attn.o_proj", "mlp.gate_up_proj", "mlp.down_proj"])
         return scope, spec
+
+    def test_int4_opt_in_is_draft_only_and_metadata_is_closed(self):
+        scope, spec = self.config(int4=True)
+        target = spec.target_model_config
+        with patch.dict(sys.modules, {"vllm.platforms": NS(current_platform=NS(is_xpu=lambda: True))}), \
+                patch.dict(os.environ, {"VLLM_USE_V2_MODEL_RUNNER": "0"}):
+            scope["_b70_dflash2_validate"](spec)
+            self.assertIs(spec.target_model_config, target)
+            self.assertEqual(target.dtype, torch.float16)
+            self.assertEqual(target.quantization, "gptq")
+            for key, value in (("bits", 8), ("group_size", 32), ("desc_act", True),
+                               ("sym", False), ("lm_head", True), ("dynamic", {}),
+                               ("modules_in_block_to_quantize", ["self_attn.qkv_proj"]),
+                               ("modules_in_block_to_quantize", ["fc"]), ("checkpoint_format", "gptq_v2")):
+                invalid = deepcopy(spec)
+                invalid.draft_model_config.hf_config.quantization_config[key] = value
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    scope["_b70_dflash2_validate"](invalid)
+            invalid = deepcopy(spec)
+            invalid.rejection_sample_method = "synthetic"
+            with self.assertRaises(ValueError):
+                scope["_b70_dflash2_validate"](invalid)
+            scope["_B70_DFLASH2_INT4"] = False
+            with self.assertRaises(ValueError):
+                scope["_b70_dflash2_validate"](spec)
+            scope.update(_B70_DFLASH2_INT4=True, _B70_DFLASH2_BF16=False)
+            with self.assertRaisesRegex(ValueError, "requires B70_DFLASH2_BF16"):
+                scope["_b70_dflash2_validate"](spec)
+
+    def test_checkpoint_int4_dtype_allowlist_excludes_qkv_and_conditioning(self):
+        classify = self.scope["_b70_checkpoint_dtype"]
+        name = "layers.0.mlp.down_proj.qweight"
+        self.assertEqual(classify(name), torch.bfloat16)  # No implicit opt-in.
+        self.scope["_B70_DFLASH2_INT4"] = True
+        for layer in range(5):
+            for module in ("self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"):
+                for suffix in ("qweight", "qzeros", "g_idx", "scales"):
+                    self.assertEqual(classify(f"layers.{layer}.{module}.{suffix}"),
+                                     torch.bfloat16 if suffix == "scales" else torch.int32)
+                with self.assertRaisesRegex(ValueError, "expected packed"):
+                    classify(f"layers.{layer}.{module}.weight")
+        for name in ("fc.qweight", "candidate_selector.hidden_projection.qweight",
+                     "layers.0.self_attn.q_proj.qweight", "layers.0.attention_conv.kernel_projection.qweight",
+                     "layers.5.mlp.down_proj.qweight", "layers.0.mlp.down_proj_extra.qweight"):
+            self.assertEqual(classify(name), torch.bfloat16)  # Cannot load INT32 here.
+
+    def test_int4_runtime_layout_and_kernel_validation(self):
+        class Unquantized:
+            pass
+        class AutoGPTQLinearMethod:
+            pass
+        class XPUwNa16LinearKernel:
+            pass
+        imports = {
+            "vllm.model_executor.layers.linear": NS(UnquantizedLinearMethod=Unquantized),
+            "vllm.model_executor.layers.quantization.auto_gptq": NS(AutoGPTQLinearMethod=AutoGPTQLinearMethod),
+            "vllm.model_executor.kernels.linear.mixed_precision.xpu": NS(XPUwNa16LinearKernel=XPUwNa16LinearKernel),
+        }
+        def linear(k, n):
+            module = nn.Module()
+            module.quant_method = AutoGPTQLinearMethod()
+            module.quant_method.kernel = XPUwNa16LinearKernel()
+            module.quant_method.quant_config = NS(weight_bits=4, group_size=128, desc_act=False, is_sym=True)
+            module.quant_method.input_dtype = None
+            # Shape-only views avoid allocating hundreds of MB; actual GEMMs are tested on XPU.
+            module.qweight = nn.Parameter(torch.zeros(1, dtype=torch.int32).expand(n, k // 8), requires_grad=False)
+            module.scales = nn.Parameter(torch.ones(1, dtype=torch.bfloat16).expand(k // 128, n), requires_grad=False)
+            module.qzeros = nn.Parameter(torch.tensor([8], dtype=torch.int8), requires_grad=False)
+            module.g_idx = None
+            return module
+        layers = []
+        for _ in range(5):
+            qkv = NS(quant_method=Unquantized(), weight=torch.ones(1, dtype=torch.bfloat16))
+            layers.append(NS(self_attn=NS(qkv_proj=qkv, o_proj=linear(4096, 5120)),
+                             mlp=NS(gate_up_proj=linear(5120, 34816), down_proj=linear(17408, 5120))))
+        model = NS(layers=layers)
+        validate = self.scope["_b70_int4_parameters"]
+        with patch.dict(sys.modules, imports), redirect_stdout(io.StringIO()):
+            self.assertEqual(len(validate(model)), 45)
+            module = layers[0].mlp.down_proj
+            module.qzeros.data.fill_(7)
+            with self.assertRaisesRegex(RuntimeError, "zero point"):
+                validate(model)
+            module.qzeros.data.fill_(8)
+            module.quant_method.kernel = object()
+            with self.assertRaisesRegex(RuntimeError, "wrong kernel/layout"):
+                validate(model)
+            module.quant_method.kernel = XPUwNa16LinearKernel()
+            layers[0].self_attn.qkv_proj.quant_method = AutoGPTQLinearMethod()
+            with self.assertRaisesRegex(RuntimeError, "QKV/context"):
+                validate(model)
 
     def test_config_guards_and_dtype_do_not_modify_target(self):
         scope, spec = self.config()
@@ -390,7 +490,7 @@ class TensorTests(unittest.TestCase):
         class Base:
             def load_weights(self, weights):
                 return list(weights)
-        scope = {"torch": torch, "DFlashQwen3ForCausalLM": Base}
+        scope = dict(self.scope, DFlashQwen3ForCausalLM=Base)
         cls = actual_class(self.sources["model_executor/models/qwen3_dflash2.py"],
                            "DFlash2Qwen3ForCausalLM", {"load_weights"}, scope)
         draft = cls()
@@ -399,6 +499,15 @@ class TensorTests(unittest.TestCase):
         self.assertEqual(draft.load_weights([("fc.weight", tensor)])[0][0], "fc.weight")
         for name, weight in (("fc.weight", tensor.half()), ("embed_tokens.weight", tensor),
                              ("lm_head.weight", tensor), ("d2t", tensor)):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                draft.load_weights([(name, weight)])
+        self.scope["_B70_DFLASH2_INT4"] = True
+        packed = torch.ones(2, 2, dtype=torch.int32)
+        name = "layers.0.mlp.down_proj.qweight"
+        self.assertIs(draft.load_weights([(name, packed)])[0][1], packed)
+        for name, weight in (("layers.0.self_attn.q_proj.qweight", packed),
+                             ("fc.qweight", packed), ("layers.0.mlp.down_proj.weight", tensor),
+                             ("layers.0.mlp.down_proj.scales", tensor.half())):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 draft.load_weights([(name, weight)])
 

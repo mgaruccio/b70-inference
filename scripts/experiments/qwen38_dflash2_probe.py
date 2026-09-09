@@ -47,11 +47,16 @@ def server_command(args, out):
         serve += ["--enforce-eager"]
     setup = "python /prefill_guard.py; python /gdn_prefill.py; "
     if args.mode == "dflash2":
-        argv += ["-v", f"{DRAFT}:/draft:ro", "-v", f"{out / 'patch_dflash2.py'}:/overlay.py:ro",
+        draft = args.draft_int4 or DRAFT
+        argv += ["-v", f"{draft}:/draft:ro", "-v", f"{out / 'patch_dflash2.py'}:/overlay.py:ro",
                  "-e", "B70_DFLASH2_BF16=1", "-e", f"B70_DFLASH2_AUDIT={int(args.audit)}"]
         setup += "python /overlay.py; "
-        serve += ["--speculative-config", json.dumps({"method": "dflash", "model": "/draft",
-                                                       "kv_cache_dtype": "auto", "num_speculative_tokens": 7})]
+        spec = {"method": "dflash", "model": "/draft", "kv_cache_dtype": "auto",
+                "num_speculative_tokens": 7}
+        if args.draft_int4:
+            argv += ["-e", "B70_DFLASH2_INT4=1"]
+            spec["quantization"] = "gptq"
+        serve += ["--speculative-config", json.dumps(spec)]
     argv += ["--entrypoint", "bash", IMAGE, "-lc", "set -e; " + setup + "exec " + shlex.join(serve)]
     return argv
 
@@ -64,6 +69,7 @@ class DFlashCell(probe.Cell):
         self.summary.update(mode=args.mode, image=IMAGE, context=args.context, model_runner="legacy",
                             graph=args.graph, audit=args.audit, target_dtype="float16",
                             draft_dtype="bfloat16" if args.mode == "dflash2" else None,
+                            draft_quantization="rtn-int4-g128" if args.draft_int4 else None,
                             speculative_tokens=7 if args.mode == "dflash2" else 0)
 
     def start(self):
@@ -90,7 +96,9 @@ class DFlashCell(probe.Cell):
             (self.out / source.name).write_bytes(source.read_bytes())
         if self.args.mode == "dflash2":
             (self.out / "patch_dflash2.py").write_bytes(self.args.patch.resolve().read_bytes())
-            self.summary["draft_config"] = json.loads((DRAFT / "config.json").read_text())
+            draft = (self.args.draft_int4 or DRAFT).resolve()
+            self.summary["draft_path"] = str(draft)
+            self.summary["draft_config"] = json.loads((draft / "config.json").read_text())
         argv = server_command(self.args, self.out)
         probe.save(self.out / "launch-argv.json", argv)
         (self.out / "launcher.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\nexec " + shlex.join(argv) + "\n")
@@ -143,6 +151,7 @@ def main():
     p.add_argument("--out", required=True, type=Path)
     p.add_argument("--mode", choices=("control", "dflash2"), required=True)
     p.add_argument("--patch", type=Path)
+    p.add_argument("--draft-int4", type=Path, help="Disposable RTN W4A16/G128 drafter directory")
     p.add_argument("--guard", type=Path, default=Path("/tmp/qwen-b70-patch-uniform-decode-prefill.py"))
     p.add_argument("--prefill-patch", type=Path, required=True)
     p.add_argument("--context", type=int, default=32768)
@@ -150,6 +159,12 @@ def main():
     p.add_argument("--audit", action="store_true")
     p.add_argument("--suite", choices=("smoke", "compare", "long"), default="compare")
     a = p.parse_args()
+    if a.draft_int4:
+        if a.mode != "dflash2":
+            p.error("--draft-int4 is drafter-only, never a target/control option")
+        a.draft_int4 = a.draft_int4.resolve()
+        if a.draft_int4 in (TARGET.resolve(), DRAFT.resolve()):
+            p.error("--draft-int4 must name a separate disposable checkpoint")
     if a.mode == "dflash2" and not a.patch:
         p.error("DFlash2 requires its explicit isolated overlay")
     if a.audit and (a.mode != "dflash2" or a.graph):
