@@ -109,3 +109,19 @@ def test_hessian_formula_and_capture_disjointness(quantizer, tmp_path):
 
     with pytest.raises(quantizer.CalibrationError, match="disjoint"):
         quantizer.validate_capture_sets(calibration, calibration, 128)
+
+
+def test_rtn_default_packing_is_bounded_independently_of_gptq(quantizer, monkeypatch):
+    torch = pytest.importorskip("torch")
+    weight = torch.zeros((5000, 128), dtype=torch.float16)
+    seen_rows = []
+    original_pack = quantizer.pack_signed_nibbles
+
+    def recording_pack(values):
+        seen_rows.append(int(values.shape[0]))
+        return original_pack(values)
+
+    monkeypatch.setattr(quantizer, "pack_signed_nibbles", recording_pack)
+    quantizer.rtn_quantize(weight, row_chunk_rows=0, device="cpu")
+    assert max(seen_rows) <= quantizer.DEFAULT_RTN_ROW_CHUNK
+    assert max(seen_rows) == 4096

@@ -23,6 +23,7 @@ import sys
 import time
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 GROUP_SIZE = 128
@@ -32,6 +33,7 @@ DEFAULT_BLOCK_SIZE = GROUP_SIZE
 DEFAULT_EVAL_ROWS = 512
 DEFAULT_EVAL_CHUNK_ROWS = 8
 DEFAULT_HESSIAN_CHUNK_ROWS = 4096
+DEFAULT_RTN_ROW_CHUNK = 4096
 DEFAULT_DEQUANT_ROW_CHUNK = 4096
 DEFAULT_WARMUP = 5
 DEFAULT_REPEATS = 15
@@ -41,29 +43,18 @@ QWEN_HEAD_SHAPE = (248_320, 5_120)
 class CalibrationError(RuntimeError):
     """Raised when the standalone calibration contract is not satisfied."""
 
-
-_TORCH: Any | None = None
-
-
 def _require_torch() -> Any:
-    """Import torch lazily so validation and ``py_compile`` stay lightweight."""
-
-    global _TORCH
-    if _TORCH is None:
-        try:
-            import torch
-        except ModuleNotFoundError as exc:  # pragma: no cover - environment dependent.
-            raise CalibrationError("this calibration tool requires PyTorch") from exc
-        _TORCH = torch
-    return _TORCH
+    """Import torch lazily; Python's module cache avoids a manual global cache."""
+    try:
+        import torch
+    except ModuleNotFoundError as exc:  # pragma: no cover - environment dependent.
+        raise CalibrationError("this calibration tool requires PyTorch") from exc
+    return torch
 
 
 def _torch_load(path: Path) -> Any:
     torch = _require_torch()
-    try:
-        return torch.load(path, map_location="cpu", weights_only=True)
-    except TypeError:  # Older pinned torch versions do not expose weights_only.
-        return torch.load(path, map_location="cpu")
+    return torch.load(path, map_location="cpu", weights_only=True)
 
 
 def _check_finite(tensor: Any, what: str) -> None:
@@ -152,12 +143,13 @@ def compute_activation_hessian(
     hidden_size: int,
     *,
     chunk_rows: int = DEFAULT_HESSIAN_CHUNK_ROWS,
+    progress: bool = False,
 ) -> tuple[Any, int]:
     """Compute the requested full Hessian ``H = 2 X^T X / N`` on CPU.
 
-    Accumulation is chunked so large capture files do not create a second copy of
-    all calibration rows.  Keeping this small factorization input on CPU also
-    avoids relying on an incomplete XPU LAPACK implementation.
+    Capture files are buffered until ``chunk_rows`` rows are available before a
+    rank-5k ``X.T @ X``.  This keeps thousands of tiny capture files from
+    launching thousands of large CPU matmuls while preserving the full Hessian.
     """
 
     torch = _require_torch()
@@ -165,15 +157,47 @@ def compute_activation_hessian(
         raise ValueError("hidden_size must be positive")
     if chunk_rows <= 0:
         raise ValueError("chunk_rows must be positive")
+    path_list = [Path(path) for path in paths]
     hessian = torch.zeros((hidden_size, hidden_size), dtype=torch.float32, device="cpu")
     sample_count = 0
-    for hidden in iter_hidden_states(paths, hidden_size):
-        for start in range(0, int(hidden.shape[0]), chunk_rows):
-            sample = hidden[start : start + chunk_rows].to(dtype=torch.float32)
-            hessian.add_(sample.transpose(0, 1).matmul(sample))
-            sample_count += int(sample.shape[0])
+    block_count = 0
+    buffered: list[Any] = []
+    buffered_rows = 0
+
+    def add_block(chunks: list[Any]) -> None:
+        nonlocal block_count, sample_count
+        sample = chunks[0] if len(chunks) == 1 else torch.cat(chunks, dim=0)
+        sample32 = sample.to(dtype=torch.float32)
+        hessian.add_(sample32.transpose(0, 1).matmul(sample32))
+        sample_count += int(sample32.shape[0])
+        block_count += 1
+        if progress and (block_count == 1 or block_count % 4 == 0):
+            print(
+                f"[hessian] blocks={block_count} rows={sample_count} chunk_rows={chunk_rows}",
+                flush=True,
+            )
+
+    file_total = len(path_list)
+    for file_index, path in enumerate(path_list, 1):
+        hidden = _load_hidden_file(path, hidden_size)
+        if progress and (file_index == 1 or file_index % 256 == 0 or file_index == file_total):
+            print(f"[hessian] files={file_index}/{file_total}", flush=True)
+        offset = 0
+        while offset < int(hidden.shape[0]):
+            take = min(int(hidden.shape[0]) - offset, chunk_rows - buffered_rows)
+            buffered.append(hidden[offset : offset + take])
+            buffered_rows += take
+            offset += take
+            if buffered_rows == chunk_rows:
+                add_block(buffered)
+                buffered = []
+                buffered_rows = 0
+    if buffered_rows:
+        add_block(buffered)
     if sample_count <= 0:
         raise CalibrationError("calibration captures contain no rows")
+    if progress and block_count > 1 and block_count % 4:
+        print(f"[hessian] blocks={block_count} rows={sample_count} complete", flush=True)
     hessian.mul_(2.0 / sample_count)
     _check_finite(hessian, "activation Hessian")
     return hessian, sample_count
@@ -321,6 +345,7 @@ def rtn_quantize(
     group_size: int = GROUP_SIZE,
     row_chunk_rows: int | None = None,
     device: str | Any | None = None,
+    progress: bool = False,
 ) -> dict[str, Any]:
     """Create the symmetric G128 round-to-nearest baseline in the same layout."""
 
@@ -331,10 +356,17 @@ def rtn_quantize(
     source = weight.detach().to(device=target)
     storage = _new_qweight_storage(rows, hidden, device=target)
     scales = torch.empty((hidden // group_size, rows), dtype=torch.float16, device=target)
-    chunk_size = _row_chunk_size(rows, row_chunk_rows)
+    requested_rows = (
+        DEFAULT_RTN_ROW_CHUNK
+        if row_chunk_rows is None or row_chunk_rows == 0
+        else min(row_chunk_rows, DEFAULT_RTN_ROW_CHUNK)
+    )
+    chunk_size = _row_chunk_size(rows, requested_rows)
     with torch.no_grad():
         for row_start in range(0, rows, chunk_size):
             row_end = min(rows, row_start + chunk_size)
+            if progress:
+                print(f"[rtn] rows={row_start}:{row_end}/{rows}", flush=True)
             working = source[row_start:row_end].to(dtype=torch.float32).contiguous()
             grouped = working.reshape(row_end - row_start, hidden // group_size, group_size)
             scale32 = grouped.abs().amax(dim=-1).div(7.0)
@@ -362,6 +394,7 @@ def rtn_quantize(
             "qweight_shape": list(qweight.shape),
             "qweight_strides": list(qweight.stride()),
             "scales_shape": list(scales.shape),
+            "row_chunk_rows": chunk_size,
         },
     }
 
@@ -375,6 +408,7 @@ def gptq_quantize(
     block_size: int = DEFAULT_BLOCK_SIZE,
     row_chunk_rows: int | None = None,
     device: str | Any | None = None,
+    progress: bool = False,
 ) -> dict[str, Any]:
     """Quantize ``[N, K]`` with full-Hessian, sequential block-128 GPTQ.
 
@@ -405,6 +439,8 @@ def gptq_quantize(
     with torch.no_grad():
         for row_start in range(0, rows, chunk_size):
             row_end = min(rows, row_start + chunk_size)
+            if progress:
+                print(f"[gptq] rows={row_start}:{row_end}/{rows}", flush=True)
             working = source[row_start:row_end].to(dtype=torch.float32).contiguous()
             for block_start in range(0, hidden, block_size):
                 block_end = min(hidden, block_start + block_size)
@@ -444,6 +480,15 @@ def gptq_quantize(
                 if block_end < hidden:
                     cross_correction = block_errors.matmul(upper[block_start:block_end, block_end:])
                     working[:, block_end:].sub_(cross_correction)
+                if progress:
+                    block_index = block_start // block_size + 1
+                    block_total = (hidden + block_size - 1) // block_size
+                    if block_index == 1 or block_index % 8 == 0 or block_index == block_total:
+                        print(
+                            f"[gptq] rows={row_start}:{row_end}/{rows} "
+                            f"blocks={block_index}/{block_total}",
+                            flush=True,
+                        )
 
     qweight = storage.transpose(0, 1)
     return {
@@ -629,19 +674,114 @@ def load_lm_head_weight(model_dir: str | Path, *, expected_shape: tuple[int, int
 def _load_xpu_op() -> Any:
     torch = _require_torch()
     try:
-        op = torch.ops._xpu_C.int4_gemm_w4a16
+        return torch.ops._xpu_C.int4_gemm_w4a16
     except AttributeError:
-        try:
-            from vllm._xpu_ops import xpu_ops as _xpu_ops_registration  # noqa: F401
-        except Exception as exc:  # pragma: no cover - pinned image dependent.
-            raise CalibrationError(
-                "vllm._xpu_ops is required to register int4_gemm_w4a16"
-            ) from exc
-        try:
-            op = torch.ops._xpu_C.int4_gemm_w4a16
-        except AttributeError as exc:  # pragma: no cover - pinned image dependent.
-            raise CalibrationError("int4_gemm_w4a16 remained unavailable after registration") from exc
-    return op
+        pass
+
+    try:
+        import vllm  # noqa: F401  # Registers the pinned vLLM XPU extensions.
+    except Exception as exc:  # pragma: no cover - pinned image dependent.
+        raise CalibrationError("failed to import vllm for XPU operator registration") from exc
+
+    registration_error: Exception | None = None
+    try:
+        import vllm._C  # noqa: F401  # Some pinned builds register _xpu_C here.
+    except Exception as exc:  # pragma: no cover - build dependent.
+        registration_error = exc
+
+    try:
+        return torch.ops._xpu_C.int4_gemm_w4a16
+    except AttributeError as exc:  # pragma: no cover - pinned image dependent.
+        detail = f"; vllm._C import error: {registration_error}" if registration_error else ""
+        raise CalibrationError(
+            "int4_gemm_w4a16 remained unavailable after importing vllm and vllm._C" + detail
+        ) from exc
+
+def _first_hidden_rows(paths: Sequence[str | Path], hidden_size: int, rows: int) -> Any:
+    torch = _require_torch()
+    if rows <= 0:
+        raise ValueError("rows must be positive")
+    parts: list[Any] = []
+    remaining = rows
+    for hidden in iter_hidden_states(paths, hidden_size):
+        take = min(int(hidden.shape[0]), remaining)
+        parts.append(hidden[:take])
+        remaining -= take
+        if remaining == 0:
+            break
+    if remaining:
+        raise CalibrationError(f"need {rows} real hidden rows, found {rows - remaining}")
+    return parts[0] if len(parts) == 1 else torch.cat(parts, dim=0)
+
+
+def xpu_kernel_preflight(
+    weight: Any,
+    calibration_files: Sequence[str | Path],
+    hidden_size: int,
+    op: Any,
+    *,
+    output_rows: int = 128,
+    input_columns: int = 128,
+    atol: float = 0.25,
+    rtol: float = 0.02,
+) -> dict[str, Any]:
+    """Prove the real XPU pack/kernel path against dequantized FP16 F.linear."""
+    torch = _require_torch()
+    if output_rows != 128 or input_columns not in (128, 256):
+        raise ValueError("preflight supports N=128 and K=128 or 256")
+    if tuple(weight.shape)[0] < output_rows or tuple(weight.shape)[1] < input_columns:
+        raise CalibrationError("lm_head is too small for the XPU preflight fixture")
+    real_hidden = _first_hidden_rows(calibration_files, hidden_size, 5)
+    if int(real_hidden.shape[1]) < input_columns:
+        raise CalibrationError("real hidden states are too narrow for the XPU preflight fixture")
+    tiny_weight = weight[:output_rows, :input_columns].contiguous()
+    tiny = rtn_quantize(
+        tiny_weight,
+        group_size=GROUP_SIZE,
+        row_chunk_rows=output_rows,
+        device="xpu",
+        progress=False,
+    )
+    hidden = real_hidden[:5, :input_columns].to(device="xpu", dtype=torch.float16).contiguous()
+    dequantized = dequantize_weight(tiny, output_dtype=torch.float16)
+    report: dict[str, Any] = {
+        "status": "passed",
+        "input": "real calibration hidden states",
+        "shape": {"M": [1, 5], "N": output_rows, "K": input_columns},
+        "tolerance": {"atol": atol, "rtol": rtol},
+        "comparisons": {},
+    }
+    with torch.no_grad():
+        for rows in (1, 5):
+            sample = hidden[:rows]
+            kernel = op(
+                sample,
+                tiny["qweight"],
+                None,
+                tiny["scales"],
+                tiny["qzeros"],
+                GROUP_SIZE,
+                None,
+            )
+            _synchronize(sample.device)
+            reference = torch.nn.functional.linear(sample, dequantized)
+            difference = (kernel.to(dtype=torch.float32) - reference.to(dtype=torch.float32)).abs()
+            max_abs = float(difference.max().item())
+            rms = float(torch.sqrt((difference * difference).mean()).item())
+            max_reference = float(reference.to(dtype=torch.float32).abs().max().item())
+            max_allowed = atol + rtol * max_reference
+            if not bool(torch.allclose(kernel, reference, atol=atol, rtol=rtol)):
+                raise CalibrationError(
+                    f"XPU INT4 preflight mismatch at M={rows}: max_abs={max_abs:.6g} "
+                    f"rms={rms:.6g} allowed_max={max_allowed:.6g}"
+                )
+            report["comparisons"][f"M{rows}"] = {
+                "max_abs_error": max_abs,
+                "rms_error": rms,
+                "max_allowed_abs_error": max_allowed,
+            }
+    return report
+
 
 
 def _synchronize(device: Any) -> None:
@@ -816,43 +956,78 @@ def benchmark_w4a16(
     op: Any,
     hidden: Any,
     artifact: Mapping[str, Any],
+    dense_weight: Any,
     *,
     warmup: int = DEFAULT_WARMUP,
     repeats: int = DEFAULT_REPEATS,
 ) -> dict[str, Any]:
-    """Supplementary M=1/M=5 kernel timing on the real held-out hidden states."""
-
+    """Supplementary INT4 vs FP16 M=1/M=5 timing on real held-out states."""
     torch = _require_torch()
     if warmup < 0 or repeats <= 0:
         raise ValueError("warmup must be non-negative and repeats must be positive")
     if hidden.ndim != 2 or int(hidden.shape[0]) < 1:
         raise ValueError("benchmark hidden states must contain at least one row")
+    if dense_weight.dtype != torch.float16 or dense_weight.ndim != 2:
+        raise ValueError("FP16 benchmark reference must be a rank-2 float16 tensor")
+    if dense_weight.device != hidden.device:
+        raise ValueError("FP16 benchmark weight and hidden states must share a device")
+
+    def measure(callable_: Any, sample: Any) -> list[float]:
+        for _ in range(warmup):
+            callable_(sample)
+        _synchronize(sample.device)
+        durations: list[float] = []
+        for _ in range(repeats):
+            started = time.perf_counter()
+            callable_(sample)
+            _synchronize(sample.device)
+            durations.append((time.perf_counter() - started) * 1000.0)
+        return durations
+
+    def summarize(durations: list[float]) -> dict[str, float]:
+        return {
+            "median_ms": float(median(durations)),
+            "mean_ms": sum(durations) / len(durations),
+            "min_ms": min(durations),
+            "max_ms": max(durations),
+        }
+
     measurements: dict[str, Any] = {
         "supplementary": True,
         "not_serving_speed": True,
         "warmup": warmup,
         "repeats": repeats,
         "operator": "torch.ops._xpu_C.int4_gemm_w4a16",
+        "reference": "dense FP16 torch.nn.functional.linear",
     }
     for rows in (1, 5):
         if int(hidden.shape[0]) < rows:
             measurements[f"M{rows}"] = {"skipped": "fewer than requested held-out rows"}
             continue
         sample = hidden[:rows].contiguous()
-        for _ in range(warmup):
-            op(sample, artifact["qweight"], None, artifact["scales"], artifact["qzeros"], int(artifact["group_size"]), None)
-        _synchronize(sample.device)
-        durations = []
-        for _ in range(repeats):
-            started = time.perf_counter()
-            op(sample, artifact["qweight"], None, artifact["scales"], artifact["qzeros"], int(artifact["group_size"]), None)
-            _synchronize(sample.device)
-            durations.append((time.perf_counter() - started) * 1000.0)
+        int4_durations = measure(
+            lambda value: op(
+                value,
+                artifact["qweight"],
+                None,
+                artifact["scales"],
+                artifact["qzeros"],
+                int(artifact["group_size"]),
+                None,
+            ),
+            sample,
+        )
+        fp16_durations = measure(
+            lambda value: torch.nn.functional.linear(value, dense_weight),
+            sample,
+        )
+        int4_summary = summarize(int4_durations)
+        fp16_summary = summarize(fp16_durations)
         measurements[f"M{rows}"] = {
-            "mean_ms": sum(durations) / len(durations),
-            "min_ms": min(durations),
-            "max_ms": max(durations),
             "rows": rows,
+            "int4": int4_summary,
+            "fp16_reference": fp16_summary,
+            "median_fp16_over_int4": fp16_summary["median_ms"] / int4_summary["median_ms"],
         }
     return measurements
 
@@ -890,15 +1065,35 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         raise CalibrationError(f"unsupported device for this tool: {device}")
 
+    print("[phase] validating calibration and held-out captures", flush=True)
     calibration_files, eval_files, calibration_rows, eval_rows = validate_capture_sets(
         args.calibration_dir, args.eval_dir, QWEN_HEAD_SHAPE[1]
     )
+    print(
+        f"[phase] captures ready: calibration_files={len(calibration_files)} rows={calibration_rows} "
+        f"eval_files={len(eval_files)} rows={eval_rows}",
+        flush=True,
+    )
     weight, shard = load_lm_head_weight(args.model, expected_shape=QWEN_HEAD_SHAPE)
+    print(f"[phase] loaded dense lm_head from {shard}", flush=True)
+    if op is not None:
+        print("[phase] running real-XPU N128/K128 M1/M5 pack preflight", flush=True)
+        preflight = xpu_kernel_preflight(
+            weight, calibration_files, QWEN_HEAD_SHAPE[1], op
+        )
+        print("[phase] real-XPU pack preflight passed", flush=True)
+    else:
+        preflight = {
+            "status": "skipped",
+            "reason": "--device is not xpu",
+        }
     hessian, hessian_rows = compute_activation_hessian(
         calibration_files,
         QWEN_HEAD_SHAPE[1],
         chunk_rows=args.hessian_chunk_rows,
+        progress=True,
     )
+    print(f"[phase] Hessian ready: rows={hessian_rows} shape={tuple(hessian.shape)}", flush=True)
     calibrated = gptq_quantize(
         weight,
         hessian,
@@ -906,13 +1101,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         group_size=args.group_size,
         row_chunk_rows=args.row_chunk_rows,
         device=device,
+        progress=True,
     )
+    print("[phase] calibrated GPTQ head complete", flush=True)
     rtn = rtn_quantize(
         weight,
         group_size=args.group_size,
         row_chunk_rows=args.row_chunk_rows,
         device=device,
+        progress=True,
     )
+    print("[phase] RTN comparison head complete", flush=True)
+    print(f"[phase] evaluating held-out logits (rows={args.eval_rows}, chunk={args.eval_chunk_rows})", flush=True)
     report, benchmark_hidden = evaluate_heldout(
         weight,
         calibrated,
@@ -924,8 +1124,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         chunk_rows=args.eval_chunk_rows,
         op=op,
     )
+    print("[phase] held-out comparison complete", flush=True)
     if op is not None:
-        benchmark = benchmark_w4a16(op, benchmark_hidden, calibrated)
+        print("[phase] running supplementary INT4/FP16 M1/M5 microbench", flush=True)
+        benchmark_dense_weight = weight.to(device=device)
+        try:
+            benchmark = benchmark_w4a16(
+                op,
+                benchmark_hidden,
+                calibrated,
+                benchmark_dense_weight,
+            )
+        finally:
+            del benchmark_dense_weight
     else:
         benchmark = {
             "supplementary": True,
@@ -949,6 +1160,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "eval": {"files": len(eval_files), "available_rows": eval_rows, "reported_rows": report["rows"]},
         "device": str(device),
         "rtn_comparison": "same FP16 scales/zero-point contract, no Hessian correction",
+        "xpu_preflight": preflight,
     }
     output = save_quantized_artifact(calibrated, args.output, metadata=metadata)
     report_payload = {
