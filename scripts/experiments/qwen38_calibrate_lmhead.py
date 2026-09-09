@@ -721,9 +721,9 @@ def xpu_kernel_preflight(
     op: Any,
     *,
     output_rows: int = 128,
-    input_columns: int = 128,
-    atol: float = 0.25,
-    rtol: float = 0.02,
+    input_columns: int = 256,
+    atol: float = 0.005,
+    rtol: float = 0.01,
 ) -> dict[str, Any]:
     """Prove the real XPU pack/kernel path against dequantized FP16 F.linear."""
     torch = _require_torch()
@@ -1077,7 +1077,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     weight, shard = load_lm_head_weight(args.model, expected_shape=QWEN_HEAD_SHAPE)
     print(f"[phase] loaded dense lm_head from {shard}", flush=True)
     if op is not None:
-        print("[phase] running real-XPU N128/K128 M1/M5 pack preflight", flush=True)
+        print("[phase] running real-XPU N128/K256 M1/M5 pack preflight", flush=True)
         preflight = xpu_kernel_preflight(
             weight, calibration_files, QWEN_HEAD_SHAPE[1], op
         )

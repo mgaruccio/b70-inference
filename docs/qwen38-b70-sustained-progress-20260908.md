@@ -423,3 +423,127 @@ Mean top-5 overlap 0.930; worst max-abs 1.82. One wrong argmax in a 5-row verify
 - Next lossless cut, if authorized: oneDNN/Xe2 strategy for the dense `[5,5120]×[5120,248320]` FP16 GEMM. Next lossy cut: a **calibrated** GPTQ `lm_head` (not RTN) with the same public-API greedy/canary gate.
 
 Qwen was stopped after the compare cell. Glimmer was left down as requested. No persistent launcher, weight, or default change.
+
+
+## Follow-up: calibrated target head and relaxed MTP (September 9 UTC)
+
+The user authorized the lossy cut, explicitly added cascade acceptance and the DFlash2/quantized-DFlash2/adaptive-depth/DSpark roadmap, and permitted experiments on `inference-host`. Glimmer must remain down. Existing weight files, persistent launcher, 275 W cap and configured 212992-token C1 context remain unchanged. None of these experiments promotes a default.
+
+### Fresh source checks and interpretation
+
+- [Pinned vLLM rejection sampler](https://raw.githubusercontent.com/vllm-project/vllm/ac7509e2b1db40fec2f03dde1ed4e9dfdc2338c9/vllm/v1/sample/rejection_sampler.py): greedy verification uses target argmax and truncates at the first rejected proposal. The pinned config offers standard, block and synthetic rejection, **not** generic relaxed acceptance. Synthetic acceptance is a performance simulator, not a quality-preserving shortcut.
+- [Relaxed acceptance proposal #45229](https://github.com/vllm-project/vllm/pull/45229) proposed top-three reasoning-token acceptance with a probability-ratio bound; it was closed. [Medusa](https://arxiv.org/abs/2401.10774) uses typical acceptance. These change the target distribution. [Cascade #44506](https://github.com/vllm-project/vllm/issues/44506) / [the MoE paper](https://arxiv.org/abs/2506.20675) instead concern adaptive speculation scheduling. Do not conflate those with strict hierarchical verification or describe our relaxation as a reproduction of that scheduler.
+- [Canonical GPTQ `fasterquant`](https://raw.githubusercontent.com/IST-DASLab/gptq/main/gptq.py): use the full activation Hessian, damping and sequential error compensation. [GPTQModel](https://github.com/ModelCloud/GPTQModel) supports head quantization, but no verified turnkey workflow was found for modifying only the FP16 head of an already-GPTQ body. The bounded experiment uses real post-normalization head inputs, no activation reordering, symmetric G128 packing, and a separate head artifact. It does **not** merge into or overwrite the original checkpoint.
+- [DFlash2 XPU #55250](https://github.com/vllm-project/vllm/issues/55250), opened September 3, confirms BF16 B70 reports of acceptance length 3.3–5.4 and 62–96 tok/s. Downcasting its BF16-trained drafter to FP16 overflows and gives zero acceptance. [#55294](https://github.com/vllm-project/vllm/pull/55294) is a fast-fail proposal, not a mixed-dtype solution. The reported working stack is newer than our pinned image; these rates are not local measurements.
+- [XPU kernels #579](https://github.com/vllm-project/vllm-xpu-kernels/pull/579), merged September 8, fixes stacked 2D RMSNorm weights silently reusing row zero. A BF16 DFlash2 experiment must verify this behavior in the actual runtime, in addition to keeping target and drafter dtypes independent. A version string alone is insufficient.
+- [DSpark checkpoint card](https://huggingface.co/RadixArk/Qwen3.8-27B-DSpark) verifies v2's weighted acceptance 2.7211→3.4286 (+26.00%) on 64,675 requests; HumanEval 3.0437→3.8468, GSM8K 3.6030→4.5162, LongBench-v2 3.2602→3.9268. This is SGLang/four-GB300 evidence, not B70/vLLM evidence.
+- [EXL3 DFlash2 5-bpw card](https://huggingface.co/Mia-AiLab/Qwen3.8-27B-DFlash2-EXL3-5.0bpw) reports about 3.85→1.4 GB and a GB10 gain, but needs a DFlash2-enabled ExLlamaV3 fork. [NVFP4 DFlash2](https://huggingface.co/YourHighnessLA/Qwen3.8-27B-DFlash2-NVFP4) targets CUDA/RTX 5090. The supplied +5–10% claim is not established as a drafter-quantization gain; the GB10 discussion attributes comparable changes to block-size tuning. Neither format is a ready XPU drafter path.
+- [B70 retrained MTP card](https://huggingface.co/rwmacy/qwen3.8-27b-mtp-head-v8-b70): +0.20 tok/s, acceptance 3.01 versus 3.00, 14/28 wins. Defer retraining. [Intel 2.8-bpw AutoRound card](https://huggingface.co/Intel/Qwen3.8-27B-bpw2.8-AutoRound) explicitly warns that 2/3-bit kernels are less efficient than 4/8-bit kernels: capacity research, not a demonstrated B70 speed upgrade.
+- [Adaptive DFlash K #52559](https://github.com/vllm-project/vllm/pull/52559) and [small-M verification optimization #53070](https://github.com/vllm-project/vllm/pull/53070) are useful leads, not installed native-MTP/XPU capabilities. Existing local K4/K6 code-versus-prose evidence already motivates adaptive depth without repeating an unrelated K1/K2 sweep.
+
+### Defined experiment and public-boundary test process
+
+Research code: `scripts/experiments/qwen38_lossy_probe.py` and opt-in overlays under `patches/qwen38-b70-vllm-0.27.2rc1-gac7509e2b/`. Lab preview/patch UI calls failed with the known missing socket; the operational preview was given in chat before writes/launches.
+
+1. **Preconditions/environment:** idle single B70; pinned image and original launcher hash; validated prefill guard hash; MTP4, dense target, existing INT4 draft, FP8 KV, context 212992, 275 W, balanced mode, graph list `[1,2,4,8]`. Refuse to stop unrelated running containers. Only disposable `qwen38` is owned by the cell.
+2. **Every serving cell:** poll `/health` for at most 720 seconds and assert `qwen38`/212992 from `/v1/models`. Through `POST /v1/chat/completions`, run the original arithmetic/JSON/Python-AST natural-stop canaries. Through `POST /v1/completions`, test finite token logprobs at lengths 1–128 plus 133/197/261 (131 probes, K4-specific).
+3. **Calibration only:** 32 varied technical topics ×384 forced output tokens; eight distinct held-out topics ×256. Temperature 0, seed 42, thinking false, unique salts. Capture real target head inputs only while an explicit request is active, return dense FP16 logits, retain separate `calibration/` and `heldout/` tensors. Bounded at 16384/4096 rows; report actual coverage rather than assuming every requested row was retained. No throughput claims from capture.
+4. **Quantization:** stop Qwen, calibrate only its head from the calibration split. Check packing against the actual XPU W4A16 operator and compare calibrated/RTN logits against FP16 on held-out rows; measure M1/M5 kernels separately from serving. Hold calibration and evaluation prompts apart. Keep a separate packed-head file; never modify the checkpoint.
+5. **Serving ablations:** strict dense K4 control, relaxed-only, head-only, then combined only if individual candidates justify it. First relaxation is **top two and draft probability ≥0.9×target-top-one probability**, all-greedy standard sampling only; token IDs ≥248044 (special/control/padding tail) remain strict for both target and draft. Output changes are intentional and explicitly lossy. No synthetic acceptance and no claims of exact distribution fidelity.
+6. **Quality and speed:** eight held-out function-generation tasks with edge-case assertions, executed in a no-network, read-only, unprivileged CPU container with time/memory/PID limits. A failed correctness gate rejects the candidate rather than ranking its speed. After gates, one warmup plus five measured 512-token trials each of the established code/prose prompts. Retain requests, SSE, token IDs, first-content decode timing and draft/acceptance/cache counter deltas. Compare within prompt families; expose output divergence; repeat strict control to bound drift.
+7. **Long-context survivor gate:** real `/tokenize` plus `/v1/completions` request with exactly 200000 tokens, a middle-position Cedar recovery-code needle, and finite logprobs. Expected answer `684219`. This is a capacity/retrieval gate, not broad long-context coding quality or a sustained-speed measurement. A configured context alone is not a completed 200k test.
+8. **Evidence/cleanup:** timestamped `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/` directories retain copied scripts, cell launchers, model metadata, server logs, requests/responses, tensors and summaries. Stop owned Qwen in `finally`, leave Glimmer down, verify launcher/power unchanged. Abort on device errors, failed strict controls or unsafe cleanup. CLI entry point is `python3 -u /tmp/qwen38_lossy_probe.py --out <new-cell-directory> --suite capture|compare|long [overlay flags]`, invoked over SSH by the background runner.
+
+
+### Capture and strict control observed
+
+- Capture: task `b14931a27`, exit 0, host artifact `20260909T004000Z-lmhead-capture/` under the common root. All 40 requested generations completed (32 calibration, eight held-out), all three canaries and 131 finite-logprob probes passed. The row cap was reached during calibration topic 26: **3299 saved chunks across 27 calibration topics**, 173509121 bytes; **657 held-out chunks across all eight topics**, 34434847 bytes. Do not imply that the last five calibration requests contributed activations. Dense FP16 logits remained on the serving path throughout. Launcher and power checks passed; Glimmer stayed down.
+- Overlay unit tests: `b5734d682`, exit 0; seven tests passed on CPU inside the pinned XPU image (`python -m unittest discover -s tests -p test_qwen38_lossy_probe.py -v`), including prefix rejection, probability/rank limits, invalid/padded/special IDs, nonfinite values, opt-in capture and split separation. On the lead machine only the two patch tests run; five tensor cases skip because PyTorch is deliberately absent there.
+- Strict control: task `b87d940c1`, exit 0, `20260909T005000Z-strict-a/`. Three canaries, 131 finite probes and **8/8 executable function tasks passed**. All ten measured requests completed with 512 tokens. Code median **90.984 tok/s** (90.368–91.692; two output sequences); prose **74.625 tok/s** (74.577–74.639; one sequence). These are separate prompt-family measurements, not a combined agent-workload score. Original launcher and power checks passed.
+- Local DFlash2 source check: the installed pinned model registry has DFlash/DSpark entries but no `DFlash2DraftModel`, and `SpeculativeConfig` constructs the external draft with `dtype=self.target_model_config.dtype`. Thus this is not just changing one launch flag on the existing image. Keep any newer DFlash2/runtime experiment separate from the current MTP ablations.
+
+
+### Relaxed-only results
+
+Both cells completed with three canaries, 131 finite probes, **8/8 functional tasks**, ten valid measured 512-token responses, identical input token IDs by family, and zero measured prefix-cache hits. Head stayed dense FP16; MTP depth stayed four.
+
+| Cell | Code median (range), tok/s | Prose median (range), tok/s | Accepted drafts/cycle, code / prose |
+| --- | ---: | ---: | ---: |
+| Strict A | 90.984 (90.368–91.692) | 74.625 (74.577–74.639) | 2.625 / 1.971 |
+| Top-2, ratio ≥0.9 | 91.730 (90.466–91.764) | 72.405 (72.387–72.449) | 2.653 / 1.893 |
+| Top-2, ratio ≥0.7 | 96.502 (92.989–96.523) | 77.636 (77.588–77.650) | 2.846 / 2.128 |
+
+- R90: task `bbe4d417b`, artifact `20260909T005700Z-cascade-r90/`. **Not a general win**: code barely improved and prose regressed. New trajectories can lower later acceptance even when individual verification is more permissive. First measured differences versus strict were code token index 48 and prose index 19 (zero-based).
+- R70: task `be6315590`, artifact `20260909T010500Z-cascade-r70/`. Relative to the first control: **+6.06% code, +4.03% prose**. Five distinct measured code outputs and one prose output. It is a promising **lossy small-cohort candidate**, not a lossless speedup or evidence of general agent-quality parity.
+- **Neither relaxation shares a full measured output hash with strict A** in either family. All comparisons above are fixed-input/quality-gated, not content-matched throughput improvements. The eight small function tasks do not establish broad coding or reasoning quality. A second strict control and the 200k gate remain necessary before disposition.
+- Read-only review found no accepted-prefix/KV mismatch in the relaxation. Follow-ups applied before head serving: assert the loaded XPU head stride, flatten/contiguize inputs while preserving output shape, and record relaxation ratio/on-state in future summaries; mismatched CLI activation arguments fail. The original R90 summary predates those metadata fields; its retained launcher and `LOSSY` startup message identify ratio 0.9.
+- After integration, **13/13 focused tests passed** inside the pinned image (`python -m pytest -q -p no:cacheprovider tests/test_qwen38_calibrate_lmhead.py tests/test_qwen38_lossy_probe.py`). This includes full-Hessian off-diagonal behavior, RTN chunk bounds and head layout/shape tests; real-XPU packing and real-head serving are separate gates, not implied by these CPU tests.
+
+
+### Calibrated head: offline result
+
+Task `b9f6ca87d`, exit 0; artifact `20260909T011500Z-lmhead-gptq/`. Exact uploaded Bash/docker entry point retained as `run.sh`; Python as `calibrate.py`, log as `quantize.log`, metrics as `lmhead-gptq.json`, and separate tensor artifact `lmhead-gptq.pt` (**655568325 bytes**, not added to Git). The checkpoint is mounted read-only.
+
+Algorithm: full `H = 2 XᵀX / N` over **16384 real post-normalization hidden rows**, CPU inverse-Hessian Cholesky, damping 0.01, sequential error compensation in 128-column blocks, symmetric G128, no activation reordering, FP16 scales used during quantization. RTN comparison packing is output-row-chunked to avoid materializing full-head int64 intermediates. No body weights were re-quantized.
+
+Real XPU packing preflight used checkpoint subweights **N128/K256**, two quantization groups, real hidden inputs at M1/M5, and dequantized FP16 `F.linear`: **zero observed max/RMS error** in both shapes, tolerance `atol=0.005`, `rtol=0.01`. The phase banner in that run still said K128; the saved JSON records actual K256 and the source banner was corrected afterward. This preflight is a kernel-format check, not a quality result.
+
+All **3253 held-out rows across eight different topics** were evaluated, rather than just the default first 512:
+
+| Head versus original FP16 | Greedy argmax agreement | RMS logit error | Maximum absolute error | Mean top-five overlap |
+| --- | ---: | ---: | ---: | ---: |
+| RTN G128 | 97.233% | 0.20935 | 2.03516 | 96.084% |
+| Full-Hessian GPTQ G128 | **98.094%** | **0.14536** | **1.77734** | **97.129%** |
+
+Calibration improves error and greedy agreement but still changes roughly 1.9% of these target-row argmaxes. It is **not lossless** and is not automatically suitable for serving just because it beats RTN.
+
+Supplementary real-hidden kernel medians (five warmups, 15 repetitions): M1 FP16 **4.299 ms**, GPTQ **1.123 ms** (3.83×); M5 FP16 **4.312 ms**, GPTQ **1.142 ms** (3.78×). These are head-kernel speedups only, not end-to-end serving multipliers. Glimmer remained down; launcher hash and 275 W cap were preserved.
+
+
+### Head-only and combined serving
+
+- Head-only: task `b26900403`, exit 0, `20260909T012500Z-head-only/`. Strict MTP4 rejection against the calibrated head, no relaxation. Three canaries, 131 finite probes, **8/8 function tests** and all ten measured requests passed. Code **96.219 tok/s** (96.138–97.981), prose **78.349 tok/s** (78.341–78.357): +5.75% / +4.99% versus strict A, on changed outputs. Accepted drafts/cycle fell to 2.559 / 1.888; faster head evaluation outweighed that decline. No full output hash matched strict A. Inputs matched and cache hits were zero.
+- Combined head + R70: task `b007d573e`, `20260909T013300Z-combined-r70/`. All short gates passed, including **8/8 function tests**. Code **103.256 tok/s** (101.759–104.827; three output sequences), prose **83.811 tok/s** (83.749–83.822; one sequence). The task subsequently exited 1 on the first long retrieval probe; **do not mark that entire run passed**.
+- Real serving path verified: both head cells logged `B70_CALIBRATED_TARGET_HEAD_READY=1`; the patched `lm_head.quant_method.apply` routes through the packed XPU operator while preserving `LogitsProcessor` behavior. All five short comparison cells logged actual **FULL 5→5** graph replays.
+- Memory planner evidence: strict A and head-only logged **8.23 GiB KV / 221745 tokens**; R90/R70 **8.17 GiB / 220286 tokens**; combined **8.18 GiB / 220286 tokens**. All retain configured 212992 context. These are planner reservations, not a precise peak-VRAM comparison. Relaxation adds no separate drafter but is not literally allocation-free. The experimental head overlay deliberately retains the original dense weight; no claim of reclaimed dense-head VRAM is made.
+
+### Long-probe correction (retain the failed attempt)
+
+The initial combined request genuinely processed **200000 prompt tokens** and returned 16 finite-logprob tokens after **344.09 seconds**, without a memory/device error. However, its raw completion began `\n\n<think>\nThe user is asking for the deployment recovery code for project Cedar.` and ended with `finish_reason=length`. The 16-token budget was consumed by reasoning before any answer. This is **inconclusive for retrieval**, not evidence that the lossy model forgot the needle. Original `long-request.json`, `long-response.json` and failed summary remain untouched.
+
+Correction before repeating any long claims: use the pinned server's `TokenizeChatRequest` with `chat_template_kwargs={"enable_thinking":false}` and `add_generation_prompt=true`; preserve its actual user/assistant framing, disable extra special tokens on content fragments, and count the complete framed input to exactly 200000. First run the same framing as a short retrieval smoke with a 32-token budget. Require exact answer `684219`, natural `finish_reason=stop`, expected prompt-token count and finite logprobs for both smoke and long request. Save template requests/responses and mark the protocol `nonthinking-chat-v2`. The pure prompt-assembly test is supplemental, not a substitute for this live smoke.
+
+The repeated strict control runs the corrected probe first, then surviving candidates use identical framed input IDs. `--suite compare-long` runs quality/timing and then long retrieval in the same server; `--suite long` runs the common startup gates followed by retrieval. No acceptance threshold, weights or performance settings were changed to fix the probe.
+
+
+### Final repeats and validated 200k result
+
+| Completed cell | Code median (range), tok/s | Prose median (range), tok/s | Accepted drafts/cycle, code / prose | 200000-token retrieval |
+| --- | ---: | ---: | ---: | --- |
+| Strict B | **91.631** (91.019–91.660) | **74.625** (74.620–74.641) | 2.642 / 1.971 | Pass, 343.938 s |
+| Calibrated head + R70 repeat | **102.511** (102.456–103.254) | **83.794** (83.785–83.817) | 2.814 / 2.103 | Pass, 343.939 s |
+| Dense head + R70 repeat | **93.028** (92.923–96.596) | **77.701** (77.673–77.719) | 2.766 / 2.128 | Pass, 344.082 s |
+
+Every row passed three natural-stop canaries, 131 finite probes, all **eight unique functional coding tasks**, all ten measured 512-token outputs, the short 64-token retrieval-format smoke, and the long request. The complete saved long-request JSON objects were compared and are **identical across all three cells**, including all 200000 input IDs. All three returned exactly `684219`, `finish_reason=stop`, finite logprobs, and the expected input-token count. This is a real capacity/retrieval check, **not a sustained 200k-context generation benchmark**.
+
+Artifacts, all under the common host root:
+
+- Strict B: `20260909T015000Z-strict-b-long-v2/`, task `ba0007e4d`, exit 0.
+- Combined repeat: `20260909T015229Z-combined-r70-repeat-long-v2/`, task `b66443688`, exit 0.
+- R70 repeat: `20260909T020353Z-cascade-r70-repeat-long-v2/`, task `bd0deb35b`, exit 0.
+
+Interpretation:
+
+- **Best bounded result: calibrated head + R70.** Against the more conservative repeated strict control, the two combined short cells give code **+12.69% / +11.87%**, prose **+12.31% / +12.29%**. Roughly **12%** is a fair description of these fixed-prompt, explicitly lossy measurements—not a universal Qwen/agent-speed claim. Both combined repeats retain the same prose output; two shared code-output hashes reproduce within about 0.03%. They do not match strict-target outputs.
+- Strict controls are stable. Their common code sequence (`54d4bf7e847a…`) goes 91.313→91.631 tok/s, about +0.35%; prose is effectively unchanged. The first strict code median also mixes an extra output trajectory, so use strict B rather than maximizing the apparent improvement.
+- **Relaxation alone is less reliable on code than the first median suggested.** Against strict B, R70 code improves +5.32% initially but only +1.52% on repeat; prose +4.03% / +4.12%. This is output-mode mixture, not evidence of a large kernel-clock regression: the shared slow code sequence is 92.989→93.022 tok/s, while the shared fast sequence is 96.523→96.596. Four of five repeat requests followed the slower sequence. Do not advertise a robust 6% standalone coding win.
+- **Keep R90 rejected as a general speed choice.** Prose regressed. Keep the calibrated head and R70/combined overlays as opt-in research candidates only. The guard remains explicitly mounted for research; no persistent-launcher/default change was made.
+- Eight small coding tasks and one needle do not establish broad coding/reasoning fidelity, multi-turn agent quality, or long-session stability. The calibrated head changes about 1.9% of held-out target-row argmaxes, and relaxed acceptance deliberately accepts non-argmax tokens. Those quality tradeoffs remain real even though these gates passed.
+
+Final verification: **14/14 focused tests passed** in the pinned image, including the corrected prompt framing/short-smoke sequencing test; Python syntax and `git diff --check` passed. Actual FULL 5→5 graph replay was observed in the repeated cells; input IDs matched by speed family and all measured prefix-cache hits were zero. Final host check: no running containers, Glimmer stopped, power cap `275000000`, persistent-launcher SHA still `63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4`. Original weights were only mounted read-only. Writing-worker commits were integrated and their clean worktree removed.
+
+### Disposition of the wider roadmap
+
+This phase experimentally investigated **calibrated head quantization and a clearly defined top-two/probability-ratio relaxation**. It did not implement the MoE Cascade scheduler, prove hierarchical-cascade equivalence, port DFlash2, quantize a DFlash2 drafter, add adaptive native-MTP depth, or benchmark DSpark v2 locally.
+
+Next sensible gate is a larger held-out multi-turn coding/agent-quality and long-generation cohort for the roughly 12% combined candidate, not automatic promotion. For the next implementation target, use an isolated newer DFlash2 stack with genuinely independent BF16 draft dtype and the stacked-weight RMSNorm fix verified on-device; then assess an XPU-native quantized drafter under the 200k memory constraint. EXL3/NVFP4 community artifacts are evidence that drafter compression is useful, not formats our pinned XPU stack can consume. Native adaptive depth remains motivated by workload-dependent results; DSpark v2 stays behind those integrations. No further GPU cells were launched in this phase.
