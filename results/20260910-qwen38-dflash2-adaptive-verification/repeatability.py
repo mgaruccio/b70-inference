@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Bounded no-op discrepancy diagnosis; same retained 512-token requests, A/B/A."""
+import json
+import argparse
+from pathlib import Path
+import signal
+import subprocess
+import sys
+from types import SimpleNamespace
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "code/scripts/experiments"))
+import qwen38_dflash2_probe as runner
+import qwen38_long_context_bench as cold
+
+
+def save(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--smoke-caps", action="store_true", help="test caps1/3 with the same short replay payloads")
+    modes.add_argument("--adaptive-smoke", action="store_true", help="test adaptive switching with1024 outputs at512/160000 inputs")
+    options = parser.parse_args()
+    def stop(signum, frame):
+        raise KeyboardInterrupt(f"signal {signum}")
+    for signum in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(signum, stop)
+    # Freeze the two observed mismatches; a new nondeterministic run must not
+    # silently choose a different diagnostic workload or fail on its count.
+    requests = []
+    for source in ("points/length-512/warmup-00/request.json",
+                   "points/length-512/measured-05/request.json"):
+        payload = json.loads((ROOT / "baseline/long-context" / source).read_text())
+        assert len(payload["prompt"]) == 512 and payload["seed"] == 42 and payload["temperature"] == 0
+        requests.append((source, payload))
+    cells = (("cap1", 1), ("cap3", 3)) if options.smoke_caps else (("baseline-a", None), ("cap7", 7), ("baseline-b", None))
+    subdir = "cap-smoke" if options.smoke_caps else "repeatability-runtime"
+    if options.adaptive_smoke:
+        cells, subdir = (("adaptive", None),), "adaptive-smoke"
+        long_point = next(p for p in json.loads((ROOT / "baseline/long-context/summary.json").read_text())["points"]
+                          if p["requested_length"] == 160000)
+        source = long_point["warmup"]["request_path"]
+        requests = [requests[0], (source, json.loads((ROOT / "baseline/long-context" / source).read_text()))]
+        requests = [(source, dict(payload, max_tokens=1024)) for source, payload in requests]
+    for name, cap in cells:
+        out = ROOT / subdir / name
+        if out.exists():
+            raise RuntimeError(f"refusing to overwrite {out}")
+        args = SimpleNamespace(out=out, mode="dflash2", context=180224, graph=True, audit=False,
+            suite="standard", draft_int4=Path("/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-dflash2-quant/rtn-int4-g128"),
+            guard=Path("/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-dflash2/runner/patch_uniform_decode_prefill.py"),
+            patch=ROOT / "code/scripts/patch-vllm-qwen38-dflash2-bf16.py",
+            prefill_patch=ROOT / "code/scripts/patch-vllm-qwen38-xpu-prefill.py",
+            cache_group_size=8, max_num_batched_tokens=2048, verification_cap=cap,
+            adaptive_verification=options.adaptive_smoke)
+        cell = runner.DFlashCell(args)
+        try:
+            cell.start()
+            cell.gates()
+            cell.quality()
+            code = '''import hashlib, importlib.util, json, sys
+from pathlib import Path
+r=Path(importlib.util.find_spec("vllm").origin).parent
+paths=["v1/core/sched/async_scheduler.py","v1/core/sched/scheduler.py","v1/worker/gpu_model_runner.py","v1/spec_decode/llm_base_proposer.py","v1/spec_decode/dflash.py","config/speculative.py","_xpu_ops.py"]
+print(json.dumps({"root":str(r), "python":sys.executable, "hashes":{p:hashlib.sha256((r/p).read_bytes()).hexdigest() for p in paths}}))
+'''
+            command = ["docker", "exec", "qwen38", "/opt/venv/bin/python", "-P", "-c", code]
+            save(out / "source-capture-argv.json", command)
+            save(out / "effective-source-sha256.json", json.loads(subprocess.check_output(command, text=True)))
+            client = cold.PublicAPI("http://127.0.0.1:8000")
+            rows = []
+            for request_index, (source, payload) in enumerate(requests):
+                for repeat in range(2 if options.adaptive_smoke else 6):
+                    dest = out / f"request-{request_index}/repeat-{repeat}"
+                    save(dest / "request.json", payload)
+                    (dest / "metrics-before.raw").write_text(runner.probe.get("/metrics"))
+                    events = []
+                    try:
+                        for timestamp, raw in client.stream("/v1/completions", payload):
+                            events.append((timestamp, raw))
+                    finally:
+                        save(dest / "sse.json", [{"monotonic_s": t, "raw": r.decode("utf-8")} for t, r in events])
+                    parsed = cold.parse_sse_events(events)
+                    (dest / "metrics-after.raw").write_text(runner.probe.get("/metrics"))
+                    validation = cold.validate_token_counts(parsed.get("usage"), len(payload["prompt"]), payload["max_tokens"])
+                    save(dest / "response.json", parsed)
+                    if not validation["valid"] or parsed["parse_errors"]:
+                        raise RuntimeError(f"invalid stream {dest}")
+                    rows.append({"source": source, "request_index": request_index,
+                                 "repeat": repeat, "text": parsed["text"]})
+                    save(out / "replays.json", rows)
+            cell.summary["status"] = "repeatability_completed"
+        except BaseException as error:
+            cell.summary.update(status="failed", error=repr(error))
+            raise
+        finally:
+            cell.close()
+    print("REPEATABILITY_COMPLETE", flush=True)
+
+
+if __name__ == "__main__":
+    main()

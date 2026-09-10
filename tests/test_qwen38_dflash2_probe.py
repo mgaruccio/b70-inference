@@ -16,6 +16,40 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_adaptive_verification_is_explicit_and_keeps_generation_seven(self):
+        argv = self.argv("dflash2", graph=True, adaptive_verification=True)
+        self.assertIn("B70_DFLASH2_VERIFY_CAP=adaptive", argv)
+        serve = shlex.split(argv[-1].split("exec ", 1)[1])
+        self.assertIn("--async-scheduling", serve)
+        config = json.loads(serve[serve.index("--speculative-config") + 1])
+        self.assertEqual(config["num_speculative_tokens"], 7)
+        self.assertNotIn("enable_adaptive_verification", config)
+        for mode, options in (("control", {"adaptive_verification": True}),
+                              ("dflash2", {"adaptive_verification": True, "verification_cap": 3}),
+                              ("dflash2", {"adaptive_verification": "false"})):
+            with self.assertRaises(ValueError):
+                self.argv(mode, **options)
+
+    def test_verification_cap_changes_only_opt_in_scheduling(self):
+        default = self.argv("dflash2", graph=True)
+        self.assertFalse(any("B70_DFLASH2_VERIFY_CAP" in part for part in default))
+        self.assertNotIn("patch_verification.py", default[-1])
+        for cap in (1, 3, 7):
+            argv = self.argv("dflash2", graph=True, verification_cap=cap)
+            self.assertIn(f"B70_DFLASH2_VERIFY_CAP={cap}", argv)
+            self.assertIn("python /profile/patch_verification.py; ", argv[-1])
+            serve = shlex.split(argv[-1].split("exec ", 1)[1])
+            self.assertIn("--async-scheduling", serve)
+            spec = json.loads(serve[serve.index("--speculative-config") + 1])
+            self.assertEqual(spec["num_speculative_tokens"], 7)
+            self.assertNotIn("enable_adaptive_verification", spec)
+            self.assertEqual(serve[serve.index("--max-num-seqs") + 1], "1")
+        for cap in (0, 2, 8, True, "1"):
+            with self.assertRaises(ValueError):
+                self.argv("dflash2", verification_cap=cap)
+        with self.assertRaises(ValueError):
+            self.argv("control", verification_cap=3)
+
     def argv(self, mode, graph=False, draft_int4=None, **options):
         args = SimpleNamespace(mode=mode, context=32768, graph=graph, audit=False, draft_int4=draft_int4, **options)
         with patch.object(Path, "stat", return_value=SimpleNamespace(st_gid=109)):

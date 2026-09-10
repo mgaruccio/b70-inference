@@ -15,6 +15,36 @@ import qwen38_standard_bench as bench
 
 
 class StandardBenchmarkTests(unittest.TestCase):
+    def test_verification_cap_requires_dflash_development(self):
+        base = ["benchmark", "--out", "/unused", "--betterbench", "/unused",
+                "--guard", "/unused", "--patch", "/unused", "--prefill-patch", "/unused"]
+        for extra in (["--verification-cap", "3"],
+                      ["--verification-cap", "1", "--long-context-only", "--reference-mtp"],
+                      ["--verification-cap", "2", "--long-context-only"],
+                      ["--adaptive-verification"],
+                      ["--adaptive-verification", "--long-context-only", "--reference-mtp"],
+                      ["--adaptive-verification", "--verification-cap", "3", "--long-context-only"]):
+            with self.subTest(extra=extra), patch.object(sys, "argv", base + extra), \
+                    contextlib.redirect_stderr(io.StringIO()), patch.object(bench.dflash, "DFlashCell") as cell:
+                with self.assertRaises(SystemExit) as error:
+                    bench.main()
+                self.assertEqual(error.exception.code, 2)
+                cell.assert_not_called()
+        for cap in (1, 3, 7):
+            with patch.object(sys, "argv", base + ["--verification-cap", str(cap), "--long-context-only"]), \
+                    patch.object(bench.signal, "signal"), \
+                    patch.object(bench.dflash, "DFlashCell", side_effect=RuntimeError("stop before host start")) as cell:
+                with self.assertRaisesRegex(RuntimeError, "stop before host start"):
+                    bench.main()
+                self.assertEqual(cell.call_args.args[0].verification_cap, cap)
+        with patch.object(sys, "argv", base + ["--adaptive-verification", "--long-context-only"]), \
+                patch.object(bench.signal, "signal"), \
+                patch.object(bench.dflash, "DFlashCell", side_effect=RuntimeError("stop before host start")) as cell:
+            with self.assertRaisesRegex(RuntimeError, "stop before host start"):
+                bench.main()
+            self.assertTrue(cell.call_args.args[0].adaptive_verification)
+            self.assertIsNone(cell.call_args.args[0].verification_cap)
+
     def test_reference_is_cold_localhost_and_original_unchanged(self):
         original = (ROOT / "scripts" / "start-qwen38.sh").read_bytes()
         text = mtp.launcher_text(original, Path("/tmp/reference"))

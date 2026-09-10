@@ -1,0 +1,9 @@
+[
+  "docker",
+  "exec",
+  "qwen38",
+  "/opt/venv/bin/python",
+  "-P",
+  "-c",
+  "import hashlib, importlib.util, json, sys\nfrom pathlib import Path\nroot = Path(importlib.util.find_spec(\"vllm\").origin).parent\nif not str(root).startswith(\"/opt/venv/\"):\n    raise RuntimeError(f\"unexpected serving package: {root}\")\nspec = importlib.util.spec_from_file_location(\"verification\", \"/profile/patch_verification.py\")\noverlay = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(overlay)\nsource = (root / overlay.RELATIVE_PATH).read_text()\nif overlay.MARKER not in source or overlay.patch_text(source) != source:\n    raise RuntimeError(\"installed verification overlay is not an exact replay\")\nhashes = {p: hashlib.sha256((root / p).read_bytes()).hexdigest()\n          for p in (*overlay.DEPENDENCY_SHA256, overlay.RELATIVE_PATH)}\nfor path, expected in overlay.DEPENDENCY_SHA256.items():\n    if hashes[path] != expected:\n        raise RuntimeError(f\"installed verification dependency changed: {path}\")\nprint(json.dumps({\"python\": sys.executable, \"root\": str(root), \"hashes\": hashes}))\n"
+]

@@ -1,0 +1,139 @@
+B70_XPU_GDN_PARTIAL_BLOCK: /opt/venv/lib/python3.12/site-packages/vllm/_xpu_ops.py
+{"test": "C1 K7 partial GDN state continuation", "torch": "2.13.0+xpu", "vllm": "0.28.1rc1.dev278+g73029d424", "xpu_kernels": "0.1.14.1", "device": "Intel(R) Arc(TM) Pro B70 Graphics", "config": "/target-config.json", "tp_size": 1, "gqa_interleaved": false, "conv_shape": [12, 10, 10240], "ssm_shape": [12, 48, 128, 128], "state_dtypes": ["torch.float16", "torch.float32"], "qkvz_shape": [8, 16384], "ba_shape": [8, 96], "seed": 73029, "rtol": 0, "atol": 0}
+BEGIN L=1 previous=1
+PASS L=1 previous=1
+BEGIN L=1 previous=2
+PASS L=1 previous=2
+BEGIN L=1 previous=3
+PASS L=1 previous=3
+BEGIN L=1 previous=4
+PASS L=1 previous=4
+BEGIN L=1 previous=5
+PASS L=1 previous=5
+BEGIN L=1 previous=6
+PASS L=1 previous=6
+BEGIN L=1 previous=7
+PASS L=1 previous=7
+BEGIN L=1 previous=8
+PASS L=1 previous=8
+BEGIN L=2 previous=1
+PASS L=2 previous=1
+BEGIN L=2 previous=2
+PASS L=2 previous=2
+BEGIN L=2 previous=3
+PASS L=2 previous=3
+BEGIN L=2 previous=4
+PASS L=2 previous=4
+BEGIN L=2 previous=5
+PASS L=2 previous=5
+BEGIN L=2 previous=6
+PASS L=2 previous=6
+BEGIN L=2 previous=7
+PASS L=2 previous=7
+BEGIN L=2 previous=8
+PASS L=2 previous=8
+BEGIN L=3 previous=1
+PASS L=3 previous=1
+BEGIN L=3 previous=2
+PASS L=3 previous=2
+BEGIN L=3 previous=3
+PASS L=3 previous=3
+BEGIN L=3 previous=4
+PASS L=3 previous=4
+BEGIN L=3 previous=5
+PASS L=3 previous=5
+BEGIN L=3 previous=6
+PASS L=3 previous=6
+BEGIN L=3 previous=7
+PASS L=3 previous=7
+BEGIN L=3 previous=8
+PASS L=3 previous=8
+BEGIN L=4 previous=1
+PASS L=4 previous=1
+BEGIN L=4 previous=2
+PASS L=4 previous=2
+BEGIN L=4 previous=3
+PASS L=4 previous=3
+BEGIN L=4 previous=4
+PASS L=4 previous=4
+BEGIN L=4 previous=5
+PASS L=4 previous=5
+BEGIN L=4 previous=6
+PASS L=4 previous=6
+BEGIN L=4 previous=7
+PASS L=4 previous=7
+BEGIN L=4 previous=8
+PASS L=4 previous=8
+BEGIN L=5 previous=1
+PASS L=5 previous=1
+BEGIN L=5 previous=2
+PASS L=5 previous=2
+BEGIN L=5 previous=3
+PASS L=5 previous=3
+BEGIN L=5 previous=4
+PASS L=5 previous=4
+BEGIN L=5 previous=5
+PASS L=5 previous=5
+BEGIN L=5 previous=6
+PASS L=5 previous=6
+BEGIN L=5 previous=7
+PASS L=5 previous=7
+BEGIN L=5 previous=8
+PASS L=5 previous=8
+BEGIN L=6 previous=1
+PASS L=6 previous=1
+BEGIN L=6 previous=2
+PASS L=6 previous=2
+BEGIN L=6 previous=3
+PASS L=6 previous=3
+BEGIN L=6 previous=4
+PASS L=6 previous=4
+BEGIN L=6 previous=5
+PASS L=6 previous=5
+BEGIN L=6 previous=6
+PASS L=6 previous=6
+BEGIN L=6 previous=7
+PASS L=6 previous=7
+BEGIN L=6 previous=8
+PASS L=6 previous=8
+BEGIN L=7 previous=1
+PASS L=7 previous=1
+BEGIN L=7 previous=2
+PASS L=7 previous=2
+BEGIN L=7 previous=3
+PASS L=7 previous=3
+BEGIN L=7 previous=4
+PASS L=7 previous=4
+BEGIN L=7 previous=5
+PASS L=7 previous=5
+BEGIN L=7 previous=6
+PASS L=7 previous=6
+BEGIN L=7 previous=7
+PASS L=7 previous=7
+BEGIN L=7 previous=8
+PASS L=7 previous=8
+PASS alternating widths=(2, 4, 8, 2) previous=1
+PASS alternating widths=(2, 4, 8, 2) previous=2
+PASS alternating widths=(2, 4, 8, 2) previous=3
+PASS alternating widths=(2, 4, 8, 2) previous=4
+PASS alternating widths=(2, 4, 8, 2) previous=5
+PASS alternating widths=(2, 4, 8, 2) previous=6
+PASS alternating widths=(2, 4, 8, 2) previous=7
+PASS alternating widths=(2, 4, 8, 2) previous=8
+PASS alternating widths=(4, 2, 8, 4) previous=1
+PASS alternating widths=(4, 2, 8, 4) previous=2
+PASS alternating widths=(4, 2, 8, 4) previous=3
+PASS alternating widths=(4, 2, 8, 4) previous=4
+PASS alternating widths=(4, 2, 8, 4) previous=5
+PASS alternating widths=(4, 2, 8, 4) previous=6
+PASS alternating widths=(4, 2, 8, 4) previous=7
+PASS alternating widths=(4, 2, 8, 4) previous=8
+PASS alternating widths=(8, 1, 2) previous=1
+PASS alternating widths=(8, 1, 2) previous=2
+PASS alternating widths=(8, 1, 2) previous=3
+PASS alternating widths=(8, 1, 2) previous=4
+PASS alternating widths=(8, 1, 2) previous=5
+PASS alternating widths=(8, 1, 2) previous=6
+PASS alternating widths=(8, 1, 2) previous=7
+PASS alternating widths=(8, 1, 2) previous=8
+{"result": "PASS", "partial_cases": 224, "continuations": 896, "alternating_chained_steps": 5408, "api_and_graph_verification": "still required"}

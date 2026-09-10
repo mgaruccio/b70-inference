@@ -1,0 +1,8 @@
+[
+  "docker",
+  "exec",
+  "qwen38",
+  "python",
+  "-c",
+  "import hashlib, importlib.util, json\nfrom pathlib import Path\nr=Path(importlib.util.find_spec(\"vllm\").origin).parent\npaths=[\"v1/core/sched/async_scheduler.py\",\"v1/core/sched/scheduler.py\",\"v1/worker/gpu_model_runner.py\",\"v1/spec_decode/llm_base_proposer.py\",\"v1/spec_decode/dflash.py\",\"config/speculative.py\",\"_xpu_ops.py\"]\nprint(json.dumps({p:hashlib.sha256((r/p).read_bytes()).hexdigest() for p in paths}))\n"
+]
