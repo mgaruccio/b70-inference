@@ -1,12 +1,13 @@
-"""CPU contracts for the fixed verification-prefix overlay, not native proof.
+"""CPU contracts for fixed/adaptive verification prefixes, not native proof.
 
 The fixture is the COMPLETE, unmodified Apache-2.0 async_scheduler.py from
 vLLM 73029d42441321b631779db3475031f5ec26dd6c (URL in the patch). No network,
 vLLM, torch, GPU or XPU dependency is needed. We execute the actual original
 and patched AsyncScheduler class plus the existing BF16 config guards with
 isolated imports. The parent Scheduler/request/cache stubs below model only
-counter handoffs; they do not replace the lead's native GDN/API oracle.
-
+counter/completion handoffs; they do not replace the lead's native GDN/API
+oracle. Adaptive tests call the real patched update_from_output and schedule
+overrides with a deterministic synthetic CPU clock (never sleeps).
 Run: python -m unittest discover -s tests -p 'test_qwen38_dflash2_verification.py' -v
 The GPU source-pin regression additionally uses B70_DFLASH2_VERIFY_GPU_SOURCE
 (default: the local pinned /tmp source export); only that test skips if absent.
@@ -87,6 +88,8 @@ class Request:
         self.request_id = request_id
         self.prompt = prompt
         self.max_output = max_output
+        self.num_prompt_tokens = prompt
+        self.num_preemptions = 0
         self.output_token_ids = []
         self.spec_token_ids = []
         self.num_computed_tokens = 0
@@ -101,6 +104,9 @@ class Request:
     @property
     def num_tokens(self):
         return self.prompt + len(self.output_token_ids)
+
+    def is_finished(self):
+        return self.status == STATUS.FINISHED
 
 
 class SchedulerStub:
@@ -140,6 +146,28 @@ class SchedulerStub:
                 break
         return ids, stopped
 
+    def update_from_output(self, scheduler_output, model_runner_output):
+        # Mirror only the pinned parent's drain/rejection/stop handoff. Keep the
+        # sampled lists by reference, as upstream does (EOS mutates them).
+        result = {}
+        for rid in scheduler_output.num_scheduled_tokens:
+            r = self.requests.get(rid)
+            if r is None:
+                continue
+            index = model_runner_output.req_id_to_index.get(rid)
+            ids = model_runner_output.sampled_token_ids
+            ids = ids[index] if ids and index is not None else []
+            result[rid] = deliver(self, r, scheduler_output, ids, copy_ids=False)
+            if r.is_finished():
+                self.requests.pop(rid, None)
+        self.parent_result = result
+        return result
+
+
+class ScheduleOutput(NS):
+    # Like pinned SchedulerOutput's ordinary dataclass: supports weak references.
+    pass
+
 
 def module(name, **attrs):
     result = ModuleType(name)
@@ -158,8 +186,8 @@ def runtime(cap=None, cfg=None, *, source=PATCHED, env=None, int4=False, xpu=Tru
     modules = {name: module(name) for name in (
         "vllm", "vllm.config", "vllm.v1", "vllm.v1.core", "vllm.v1.core.sched")}
     modules.update({
-        "vllm.logger": module("vllm.logger", init_logger=lambda name: NS()),
-        "vllm.v1.core.sched.output": module("output", SchedulerOutput=NS),
+        "vllm.logger": module("vllm.logger", init_logger=lambda name: NS(info=mock.Mock())),
+        "vllm.v1.core.sched.output": module("output", SchedulerOutput=ScheduleOutput),
         "vllm.v1.core.sched.scheduler": module("scheduler", Scheduler=SchedulerStub),
         "vllm.v1.request": module("request", Request=Request, RequestStatus=STATUS),
         "vllm.platforms": module("platforms", current_platform=NS(is_xpu=lambda: xpu)),
@@ -177,13 +205,14 @@ def runtime(cap=None, cfg=None, *, source=PATCHED, env=None, int4=False, xpu=Tru
 def schedule(s, r=None, *, drafts=None, n=None, generation=7):
     """Feed a chosen real schedule to the override; not a scheduler simulator."""
     if r is None:
-        output = NS(num_scheduled_tokens={}, scheduled_spec_decode_tokens={})
+        output = ScheduleOutput(num_scheduled_tokens={}, scheduled_spec_decode_tokens={})
     else:
         s.requests[r.request_id] = r
         if drafts is None:
             drafts = r.spec_token_ids
-        output = NS(num_scheduled_tokens={r.request_id: n if n is not None else len(drafts) + 1},
-                    scheduled_spec_decode_tokens={r.request_id: drafts} if drafts else {})
+        output = ScheduleOutput(
+            num_scheduled_tokens={r.request_id: n if n is not None else len(drafts) + 1},
+            scheduled_spec_decode_tokens={r.request_id: drafts} if drafts else {})
         # Parent schedule rebinds, never clears the shared placeholder list.
         r.spec_token_ids = []
     output.num_spec_tokens_to_schedule = generation
@@ -194,10 +223,10 @@ def schedule(s, r=None, *, drafts=None, n=None, generation=7):
     return output
 
 
-def deliver(s, r, output, ids):
+def deliver(s, r, output, ids, *, copy_ids=True):
     """Model the parent's rejection/stale drains, then call the REAL override.
 
-    No claim about update_from_output, allocator, worker, or device execution.
+    No claim about allocator, worker, or device execution.
     In-flight counts are scheduled input counts, not accepted output counts.
     """
     n = output.num_scheduled_tokens[r.request_id]
@@ -215,12 +244,15 @@ def deliver(s, r, output, ids):
             r.num_computed_tokens -= rejected
         if r.num_output_placeholders > 0:
             r.num_output_placeholders -= rejected
-    return s._update_request_with_output(r, list(ids), is_stale=stale)
+    if not ids:
+        return [], False
+    return s._update_request_with_output(r, list(ids) if copy_ids else ids, is_stale=stale)
 
 
 def preempt(r, *, drop=False):
     # Pinned parent zeroes counters/rebinds IDs before late async delivery.
     r.status = STATUS.PREEMPTED
+    r.num_preemptions += 1
     r.num_computed_tokens = 0
     r.spec_token_ids = []
     r.num_stale_output_tokens = r.num_in_flight_tokens
@@ -406,9 +438,346 @@ class PrefixTests(unittest.TestCase):
             self.assertEqual(r.spec_token_ids, [-1] * 3)
 
 
+class Clock:
+    def __init__(self):
+        self.now = 1000.0
+        self.calls = 0
+
+    def __call__(self):
+        self.calls += 1
+        return self.now
+
+
+@contextmanager
+def adaptive_runtime():
+    with runtime("adaptive") as s:
+        clock = Clock()
+        namespace = s.update_from_output.__func__.__globals__
+        with mock.patch.dict(namespace, {"_b70_perf_counter": clock}):
+            yield s, clock, namespace["logger"].info
+
+
+def complete(s, r, output, ids, clock, elapsed=1.0):
+    clock.now += elapsed
+    runner = NS(req_ids=[r.request_id], req_id_to_index={r.request_id: 0},
+                sampled_token_ids=[ids])
+    result = s.update_from_output(output, runner)
+    assert result is s.parent_result  # The parent's return value is untouched.
+    return runner
+
+
+def adaptive_round(s, r, clock, *, depth=None, tokens=None, elapsed=1.0):
+    output = schedule(s, r, drafts=None if depth is None else [-1] * depth)
+    actual = len(output.scheduled_spec_decode_tokens.get(r.request_id, ()))
+    complete(s, r, output, [101] * (actual + 1 if tokens is None else tokens), clock, elapsed)
+    assert output.num_spec_tokens_to_schedule == s.num_spec_tokens == s.num_lookahead_tokens == 7
+    assert r.num_output_placeholders >= 0
+    return output
+
+
+def adaptive_start(s, clock, r=None):
+    r = r or Request(max_output=100000)
+    prefill = schedule(s, r, drafts=[], n=r.prompt)
+    complete(s, r, prefill, [101], clock, 10000.0)
+    adaptive_round(s, r, clock, tokens=1, elapsed=10000.0)  # First decode excluded.
+    return r, s._b70_dflash2_verify_states[r.request_id]
+
+
+def drive_until(s, r, clock, predicate, *, tokens=None, durations=None, limit=200):
+    tokens = tokens or {7: 8, 3: 4}
+    durations = durations or {7: 1.0, 3: 1.0}
+    state = s._b70_dflash2_verify_states[r.request_id]
+    for count in range(limit + 1):
+        if predicate(state):
+            return count
+        depth = len(r.spec_token_ids)
+        adaptive_round(s, r, clock, tokens=tokens[depth], elapsed=durations[depth])
+    raise AssertionError(f"controller did not progress: {state.summary('test')}")
+
+
+def summaries(logger):
+    import json
+    results = []
+    for call in logger.call_args_list:
+        fmt, payload = call.args
+        assert fmt == "B70_DFLASH2_ADAPTIVE %s"  # Request ID is data, never format.
+        results.append(json.loads(payload))
+    return results
+
+
+class AdaptiveTests(unittest.TestCase):
+    def test_seven_wins_initial_windows_and_next_step_only(self):
+        with adaptive_runtime() as (s, clock, log):
+            r, state = adaptive_start(s, clock)
+            self.assertEqual(state.pending_cap, 7)
+            self.assertEqual(state.totals, {3: [0, 0, 0.0], 7: [0, 0, 0.0]})
+            steps = drive_until(s, r, clock, lambda st: st.phase == "probe")
+            self.assertEqual(steps, 11)  # Interval anchor + 2 settle + 8 scored.
+            self.assertEqual(state.totals[7], [8, 64, 8.0])
+            self.assertEqual((state.pending_cap, state.current_k), (3, 7))
+            old_list = r.spec_token_ids
+            self.assertEqual(len(old_list), 7)  # Completion never rewrites placeholders.
+            old = adaptive_round(s, r, clock, elapsed=9999.0)
+            self.assertIs(old.scheduled_spec_decode_tokens[r.request_id], old_list)
+            self.assertEqual(old_list, [-1] * 7)
+            self.assertEqual(len(r.spec_token_ids), 3)
+            self.assertEqual(state.ignored["depth_mismatch"], 1)
+            self.assertEqual(state.totals[3], [0, 0, 0.0])
+            drive_until(s, r, clock, lambda st: st.decisions[7] == 1)
+            self.assertEqual(state.totals[3], [8, 32, 8.0])
+            self.assertEqual(state.pending_cap, 7)
+            self.assertEqual(state.ignored["settle"], 4)
+            self.assertEqual(state.switches, {"7->3": 1, "3->7": 1})
+            self.assertEqual(r.num_output_placeholders, 0)
+            self.assertFalse(log.called)  # Never per-round logging.
+
+    def test_three_wins_on_useful_tokens_per_time_not_acceptance(self):
+        with adaptive_runtime() as (s, clock, _):
+            r, state = adaptive_start(s, clock)
+            drive_until(s, r, clock, lambda st: st.decisions[3] == 1,
+                        tokens={7: 8, 3: 2}, durations={7: 4.0, 3: 0.5})
+            # K3 accepts just 1/3 drafts vs K7's 7/7, but emits twice as fast.
+            self.assertEqual(state.totals[7], [8, 64, 32.0])
+            self.assertEqual(state.totals[3], [8, 16, 4.0])
+            self.assertEqual((state.incumbent, state.pending_cap, state.phase), (3, 3, "exploit"))
+
+    def test_reprobes_after_24_valid_rounds_and_reverses_both_ways(self):
+        with adaptive_runtime() as (s, clock, _):
+            r, state = adaptive_start(s, clock)
+            drive_until(s, r, clock, lambda st: st.decisions[3] == 1,
+                        durations={7: 4.0, 3: 1.0})
+            for _ in range(23):
+                adaptive_round(s, r, clock, elapsed=4.0)
+            self.assertEqual((state.phase, state.window[0]), ("exploit", 23))
+            adaptive_round(s, r, clock, elapsed=4.0)
+            self.assertEqual((state.phase, state.pending_cap), ("probe", 7))
+            self.assertEqual(state.reference, [24, 96, 96.0])
+            drive_until(s, r, clock, lambda st: st.decisions[7] == 1,
+                        durations={7: 1.0, 3: 4.0})
+            self.assertEqual(state.incumbent, 7)
+            # New measurements, not lifetime averages, must let K3 win again.
+            drive_until(s, r, clock, lambda st: st.decisions[3] == 2,
+                        durations={7: 4.0, 3: 1.0})
+            self.assertEqual(state.incumbent, 3)
+            self.assertEqual(state.totals[3][0], 8 + 24 + 8)
+            self.assertEqual(state.totals[7][0], 8 + 8 + 24)
+            self.assertEqual(state.switches, {"7->3": 2, "3->7": 1})
+
+    def test_hysteresis_retains_incumbent_near_ties(self):
+        for gain, winner in ((0.99, 7), (1.0, 7), (1.029, 7), (1.031, 3)):
+            with self.subTest(gain=gain), adaptive_runtime() as (s, clock, _):
+                r, state = adaptive_start(s, clock)
+                drive_until(s, r, clock, lambda st: sum(st.decisions.values()) == 1,
+                            durations={7: 1.0, 3: 0.5 / gain})
+                self.assertEqual(state.incumbent, winner)
+        with adaptive_runtime() as (s, clock, _):
+            r, state = adaptive_start(s, clock)
+            drive_until(s, r, clock, lambda st: st.decisions[3] == 1,
+                        durations={7: 4.0, 3: 1.0})
+            drive_until(s, r, clock, lambda st: st.decisions[3] == 2,
+                        durations={7: 2.0 / 1.02, 3: 1.0})
+            self.assertEqual(state.incumbent, 3)  # Hysteresis is symmetric.
+
+    def test_overlapping_async_old_depths_settle_then_progress(self):
+        with adaptive_runtime() as (s, clock, _):
+            r, state = adaptive_start(s, clock)
+            pending = [schedule(s, r), schedule(s, r)]
+            observed = []
+            for i in range(160):
+                output = pending.pop(0)
+                pending.append(schedule(s, r))  # Ahead of the completed feedback.
+                depth = len(output.scheduled_spec_decode_tokens[r.request_id])
+                observed.append(depth)
+                dt = {7: 4.0, 3: 1.0} if i < 65 else {7: 1.0, 3: 4.0}
+                complete(s, r, output, [101] * (depth + 1), clock, dt[depth])
+                self.assertLessEqual(len(s._b70_dflash2_verify_pending), 2)
+            for output in pending:
+                depth = len(output.scheduled_spec_decode_tokens[r.request_id])
+                complete(s, r, output, [101] * (depth + 1), clock)
+            self.assertEqual(set(observed), {3, 7})
+            self.assertGreaterEqual(state.decisions[3], 1)
+            self.assertGreaterEqual(state.decisions[7], 1)
+            self.assertGreaterEqual(state.ignored["depth_mismatch"], 3)
+            self.assertGreater(state.ignored["settle"], 2)
+            self.assertEqual(s._b70_dflash2_verify_pending, {})
+            self.assertEqual(r.num_output_placeholders, 0)
+
+    def test_prefill_first_decode_and_clipped_depths_never_score(self):
+        with adaptive_runtime() as (s, clock, _):
+            r = Request(prompt=32, max_output=100000)
+            first = schedule(s, r, drafts=[], n=16)
+            last = schedule(s, r, drafts=[], n=16)
+            complete(s, r, first, [], clock, 10000.0)
+            complete(s, r, last, [101], clock, 10000.0)
+            state = s._b70_dflash2_verify_states[r.request_id]
+            adaptive_round(s, r, clock, elapsed=10000.0)
+            self.assertEqual(state.ignored, {"prefill": 2, "first_decode": 1})
+            for depth in (0, 1, 2, 4, 5, 6):
+                output = schedule(s, r, drafts=[-1] * depth)
+                self.assertEqual(r.num_output_placeholders, depth + 1)
+                self.assertEqual(len(r.spec_token_ids), 7)
+                complete(s, r, output, [101] * (depth + 1), clock, 9999.0)
+                self.assertEqual(state.current_k, depth)
+            self.assertEqual(state.ignored["clipped_depth"], 6)
+            self.assertEqual(state.totals, {3: [0, 0, 0.0], 7: [0, 0, 0.0]})
+            self.assertEqual(set(state.scheduled), {0, 1, 2, 4, 5, 6, 7})
+            drive_until(s, r, clock, lambda st: st.phase == "probe")
+            self.assertEqual(state.totals[7], [8, 64, 8.0])
+
+    def test_invalid_token_counts_and_completion_intervals_do_not_learn(self):
+        for tokens in (0, 9):
+            with self.subTest(tokens=tokens), adaptive_runtime() as (s, clock, _):
+                r, state = adaptive_start(s, clock)
+                adaptive_round(s, r, clock, tokens=tokens)
+                self.assertEqual(state.ignored["token_bounds"], 1)
+                self.assertEqual(state.window[0], 0)
+                self.assertIsNone(state.last_completion)
+        for elapsed in (0.0, -1.0, float("nan"), float("inf"), -float("inf")):
+            with self.subTest(elapsed=elapsed), adaptive_runtime() as (s, clock, _):
+                r, state = adaptive_start(s, clock)
+                adaptive_round(s, r, clock)
+                adaptive_round(s, r, clock, elapsed=elapsed)
+                self.assertEqual(state.ignored["invalid_interval"], 1)
+                self.assertEqual(state.window[0], 0)
+                self.assertIsNone(state.last_completion)
+                clock.now = 30000.0
+                drive_until(s, r, clock, lambda st: st.phase == "probe")
+                self.assertEqual(state.totals[7], [8, 64, 8.0])
+
+    def test_terminal_parent_list_mutation_is_excluded_and_summary_once(self):
+        for stop in ("eos", "length"):
+            with self.subTest(stop=stop), adaptive_runtime() as (s, clock, log):
+                rid = 'caller-%s-\\n-"id"'
+                r, state = adaptive_start(s, clock, Request(rid, max_output=100000))
+                drive_until(s, r, clock, lambda st: st.totals[7][0] == 3)
+                before = deepcopy(state.totals)
+                if stop == "length":
+                    r.max_output = len(r.output_token_ids) + 1
+                ids = ([EOS] if stop == "eos" else [101]) + [101] * 7
+                output = schedule(s, r)
+                runner = complete(s, r, output, ids, clock)
+                self.assertIs(runner.sampled_token_ids[0], ids)
+                self.assertEqual(len(ids), 1)
+                self.assertEqual(state.totals, before)
+                self.assertEqual(state.ignored["terminal"], 1)
+                self.assertEqual(s._b70_dflash2_verify_states, {})
+                self.assertEqual(s._b70_dflash2_verify_pending, {})
+                schedule(s)  # Reaping again must not log twice.
+                records = summaries(log)
+                self.assertEqual(len(records), 1)
+                summary = records[0]
+                self.assertEqual(summary["request_id"], rid)
+                self.assertEqual(summary["scheduled_depths"], {"0": 1, "7": 8})
+                self.assertEqual(summary["scored"]["7"], {"rounds": 3, "tokens": 24, "seconds": 3.0})
+                self.assertEqual(summary["ignored"]["settle"], 2)
+                self.assertIn("next_cap_selections", summary)
+                self.assertIn("switches", summary)
+
+    def test_preemption_resets_even_with_same_step_resume_and_stale_delivery(self):
+        for drop in (False, True):
+            with self.subTest(drop=drop), adaptive_runtime() as (s, clock, log):
+                r, old_state = adaptive_start(s, clock)
+                old_output = schedule(s, r)
+                preempt(r, drop=drop)
+                r.status = STATUS.RUNNING  # Same-step resume, epoch still differs.
+                resumed = schedule(s, r, drafts=[], n=r.num_tokens)
+                state = s._b70_dflash2_verify_states[r.request_id]
+                self.assertIsNot(state, old_state)
+                complete(s, r, old_output, [101], clock)
+                self.assertEqual(state.totals[7][0], 0)
+                complete(s, r, resumed, [101], clock)
+                self.assertEqual(state.ignored, {"prefill": 1})
+                self.assertEqual(state.pending_cap, 7)
+                self.assertEqual(r.num_output_placeholders, 0)
+                self.assertEqual(summaries(log)[0]["reason"], "preempted")
+                self.assertEqual(len(summaries(log)), 1)
+
+    def test_stale_flag_snapshotted_before_parent_drains_it(self):
+        with adaptive_runtime() as (s, clock, _):
+            r, state = adaptive_start(s, clock)
+            output = schedule(s, r)
+            # An existing stale share: the parent drains this flag to zero.
+            r.num_stale_output_tokens = output.num_scheduled_tokens[r.request_id]
+            r.num_output_placeholders = 0
+            complete(s, r, output, [101], clock)
+            self.assertEqual(r.num_stale_output_tokens, 0)
+            self.assertEqual(state.ignored["stale_output"], 1)
+            self.assertEqual(state.totals[7][0], 0)
+
+    def test_aborted_removed_and_reused_ids_do_not_retain_controller_state(self):
+        for removed in (False, True):
+            with self.subTest(removed=removed), adaptive_runtime() as (s, clock, log):
+                r, old_state = adaptive_start(s, clock)
+                output = schedule(s, r)
+                r.status = STATUS.FINISHED
+                if removed:
+                    del s.requests[r.request_id]
+                complete(s, r, output, [101], clock)
+                self.assertEqual(s._b70_dflash2_verify_states, {})
+                self.assertEqual(s._b70_dflash2_verify_pending, {})
+                self.assertEqual(len(summaries(log)), 1)
+                new, state = adaptive_start(s, clock, Request(r.request_id, max_output=100000))
+                self.assertIsNot(state, old_state)
+                self.assertIsNot(new.spec_token_ids, r.spec_token_ids)
+                self.assertEqual(state.totals[7][0], 0)
+                self.assertEqual(state.pending_cap, 7)
+                del s.requests[new.request_id]
+                schedule(s)  # Removal without any completion also reaps.
+                self.assertEqual(s._b70_dflash2_verify_states, {})
+                self.assertEqual(len(summaries(log)), 2)
+
+    def test_replacement_identity_and_abandoned_output_metadata_are_reaped(self):
+        with adaptive_runtime() as (s, clock, log):
+            r, old_state = adaptive_start(s, clock)
+            old = schedule(s, r)
+            new = Request(r.request_id, max_output=100000)
+            new_output = schedule(s, new, drafts=[], n=new.prompt)
+            state = s._b70_dflash2_verify_states[new.request_id]
+            self.assertIsNot(state, old_state)
+            self.assertNotIn(id(old), s._b70_dflash2_verify_pending)
+            self.assertEqual(summaries(log)[0]["reason"], "replaced")
+            self.assertEqual(state.pending_cap, 7)
+            del new_output
+            schedule(s)
+            self.assertEqual(s._b70_dflash2_verify_pending, {})
+            self.assertEqual(state.ignored["abandoned_output"], 1)
+
+    def test_instances_are_isolated_and_short_requests_stay_seven(self):
+        with adaptive_runtime() as (first, clock, log):
+            r = Request(max_output=2)
+            output = schedule(first, r, drafts=[], n=r.prompt)
+            complete(first, r, output, [101], clock)
+            with adaptive_runtime() as (second, other_clock, other_log):
+                other, state = adaptive_start(second, other_clock)
+                self.assertIsNot(first._b70_dflash2_verify_states, second._b70_dflash2_verify_states)
+                self.assertIsNot(r.spec_token_ids, other.spec_token_ids)
+                output = schedule(first, r)
+                complete(first, r, output, [101] * 8, clock)
+                self.assertEqual(summaries(log)[0]["switches"], {"7->3": 0, "3->7": 0})
+                self.assertFalse(other_log.called)
+                self.assertEqual(state.pending_cap, 7)
+
+    def test_fixed_and_disabled_completion_path_never_clocks_or_collects(self):
+        for cap in (None, "1", "3", "7"):
+            with self.subTest(cap=cap), runtime(cap) as s:
+                namespace = s.update_from_output.__func__.__globals__
+                forbidden = mock.Mock(side_effect=AssertionError("adaptive clock in fixed mode"))
+                with mock.patch.dict(namespace, {"_b70_perf_counter": forbidden}):
+                    clock = Clock()
+                    r = Request()
+                    prefill = schedule(s, r, drafts=[], n=r.prompt)
+                    complete(s, r, prefill, [101], clock)
+                    adaptive_round(s, r, clock)
+                    self.assertFalse(forbidden.called)
+                    self.assertFalse(namespace["logger"].info.called)
+                    self.assertFalse(hasattr(s, "_b70_dflash2_verify_states"))
+                    self.assertEqual(r.num_output_placeholders, 0)
+
+
 class GuardTests(unittest.TestCase):
     def test_rejects_noncanonical_environment(self):
-        for value in ("", "0", "2", "4", "8", "-1", "01", "+1", " 1", "3 ", "7\n", "1.0", "auto", "off", "１"):
+        for value in ("", "0", "2", "4", "8", "-1", "01", "+1", " 1", "3 ", "7\n",
+                      "1.0", "auto", "off", "１", "Adaptive", "ADAPTIVE", "adaptive ", " adaptive", "adaptive\n"):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "exactly 1, 3, or 7"):
                 with runtime(value):
                     pass
@@ -444,8 +813,9 @@ class GuardTests(unittest.TestCase):
                     for part in parents:
                         obj = getattr(obj, part)
                     setattr(obj, name, value)
-                    with self.assertRaises(ValueError), runtime("3", cfg):
-                        pass
+                    for cap in ("3", "adaptive"):
+                        with self.subTest(cap=cap), self.assertRaises(ValueError), runtime(cap, cfg):
+                            pass
 
     def test_reuses_real_checkpoint_and_bf16_int4_guards(self):
         for int4 in (False, True):
@@ -496,6 +866,37 @@ class GuardTests(unittest.TestCase):
                     schedule(s, r, generation=generation)
                 self.assertEqual(vars(r), before)
         with runtime("3") as s:
+            s.dynamic_sd_lookup = [7]
+            with self.assertRaisesRegex(RuntimeError, "dynamic SD"):
+                schedule(s)
+
+
+    def test_adaptive_reuses_bf16_guards_and_refuses_generation_drift(self):
+        for int4 in (False, True):
+            with self.subTest(int4=int4), runtime("adaptive", int4=int4) as s:
+                self.assertEqual(s._b70_dflash2_verify_cap, "adaptive")
+        for env in ({"B70_DFLASH2_BF16": "0"}, {"VLLM_USE_V2_MODEL_RUNNER": "1"}):
+            with self.subTest(env=env), self.assertRaises(ValueError), runtime("adaptive", env=env):
+                pass
+        with self.assertRaises(ValueError), runtime("adaptive", xpu=False):
+            pass
+        cfg = config(int4=True)
+        cfg.speculative_config.draft_model_config.hf_config.quantization_config["bits"] = 8
+        with self.assertRaises(ValueError), runtime("adaptive", cfg, int4=True):
+            pass
+        for malformed in (None, [], "bad"):
+            cfg = config()
+            cfg.speculative_config.draft_model_config.hf_config.dflash_config = malformed
+            with self.subTest(malformed=malformed), self.assertRaises(ValueError), runtime("adaptive", cfg):
+                pass
+        with runtime("adaptive") as s:
+            r = Request()
+            before = deepcopy(vars(r))
+            for generation in (0, 1, 3, 8, 7.0, "7", None):
+                with self.subTest(generation=generation), self.assertRaisesRegex(RuntimeError, "generation K7"):
+                    schedule(s, r, generation=generation)
+                self.assertEqual(vars(r), before)
+                self.assertEqual(s._b70_dflash2_verify_states, {})
             s.dynamic_sd_lookup = [7]
             with self.assertRaisesRegex(RuntimeError, "dynamic SD"):
                 schedule(s)
@@ -575,6 +976,13 @@ class SourceTests(unittest.TestCase):
             ORIGINAL.replace("logger =", "# changed\nlogger =", 1),
             ORIGINAL.replace("\n", "\r\n"),
             PATCHED.replace("int(cap)", "int(cap) + 1"),
+            PATCHED.replace("self.settle = 2", "self.settle = 1", 1),
+            PATCHED.replace("1.03 * self.reference", "1.0 * self.reference"),
+            PATCHED.replace("24 if self.phase", "240 if self.phase"),
+            PATCHED.replace("_b70_perf_counter()", "0.0"),
+            PATCHED.replace("state.observe(depth, count, now)", "state.observe(depth, 8, now)"),
+            PATCHED.replace(patch.ADAPTIVE_HELPERS, ""),
+            PATCHED.replace(patch.ADAPTIVE_METHODS, ""),
             PATCHED + f"\n# {patch.MARKER}\n",
             PATCHED.replace(patch.MARKER, "REMOVED"),
             PATCHED.replace(patch.INIT, "") + patch.INIT,
