@@ -8,6 +8,8 @@ isolated imports. The parent Scheduler/request/cache stubs below model only
 counter handoffs; they do not replace the lead's native GDN/API oracle.
 
 Run: python -m unittest discover -s tests -p 'test_qwen38_dflash2_verification.py' -v
+The GPU source-pin regression additionally uses B70_DFLASH2_VERIFY_GPU_SOURCE
+(default: the local pinned /tmp source export); only that test skips if absent.
 """
 
 from contextlib import contextmanager
@@ -66,7 +68,8 @@ def config(int4=False):
                            prefill_context_parallel_size=1),
         speculative_config=NS(
             method="dflash", num_speculative_tokens=7,
-            num_speculative_tokens_per_batch_size=None, parallel_drafting=False,
+            # SpeculativeConfig normalizes DFlash to parallel drafting at init.
+            num_speculative_tokens_per_batch_size=None, parallel_drafting=True,
             draft_sample_method="greedy", rejection_sample_method="standard",
             quantization="gptq" if int4 else None, kv_cache_dtype="auto",
             use_heterogeneous_vocab=False, use_local_argmax_reduction=False,
@@ -423,7 +426,7 @@ class GuardTests(unittest.TestCase):
             "speculative_config.method": ["eagle", "ngram"],
             "speculative_config.num_speculative_tokens": [3, 7.0],
             "speculative_config.num_speculative_tokens_per_batch_size": [[], [(1, 1, 7)]],
-            "speculative_config.parallel_drafting": [True],
+            "speculative_config.parallel_drafting": [False, None, 1],
             "speculative_config.draft_sample_method": ["probabilistic"],
             "speculative_config.rejection_sample_method": ["synthetic", "typical"],
             "speculative_config.use_heterogeneous_vocab": [True],
@@ -507,6 +510,64 @@ class SourceTests(unittest.TestCase):
         # Output updates, including stale/EOS behavior, are untouched verbatim.
         tail = "    def _update_request_with_output(\n"
         self.assertEqual(ORIGINAL[ORIGINAL.index(tail):], PATCHED[PATCHED.index(tail):])
+
+    def test_prefill_guarded_gpu_accepted_but_unguarded_rejected(self):
+        source_path = Path(os.environ.get(
+            "B70_DFLASH2_VERIFY_GPU_SOURCE",
+            "/tmp/qwen38-boundary-source-73029d424/v1/worker/gpu_model_runner.py",
+        ))
+        if not source_path.is_file():
+            self.skipTest(f"pinned unguarded GPU source export unavailable: {source_path}")
+        original = source_path.read_text(encoding="utf-8")
+        self.assertEqual(hashlib.sha256(original.encode()).hexdigest(),
+                         "d620deb484fee968aeefefcf8cc901cf2665118e1a2415ee1bb906fd697b3054")
+        # Exact edits from deployed patch_uniform_decode_prefill.py, SHA256
+        # baa4647398874c19175ea74fe6f5d8dd6c2d83fc4bd0e5f2a68558afd983f5ad.
+        signature = (
+            "    def _is_uniform_decode(\n"
+            "        max_num_scheduled_tokens: int,\n"
+            "        uniform_decode_query_len: int,\n"
+            "        num_tokens: int,\n"
+            "        num_reqs: int,\n"
+        )
+        classifier = "                (max_num_scheduled_tokens == uniform_decode_query_len)\n"
+        call = (
+            "            num_tokens=num_tokens,\n"
+            "            num_reqs=num_reqs,\n"
+        )
+        edits = (
+            (signature, signature + "        has_prefill: bool = False,\n"),
+            (classifier, "                not has_prefill  # B70_FIX_UNIFORM_DECODE_PREFILL\n"
+                         "                and (max_num_scheduled_tokens == uniform_decode_query_len)\n"),
+            (call + "            force_uniform_decode=force_uniform_decode,\n",
+             call + "            has_prefill=bool(\n"
+                    "                (self.input_batch.num_computed_tokens_cpu[:num_reqs]\n"
+                    "                 < self.input_batch.num_prompt_tokens[:num_reqs]).any()\n"
+                    "            ),\n"
+                    "            force_uniform_decode=force_uniform_decode,\n"),
+        )
+        guarded = original
+        for old, new in edits:
+            self.assertEqual(guarded.count(old), 1)
+            guarded = guarded.replace(old, new, 1)
+        expected = "00f22cb5fe8bc2f05cc93b0500faaa55d8b3a77754fde3e23767648f621f4dd4"
+        relative = "v1/worker/gpu_model_runner.py"
+        self.assertEqual(hashlib.sha256(guarded.encode()).hexdigest(), expected)
+        self.assertEqual(patch.DEPENDENCY_SHA256[relative], expected)
+        with self.package_root() as (root, target):
+            with mock.patch.dict(patch.DEPENDENCY_SHA256, {relative: expected}):
+                gpu = root / relative
+                gpu.write_text(original, encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "handoff dependency"):
+                    patch.apply(root)
+                self.assertEqual(target.read_text(), ORIGINAL)
+                gpu.write_text(guarded, encoding="utf-8")
+                self.assertTrue(patch.apply(root))
+                self.assertFalse(patch.apply(root))
+                gpu.write_text(original, encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "handoff dependency"):
+                    patch.apply(root)
+                self.assertEqual(target.read_text(), PATCHED)
 
     def test_source_drift_partial_moved_and_tampered_overlay_rejected(self):
         candidates = [

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Pinned, opt-in fixed verification prefixes for the legacy async DFlash2 path.
 
-Apply AFTER patch-vllm-qwen38-dflash2-bf16.py in a disposable 73029d424 image.
+Apply after the deployed prefill guard and BF16 overlay in a disposable
+73029d424 image (guard -> xpu_prefill -> BF16 -> xpu_boundary -> cache_groups
+-> verification). The original unguarded GPU runner is deliberately rejected.
 B70_DFLASH2_VERIFY_CAP must be absent (off) or exactly 1, 3, or 7. Generation,
 SchedulerOutput.num_spec_tokens_to_schedule, lookahead allocation, GPU draft
 storage, and GDN rollback slots remain K=7. Only the NEXT step's read-only
@@ -33,11 +35,13 @@ from pathlib import Path
 MARKER = "B70_DFLASH2_VERIFY_PREFIX"
 RELATIVE_PATH = "v1/core/sched/async_scheduler.py"
 ORIGINAL_SHA256 = "e586a0ef3c6778be56a93e7f9bb712d4de9de6e7d7fe7e3e1d51dae83ecfc508"
-# Whole source pins: unchanged scheduler/scatter, and the reviewed BF16 overlay's
-# config guards/proposers. These files are validated, NEVER rewritten here.
+# Whole source pins: unchanged scheduler, guarded GPU runner, and the reviewed
+# BF16 config/proposers. These files are validated, NEVER rewritten here.
+# GPU prefill guard script SHA256:
+# baa4647398874c19175ea74fe6f5d8dd6c2d83fc4bd0e5f2a68558afd983f5ad
 DEPENDENCY_SHA256 = {
     "v1/core/sched/scheduler.py": "35758b60df936ee004b22a5faa0c40ea42e8ce3c628343a40bda080d74f1c203",
-    "v1/worker/gpu_model_runner.py": "d620deb484fee968aeefefcf8cc901cf2665118e1a2415ee1bb906fd697b3054",
+    "v1/worker/gpu_model_runner.py": "00f22cb5fe8bc2f05cc93b0500faaa55d8b3a77754fde3e23767648f621f4dd4",
     "config/speculative.py": "b2d69c5dcfd0de5e66f1b12b3739095b220a0f2bebf96efb686e33c391cf9e78",
     "v1/spec_decode/llm_base_proposer.py": "768947f4102302374f9b19dad1f08818247e88b099ebdfbd86b506990f8eebcf",
     "v1/spec_decode/dflash.py": "39dfccdc124139530d3a1e798457bfea50743496763b665d0887259bdc5236be",
@@ -77,7 +81,8 @@ INIT = '''        # B70_DFLASH2_VERIFY_PREFIX: fixed next-step verification, NOT
                         or type(spec.num_speculative_tokens) is not int
                         or spec.num_speculative_tokens != 7
                         or spec.num_speculative_tokens_per_batch_size is not None
-                        or spec.parallel_drafting is not False
+                        # Pinned SpeculativeConfig normalizes DFlash to True.
+                        or spec.parallel_drafting is not True
                         or pc.tensor_parallel_size != 1
                         or pc.pipeline_parallel_size != 1
                         or pc.data_parallel_size != 1
