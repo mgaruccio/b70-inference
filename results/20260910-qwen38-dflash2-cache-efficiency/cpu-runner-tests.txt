@@ -1,0 +1,49 @@
+test_command_output_and_argv_are_retained (test_qwen38_standard_bench.StandardBenchmarkTests.test_command_output_and_argv_are_retained) ... COMMAND=/usr/bin/python3 -c 'print('"'"'observed'"'"')'
+ok
+test_development_points_still_include_rejection_boundary (test_qwen38_standard_bench.StandardBenchmarkTests.test_development_points_still_include_rejection_boundary) ... ok
+test_dflash_context_default_and_explicit_limits (test_qwen38_standard_bench.StandardBenchmarkTests.test_dflash_context_default_and_explicit_limits) ... ok
+test_experimental_memory_options_are_explicit (test_qwen38_standard_bench.StandardBenchmarkTests.test_experimental_memory_options_are_explicit) ... ok
+test_failed_commands_are_not_successful (test_qwen38_standard_bench.StandardBenchmarkTests.test_failed_commands_are_not_successful) ... COMMAND=/usr/bin/python3 -c 'raise SystemExit(7)'
+ok
+test_invalid_context_rejected_before_host_start (test_qwen38_standard_bench.StandardBenchmarkTests.test_invalid_context_rejected_before_host_start) ... ok
+test_invalid_memory_and_length_options_fail_before_host_start (test_qwen38_standard_bench.StandardBenchmarkTests.test_invalid_memory_and_length_options_fail_before_host_start) ... ok
+test_long_context_keeps_standard_points_and_adds_one_token_over (test_qwen38_standard_bench.StandardBenchmarkTests.test_long_context_keeps_standard_points_and_adds_one_token_over) ... ok
+test_metrics_snapshot_preserves_raw_text (test_qwen38_standard_bench.StandardBenchmarkTests.test_metrics_snapshot_preserves_raw_text) ... ok
+test_mtp_cannot_take_dflash_checkpoint (test_qwen38_standard_bench.StandardBenchmarkTests.test_mtp_cannot_take_dflash_checkpoint) ... ok
+test_mtp_rejects_context_override (test_qwen38_standard_bench.StandardBenchmarkTests.test_mtp_rejects_context_override) ... ok
+test_reference_is_cold_localhost_and_original_unchanged (test_qwen38_standard_bench.StandardBenchmarkTests.test_reference_is_cold_localhost_and_original_unchanged) ... ok
+test_reference_quotes_output_path (test_qwen38_standard_bench.StandardBenchmarkTests.test_reference_quotes_output_path) ... ok
+test_reference_rejects_changed_launcher (test_qwen38_standard_bench.StandardBenchmarkTests.test_reference_rejects_changed_launcher) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.036s
+
+OK
+test_acceptance_uses_measured_requests (test_qwen38_dflash2_probe.RunnerTests.test_acceptance_uses_measured_requests) ... ok
+test_cache_grouping_is_opt_in_and_does_not_change_dtypes (test_qwen38_dflash2_probe.RunnerTests.test_cache_grouping_is_opt_in_and_does_not_change_dtypes) ... ok
+test_control_is_unmodified_fp16_target (test_qwen38_dflash2_probe.RunnerTests.test_control_is_unmodified_fp16_target) ... ok
+test_draft_is_explicit_and_separate (test_qwen38_dflash2_probe.RunnerTests.test_draft_is_explicit_and_separate) ... ok
+test_graph_is_opt_in (test_qwen38_dflash2_probe.RunnerTests.test_graph_is_opt_in) ... ok
+test_int4_is_only_an_explicit_draft_override (test_qwen38_dflash2_probe.RunnerTests.test_int4_is_only_an_explicit_draft_override) ... ok
+test_int4_rejects_control_and_original_weights_before_start (test_qwen38_dflash2_probe.RunnerTests.test_int4_rejects_control_and_original_weights_before_start) ... usage: probe [-h] --out OUT --mode {control,dflash2} [--patch PATCH]
+             [--draft-int4 DRAFT_INT4] [--guard GUARD]
+             --prefill-patch PREFILL_PATCH [--context CONTEXT] [--graph]
+             [--audit] [--suite {smoke,compare,long}]
+probe: error: --draft-int4 is drafter-only, never a target/control option
+usage: probe [-h] --out OUT --mode {control,dflash2} [--patch PATCH]
+             [--draft-int4 DRAFT_INT4] [--guard GUARD]
+             --prefill-patch PREFILL_PATCH [--context CONTEXT] [--graph]
+             [--audit] [--suite {smoke,compare,long}]
+probe: error: --draft-int4 must name a separate disposable checkpoint
+usage: probe [-h] --out OUT --mode {control,dflash2} [--patch PATCH]
+             [--draft-int4 DRAFT_INT4] [--guard GUARD]
+             --prefill-patch PREFILL_PATCH [--context CONTEXT] [--graph]
+             [--audit] [--suite {smoke,compare,long}]
+probe: error: --draft-int4 must name a separate disposable checkpoint
+ok
+test_unsupported_cache_and_prefill_overrides_are_rejected (test_qwen38_dflash2_probe.RunnerTests.test_unsupported_cache_and_prefill_overrides_are_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.004s
+
+OK

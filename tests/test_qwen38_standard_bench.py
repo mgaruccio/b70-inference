@@ -79,7 +79,8 @@ class StandardBenchmarkTests(unittest.TestCase):
         base = ["benchmark", "--out", "/unused", "--betterbench", "/unused",
                 "--guard", "/unused", "--patch", "/unused", "--prefill-patch", "/unused"]
         for extra, expected in (([], 32768), (["--context", "49152"], 49152),
-                                (["--context", "65536"], 65536)):
+                                (["--context", "65536"], 65536),
+                                (["--context", "262144"], 262144)):
             with self.subTest(context=expected), patch.object(sys, "argv", base + extra), \
                     patch.object(bench.signal, "signal"), \
                     patch.object(bench.dflash, "DFlashCell", side_effect=RuntimeError("stop before host start")) as cell:
@@ -89,7 +90,7 @@ class StandardBenchmarkTests(unittest.TestCase):
                 self.assertEqual(cell.call_args.args[0].mode, "dflash2")
 
     def test_invalid_context_rejected_before_host_start(self):
-        for value in ("511", "212993", "not-an-integer"):
+        for value in ("511", "262145", "not-an-integer"):
             argv = ["benchmark", "--out", "/unused", "--betterbench", "/unused",
                     "--guard", "/unused", "--context", value]
             with self.subTest(value=value), patch.object(sys, "argv", argv), \
@@ -126,6 +127,48 @@ class StandardBenchmarkTests(unittest.TestCase):
                                                     limit - bench.cold.OUTPUT_TOKENS + 1))))
                     self.assertEqual(constructor.call_args.args[0].context, limit)
                     cell.close.assert_called_once()
+    def test_experimental_memory_options_are_explicit(self):
+        base = ["benchmark", "--out", "/unused", "--betterbench", "/unused",
+                "--guard", "/unused", "--patch", "/unused", "--prefill-patch", "/unused"]
+        for extra, expected in (([], (8192, None)),
+                                (["--max-num-batched-tokens", "2048", "--cache-group-size", "8"], (2048, 8))):
+            with self.subTest(extra=extra), patch.object(sys, "argv", base + extra), \
+                    patch.object(bench.signal, "signal"), \
+                    patch.object(bench.dflash, "DFlashCell", side_effect=RuntimeError("stop")) as cell:
+                with self.assertRaisesRegex(RuntimeError, "stop"):
+                    bench.main()
+                args = cell.call_args.args[0]
+                self.assertEqual((args.max_num_batched_tokens, args.cache_group_size), expected)
+
+    def test_invalid_memory_and_length_options_fail_before_host_start(self):
+        base = ["benchmark", "--out", "/unused", "--betterbench", "/unused", "--guard", "/unused"]
+        for extra in (["--cache-group-size", "5"], ["--max-num-batched-tokens", "0"],
+                      ["--lengths", "512"], ["--long-context-only", "--lengths", "0"],
+                      ["--reference-mtp", "--cache-group-size", "8"],
+                      ["--reference-mtp", "--max-num-batched-tokens", "2048"]):
+            with self.subTest(extra=extra), patch.object(sys, "argv", base + extra), \
+                    patch.object(bench.dflash, "DFlashCell") as cell, \
+                    contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    bench.main()
+                self.assertEqual(error.exception.code, 2)
+                cell.assert_not_called()
+
+    def test_development_points_still_include_rejection_boundary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            argv = ["benchmark", "--out", tmp, "--betterbench", "/unused", "--guard", "/unused",
+                    "--patch", "/unused", "--prefill-patch", "/unused", "--long-context-only",
+                    "--context", "65536", "--lengths", "512", "32768"]
+            with patch.object(sys, "argv", argv), patch.object(bench.signal, "signal"), \
+                    patch.object(bench.dflash, "DFlashCell") as constructor, \
+                    patch.object(bench, "run_logged") as run, contextlib.redirect_stdout(io.StringIO()):
+                cell = constructor.return_value
+                cell.out, cell.summary = Path(tmp), {}
+                bench.main()
+                command = run.call_args.args[0]
+                self.assertEqual(command[command.index("--lengths") + 1:], ["512", "32768", "65409"])
+                cell.close.assert_called_once()
+
 
 
 if __name__ == "__main__":

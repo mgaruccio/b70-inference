@@ -28,7 +28,7 @@ PATCH_PATH = ROOT / "scripts/patch-vllm-qwen38-dflash2-cache-groups.py"
 SOURCE_PATH = Path(
     os.environ.get(
         "B70_DFLASH2_CACHE_GROUP_SOURCE",
-        "/tmp/qwen38-memory-inspection/dflash/v1/core/kv_cache_utils.py",
+        str(ROOT / "results/20260910-qwen38-dflash2-cache-efficiency/reference-source/kv_cache_utils.py"),
     )
 )
 
