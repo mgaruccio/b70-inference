@@ -2,9 +2,11 @@
 
 python -B -m unittest discover -s tests -p test_qwen38_dspark_bf16.py -v
 B70_DSPARK_SOURCE_ROOT must contain the complete pristine installed-image export
-(or this exact overlay). Missing exports/CPU PyTorch explicitly skip the relevant
-checks. No downloads, package installs or accelerator operations. TensorTests
-can run read-only in the pinned image, using its installed vllm as SOURCE_ROOT.
+(or this exact overlay). Missing exports/CPU PyTorch/native vLLM explicitly skip
+relevant checks. No downloads, package installs or accelerator operations.
+TensorTests use the pinned installed LogitsProcessor and CPU tensors, with only
+backbone/distributed storage and GPU launch boundaries mocked. Run in the pinned
+read-only image (writable tmpfs /tmp), using its installed vllm as SOURCE_ROOT.
 """
 import ast
 from contextlib import contextmanager
@@ -41,6 +43,9 @@ DSPARK = "model_executor/models/qwen3_dspark.py"
 BASE = "v1/worker/gpu/spec_decode/speculator.py"
 FLASH_SPEC = "v1/worker/gpu/spec_decode/dflash/speculator.py"
 SPARK_SPEC = "v1/worker/gpu/spec_decode/dspark/speculator.py"
+LOGITS_PROCESSOR = "model_executor/layers/logits_processor.py"
+GUMBEL = "v1/worker/gpu/sample/gumbel.py"
+REJECTION = "v1/worker/gpu/spec_decode/rejection_sampler_utils.py"
 DTYPES = torch or NS(float16="float16", bfloat16="bfloat16", float32="float32")
 
 
@@ -77,7 +82,7 @@ def actual_function(source, name, scope):
 
 def config():
     qc = dict(quant_method="gptq", bits=4, group_size=128, sym=True, desc_act=False, lm_head=False)
-    target = NS(dtype=DTYPES.float16, quantization="gptq", head_dtype=None,
+    target = NS(dtype=DTYPES.float16, quantization="gptq", head_dtype=DTYPES.float16,
                 hf_config=NS(architectures=["Qwen3_5ForConditionalGeneration"], model_type="qwen3_5",
                              quantization_config=qc), hf_text_config=NS(num_hidden_layers=64),
                 get_hidden_size=lambda: 5120, get_vocab_size=lambda: 248320,
@@ -138,33 +143,37 @@ class GuardTests(unittest.TestCase):
             self.assertFalse(scope["_B70_DSPARK_BF16"])
 
     def test_valid_raw_and_normalized_config_and_target_unchanged(self):
-        with guard_imports():
-            c, scope = config(), config_scope()
-            before = repr(c)
-            scope["_b70_dspark_runtime"](c)
-            self.assertEqual(repr(c), before)
-            self.assertEqual(scope["_b70_dspark_dtype"](c), DTYPES.bfloat16)
-            c.speculative_config.draft_model_config.hf_config.architectures = ["Qwen3DSparkModel"]
-            scope["_b70_dspark_runtime"](c)
+        for method in ("greedy", "probabilistic"):
+            with self.subTest(method=method), guard_imports():
+                c, scope = config(), config_scope()
+                c.speculative_config.draft_sample_method = method
+                before = repr(c)
+                scope["_b70_dspark_runtime"](c)
+                self.assertEqual(repr(c), before)
+                self.assertEqual(scope["_b70_dspark_dtype"](c), DTYPES.bfloat16)
+                c.speculative_config.draft_model_config.hf_config.architectures = ["Qwen3DSparkModel"]
+                scope["_b70_dspark_runtime"](c)
 
     def test_invalid_request_target_and_quantization(self):
         cases = {
             "method": ["dflash", "eagle3", None], "model": [None],
             "revision": ["main", "wrong"], "quantization": ["gptq", "fp8"],
-            "num_speculative_tokens": [0, 6, 8], "draft_sample_method": ["probabilistic"],
-            "rejection_sample_method": ["synthetic", "block"], "enable_adaptive_verification": [True],
+            "num_speculative_tokens": [0, 6, 8], "draft_sample_method": [None, "", "stochastic", "Greedy", "Probabilistic"],
+            "rejection_sample_method": [None, "", "synthetic", "block"], "enable_adaptive_verification": [True],
             "dspark_draft_topk": [16], "use_heterogeneous_vocab": [True],
             "use_local_argmax_reduction": [True], "kv_cache_dtype": [None, "auto", "float16", "fp8"],
         }
         scope = config_scope()
         with guard_imports():
-            for key, values in cases.items():
-                for value in values:
-                    with self.subTest(key=key, value=value):
-                        c = config()
-                        setattr(c.speculative_config, key, value)
-                        with self.assertRaises(ValueError):
-                            scope["_b70_dspark_requested"](c.speculative_config)
+            for method in ("greedy", "probabilistic"):
+                for key, values in cases.items():
+                    for value in values:
+                        with self.subTest(method=method, key=key, value=value):
+                            c = config()
+                            c.speculative_config.draft_sample_method = method
+                            setattr(c.speculative_config, key, value)
+                            with self.assertRaises(ValueError):
+                                scope["_b70_dspark_requested"](c.speculative_config)
             for key, value in (("dtype", DTYPES.bfloat16), ("quantization", None),
                                ("head_dtype", DTYPES.bfloat16)):
                 c = config()
@@ -384,6 +393,65 @@ class SourceTests(unittest.TestCase):
             if "dtype=vllm_config.model_config.dtype" in old:
                 self.assertIn("_b70_dspark_dtype(vllm_config)", new)
 
+    def test_native_probability_cache_and_rejection_contract(self):
+        # Static kernel checks only: Triton/XPU execution belongs to the API gate.
+        sources = overlay.prepare(exported_sources())
+        self.assertIn('draft_sample_method: DraftSampleMethod = "greedy"', sources["config/speculative.py"])
+        for name in (LOGITS_PROCESSOR, GUMBEL, REJECTION, "v1/worker/gpu/spec_decode/rejection_sampler.py"):
+            self.assertNotIn(name, overlay.transformations())
+
+        def function(path, name):
+            return next(n for n in ast.walk(ast.parse(sources[path]))
+                        if isinstance(n, ast.FunctionDef) and n.name == name)
+
+        writer = function(GUMBEL, "gumbel_block_argmax")
+        stores = [n for n in ast.walk(writer) if isinstance(n, ast.Call) and ast.unparse(n.func) == "tl.store"]
+        self.assertEqual(len(stores), 1)
+        self.assertEqual(ast.unparse(stores[0].args[1]), "logits")  # Before temperature/noise, no dtype cast.
+        self.assertEqual(ast.unparse(stores[0].args[0]),
+                         "logits_cache_ptr + req_state_idx * logits_cache_stride_0 + col * logits_cache_stride_1 + block")
+        draw = next(n for n in ast.walk(writer) if isinstance(n, ast.Call)
+                    and ast.unparse(n.func) == "gumbel_noised_argmax")
+        self.assertLess(stores[0].lineno, draw.lineno)
+        self.assertEqual(ast.unparse(draw.args[0]), "logits")
+        self.assertIn("logits = logits.to(tl.float32)", ast.unparse(function(GUMBEL, "_gumbel_sample_kernel")))
+        sampler = function(GUMBEL, "gumbel_noised_argmax")
+        self.assertEqual(sum(isinstance(n, ast.BinOp) and ast.unparse(n) == "logits / temp"
+                             for n in ast.walk(sampler)), 1)
+        self.assertIn("temp != 0.0 and APPLY_TEMPERATURE", ast.unparse(sampler))
+        self.assertIn("pos = pos + _DRAFT_NOISE_SALT", ast.unparse(sampler))
+
+        # All three q readers load FP32 pre-temperature logits and scale once.
+        for name in ("_compute_global_logprobs_and_logsumexp", "_compute_local_logits_stats_kernel", "_resample_kernel"):
+            scaled = [n for n in ast.walk(function(REJECTION, name))
+                      if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Div)
+                      and ast.unparse(n.right) == "temp" and "draft_logits_ptr" in ast.unparse(n.left)]
+            self.assertEqual(len(scaled), 1)
+            self.assertTrue(ast.unparse(scaled[0].left).endswith(".to(tl.float32)"))
+        self.assertIn("accepted = target_logprob > tl.log(u) + draft_logprob",
+                      ast.unparse(function(REJECTION, "_rejection_kernel")))
+        residual = ast.unparse(function(REJECTION, "_resample_kernel"))
+        self.assertIn("ratio = tl.exp(draft_log_probs - target_log_probs)", residual)
+        self.assertIn("APPLY_TEMPERATURE=False", residual)
+        self.assertIn("IS_DRAFTING=False", residual)
+        # Native rejection bounds by the cache width; the overlay must keep the
+        # full target vocabulary in that buffer (allocation and guard tests).
+        self.assertIn("vocab_size = min(vocab_size, draft_logits.size(-1))",
+                      ast.unparse(function(REJECTION, "rejection_sample")))
+
+    def test_fp32_probability_cache_override_is_opt_in_dspark_only(self):
+        sources = overlay.prepare(exported_sources())
+        for flag in ("0", "1"):
+            scope = {**config_scope(flag), "torch": DTYPES}
+            cls = actual_class(sources[BASE], "DraftModelSpeculator", ["draft_logits_spec"], scope, base="object")
+            for method in ("dspark", "dflash"):
+                for sample in ("greedy", "probabilistic"):
+                    c = config()
+                    c.speculative_config.method = method
+                    c.speculative_config.draft_sample_method = sample
+                    expected = DTYPES.float32 if (flag, method, sample) == ("1", "dspark", "probabilistic") else DTYPES.float16
+                    self.assertEqual(cls().draft_logits_spec(c), (expected, 0.0))
+
 
 @unittest.skipIf(torch is None, "CPU PyTorch required; run TensorTests read-only in the pinned image")
 class TensorTests(unittest.TestCase):
@@ -391,13 +459,36 @@ class TensorTests(unittest.TestCase):
     def setUpClass(cls):
         cls.sources = overlay.prepare(exported_sources())
         torch.set_num_threads(2)
+        try:
+            from vllm.model_executor.layers.logits_processor import LogitsProcessor
+            from vllm.model_executor.layers.linear import UnquantizedLinearMethod
+        except ImportError as exc:
+            raise unittest.SkipTest("native installed vLLM required for tensor tests") from exc
+        native_source = Path(LogitsProcessor.forward.__code__.co_filename).read_bytes()
+        if hashlib.sha256(native_source).hexdigest() != overlay.PINNED_SHA256[LOGITS_PROCESSOR]:
+            raise RuntimeError("installed native LogitsProcessor differs from pinned image")
+        cls.LogitsProcessor = LogitsProcessor
+        cls.UnquantizedLinearMethod = UnquantizedLinearMethod
 
     def setUp(self):
         torch.manual_seed(12)
         self.scope = {"torch": torch, "nn": nn, "F": F}
         actual_function(self.sources[DFLASH], "_b70_dspark_loaded", self.scope)
 
-    def model(self, enabled=True):
+    def head(self, vocab, hidden, *, dtype=None, **kwargs):
+        # Tiny TP=1 storage instead of distributed ParallelLMHead; native dense
+        # projection and LogitsProcessor remain real (no implicit .float() mock).
+        head = nn.Linear(hidden, vocab, bias=False, dtype=dtype)
+        head.tp_size = 1
+        head.quant_method = self.UnquantizedLinearMethod()
+        return head
+
+    def logits_processor(self, *args, **kwargs):
+        # The real loader retains the target VllmConfig while creating the draft.
+        with patch("vllm.model_executor.layers.logits_processor.get_current_vllm_config", return_value=config()):
+            return self.LogitsProcessor(*args, **kwargs)
+
+    def model(self, enabled=True, method="greedy"):
         inner_cls = actual_class(self.sources[DFLASH], "DFlashQwen3Model", ["embed_input_ids"], self.scope)
         inner = inner_cls()
         inner._b70_dspark_bf16 = enabled
@@ -407,13 +498,28 @@ class TensorTests(unittest.TestCase):
         inner.use_aux_hidden_state = True
         inner.fc = nn.Linear(12, 4, bias=False, dtype=torch.bfloat16 if enabled else torch.float16)
         inner.fc.input_size = 12
-        base = actual_class(self.sources[DFLASH], "DFlashQwen3ForCausalLM", ["combine_hidden_states"], self.scope)
-        cls = actual_class(self.sources[DSPARK], "Qwen3DSparkForCausalLM", ["compute_draft_logits"], self.scope,
-                           base="DFlashQwen3ForCausalLM")
-        model = cls()
-        model.model = inner
-        model.lm_head = nn.Linear(4, 16, bias=False, dtype=torch.float16)
-        model.logits_processor = lambda head, hidden: F.linear(hidden, head.weight).float()
+        self.scope.update(ParallelLMHead=self.head, LogitsProcessor=self.logits_processor,
+                          Qwen3DSparkModel=lambda **kwargs: inner, maybe_prefix=lambda a, b: a + "." + b)
+        markov_cls = actual_class(self.sources[DSPARK], "DSparkMarkovHead", ["__init__", "embed", "bias"], self.scope)
+        actual_class(self.sources[DFLASH], "DFlashQwen3ForCausalLM", ["combine_hidden_states"], self.scope)
+        cls = actual_class(self.sources[DSPARK], "Qwen3DSparkForCausalLM",
+                           ["__init__", "compute_draft_logits", "markov_embed", "markov_bias", "map_draft_to_target"],
+                           self.scope, base="DFlashQwen3ForCausalLM")
+        c = config()
+        c.speculative_config.draft_sample_method = method
+        c.model_config.get_num_layers = lambda pc: 64
+        c.model_config.get_vocab_size = lambda: 16
+        hf = c.speculative_config.draft_model_config.hf_config
+        hf.hidden_size = 4
+        hf.draft_vocab_size = 16
+        original_dtype = torch.get_default_dtype()
+        try:
+            torch.set_default_dtype(torch.bfloat16 if enabled else torch.float16)
+            inner.markov_head = markov_cls(16, 16, 4, prefix="markov")
+            model = cls(vllm_config=c)
+        finally:
+            torch.set_default_dtype(original_dtype)
+        model.lm_head = self.head(16, 4, dtype=torch.float16)  # Actual shared target-head boundary.
         return model
 
     def test_real_embedding_fc_head_boundaries_and_shared_storage(self):
@@ -431,7 +537,7 @@ class TensorTests(unittest.TestCase):
             self.assertEqual(hidden.dtype, dtype)
             torch.testing.assert_close(hidden, model.model.fc(aux.to(dtype)))
             torch.testing.assert_close(model.combine_hidden_states(aux[0]), hidden[0])
-            torch.testing.assert_close(model.compute_draft_logits(hidden), F.linear(hidden.half(), head.weight).float())
+            torch.testing.assert_close(model.compute_draft_logits(hidden), F.linear(hidden.half(), head.weight))
             self.assertTrue(torch.equal(aux, aux_copy))
             self.assertIs(model.model.embed_tokens, embed)
             self.assertIs(model.lm_head, head)
@@ -443,13 +549,10 @@ class TensorTests(unittest.TestCase):
                 model.combine_hidden_states(torch.ones(2, 11, dtype=torch.float16))
 
     def test_implicit_markov_and_explicit_confidence_precision(self):
-        def lm_head(vocab, hidden, **kwargs):
-            return nn.Linear(hidden, vocab, bias=False)
-
         def replicated_linear(inputs, outputs, *, bias, params_dtype, **kwargs):
             return nn.Linear(inputs, outputs, bias=bias, dtype=params_dtype)
 
-        self.scope.update(ParallelLMHead=lm_head, ReplicatedLinear=replicated_linear,
+        self.scope.update(ParallelLMHead=self.head, ReplicatedLinear=replicated_linear,
                           maybe_prefix=lambda a, b: a + "." + b)
         markov_cls = actual_class(self.sources[DSPARK], "DSparkMarkovHead", ["__init__", "embed", "bias"], self.scope)
         confidence_cls = actual_class(self.sources[DSPARK], "DSparkConfidenceHead", ["__init__", "forward"], self.scope)
@@ -463,7 +566,10 @@ class TensorTests(unittest.TestCase):
         self.assertTrue(all(p.dtype == torch.bfloat16 for p in markov.parameters()))
         self.assertTrue(all(p.dtype == torch.float32 for p in confidence.parameters()))
         embed = markov.embed(torch.tensor([1, 2]))
-        bias = markov.bias(embed, lambda head, x: head(x).float())
+        processor = self.model().logits_processor
+        bias = markov.bias(embed, processor)
+        self.assertEqual(bias.dtype, torch.bfloat16)
+        torch.testing.assert_close(bias, F.linear(embed, markov.markov_w2.weight), rtol=0, atol=0)
         self.assertEqual(embed.dtype, torch.bfloat16)
         self.assertTrue(torch.isfinite(bias).all())
         self.assertEqual(confidence(torch.ones(2, 4, dtype=torch.bfloat16), embed).dtype, torch.float32)
@@ -471,27 +577,106 @@ class TensorTests(unittest.TestCase):
             markov.markov_w1.weight.fill_(70000)
         self.assertTrue(torch.isfinite(markov.embed(torch.tensor([1]))).all())
         self.assertFalse(torch.isfinite(markov.markov_w1.weight.half()).all())
+        self.assertTrue(torch.isfinite(markov.bias(markov.embed(torch.tensor([1])), processor)).all())
+        processor.head_dtype = torch.float16  # Regression: inherited target dtype overflows this valid BF16 head.
+        self.assertFalse(torch.isfinite(markov.bias(markov.embed(torch.tensor([1])), processor)).all())
 
     def test_v2_context_and_query_buffers_created_in_draft_dtype(self):
         scope = {**self.scope, **config_scope(), "_target_feeds_hc_residual": lambda c: False,
                  "InputBuffers": lambda **kw: NS(), "get_parallel_drafting_token_id": lambda hf: hf.mask_token_id}
-        base = actual_class(self.sources[BASE], "DraftModelSpeculator", ["__init__"], scope, base="object")
+        base = actual_class(self.sources[BASE], "DraftModelSpeculator", ["__init__", "draft_logits_spec"], scope, base="object")
         dflash = actual_class(self.sources[FLASH_SPEC], "DFlashSpeculator", ["__init__"], scope, base="DraftModelSpeculator")
         dspark = actual_class(self.sources[SPARK_SPEC], "DSparkSpeculator", ["__init__"], scope, base="DFlashSpeculator")
         fake_dflash = NS(dflash_has_any_non_causal=lambda hf: True)
-        c = config()
-        with guard_imports(), patch.dict(sys.modules, {"vllm.model_executor.models.qwen3_dflash": fake_dflash}):
-            speculator = dspark(c, torch.device("cpu"))
-        self.assertEqual(speculator.dtype, torch.bfloat16)
-        self.assertEqual(speculator.hidden_states.dtype, torch.bfloat16)
-        self.assertEqual(speculator.hidden_states.shape, (4, 5120))
-        self.assertEqual(speculator.num_query_per_req, 7)
-        self.assertEqual(speculator.context_positions.dtype, torch.int64)
-        self.assertEqual(speculator.draft_tokens.dtype, torch.int64)
-        self.assertEqual(speculator.draft_token_confidence_probs.dtype, torch.float32)
-        self.assertIsNone(speculator.draft_logits)
-        self.assertEqual(c.model_config.dtype, torch.float16)
-        self.assertEqual(c.cache_config.cache_dtype, "fp8")
+        for method in ("greedy", "probabilistic"):
+            with self.subTest(method=method):
+                c = config()
+                c.speculative_config.draft_sample_method = method
+                with guard_imports(), patch.dict(sys.modules, {"vllm.model_executor.models.qwen3_dflash": fake_dflash}):
+                    speculator = dspark(c, torch.device("cpu"))
+                self.assertEqual(speculator.dtype, torch.bfloat16)
+                self.assertEqual(speculator.hidden_states.dtype, torch.bfloat16)
+                self.assertEqual(speculator.hidden_states.shape, (4, 5120))
+                self.assertEqual(speculator.num_query_per_req, 7)
+                self.assertEqual(speculator.context_positions.dtype, torch.int64)
+                self.assertEqual(speculator.draft_tokens.dtype, torch.int64)
+                self.assertEqual(speculator.draft_token_confidence_probs.dtype, torch.float32)
+                self.assertIsNone(speculator._d2t_scatter_index)
+                self.assertIsNone(speculator._draft_scatter_buf)
+                self.assertIsNone(speculator._draft_topk)
+                if method == "greedy":
+                    self.assertIsNone(speculator.draft_logits)
+                else:
+                    cache = speculator.draft_logits
+                    self.assertEqual(cache.dtype, torch.float32)
+                    self.assertEqual(cache.shape, (2, 7, c.model_config.get_vocab_size()))
+                    self.assertEqual(cache.stride(), (7 * 248320, 248320, 1))
+                    self.assertTrue(cache.is_contiguous())
+                    self.assertEqual(torch.count_nonzero(cache).item(), 0)
+                self.assertEqual(c.model_config.head_dtype, torch.float16)
+                self.assertEqual(c.model_config.dtype, torch.float16)
+                self.assertEqual(c.cache_config.cache_dtype, "fp8")
+
+    def test_native_sequential_draft_sampling_preserves_mixed_logits(self):
+        # Only the GPU Gumbel launch is observed/mocked. Native DSpark methods,
+        # native LogitsProcessor and native unquantized projections run on CPU.
+        # This checks the cache boundary, not stochastic kernel correctness.
+        for method in ("greedy", "probabilistic"):
+            with self.subTest(method=method):
+                model = self.model(method=method)
+                self.assertIsNone(model.logits_processor.head_dtype)
+                scope = {**self.scope, "gumbel_sample": Mock()}
+                cls = actual_class(self.sources[SPARK_SPEC], "DSparkSpeculator",
+                                   ["_sample_logits", "_sample_sequential"], scope, base="object")
+                obj = cls()
+                obj.model, obj.num_speculative_steps = model, 7
+                obj._draft_topk = obj._d2t_scatter_index = obj._draft_scatter_buf = None
+                obj.enable_adaptive_verification = obj.use_fp64_gumbel = False
+                obj.sample_indices = torch.arange(14)
+                obj.sample_idx_mapping = torch.tensor([1] * 7 + [0] * 7, dtype=torch.int32)
+                obj.sample_pos = torch.arange(10, 24)
+                obj.input_buffers = NS(input_ids=torch.tensor([1] + [0] * 6 + [2] + [0] * 6))
+                obj._anchor_idx, obj._step_cols = torch.tensor([0, 7]), torch.arange(7, dtype=torch.int32)
+                obj.temperature, obj.seeds = torch.tensor([0.5, 2.0]), torch.tensor([42, 43])
+                obj.draft_tokens = torch.empty(2, 7, dtype=torch.int64)
+                obj.draft_logits = torch.zeros(2, 7, 16) if method == "probabilistic" else None
+                hidden = torch.randn(14, 4, dtype=torch.bfloat16)
+                base = model.compute_draft_logits(hidden).view(2, 7, 16)
+                self.assertEqual(base.dtype, torch.float16)
+                prev = torch.tensor([1, 2])
+
+                def observe(logits, idx_map, temperature, seeds, pos, **kw):
+                    step = int(kw["logits_cache_col"])
+                    self.assertEqual(logits.dtype, torch.float32)
+                    self.assertIs(temperature, obj.temperature)
+                    self.assertIs(seeds, obj.seeds)
+                    self.assertEqual(kw["apply_temperature"], True)
+                    self.assertEqual(kw["is_drafting"], True)
+                    self.assertEqual(kw["use_fp64"], False)
+                    self.assertIs(kw["logits_cache"], obj.draft_logits)
+                    torch.testing.assert_close(pos, obj.sample_pos.view(2, 7)[:, step] - 1)
+                    # Mirror only the cache store documented in the pinned native
+                    # kernel, not its sampling. Returned ids deliberately drive
+                    # the next Markov step instead of assuming greedy proposals.
+                    obj.draft_logits[idx_map.long(), step] = logits
+                    return torch.tensor([(step + 3) % 16, (step + 5) % 16])
+
+                scope["gumbel_sample"].side_effect = observe
+                obj._sample_sequential(2, hidden)
+                for step in range(7):
+                    bias = model.markov_bias(model.markov_embed(prev))
+                    self.assertEqual(bias.dtype, torch.bfloat16)
+                    expected = base[:, step].float() + bias.float()
+                    if method == "greedy":
+                        torch.testing.assert_close(obj.draft_tokens[:, step], expected.argmax(-1))
+                    else:
+                        cached = obj.draft_logits[torch.tensor([1, 0]), step]
+                        torch.testing.assert_close(cached, expected, rtol=0, atol=0)
+                        self.assertTrue(torch.any(expected != expected.half().float()))
+                        for temp in (0.5, 2.0):
+                            torch.testing.assert_close((cached / temp).softmax(-1), (expected / temp).softmax(-1), rtol=0, atol=0)
+                    prev = obj.draft_tokens[:, step]
+                self.assertEqual(scope["gumbel_sample"].call_count, 7 if method == "probabilistic" else 0)
 
     def test_attn_metadata_config_isolated_and_allocated_cache_validated(self):
         scope = {**self.scope, **config_scope(), "copy": NS(copy=copy),

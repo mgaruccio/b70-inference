@@ -3,8 +3,8 @@
 
 B70_DSPARK_BF16=1 python -P /overlay.py [--root /exported/vllm]
 Keep B70_DSPARK_BF16=1 and VLLM_USE_V2_MODEL_RUNNER=1 in the server environment.
-Only K=7, greedy proposals, standard rejection, explicit draft
-kv_cache_dtype=bfloat16, TP=PP=DP=CP=1 are supported. Target GPTQ Int4/sym/G128
+Only K=7, greedy (default) or native probabilistic proposals, standard rejection,
+explicit draft kv_cache_dtype=bfloat16, TP=PP=DP=CP=1 are supported. Target GPTQ Int4/sym/G128
 FP16 compute and FP8 KV stay untouched. No adaptive verification or top-k draft
 truncation. This does not install/promote a launcher or promise a speedup.
 
@@ -15,11 +15,20 @@ Official research (lead, 2026-09-10):
 https://huggingface.co/RadixArk/Qwen3.8-27B-DSpark/tree/b9a5dbdf03bc999c6c73c426b19c2d9041cea393
 https://github.com/vllm-project/vllm/tree/73029d424/vllm/v1/worker/gpu/spec_decode/dspark
 https://github.com/vllm-project/vllm/blob/73029d424/vllm/model_executor/models/qwen3_dspark.py
+Probability/precision helpers inspected from the same installed image (2026-09-11):
+https://github.com/vllm-project/vllm/blob/73029d424/vllm/model_executor/layers/logits_processor.py
+https://github.com/vllm-project/vllm/blob/73029d424/vllm/v1/worker/gpu/sample/gumbel.py
+https://github.com/vllm-project/vllm/blob/73029d424/vllm/v1/worker/gpu/spec_decode/rejection_sampler_utils.py
 
 The loader's default-dtype context already creates implicit parameters in BF16.
 The confidence projection remains explicitly FP32, as upstream (unused with
 fixed verification); only activation boundaries to shared FP16 vocab modules
-are cast. The draft cache stays explicitly BF16, while its FlashAttention implementation
+are cast. The draft-local logits processor must not inherit the target head dtype:
+BF16 Markov logits plus FP16 base logits promote to FP32 in either sampling mode.
+Probabilistic drafts cache that sum losslessly in FP32 before temperature, using
+native Gumbel draws and standard probability-ratio rejection. Temperature is
+applied once on sampling and once on reading the unscaled cache for verification.
+The draft KV cache stays explicitly BF16, while its FlashAttention implementation
 selector is normalized to 'auto' because the pinned XPU kernel rejects the explicit
 'bfloat16' selector.
 All touched sources AND their dtype/sharing/routing helpers are whole-file
@@ -58,6 +67,11 @@ PINNED_SHA256 = {
     "model_executor/layers/attention/attention.py": "64a1b218f04a7178d9d41c12fc6ae08f6cff648031bf118216019a48d15572c7",
     "v1/attention/backends/flash_attn.py": "5d9c676d8d03ec4e583183f9f42fac33c223768fdc3d6088dff97b5ac0cd4c3a",
     "platforms/xpu.py": "5951dc8c6e25f57c80fa4f4c5a55b8d5b39799a7fc578e36f9c98e89b9897af0",
+    # Unmodified probability path: native head projection, cache write/read and rejection dispatch.
+    "model_executor/layers/logits_processor.py": "6b0603d67b0c756253c2fdc882a3896d2e873a16e9aa2ef877aabca8d36bdb5f",
+    "v1/worker/gpu/sample/gumbel.py": "3ec1df510bdad13e8b0a457b5b67c98affdf6e57369e56cb471246cc8f40dd34",
+    "v1/worker/gpu/spec_decode/rejection_sampler.py": "e20adc9b6c8a62a5be232bae15a1e361e898142966a68ea3ef244b39ffc5ce44",
+    "v1/worker/gpu/spec_decode/rejection_sampler_utils.py": "20ca2e5ac34e9ef93dca388bed72a00d4ff67d569ec6ec2393b21a92d74a1fae",
 }
 
 CONFIG_HELPERS = '''
@@ -97,11 +111,12 @@ def _b70_dspark_requested(spec):
             or qc.get("lm_head") is not False):
         raise ValueError("B70 DSpark requires target GPTQ Int4 symmetric G128, no act-order/head quantization")
     if (spec.quantization is not None or spec.num_speculative_tokens != 7
-            or spec.draft_sample_method != "greedy" or spec.rejection_sample_method != "standard"
+            or spec.draft_sample_method not in ("greedy", "probabilistic")
+            or spec.rejection_sample_method != "standard"
             or spec.enable_adaptive_verification or spec.dspark_draft_topk is not None
             or spec.use_heterogeneous_vocab or spec.use_local_argmax_reduction
             or spec.kv_cache_dtype != "bfloat16"):
-        raise ValueError("B70 DSpark requires dense draft, K=7, greedy, standard rejection, "
+        raise ValueError("B70 DSpark requires dense draft, K=7, greedy/probabilistic, standard rejection, "
                          "fixed verification, full vocab and explicit draft kv_cache_dtype=bfloat16")
     if (spec.revision not in (None, "b9a5dbdf03bc999c6c73c426b19c2d9041cea393")
             or (spec.revision is None and not _b70_os.path.isdir(spec.model))):
@@ -249,10 +264,16 @@ def transformations():
         "v1/worker/gpu/spec_decode/speculator.py": [
             ('from vllm.config.compilation import CUDAGraphMode\n',
              'from vllm.config.compilation import CUDAGraphMode\n'
-             'from vllm.config.speculative import _b70_dspark_dtype, _b70_dspark_runtime\n'),
+             'from vllm.config.speculative import _b70_dspark_dtype, _b70_dspark_runtime, _b70_dspark_enabled\n'),
             ('        self.dtype = vllm_config.model_config.dtype\n',
              '        _b70_dspark_runtime(vllm_config)\n'
              '        self.dtype = _b70_dspark_dtype(vllm_config)\n'),
+            ('        return vllm_config.model_config.head_dtype, 0.0\n',
+             '        if (_b70_dspark_enabled(vllm_config.speculative_config)\n'
+             '                and vllm_config.speculative_config.draft_sample_method == "probabilistic"):\n'
+             '            # BF16 Markov + FP16 base logits promote to FP32. Do not round q.\n'
+             '            return torch.float32, 0.0\n'
+             '        return vllm_config.model_config.head_dtype, 0.0\n'),
         ],
         "v1/worker/gpu/spec_decode/dflash/speculator.py": [
             ('from vllm.config.compilation import CUDAGraphMode\n',
@@ -298,6 +319,11 @@ def transformations():
              '                raise ValueError("B70 DSpark allocated context cache must be BF16")\n'),
         ],
         "model_executor/models/qwen3_dspark.py": [
+            ('        self.target_vocab_size = vllm_config.model_config.get_vocab_size()\n',
+             '        if self.model._b70_dspark_bf16:\n'
+             '            # Keep each projection in its own dtype, not the target head dtype.\n'
+             '            self.logits_processor.head_dtype = None\n'
+             '        self.target_vocab_size = vllm_config.model_config.get_vocab_size()\n'),
             ('        return self.logits_processor(self.lm_head, hidden_states)\n',
              '        if self.model._b70_dspark_bf16:\n'
              '            hidden_states = hidden_states.to(self.lm_head.weight.dtype)\n'
