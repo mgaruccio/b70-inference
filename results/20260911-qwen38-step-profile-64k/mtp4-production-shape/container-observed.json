@@ -1,0 +1,333 @@
+{
+  "AppArmorProfile": "",
+  "Args": [
+    "-lc",
+    "set -e; python /patch_mtp.py; python /patch_boundary.py; python /patch_v5.py; python /patch_s.py; python /patch_m1.py; python /prefill_guard.py; exec vllm serve /model --performance-mode balanced --compilation-config '{\"cudagraph_capture_sizes\":[1,2,4,8]}' --cudagraph-metrics --quantization gptq --dtype float16 --max-model-len 212992 --gpu-memory-utilization 0.95 --kv-cache-dtype fp8 --port 8000 --max-num-seqs 1 --max-num-batched-tokens 8192 --no-enable-prefix-caching --mamba-cache-mode align --chat-template-content-format openai --default-chat-template-kwargs '{\"enable_thinking\":false}' --reasoning-parser qwen3 --override-generation-config '{\"temperature\":0.6,\"top_p\":0.95,\"top_k\":20,\"min_p\":0}' --served-model-name qwen38 --language-model-only --speculative-config '{\"method\": \"mtp\", \"num_speculative_tokens\": 4}' --enable-auto-tool-choice --tool-call-parser qwen3_xml"
+  ],
+  "Config": {
+    "AttachStderr": true,
+    "AttachStdin": false,
+    "AttachStdout": true,
+    "Cmd": [
+      "-lc",
+      "set -e; python /patch_mtp.py; python /patch_boundary.py; python /patch_v5.py; python /patch_s.py; python /patch_m1.py; python /prefill_guard.py; exec vllm serve /model --performance-mode balanced --compilation-config '{\"cudagraph_capture_sizes\":[1,2,4,8]}' --cudagraph-metrics --quantization gptq --dtype float16 --max-model-len 212992 --gpu-memory-utilization 0.95 --kv-cache-dtype fp8 --port 8000 --max-num-seqs 1 --max-num-batched-tokens 8192 --no-enable-prefix-caching --mamba-cache-mode align --chat-template-content-format openai --default-chat-template-kwargs '{\"enable_thinking\":false}' --reasoning-parser qwen3 --override-generation-config '{\"temperature\":0.6,\"top_p\":0.95,\"top_k\":20,\"min_p\":0}' --served-model-name qwen38 --language-model-only --speculative-config '{\"method\": \"mtp\", \"num_speculative_tokens\": 4}' --enable-auto-tool-choice --tool-call-parser qwen3_xml"
+    ],
+    "Domainname": "",
+    "Entrypoint": [
+      "bash"
+    ],
+    "Env": [
+      "B70_DRAFT_LMHEAD_INT4=1",
+      "B70_DRAFT_MTP_INT4=1",
+      "VLLM_XPU_ENABLE_XPU_GRAPH=1",
+      "PYTORCH_ALLOC_CONF=expandable_segments:True",
+      "VLLM_TARGET_DEVICE=xpu",
+      "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+      "ZE_AFFINITY_MASK=0",
+      "B70_MTP_BF16_DRAFT=1",
+      "PATH=/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "DEBIAN_FRONTEND=noninteractive",
+      "VIRTUAL_ENV=/opt/venv",
+      "UV_PYTHON_INSTALL_DIR=/opt/uv/python",
+      "UV_HTTP_TIMEOUT=500",
+      "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/xpu",
+      "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/xpu",
+      "UV_INDEX_STRATEGY=unsafe-best-match",
+      "UV_LINK_MODE=copy",
+      "LD_LIBRARY_PATH=/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib",
+      "VLLM_WORKER_MULTIPROC_METHOD=spawn"
+    ],
+    "ExposedPorts": {
+      "8000/tcp": {}
+    },
+    "Hostname": "1c31219e4310",
+    "Image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+    "Labels": {
+      "org.opencontainers.image.version": "24.04"
+    },
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Tty": false,
+    "User": "",
+    "Volumes": null,
+    "WorkingDir": "/workspace/vllm"
+  },
+  "Created": "2026-09-11T19:29:33.621794103Z",
+  "Driver": "overlayfs",
+  "ExecIDs": null,
+  "HostConfig": {
+    "AutoRemove": true,
+    "Binds": [
+      "/dev/dri:/dev/dri:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long:/profile:ro",
+      "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16:/model:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/patch_uniform_decode_prefill.py:/prefill_guard.py:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_mtp_boundary.py:/patch_boundary.py:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_gdn_mixed_split_v5.py:/patch_v5.py:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_draft_mtp_int4.py:/patch_m1.py:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-step-profile-64k/mtp4-production-shape:/output",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_mtp_nightly.py:/patch_mtp.py:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_draft_lmhead_int4.py:/patch_s.py:ro"
+    ],
+    "BlkioDeviceReadBps": [],
+    "BlkioDeviceReadIOps": [],
+    "BlkioDeviceWriteBps": [],
+    "BlkioDeviceWriteIOps": [],
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": [],
+    "CapAdd": null,
+    "CapDrop": null,
+    "Cgroup": "",
+    "CgroupParent": "",
+    "CgroupnsMode": "private",
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "ContainerIDFile": "",
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpuShares": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "Devices": [
+      {
+        "CgroupPermissions": "rwm",
+        "PathInContainer": "/dev/dri",
+        "PathOnHost": "/dev/dri"
+      }
+    ],
+    "Dns": null,
+    "DnsOptions": [],
+    "DnsSearch": [],
+    "ExtraHosts": null,
+    "GroupAdd": [
+      "987"
+    ],
+    "IOMaximumBandwidth": 0,
+    "IOMaximumIOps": 0,
+    "IpcMode": "host",
+    "Isolation": "",
+    "Links": null,
+    "LogConfig": {
+      "Config": {},
+      "Type": "json-file"
+    },
+    "MaskedPaths": [
+      "/proc/acpi",
+      "/proc/asound",
+      "/proc/interrupts",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/sys/devices/virtual/powercap",
+      "/sys/firmware"
+    ],
+    "Memory": 0,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "NanoCpus": 0,
+    "NetworkMode": "bridge",
+    "OomKillDisable": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "PidsLimit": null,
+    "PortBindings": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "8000"
+        }
+      ]
+    },
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ],
+    "ReadonlyRootfs": false,
+    "RestartPolicy": {
+      "MaximumRetryCount": 0,
+      "Name": "no"
+    },
+    "Runtime": "runc",
+    "SecurityOpt": [
+      "label=disable"
+    ],
+    "ShmSize": 67108864,
+    "UTSMode": "",
+    "Ulimits": [],
+    "UsernsMode": "",
+    "VolumeDriver": "",
+    "VolumesFrom": null
+  },
+  "HostnamePath": "/var/lib/docker/containers/1c31219e43101cff218322a65f5ffd1b6705e401df79b372f63c1614f1197a3c/hostname",
+  "HostsPath": "/var/lib/docker/containers/1c31219e43101cff218322a65f5ffd1b6705e401df79b372f63c1614f1197a3c/hosts",
+  "Id": "1c31219e43101cff218322a65f5ffd1b6705e401df79b372f63c1614f1197a3c",
+  "Image": "sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+  "ImageManifestDescriptor": {
+    "digest": "sha256:95949ab8df6d9b358b7c34a6a6a9af04c63cbe07847de70db6a3aae8025de87e",
+    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+    "platform": {
+      "architecture": "amd64",
+      "os": "linux"
+    },
+    "size": 4111
+  },
+  "LogPath": "/var/lib/docker/containers/1c31219e43101cff218322a65f5ffd1b6705e401df79b372f63c1614f1197a3c/1c31219e43101cff218322a65f5ffd1b6705e401df79b372f63c1614f1197a3c-json.log",
+  "MountLabel": "",
+  "Mounts": [
+    {
+      "Destination": "/patch_s.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_draft_lmhead_int4.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/dev/dri",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/dev/dri",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/prefill_guard.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/patch_uniform_decode_prefill.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/patch_v5.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_gdn_mixed_split_v5.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/output",
+      "Mode": "",
+      "Propagation": "rprivate",
+      "RW": true,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-step-profile-64k/mtp4-production-shape",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/patch_mtp.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_mtp_nightly.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/profile",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/model",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/patch_boundary.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_mtp_boundary.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/patch_m1.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_draft_mtp_int4.py",
+      "Type": "bind"
+    }
+  ],
+  "Name": "/b70-step-depth-mtp4",
+  "NetworkSettings": {
+    "Networks": {
+      "bridge": {
+        "Aliases": null,
+        "DNSNames": null,
+        "DriverOpts": null,
+        "EndpointID": "c40f3402c67e2346522301e38ee83ce5424119e43231afbf7718e989153ab8e3",
+        "Gateway": "172.17.0.1",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "GwPriority": 0,
+        "IPAMConfig": null,
+        "IPAddress": "172.17.0.2",
+        "IPPrefixLen": 16,
+        "IPv6Gateway": "",
+        "Links": null,
+        "MacAddress": "4a:d1:eb:1c:d0:b2",
+        "NetworkID": "a66f37caa987834568d5425af61ba49b2061be9ca8d0493cd060f088c9f21a97"
+      }
+    },
+    "Ports": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "8000"
+        }
+      ]
+    },
+    "SandboxID": "bbfe082eec1e2553fa52559ff2fb2d8f585dafb912421173cb65a8cecc957311",
+    "SandboxKey": "/var/run/docker/netns/bbfe082eec1e"
+  },
+  "Path": "bash",
+  "Platform": "linux",
+  "ProcessLabel": "",
+  "ResolvConfPath": "/var/lib/docker/containers/1c31219e43101cff218322a65f5ffd1b6705e401df79b372f63c1614f1197a3c/resolv.conf",
+  "RestartCount": 0,
+  "State": {
+    "Dead": false,
+    "Error": "",
+    "ExitCode": 0,
+    "FinishedAt": "0001-01-01T00:00:00Z",
+    "OOMKilled": false,
+    "Paused": false,
+    "Pid": 276906,
+    "Restarting": false,
+    "Running": true,
+    "StartedAt": "2026-09-11T19:29:33.743476623Z",
+    "Status": "running"
+  },
+  "Storage": {
+    "RootFS": {
+      "Snapshot": {
+        "Name": "overlayfs"
+      }
+    }
+  }
+}

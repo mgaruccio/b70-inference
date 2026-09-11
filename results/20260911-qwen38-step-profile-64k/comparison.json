@@ -1,0 +1,73 @@
+{
+  "tier": "development",
+  "candidate_decision": "reject MTP2; retain MTP4",
+  "production_changed": false,
+  "cells": {
+    "mtp4-baseline": {
+      "status": "passed",
+      "host_unchanged": true,
+      "valid_measurements": 6,
+      "decode_median_tps": 50.62057126514033,
+      "decode_iqr_tps": 4.684143406883592,
+      "ttft_median_s": 54.612410700006876,
+      "steps": 265.0,
+      "proposed": 1005.0,
+      "accepted": 485.0,
+      "actual_output_tokens_per_step": 2.8981132075471696,
+      "median_wall_decode_ms_per_request_counter_step_proxy": 56.291829015814955
+    },
+    "dspark-baseline": {
+      "status": "passed",
+      "host_unchanged": true,
+      "valid_measurements": 6,
+      "decode_median_tps": 26.2119950175489,
+      "decode_iqr_tps": 1.21991983584536,
+      "ttft_median_s": 57.36079388897633,
+      "steps": 282.0,
+      "proposed": 1850.0,
+      "accepted": 473.0,
+      "actual_output_tokens_per_step": 2.723404255319149,
+      "median_wall_decode_ms_per_request_counter_step_proxy": 100.20039273059251
+    },
+    "mtp4-production-shape": {
+      "status": "passed",
+      "host_unchanged": true,
+      "valid_measurements": 6,
+      "decode_median_tps": 55.698172467565186,
+      "decode_iqr_tps": 3.2357821405455454,
+      "ttft_median_s": 53.845255118998466,
+      "steps": 254.0,
+      "proposed": 1016.0,
+      "accepted": 518.0,
+      "actual_output_tokens_per_step": 3.0236220472440944,
+      "median_wall_decode_ms_per_request_counter_step_proxy": 54.8828322545379
+    },
+    "mtp2-production-shape": {
+      "status": "passed",
+      "host_unchanged": true,
+      "valid_measurements": 6,
+      "decode_median_tps": 52.23308692530668,
+      "decode_iqr_tps": 0.6474838880782201,
+      "ttft_median_s": 53.82604309800081,
+      "steps": 318.0,
+      "proposed": 636.0,
+      "accepted": 449.0,
+      "actual_output_tokens_per_step": 2.4150943396226414,
+      "median_wall_decode_ms_per_request_counter_step_proxy": 45.874840645685154
+    }
+  },
+  "long_request_pairing": {
+    "count": 7,
+    "all_equal": true
+  },
+  "short_request_pairing": {
+    "count": 19,
+    "all_equal": true
+  },
+  "short_output_id_matches": {
+    "matched": 18,
+    "total": 19
+  },
+  "candidate_decode_delta_percent": -6.221183548304632,
+  "step_proxy_caveat": "Post-first-token client decode interval divided by whole-request draft-step counter; approximate, not an isolated device-stage measurement."
+}

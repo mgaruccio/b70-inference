@@ -1,17 +1,17 @@
 # Qwen 3.8 64K speculative-step profile
 
-**Development campaign assets only.** This checkout contains no GPU results and makes
-no publishable performance or production claim. The driver owns one disposable
-container at a time; it does not edit the persistent launcher, model snapshots,
-installed runtimes, or archived patch trees.
+**Development campaign.** See [observed-results.md](observed-results.md) for actual
+baselines, stage measurements, failures, and the evidence-selected MTP2 experiment.
+No publishable benchmark or production promotion is claimed. All servers are
+disposable; persistent launchers, model snapshots, and archived patches stay unchanged.
 
 ## Question and comparison contract
 
 The question is whether there is a real 64K decode improvement over the starting
 MTP4 service, and which speculative step is worth one later, measured optimization.
-Profile the two existing bundles first, then run the unprofiled paired 64K cell.
-Only after that may the lead select **one** bounded optimization to measure. This
-package does not invent or apply that optimization.
+Run fresh unprofiled baseline cells, then profile the two existing bundles.
+Only after attribution select one bounded optimization. Here that experiment is
+MTP2 versus MTP4 via `run-mtp-depth.py`, retaining the original context-capacity settings.
 
 | cell | image/runtime | speculation and unchanged patch stack |
 | --- | --- | --- |

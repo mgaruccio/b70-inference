@@ -1,0 +1,147 @@
+{
+  "campaign": "20260911-qwen38-step-profile-64k",
+  "cell": "mtp4",
+  "common_contract": {
+    "base_url": "http://127.0.0.1:8000",
+    "cpu_offload": false,
+    "kv_cache_dtype": "fp8",
+    "max_model_len": 65664,
+    "max_num_batched_tokens": 2048,
+    "max_num_seqs": 1,
+    "prefix_caching": false,
+    "served_model_name": "qwen38",
+    "target_dtype": "float16 compute / GPTQ Int4 symmetric G128",
+    "thinking": false,
+    "xpu_graphs": true
+  },
+  "container_name": "b70-step-profile-mtp4",
+  "environment": [
+    "VLLM_TARGET_DEVICE=xpu",
+    "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+    "ZE_AFFINITY_MASK=0",
+    "B70_MTP_BF16_DRAFT=1",
+    "B70_DRAFT_LMHEAD_INT4=1",
+    "B70_DRAFT_MTP_INT4=1",
+    "VLLM_XPU_ENABLE_XPU_GRAPH=1",
+    "PYTORCH_ALLOC_CONF=expandable_segments:True"
+  ],
+  "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+  "intentional_comparison_difference": "whole runtime/image/patch-stack BUNDLE; do not attribute a cross-cell delta to one patch",
+  "mode": "benchmark",
+  "mounts": [
+    {
+      "container": "/profile",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long",
+      "mode": "ro",
+      "role": "archived_mtp4_root"
+    },
+    {
+      "container": "/model",
+      "host": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16",
+      "mode": "ro",
+      "role": "target_model"
+    },
+    {
+      "container": "/prefill_guard.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/patch_uniform_decode_prefill.py",
+      "mode": "ro",
+      "role": "prefill_guard"
+    },
+    {
+      "container": "/patch_mtp.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_mtp_nightly.py",
+      "mode": "ro",
+      "role": "mtp_nightly"
+    },
+    {
+      "container": "/patch_boundary.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_mtp_boundary.py",
+      "mode": "ro",
+      "role": "mtp_boundary"
+    },
+    {
+      "container": "/patch_v5.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_gdn_mixed_split_v5.py",
+      "mode": "ro",
+      "role": "gdn_mixed_split_v5"
+    },
+    {
+      "container": "/patch_s.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_draft_lmhead_int4.py",
+      "mode": "ro",
+      "role": "draft_lmhead_int4"
+    },
+    {
+      "container": "/patch_m1.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260909-standard/mtp4-long/reference-source/patches/patch_draft_mtp_int4.py",
+      "mode": "ro",
+      "role": "draft_mtp_int4"
+    },
+    {
+      "container": "/output",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-step-profile-64k/mtp4-baseline",
+      "mode": "rw",
+      "role": "new_run_output"
+    }
+  ],
+  "patch_order": [
+    "mtp_nightly",
+    "mtp_boundary",
+    "gdn_mixed_split_v5",
+    "draft_lmhead_int4",
+    "draft_mtp_int4",
+    "prefill_guard"
+  ],
+  "profiler_config": null,
+  "serve": [
+    "vllm",
+    "serve",
+    "/model",
+    "--performance-mode",
+    "balanced",
+    "--compilation-config",
+    "{\"cudagraph_capture_sizes\":[1,2,4,8]}",
+    "--cudagraph-metrics",
+    "--quantization",
+    "gptq",
+    "--dtype",
+    "float16",
+    "--max-model-len",
+    "65664",
+    "--gpu-memory-utilization",
+    "0.95",
+    "--kv-cache-dtype",
+    "fp8",
+    "--port",
+    "8000",
+    "--max-num-seqs",
+    "1",
+    "--max-num-batched-tokens",
+    "2048",
+    "--no-enable-prefix-caching",
+    "--mamba-cache-mode",
+    "align",
+    "--chat-template-content-format",
+    "openai",
+    "--default-chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--reasoning-parser",
+    "qwen3",
+    "--override-generation-config",
+    "{\"temperature\":0.6,\"top_p\":0.95,\"top_k\":20,\"min_p\":0}",
+    "--served-model-name",
+    "qwen38",
+    "--language-model-only",
+    "--speculative-config",
+    "{\"method\":\"mtp\",\"num_speculative_tokens\":4}",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "qwen3_xml"
+  ],
+  "speculation": {
+    "method": "mtp",
+    "num_speculative_tokens": 4
+  },
+  "stack_revision": "vLLM ac7509e2b / pinned image f01e24f6",
+  "target": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16"
+}
