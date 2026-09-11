@@ -1,0 +1,3376 @@
+{
+  "status": "measured-not-threshold-certified",
+  "tier": "development",
+  "environment": {
+    "torch": "2.13.0+xpu",
+    "transformers": "5.15.0",
+    "official_source_sha256": {
+      "dflash.py": "9825996703de73bd436a6aaf57ae203ef92d599249d9cf49078576d52f4e56a4",
+      "dspark.py": "75bba7c469166bd2d6a6877b9964d035b0cec9a83190ab9f3de8c6175883a114"
+    },
+    "device": "xpu",
+    "attention_backend": "official HF eager",
+    "argv": [
+      "/parity/replay-reference.py",
+      "--official-source",
+      "/parity/official",
+      "--capture",
+      "/parity/capture-01",
+      "--draft",
+      "/draft",
+      "--target",
+      "/target",
+      "--out",
+      "/output/reference-01",
+      "--device",
+      "xpu",
+      "--approve-gpu-replay"
+    ],
+    "namespace_accommodation": "unmodified official files under specforge/modeling/draft"
+  },
+  "weight_mapping": "all 62 keys + exact effective shared head checked; no missing/unexpected",
+  "native_vs_official": {
+    "stages": {
+      "context_fc": {
+        "shape": [
+          68,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000004
+      },
+      "context_norm": {
+        "shape": [
+          68,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.002932185772806406,
+        "cosine": 0.9999961676842859
+      },
+      "layers.0.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.25,
+        "rmse": 0.01926211453974247,
+        "cosine": 0.999998351800372
+      },
+      "layers.0.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.008881805464625359,
+        "cosine": 0.9999958184861047
+      },
+      "layers.0.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.004056239500641823,
+        "cosine": 0.99999443353605
+      },
+      "layers.0.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.006183742079883814,
+        "cosine": 0.999992842949666
+      },
+      "layers.0.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.002430528635159135,
+        "cosine": 0.9999959043887198
+      },
+      "layers.0.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.003860136028379202,
+        "cosine": 0.9999948753169923
+      },
+      "layers.0.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.03125,
+        "rmse": 0.003506156150251627,
+        "cosine": 0.9999958536514034
+      },
+      "layers.0.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.005916473921388388,
+        "cosine": 0.9999933224580323
+      },
+      "layers.0.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.0054658823646605015,
+        "cosine": 0.999994432213931
+      },
+      "layers.0.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.359375,
+        "rmse": 0.03393566235899925,
+        "cosine": 0.9998614619380978
+      },
+      "layers.0.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 4.0,
+        "rmse": 0.08518948405981064,
+        "cosine": 0.9999826794305988
+      },
+      "layers.0.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.03125,
+        "rmse": 0.004155052360147238,
+        "cosine": 0.9998732308242528
+      },
+      "layers.0.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 4.0,
+        "rmse": 0.1258535236120224,
+        "cosine": 0.9998826697395568
+      },
+      "layers.0.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 8.0,
+        "rmse": 0.16684572398662567,
+        "cosine": 0.9999633511552664
+      },
+      "layers.1.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.5,
+        "rmse": 0.025498559698462486,
+        "cosine": 0.9999984697121967
+      },
+      "layers.1.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.01166871190071106,
+        "cosine": 0.9999963581035204
+      },
+      "layers.1.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.005524275358766317,
+        "cosine": 0.9999944850086109
+      },
+      "layers.1.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.008298596367239952,
+        "cosine": 0.9999931091198317
+      },
+      "layers.1.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.25,
+        "rmse": 0.008277923800051212,
+        "cosine": 0.9999392997689455
+      },
+      "layers.1.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0703125,
+        "rmse": 0.014000656083226204,
+        "cosine": 0.999949000268586
+      },
+      "layers.1.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.010757961310446262,
+        "cosine": 0.9999777457799037
+      },
+      "layers.1.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.09375,
+        "rmse": 0.019326480105519295,
+        "cosine": 0.9999462496255568
+      },
+      "layers.1.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.015279988758265972,
+        "cosine": 0.9999751500988495
+      },
+      "layers.1.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.859375,
+        "rmse": 0.07372189313173294,
+        "cosine": 0.9993845913843615
+      },
+      "layers.1.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 2.0,
+        "rmse": 0.2104833424091339,
+        "cosine": 0.9996296498171484
+      },
+      "layers.1.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.03955078125,
+        "rmse": 0.008071928285062313,
+        "cosine": 0.999719746201555
+      },
+      "layers.1.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 4.0,
+        "rmse": 0.26419445872306824,
+        "cosine": 0.9997204804767041
+      },
+      "layers.1.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 8.0,
+        "rmse": 0.37277689576148987,
+        "cosine": 0.9999148252500076
+      },
+      "layers.2.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.5,
+        "rmse": 0.024621237069368362,
+        "cosine": 0.9999985318816704
+      },
+      "layers.2.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.014313648454844952,
+        "cosine": 0.9999967859457556
+      },
+      "layers.2.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.0055494531989097595,
+        "cosine": 0.9999945955162274
+      },
+      "layers.2.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.008323226124048233,
+        "cosine": 0.9999932674607478
+      },
+      "layers.2.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.25,
+        "rmse": 0.014352239668369293,
+        "cosine": 0.9998882431150724
+      },
+      "layers.2.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.017535164952278137,
+        "cosine": 0.9999174251353486
+      },
+      "layers.2.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.10546875,
+        "rmse": 0.01643521524965763,
+        "cosine": 0.99994813071667
+      },
+      "layers.2.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.15625,
+        "rmse": 0.02405286580324173,
+        "cosine": 0.9999141213640929
+      },
+      "layers.2.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.14453125,
+        "rmse": 0.02278047613799572,
+        "cosine": 0.9999448383754584
+      },
+      "layers.2.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 1.703125,
+        "rmse": 0.12175449728965759,
+        "cosine": 0.9993920356376934
+      },
+      "layers.2.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 4.0,
+        "rmse": 0.41699597239494324,
+        "cosine": 0.9996280165469764
+      },
+      "layers.2.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.05859375,
+        "rmse": 0.011238088831305504,
+        "cosine": 0.9996556658474524
+      },
+      "layers.2.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 4.0,
+        "rmse": 0.5046048760414124,
+        "cosine": 0.9994437893019816
+      },
+      "layers.2.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 24.0,
+        "rmse": 0.7555752396583557,
+        "cosine": 0.9998287444752797
+      },
+      "layers.3.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.25,
+        "rmse": 0.021567195653915405,
+        "cosine": 0.9999984197606343
+      },
+      "layers.3.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.015009797178208828,
+        "cosine": 0.9999952701723098
+      },
+      "layers.3.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.005451623350381851,
+        "cosine": 0.9999944928481537
+      },
+      "layers.3.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.008119017817080021,
+        "cosine": 0.9999932348256882
+      },
+      "layers.3.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.5,
+        "rmse": 0.022925307974219322,
+        "cosine": 0.999760116419383
+      },
+      "layers.3.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.15625,
+        "rmse": 0.022034477442502975,
+        "cosine": 0.9998600558114698
+      },
+      "layers.3.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.021294962614774704,
+        "cosine": 0.9999079561601142
+      },
+      "layers.3.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.21875,
+        "rmse": 0.029992494732141495,
+        "cosine": 0.9998566225777088
+      },
+      "layers.3.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.171875,
+        "rmse": 0.02910316362977028,
+        "cosine": 0.9999048672458497
+      },
+      "layers.3.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.984375,
+        "rmse": 0.1215338259935379,
+        "cosine": 0.9994256767481314
+      },
+      "layers.3.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 8.0,
+        "rmse": 0.46042558550834656,
+        "cosine": 0.999645801437406
+      },
+      "layers.3.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.1875,
+        "rmse": 0.01383179984986782,
+        "cosine": 0.9996765484538452
+      },
+      "layers.3.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 9.0,
+        "rmse": 0.9575461745262146,
+        "cosine": 0.9995367310650792
+      },
+      "layers.3.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 32.0,
+        "rmse": 1.276304841041565,
+        "cosine": 0.999781505250182
+      },
+      "layers.4.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.5,
+        "rmse": 0.021589120849967003,
+        "cosine": 0.9999985026474395
+      },
+      "layers.4.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.25,
+        "rmse": 0.01787768490612507,
+        "cosine": 0.9999952945529155
+      },
+      "layers.4.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.0625,
+        "rmse": 0.005657949950546026,
+        "cosine": 0.9999944318785864
+      },
+      "layers.4.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.125,
+        "rmse": 0.00849798321723938,
+        "cosine": 0.9999930452792689
+      },
+      "layers.4.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.75,
+        "rmse": 0.024197548627853394,
+        "cosine": 0.9997410842467449
+      },
+      "layers.4.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.17333984375,
+        "rmse": 0.023357141762971878,
+        "cosine": 0.999862309960182
+      },
+      "layers.4.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.1328125,
+        "rmse": 0.025320034474134445,
+        "cosine": 0.9998749064898171
+      },
+      "layers.4.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.21484375,
+        "rmse": 0.03174015134572983,
+        "cosine": 0.9998593784783244
+      },
+      "layers.4.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.1875,
+        "rmse": 0.03445235267281532,
+        "cosine": 0.9998718397446431
+      },
+      "layers.4.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 1.9375,
+        "rmse": 0.17367321252822876,
+        "cosine": 0.9994233298877668
+      },
+      "layers.4.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 12.0,
+        "rmse": 0.8455439209938049,
+        "cosine": 0.9996194115474935
+      },
+      "layers.4.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.5,
+        "rmse": 0.01616823859512806,
+        "cosine": 0.9997642404316588
+      },
+      "layers.4.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 32.0,
+        "rmse": 1.1300489902496338,
+        "cosine": 0.9998073127468825
+      },
+      "layers.4.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 64.0,
+        "rmse": 1.8920480012893677,
+        "cosine": 0.9996532586855734
+      },
+      "final_hidden": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.90625,
+        "rmse": 0.0472649410367012,
+        "cosine": 0.9996791468351857
+      },
+      "base_logits": {
+        "shape": [
+          7,
+          248320
+        ],
+        "dtypes": [
+          "torch.float16",
+          "torch.float16"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.416015625,
+        "rmse": 0.050443828105926514,
+        "cosine": 0.9998862989875273,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          417,
+          417,
+          436,
+          436,
+          18887,
+          18887,
+          18887
+        ],
+        "right_top1": [
+          417,
+          417,
+          436,
+          436,
+          18887,
+          18887,
+          18887
+        ],
+        "left_top1_rank_in_right": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "left_top1_margin": [
+          2.71875,
+          0.828125,
+          2.03125,
+          1.5,
+          0.828125,
+          2.375,
+          0.703125
+        ],
+        "right_top1_margin": [
+          2.8125,
+          0.859375,
+          1.9375,
+          1.4609375,
+          0.609375,
+          2.390625,
+          0.875
+        ]
+      },
+      "markov_bias.0": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "corrected_logits.0": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.232421875,
+        "rmse": 0.05011993274092674,
+        "cosine": 0.9999163369399366,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          30057
+        ],
+        "right_top1": [
+          30057
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          0.1953125
+        ],
+        "right_top1_margin": [
+          0.2578125
+        ]
+      },
+      "markov_bias.1": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000007
+      },
+      "corrected_logits.1": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.21484375,
+        "rmse": 0.03739343583583832,
+        "cosine": 0.9999422916831873,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          286
+        ],
+        "right_top1": [
+          286
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          7.609375
+        ],
+        "right_top1_margin": [
+          7.5859375
+        ]
+      },
+      "markov_bias.2": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "corrected_logits.2": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.2265625,
+        "rmse": 0.039738498628139496,
+        "cosine": 0.999943188069674,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          264
+        ],
+        "right_top1": [
+          264
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          0.6015625
+        ],
+        "right_top1_margin": [
+          0.6953125
+        ]
+      },
+      "markov_bias.3": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000004
+      },
+      "corrected_logits.3": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.2734375,
+        "rmse": 0.051481787115335464,
+        "cosine": 0.9999244242629108,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          436
+        ],
+        "right_top1": [
+          436
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          0.12109375
+        ],
+        "right_top1_margin": [
+          0.08203125
+        ]
+      },
+      "markov_bias.4": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "corrected_logits.4": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.33984375,
+        "rmse": 0.05778373405337334,
+        "cosine": 0.9998761214636473,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          34810
+        ],
+        "right_top1": [
+          34810
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          6.5234375
+        ],
+        "right_top1_margin": [
+          6.65625
+        ]
+      },
+      "markov_bias.5": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "corrected_logits.5": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.21484375,
+        "rmse": 0.04145170375704765,
+        "cosine": 0.9999354428274487,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          18887
+        ],
+        "right_top1": [
+          18887
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          1.3984375
+        ],
+        "right_top1_margin": [
+          1.4140625
+        ]
+      },
+      "markov_bias.6": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "corrected_logits.6": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": false,
+        "max_abs": 0.416015625,
+        "rmse": 0.06793420761823654,
+        "cosine": 0.999801310384968,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          303
+        ],
+        "right_top1": [
+          303
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          2.8515625
+        ],
+        "right_top1_margin": [
+          2.6796875
+        ]
+      }
+    },
+    "first_nonexact_stage": "context_norm",
+    "first_top1_difference": null,
+    "proposed_ids": {
+      "left": [
+        30057,
+        286,
+        264,
+        436,
+        34810,
+        18887,
+        303
+      ],
+      "right": [
+        30057,
+        286,
+        264,
+        436,
+        34810,
+        18887,
+        303
+      ],
+      "equal": true
+    }
+  },
+  "official_self_repeatability": {
+    "stages": {
+      "context_fc": {
+        "shape": [
+          68,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000004
+      },
+      "context_norm": {
+        "shape": [
+          68,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.0.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.0.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.0.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.0.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.0.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.0.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999997
+      },
+      "layers.0.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000004
+      },
+      "layers.0.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.0.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.0.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.0.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.0.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.0.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.0.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.1.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.1.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.1.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.1.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.1.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.1.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.1.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.1.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.1.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.1.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.1.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.1.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.1.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.1.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.2.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.2.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.2.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.2.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.2.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.2.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.2.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.2.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.2.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.2.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.2.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.2.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.2.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.2.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.3.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.3.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.3.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.3.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.3.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.3.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.3.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.3.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.3.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.3.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.3.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.3.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.3.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.3.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.4.context_k_raw": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.4.context_v": {
+        "shape": [
+          68,
+          1024
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.4.context_k_norm": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.4.context_k_rope": {
+        "shape": [
+          68,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.4.query_input_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.4.query_q_norm": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.4.query_k_norm": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.4.query_q_rope": {
+        "shape": [
+          7,
+          32,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "layers.4.query_k_rope": {
+        "shape": [
+          7,
+          8,
+          128
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "layers.4.query_attention": {
+        "shape": [
+          7,
+          4096
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "layers.4.query_o_proj": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.4.query_post_norm": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.4.query_mlp": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999998
+      },
+      "layers.4.query_output": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "final_hidden": {
+        "shape": [
+          7,
+          5120
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 0.9999999999999999
+      },
+      "base_logits": {
+        "shape": [
+          7,
+          248320
+        ],
+        "dtypes": [
+          "torch.float16",
+          "torch.float16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.000000000000009,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          417,
+          417,
+          436,
+          436,
+          18887,
+          18887,
+          18887
+        ],
+        "right_top1": [
+          417,
+          417,
+          436,
+          436,
+          18887,
+          18887,
+          18887
+        ],
+        "left_top1_rank_in_right": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "left_top1_margin": [
+          2.8125,
+          0.859375,
+          1.9375,
+          1.4609375,
+          0.609375,
+          2.390625,
+          0.875
+        ],
+        "right_top1_margin": [
+          2.8125,
+          0.859375,
+          1.9375,
+          1.4609375,
+          0.609375,
+          2.390625,
+          0.875
+        ]
+      },
+      "markov_bias.0": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "corrected_logits.0": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000016,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          30057
+        ],
+        "right_top1": [
+          30057
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          0.2578125
+        ],
+        "right_top1_margin": [
+          0.2578125
+        ]
+      },
+      "markov_bias.1": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000007
+      },
+      "corrected_logits.1": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000016,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          286
+        ],
+        "right_top1": [
+          286
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          7.5859375
+        ],
+        "right_top1_margin": [
+          7.5859375
+        ]
+      },
+      "markov_bias.2": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "corrected_logits.2": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000009,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          264
+        ],
+        "right_top1": [
+          264
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          0.6953125
+        ],
+        "right_top1_margin": [
+          0.6953125
+        ]
+      },
+      "markov_bias.3": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000004
+      },
+      "corrected_logits.3": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000004,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          436
+        ],
+        "right_top1": [
+          436
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          0.08203125
+        ],
+        "right_top1_margin": [
+          0.08203125
+        ]
+      },
+      "markov_bias.4": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "corrected_logits.4": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000016,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          34810
+        ],
+        "right_top1": [
+          34810
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          6.65625
+        ],
+        "right_top1_margin": [
+          6.65625
+        ]
+      },
+      "markov_bias.5": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0
+      },
+      "corrected_logits.5": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000009,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          18887
+        ],
+        "right_top1": [
+          18887
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          1.4140625
+        ],
+        "right_top1_margin": [
+          1.4140625
+        ]
+      },
+      "markov_bias.6": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.bfloat16",
+          "torch.bfloat16"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.0000000000000002
+      },
+      "corrected_logits.6": {
+        "shape": [
+          248320
+        ],
+        "dtypes": [
+          "torch.float32",
+          "torch.float32"
+        ],
+        "finite": true,
+        "exact": true,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "cosine": 1.000000000000001,
+        "top1_agreement": 1.0,
+        "left_top1": [
+          303
+        ],
+        "right_top1": [
+          303
+        ],
+        "left_top1_rank_in_right": [
+          1
+        ],
+        "right_top1_rank_in_left": [
+          1
+        ],
+        "left_top1_margin": [
+          2.6796875
+        ],
+        "right_top1_margin": [
+          2.6796875
+        ]
+      }
+    },
+    "first_nonexact_stage": null,
+    "first_top1_difference": null,
+    "proposed_ids": {
+      "left": [
+        30057,
+        286,
+        264,
+        436,
+        34810,
+        18887,
+        303
+      ],
+      "right": [
+        30057,
+        286,
+        264,
+        436,
+        34810,
+        18887,
+        303
+      ],
+      "equal": true
+    }
+  },
+  "native_prefix_corrected": {
+    "0": {
+      "shape": [
+        248320
+      ],
+      "dtypes": [
+        "torch.float32",
+        "torch.float32"
+      ],
+      "finite": true,
+      "exact": false,
+      "max_abs": 0.232421875,
+      "rmse": 0.05011993274092674,
+      "cosine": 0.9999163369399366,
+      "top1_agreement": 1.0,
+      "left_top1": [
+        30057
+      ],
+      "right_top1": [
+        30057
+      ],
+      "left_top1_rank_in_right": [
+        1
+      ],
+      "right_top1_rank_in_left": [
+        1
+      ],
+      "left_top1_margin": [
+        0.1953125
+      ],
+      "right_top1_margin": [
+        0.2578125
+      ]
+    },
+    "1": {
+      "shape": [
+        248320
+      ],
+      "dtypes": [
+        "torch.float32",
+        "torch.float32"
+      ],
+      "finite": true,
+      "exact": false,
+      "max_abs": 0.21484375,
+      "rmse": 0.03739343583583832,
+      "cosine": 0.9999422916831873,
+      "top1_agreement": 1.0,
+      "left_top1": [
+        286
+      ],
+      "right_top1": [
+        286
+      ],
+      "left_top1_rank_in_right": [
+        1
+      ],
+      "right_top1_rank_in_left": [
+        1
+      ],
+      "left_top1_margin": [
+        7.609375
+      ],
+      "right_top1_margin": [
+        7.5859375
+      ]
+    },
+    "2": {
+      "shape": [
+        248320
+      ],
+      "dtypes": [
+        "torch.float32",
+        "torch.float32"
+      ],
+      "finite": true,
+      "exact": false,
+      "max_abs": 0.2265625,
+      "rmse": 0.039738498628139496,
+      "cosine": 0.999943188069674,
+      "top1_agreement": 1.0,
+      "left_top1": [
+        264
+      ],
+      "right_top1": [
+        264
+      ],
+      "left_top1_rank_in_right": [
+        1
+      ],
+      "right_top1_rank_in_left": [
+        1
+      ],
+      "left_top1_margin": [
+        0.6015625
+      ],
+      "right_top1_margin": [
+        0.6953125
+      ]
+    },
+    "3": {
+      "shape": [
+        248320
+      ],
+      "dtypes": [
+        "torch.float32",
+        "torch.float32"
+      ],
+      "finite": true,
+      "exact": false,
+      "max_abs": 0.2734375,
+      "rmse": 0.051481787115335464,
+      "cosine": 0.9999244242629108,
+      "top1_agreement": 1.0,
+      "left_top1": [
+        436
+      ],
+      "right_top1": [
+        436
+      ],
+      "left_top1_rank_in_right": [
+        1
+      ],
+      "right_top1_rank_in_left": [
+        1
+      ],
+      "left_top1_margin": [
+        0.12109375
+      ],
+      "right_top1_margin": [
+        0.08203125
+      ]
+    },
+    "4": {
+      "shape": [
+        248320
+      ],
+      "dtypes": [
+        "torch.float32",
+        "torch.float32"
+      ],
+      "finite": true,
+      "exact": false,
+      "max_abs": 0.33984375,
+      "rmse": 0.05778373405337334,
+      "cosine": 0.9998761214636473,
+      "top1_agreement": 1.0,
+      "left_top1": [
+        34810
+      ],
+      "right_top1": [
+        34810
+      ],
+      "left_top1_rank_in_right": [
+        1
+      ],
+      "right_top1_rank_in_left": [
+        1
+      ],
+      "left_top1_margin": [
+        6.5234375
+      ],
+      "right_top1_margin": [
+        6.65625
+      ]
+    },
+    "5": {
+      "shape": [
+        248320
+      ],
+      "dtypes": [
+        "torch.float32",
+        "torch.float32"
+      ],
+      "finite": true,
+      "exact": false,
+      "max_abs": 0.21484375,
+      "rmse": 0.04145170375704765,
+      "cosine": 0.9999354428274487,
+      "top1_agreement": 1.0,
+      "left_top1": [
+        18887
+      ],
+      "right_top1": [
+        18887
+      ],
+      "left_top1_rank_in_right": [
+        1
+      ],
+      "right_top1_rank_in_left": [
+        1
+      ],
+      "left_top1_margin": [
+        1.3984375
+      ],
+      "right_top1_margin": [
+        1.4140625
+      ]
+    },
+    "6": {
+      "shape": [
+        248320
+      ],
+      "dtypes": [
+        "torch.float32",
+        "torch.float32"
+      ],
+      "finite": true,
+      "exact": false,
+      "max_abs": 0.416015625,
+      "rmse": 0.06793420761823654,
+      "cosine": 0.999801310384968,
+      "top1_agreement": 1.0,
+      "left_top1": [
+        303
+      ],
+      "right_top1": [
+        303
+      ],
+      "left_top1_rank_in_right": [
+        1
+      ],
+      "right_top1_rank_in_left": [
+        1
+      ],
+      "left_top1_margin": [
+        2.8515625
+      ],
+      "right_top1_margin": [
+        2.6796875
+      ]
+    }
+  },
+  "target_aux_registration": [
+    6,
+    20,
+    34,
+    48,
+    62
+  ],
+  "native_query_output_boundary": "CPU BF16 branch + residual diagnostic sum; raw addends retained",
+  "tolerance": "none imposed; report raw error, exact first difference, repeatability and decision margins"
+}
