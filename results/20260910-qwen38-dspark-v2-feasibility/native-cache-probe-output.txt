@@ -1,0 +1,24 @@
+++ stat -c %g /dev/dri/renderD128
++ timeout --signal=INT --kill-after=20s 120s docker run --rm --name dspark-cache-probe --network none --device /dev/dri --group-add 987 -e VLLM_TARGET_DEVICE=xpu -e ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE -e ZE_AFFINITY_MASK=0 -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/native-cache-probe.py:/probe.py:ro --entrypoint /opt/venv/bin/python vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4 -P /probe.py
+{
+  "torch": "2.13.0+xpu",
+  "device": "Intel(R) Arc(TM) Pro B70 Graphics",
+  "cases": [
+    {
+      "mode": "bfloat16",
+      "storage_dtype": "torch.bfloat16",
+      "expected_dispatch_rejection": "Unsupported data type of kv cache: bfloat16"
+    },
+    {
+      "mode": "auto",
+      "storage_dtype": "torch.bfloat16",
+      "exact_cache_and_untouched_slots": true
+    }
+  ]
+}
++ sha256sum /home/mike/inference/launchers/start-qwen38.sh
+63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4  /home/mike/inference/launchers/start-qwen38.sh
++ cat /sys/class/drm/card0/device/hwmon/hwmon2/power1_cap
+275000000
++ docker ps --format '{{.Names}}'
++ docker rm -f dspark-cache-probe

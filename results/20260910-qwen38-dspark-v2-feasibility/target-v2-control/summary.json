@@ -1,0 +1,75 @@
+{
+  "tier": "development",
+  "status": "passed",
+  "image": "vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4",
+  "context": 8192,
+  "speculation": false,
+  "runner": "v2",
+  "patches": [
+    "existing-xpu-short-prefill"
+  ],
+  "purpose": "XPU V2 target prerequisite, not a DSpark benchmark",
+  "api_checks": {
+    "status": "passed",
+    "speculative": false,
+    "canaries": [
+      true,
+      true,
+      true
+    ],
+    "finite_boundaries": 131,
+    "functional": [
+      {
+        "label": "gcd",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "merge",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "brackets",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "lowerbound",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "chunks",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "dedup",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "transpose",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "rle",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      }
+    ],
+    "repeatability": {
+      "code": 1,
+      "prose": 1
+    },
+    "acceptance": {
+      "steps": 0,
+      "accepted": 0,
+      "drafted": 0,
+      "mean_emitted_per_step": null
+    }
+  },
+  "host_unchanged": true
+}

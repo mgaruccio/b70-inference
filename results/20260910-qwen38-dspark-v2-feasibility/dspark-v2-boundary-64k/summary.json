@@ -1,0 +1,87 @@
+{
+  "tier": "development",
+  "status": "passed",
+  "image": "vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4",
+  "context": 65664,
+  "speculation": true,
+  "runner": "v2",
+  "patches": [
+    "existing-xpu-short-prefill",
+    "dspark-bf16",
+    "existing-xpu-gdn-boundary"
+  ],
+  "speculative_config": {
+    "method": "dspark",
+    "model": "/draft",
+    "num_speculative_tokens": 7,
+    "kv_cache_dtype": "bfloat16",
+    "quantization": null,
+    "rejection_sample_method": "standard",
+    "draft_sample_method": "greedy",
+    "enable_adaptive_verification": false
+  },
+  "purpose": "DSpark V2 64K feasibility, development only",
+  "api_checks": {
+    "status": "passed",
+    "speculative": true,
+    "canaries": [
+      true,
+      true,
+      true
+    ],
+    "finite_boundaries": 131,
+    "functional": [
+      {
+        "label": "gcd",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "merge",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "brackets",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "lowerbound",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "chunks",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "dedup",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "transpose",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "rle",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      }
+    ],
+    "repeatability": {
+      "code": 1,
+      "prose": 1
+    },
+    "acceptance": {
+      "steps": 542.0,
+      "accepted": 474.0,
+      "drafted": 3794.0,
+      "mean_emitted_per_step": 1.8745387453874538
+    }
+  },
+  "host_unchanged": true
+}
