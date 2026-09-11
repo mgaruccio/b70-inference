@@ -1,0 +1,742 @@
+{
+  "trace_sha256": "782987c70d95615d2a03cbec3f17918e16c131a6b06aee6b3a23e6418eb23cc5",
+  "target_forward_steps": 5,
+  "decode_annotations": [
+    "execute_context_0(0)_generation_1(5)",
+    "execute_context_0(0)_generation_1(5)",
+    "execute_context_0(0)_generation_1(5)",
+    "execute_context_0(0)_generation_1(5)",
+    "execute_context_0(0)_generation_1(5)"
+  ],
+  "kernel_count": 20080,
+  "kernel_queues": [
+    [
+      0,
+      64
+    ]
+  ],
+  "all_kernel_ms": 304.17885700000073,
+  "target_kernel_ms": 234.28890400000355,
+  "outside_target_or_unmapped_ms": 69.88995299999827,
+  "unmapped_cpu_external_id": {
+    "count": 275,
+    "kernel_ms": 0.6393080000000008
+  },
+  "caveat": "Eager diagnostic only; each kernel attributed once through its CPU External id and innermost target module. No overlapping parent totals. Not graph-mode throughput.",
+  "module_types": [
+    {
+      "name": "MergedColumnParallelLinear",
+      "count": 800,
+      "total_us": 76528.62699999967,
+      "ms_per_target_step": 15.305725399999934
+    },
+    {
+      "name": "Attention",
+      "count": 800,
+      "total_us": 71115.20799999962,
+      "ms_per_target_step": 14.223041599999924
+    },
+    {
+      "name": "RowParallelLinear",
+      "count": 640,
+      "total_us": 40749.92799999984,
+      "ms_per_target_step": 8.149985599999967
+    },
+    {
+      "name": "GemmaRMSNorm",
+      "count": 9970,
+      "total_us": 25612.448000000182,
+      "ms_per_target_step": 5.122489600000036
+    },
+    {
+      "name": "QwenGatedDeltaNetAttention",
+      "count": 720,
+      "total_us": 6715.042000000015,
+      "ms_per_target_step": 1.3430084000000029
+    },
+    {
+      "name": "MRotaryEmbedding",
+      "count": 3120,
+      "total_us": 6434.5770000001,
+      "ms_per_target_step": 1.28691540000002
+    },
+    {
+      "name": "QKVParallelLinear",
+      "count": 80,
+      "total_us": 5542.152000000004,
+      "ms_per_target_step": 1.1084304000000007
+    },
+    {
+      "name": "SiluAndMul",
+      "count": 320,
+      "total_us": 989.1279999999986,
+      "ms_per_target_step": 0.1978255999999997
+    },
+    {
+      "name": "Qwen3NextAttention",
+      "count": 320,
+      "total_us": 558.7749999999995,
+      "ms_per_target_step": 0.11175499999999991
+    },
+    {
+      "name": "VocabParallelEmbedding",
+      "count": 10,
+      "total_us": 43.019,
+      "ms_per_target_step": 0.0086038
+    }
+  ],
+  "subsystems": [
+    {
+      "name": "full_attention",
+      "count": 6000,
+      "total_us": 89531.42100000018,
+      "ms_per_target_step": 17.906284200000034
+    },
+    {
+      "name": "mlp",
+      "count": 960,
+      "total_us": 83879.16399999983,
+      "ms_per_target_step": 16.775832799999964
+    },
+    {
+      "name": "gdn",
+      "count": 1440,
+      "total_us": 38288.3909999998,
+      "ms_per_target_step": 7.6576781999999595
+    },
+    {
+      "name": "other",
+      "count": 8380,
+      "total_us": 22589.928000000054,
+      "ms_per_target_step": 4.517985600000011
+    }
+  ],
+  "operators": [
+    {
+      "name": "_vllm_fa2_C::varlen_fwd [[5, 24, 256], [176, 1664, 4, 256], [176, 1664, 4, 256], [5, 24, 256], [6], [6], [5], [], [5, 128], [], [], [], [], [1, 4], [1, 4], [], [], [], [], [], [], [], [], [], [], [], [], []]",
+      "count": 160,
+      "total_us": 70236.81499999993,
+      "ms_per_target_step": 14.047362999999986
+    },
+    {
+      "name": "_xpu_C::int4_gemm_w4a16 [[5, 5120], [640, 34816], [], [40, 34816], [1], [], []]",
+      "count": 320,
+      "total_us": 56495.07599999978,
+      "ms_per_target_step": 11.299015199999957
+    },
+    {
+      "name": "_xpu_C::int4_gemm_w4a16 [[5, 17408], [2176, 5120], [], [136, 5120], [1], [], []]",
+      "count": 320,
+      "total_us": 26394.96000000004,
+      "ms_per_target_step": 5.278992000000008
+    },
+    {
+      "name": "_xpu_C::int4_gemm_w4a16 [[5, 5120], [640, 16384], [], [40, 16384], [1], [], []]",
+      "count": 240,
+      "total_us": 18844.274999999994,
+      "ms_per_target_step": 3.768854999999999
+    },
+    {
+      "name": "_xpu_C::int4_gemm_w4a16 [[5, 6144], [768, 5120], [], [48, 5120], [1], [], []]",
+      "count": 320,
+      "total_us": 14354.968000000006,
+      "ms_per_target_step": 2.870993600000001
+    },
+    {
+      "name": "aten::copy_ [[5, 5120], [5, 5120], []]",
+      "count": 2570,
+      "total_us": 10100.42100000008,
+      "ms_per_target_step": 2.020084200000016
+    },
+    {
+      "name": "_xpu_C::gdn_attention [[5, 48, 128], [5, 48, 128], [5, 16384], [5, 96], [], [], [], [], [176, 7, 10240], [176, 48, 128, 128], [10240, 4], [], [], [48], [48], [], [], [], [], [], [0], [], [2], [5], [1, 5], [1], [], [], []]",
+      "count": 480,
+      "total_us": 6420.009000000004,
+      "ms_per_target_step": 1.2840018000000006
+    },
+    {
+      "name": "_xpu_C::int4_gemm_w4a16 [[5, 5120], [640, 14336], [], [40, 14336], [1], [], []]",
+      "count": 80,
+      "total_us": 5542.152000000004,
+      "ms_per_target_step": 1.1084304000000007
+    },
+    {
+      "name": "aten::copy_ [[5120], [5120], []]",
+      "count": 645,
+      "total_us": 4216.725999999996,
+      "ms_per_target_step": 0.8433451999999992
+    },
+    {
+      "name": "aten::mean [[5, 5120], [], [], []]",
+      "count": 645,
+      "total_us": 3048.829999999999,
+      "ms_per_target_step": 0.6097659999999998
+    },
+    {
+      "name": "aten::mul [[5, 24, 32], [5, 1, 32]]",
+      "count": 320,
+      "total_us": 1455.7599999999995,
+      "ms_per_target_step": 0.2911519999999999
+    },
+    {
+      "name": "aten::mm [[5, 5120], [5120, 96]]",
+      "count": 240,
+      "total_us": 1189.2760000000007,
+      "ms_per_target_step": 0.23785520000000016
+    },
+    {
+      "name": "aten::copy_ [[5, 24, 256], [5, 24, 256], []]",
+      "count": 320,
+      "total_us": 1034.1220000000003,
+      "ms_per_target_step": 0.20682440000000005
+    },
+    {
+      "name": "_C::silu_and_mul [[5, 17408], [5, 34816]]",
+      "count": 320,
+      "total_us": 989.1279999999986,
+      "ms_per_target_step": 0.1978255999999997
+    },
+    {
+      "name": "aten::mul [[5, 5120], [5, 1]]",
+      "count": 645,
+      "total_us": 979.1140000000036,
+      "ms_per_target_step": 0.1958228000000007
+    },
+    {
+      "name": "aten::mul [[5, 5120], [5120]]",
+      "count": 645,
+      "total_us": 903.4910000000029,
+      "ms_per_target_step": 0.1806982000000006
+    },
+    {
+      "name": "aten::pow [[5, 5120], []]",
+      "count": 645,
+      "total_us": 874.7330000000059,
+      "ms_per_target_step": 0.17494660000000117
+    },
+    {
+      "name": "aten::bitwise_and [[32], [32]]",
+      "count": 320,
+      "total_us": 799.3480000000017,
+      "ms_per_target_step": 0.15986960000000033
+    },
+    {
+      "name": "aten::add [[5, 5120], [5, 5120], []]",
+      "count": 640,
+      "total_us": 695.0890000000006,
+      "ms_per_target_step": 0.13901780000000014
+    },
+    {
+      "name": "aten::rsqrt [[5, 1]]",
+      "count": 645,
+      "total_us": 645.143000000005,
+      "ms_per_target_step": 0.129028600000001
+    },
+    {
+      "name": "aten::add [[5120], [], []]",
+      "count": 645,
+      "total_us": 603.8490000000039,
+      "ms_per_target_step": 0.12076980000000079
+    },
+    {
+      "name": "aten::cat [[[5, 24, 64], [5, 24, 192]], []]",
+      "count": 80,
+      "total_us": 537.2449999999998,
+      "ms_per_target_step": 0.10744899999999996
+    },
+    {
+      "name": "aten::cat [[[5, 4, 64], [5, 4, 192]], []]",
+      "count": 80,
+      "total_us": 488.9079999999997,
+      "ms_per_target_step": 0.09778159999999994
+    },
+    {
+      "name": "aten::add [[5, 1], [], []]",
+      "count": 645,
+      "total_us": 479.5130000000027,
+      "ms_per_target_step": 0.09590260000000055
+    },
+    {
+      "name": "aten::mul [[5, 4, 32], [5, 1, 32]]",
+      "count": 320,
+      "total_us": 473.77600000000035,
+      "ms_per_target_step": 0.09475520000000007
+    },
+    {
+      "name": "aten::copy_ [[5, 4, 256], [5, 4, 256], []]",
+      "count": 160,
+      "total_us": 432.13500000000056,
+      "ms_per_target_step": 0.08642700000000011
+    },
+    {
+      "name": "aten::where [[32], [5, 32], [5, 32]]",
+      "count": 320,
+      "total_us": 401.1409999999995,
+      "ms_per_target_step": 0.0802281999999999
+    },
+    {
+      "name": "aten::mean [[5, 24, 256], [], [], []]",
+      "count": 80,
+      "total_us": 372.36400000000015,
+      "ms_per_target_step": 0.07447280000000003
+    },
+    {
+      "name": "aten::copy_ [[256], [256], []]",
+      "count": 160,
+      "total_us": 339.5310000000001,
+      "ms_per_target_step": 0.06790620000000003
+    },
+    {
+      "name": "aten::remainder [[32], []]",
+      "count": 320,
+      "total_us": 333.82900000000143,
+      "ms_per_target_step": 0.06676580000000029
+    },
+    {
+      "name": "_C_cache_ops::reshape_and_cache_flash [[5, 4, 256], [5, 4, 256], [176, 1664, 4, 256], [176, 1664, 4, 256], [5], [], [], []]",
+      "count": 80,
+      "total_us": 331.63400000000024,
+      "ms_per_target_step": 0.06632680000000005
+    },
+    {
+      "name": "aten::index [[1048576, 64], []]",
+      "count": 80,
+      "total_us": 315.80400000000026,
+      "ms_per_target_step": 0.06316080000000004
+    },
+    {
+      "name": "aten::fill_ [[5, 48, 128], []]",
+      "count": 240,
+      "total_us": 295.03300000000024,
+      "ms_per_target_step": 0.05900660000000005
+    },
+    {
+      "name": "aten::cat [[[5, 24, 32], [5, 24, 32]], []]",
+      "count": 80,
+      "total_us": 268.5150000000002,
+      "ms_per_target_step": 0.05370300000000004
+    },
+    {
+      "name": "aten::lt [[32], []]",
+      "count": 320,
+      "total_us": 261.5740000000012,
+      "ms_per_target_step": 0.052314800000000244
+    },
+    {
+      "name": "aten::eq [[32], []]",
+      "count": 320,
+      "total_us": 249.5090000000007,
+      "ms_per_target_step": 0.04990180000000014
+    },
+    {
+      "name": "aten::sigmoid [[5, 6144]]",
+      "count": 80,
+      "total_us": 236.40899999999993,
+      "ms_per_target_step": 0.047281799999999985
+    },
+    {
+      "name": "aten::arange [[], [], [], [0]]",
+      "count": 320,
+      "total_us": 229.09100000000097,
+      "ms_per_target_step": 0.0458182000000002
+    },
+    {
+      "name": "aten::mean [[5, 4, 256], [], [], []]",
+      "count": 80,
+      "total_us": 216.01600000000008,
+      "ms_per_target_step": 0.04320320000000002
+    },
+    {
+      "name": "aten::cat [[[5, 4, 32], [5, 4, 32]], []]",
+      "count": 80,
+      "total_us": 203.11500000000012,
+      "ms_per_target_step": 0.04062300000000003
+    },
+    {
+      "name": "aten::sub [[5, 24, 32], [5, 24, 32], []]",
+      "count": 80,
+      "total_us": 170.17600000000004,
+      "ms_per_target_step": 0.03403520000000001
+    },
+    {
+      "name": "aten::add [[5, 24, 32], [5, 24, 32], []]",
+      "count": 80,
+      "total_us": 146.107,
+      "ms_per_target_step": 0.0292214
+    },
+    {
+      "name": "aten::add [[256], [], []]",
+      "count": 160,
+      "total_us": 136.19599999999986,
+      "ms_per_target_step": 0.02723919999999997
+    },
+    {
+      "name": "aten::copy_ [[1, 5, 128], [1, 5, 128], []]",
+      "count": 80,
+      "total_us": 121.8459999999999,
+      "ms_per_target_step": 0.02436919999999998
+    },
+    {
+      "name": "aten::mul [[5, 24, 256], [256]]",
+      "count": 80,
+      "total_us": 120.27999999999989,
+      "ms_per_target_step": 0.024055999999999977
+    },
+    {
+      "name": "aten::mul [[5, 24, 256], [5, 24, 1]]",
+      "count": 80,
+      "total_us": 118.9279999999999,
+      "ms_per_target_step": 0.02378559999999998
+    },
+    {
+      "name": "aten::sub [[1, 1], [1, 5], []]",
+      "count": 80,
+      "total_us": 113.72799999999992,
+      "ms_per_target_step": 0.022745599999999984
+    },
+    {
+      "name": "aten::add [[5, 4, 32], [5, 4, 32], []]",
+      "count": 80,
+      "total_us": 103.84799999999998,
+      "ms_per_target_step": 0.020769599999999996
+    },
+    {
+      "name": "aten::sub [[5, 4, 32], [5, 4, 32], []]",
+      "count": 80,
+      "total_us": 97.99999999999996,
+      "ms_per_target_step": 0.019599999999999992
+    },
+    {
+      "name": "aten::mul [[5, 6144], [5, 6144]]",
+      "count": 80,
+      "total_us": 94.64399999999998,
+      "ms_per_target_step": 0.018928799999999996
+    },
+    {
+      "name": "aten::pow [[5, 24, 256], []]",
+      "count": 80,
+      "total_us": 94.12199999999999,
+      "ms_per_target_step": 0.018824399999999998
+    },
+    {
+      "name": "aten::clamp_ [[1, 5], [], []]",
+      "count": 80,
+      "total_us": 76.42399999999992,
+      "ms_per_target_step": 0.015284799999999984
+    },
+    {
+      "name": "aten::mul [[5, 4, 256], [256]]",
+      "count": 80,
+      "total_us": 74.54399999999991,
+      "ms_per_target_step": 0.014908799999999982
+    },
+    {
+      "name": "aten::rsqrt [[5, 24, 1]]",
+      "count": 80,
+      "total_us": 72.88399999999992,
+      "ms_per_target_step": 0.014576799999999984
+    },
+    {
+      "name": "aten::mul [[5, 4, 256], [5, 4, 1]]",
+      "count": 80,
+      "total_us": 72.4639999999999,
+      "ms_per_target_step": 0.01449279999999998
+    },
+    {
+      "name": "aten::sub [[], [5], []]",
+      "count": 80,
+      "total_us": 70.17599999999993,
+      "ms_per_target_step": 0.014035199999999986
+    },
+    {
+      "name": "aten::add [[5, 24, 1], [], []]",
+      "count": 80,
+      "total_us": 67.8879999999999,
+      "ms_per_target_step": 0.013577599999999981
+    },
+    {
+      "name": "aten::fill_ [[6], []]",
+      "count": 80,
+      "total_us": 63.41599999999995,
+      "ms_per_target_step": 0.01268319999999999
+    },
+    {
+      "name": "aten::rsqrt [[5, 4, 1]]",
+      "count": 80,
+      "total_us": 52.39199999999999,
+      "ms_per_target_step": 0.010478399999999997
+    },
+    {
+      "name": "aten::add [[5, 4, 1], [], []]",
+      "count": 80,
+      "total_us": 47.06000000000004,
+      "ms_per_target_step": 0.009412000000000007
+    },
+    {
+      "name": "aten::pow [[5, 4, 256], []]",
+      "count": 80,
+      "total_us": 42.335000000000036,
+      "ms_per_target_step": 0.008467000000000008
+    },
+    {
+      "name": "aten::index_select [[248320, 5120], [], [5]]",
+      "count": 5,
+      "total_us": 36.769,
+      "ms_per_target_step": 0.0073538
+    },
+    {
+      "name": "aten::copy_ [[5], [5], []]",
+      "count": 5,
+      "total_us": 6.25,
+      "ms_per_target_step": 0.00125
+    }
+  ],
+  "kernels": [
+    {
+      "name": "gemm_kernel",
+      "count": 1520,
+      "total_us": 122820.70700000085,
+      "ms_per_target_step": 24.56414140000017
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE",
+      "count": 80,
+      "total_us": 67326.53099999996,
+      "ms_per_target_step": 13.465306199999992
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::Half>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "count": 2170,
+      "total_us": 9333.173000000128,
+      "ms_per_target_step": 1.8666346000000256
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "count": 1445,
+      "total_us": 6299.871999999992,
+      "ms_per_target_step": 1.2599743999999984
+    },
+    {
+      "name": "gdn::gated_delta_rule_spec_kernel<sycl::_V1::detail::half_impl::half, float, 4>",
+      "count": 240,
+      "total_us": 4388.964,
+      "ms_per_target_step": 0.8777928
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<float, at::native::xpu::MeanOps<float, float, float, float>, unsigned int, float, 4> >",
+      "count": 805,
+      "total_us": 3637.210000000002,
+      "ms_per_target_step": 0.7274420000000004
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_27XeReduceSplitKTileSchedulerENS6_22XeFMHAFwdSplitKVKernelIS9_NS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSG_8MMA_AtomIJNSG_10XE_DPAS_TTILi8EfNS3_6half_tESK_fEEEEENSG_6LayoutINSG_5tupleIJNSG_1CILi1EEENSP_ILi4EEESQ_EEENSO_IJNSP_ILi0EEESQ_ST_EEEEEKNSO_IJNSN_INSP_ILi8EEESQ_EENSN_INSP_ILi64EEESQ_EESZ_EEEEENSH_ISM_NSN_INSO_IJSQ_SQ_SR_EEENSO_IJST_ST_SQ_EEEEEKNSO_IJSX_NSN_INSP_ILi32EEESQ_EESZ_EEEEELi8ENSG_6TensorINSG_10ViewEngineINSG_8gmem_ptrIPSK_EEEENSN_INSO_IJiiiiEEENSO_IJiSQ_iiEEEEEEENS1B_INS1C_INS1D_IPNS3_12float_e4m3_tEEEEES1J_EENS1B_IS1O_NSN_IS1H_NSO_IJSQ_iiiEEEEEEEvvvLb0EEENSC_17DecodeFwdEpilogueIS1T_NSO_IJSW_NSP_ILi256EEEEEES1K_NS1B_INS1C_INS1D_IPfEEEES1J_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS2A_3ext6oneapi12experimental10propertiesINS2F_6detail20properties_type_listIJNS2F_14property_valueINS2F_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2J_INS2D_5intel12experimental12grf_size_keyEJS2L_IjLj256EEEEEEEEEELb0EJNS24_6ParamsEEEE",
+      "count": 80,
+      "total_us": 2910.2839999999987,
+      "ms_per_target_step": 0.5820567999999997
+    },
+    {
+      "name": "gdn::causal_conv1d_spec_kernel<sycl::_V1::detail::half_impl::half, 4, true>",
+      "count": 240,
+      "total_us": 2031.0449999999992,
+      "ms_per_target_step": 0.4062089999999998
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::BinaryFunctor<c10::Half, c10::Half, c10::Half, at::native::xpu::MulFunctor<float> >, at::detail::Array<char*, 3>, OffsetCalculator<2, unsigned int, false> >",
+      "count": 320,
+      "total_us": 1455.7599999999995,
+      "ms_per_target_step": 0.2911519999999999
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<float, float, float, at::native::xpu::AddFunctor<float> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 1610,
+      "total_us": 1334.5060000000078,
+      "ms_per_target_step": 0.26690120000000156
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<float, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::MulFunctor<float> > > >",
+      "count": 805,
+      "total_us": 1170.5060000000035,
+      "ms_per_target_step": 0.2341012000000007
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::MulFunctor<float> >, at::detail::Array<char*, 3>, OffsetCalculator<2, unsigned int, false> >",
+      "count": 805,
+      "total_us": 1098.3150000000046,
+      "ms_per_target_step": 0.2196630000000009
+    },
+    {
+      "name": "at::native::xpu::CatArrayBatchedCopy<at::native::xpu::OpaqueType<2u>, unsigned int, 3, 16, 16>",
+      "count": 160,
+      "total_us": 1026.1530000000014,
+      "ms_per_target_step": 0.2052306000000003
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::PowImplUnaryFunctor1<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 805,
+      "total_us": 1011.1900000000048,
+      "ms_per_target_step": 0.20223800000000097
+    },
+    {
+      "name": "vllm::act_and_mul_vec_kernel<sycl::_V1::detail::half_impl::half, &(sycl::_V1::detail::half_impl::half vllm::silu_kernel<sycl::_V1::detail::half_impl::half>(sycl::_V1::detail::half_impl::half const&)), true, 8>",
+      "count": 320,
+      "total_us": 989.1279999999986,
+      "ms_per_target_step": 0.1978255999999997
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<16, at::native::xpu::BinaryFunctor<bool, bool, bool, at::native::xpu::BitwiseAndFunctor<bool> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "count": 320,
+      "total_us": 799.3480000000017,
+      "ms_per_target_step": 0.15986960000000033
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::RsqrtFunctor<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 805,
+      "total_us": 770.4190000000077,
+      "ms_per_target_step": 0.15408380000000155
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::AddFunctor<float> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "count": 640,
+      "total_us": 695.0890000000006,
+      "ms_per_target_step": 0.13901780000000014
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::BinaryFunctor<c10::Half, c10::Half, c10::Half, at::native::xpu::AddFunctor<float> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "count": 320,
+      "total_us": 518.1310000000003,
+      "ms_per_target_step": 0.10362620000000006
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<c10::Half, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<c10::Half, c10::Half, c10::Half, at::native::xpu::MulFunctor<float> > > >",
+      "count": 320,
+      "total_us": 473.77600000000035,
+      "ms_per_target_step": 0.09475520000000007
+    },
+    {
+      "name": "at::native::xpu::CatArrayBatchedCopy_contig<at::native::xpu::OpaqueType<2u>, unsigned int, 3, 64, 1>",
+      "count": 160,
+      "total_us": 471.63000000000017,
+      "ms_per_target_step": 0.09432600000000003
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<c10::Half, 4, OffsetCalculator<4, unsigned int, false>, at::native::xpu::WhereFunctor<c10::Half> > >",
+      "count": 320,
+      "total_us": 401.1409999999995,
+      "ms_per_target_step": 0.0802281999999999
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::BUnaryFunctor<long, long, long, at::native::xpu::RemainderIntegralFunctor<long> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 320,
+      "total_us": 333.82900000000143,
+      "ms_per_target_step": 0.06676580000000029
+    },
+    {
+      "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::Half, unsigned char, (vllm::Fp8KVCacheDataType)1>",
+      "count": 80,
+      "total_us": 331.63400000000024,
+      "ms_per_target_step": 0.06632680000000005
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<2> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "count": 80,
+      "total_us": 315.80400000000026,
+      "ms_per_target_step": 0.06316080000000004
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "count": 240,
+      "total_us": 295.03300000000024,
+      "ms_per_target_step": 0.05900660000000005
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGroupRangeKernel<4, at::native::xpu::LegacyKernelWithCastScalarFunctor<c10::Half, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<c10::Half> > >",
+      "count": 80,
+      "total_us": 262.1680000000002,
+      "ms_per_target_step": 0.05243360000000004
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::CompareScalarFunctor<long, at::native::xpu::CompareFunctor<long> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 320,
+      "total_us": 261.5740000000012,
+      "ms_per_target_step": 0.052314800000000244
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::AUnaryFunctor<long, long, bool, at::native::xpu::CompareEqFunctor<long> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 320,
+      "total_us": 249.5090000000007,
+      "ms_per_target_step": 0.04990180000000014
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::SigmoidFunctor<c10::Half>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 80,
+      "total_us": 236.40899999999993,
+      "ms_per_target_step": 0.047281799999999985
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::CopyScalarFunc<c10::Half>, at::detail::Array<char*, 2>, OffsetCalculator<1, unsigned int, false> >",
+      "count": 160,
+      "total_us": 227.72200000000026,
+      "ms_per_target_step": 0.045544400000000054
+    },
+    {
+      "name": "at::native::xpu::ElementwiseKernelWithIndexFunctor<int, at::native::xpu::ArangeFunctor<long, long> >",
+      "count": 160,
+      "total_us": 127.92199999999978,
+      "ms_per_target_step": 0.025584399999999955
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<int, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<int> > >",
+      "count": 80,
+      "total_us": 121.8459999999999,
+      "ms_per_target_step": 0.02436919999999998
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<int, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> > > >",
+      "count": 80,
+      "total_us": 113.72799999999992,
+      "ms_per_target_step": 0.022745599999999984
+    },
+    {
+      "name": "at::native::xpu::ElementwiseKernelWithIndexFunctor<int, at::native::xpu::ArangeFunctor<int, long> >",
+      "count": 160,
+      "total_us": 101.16899999999988,
+      "ms_per_target_step": 0.020233799999999975
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::BinaryFunctor<c10::Half, c10::Half, c10::Half, at::native::xpu::MulFunctor<float> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "count": 80,
+      "total_us": 94.64399999999998,
+      "ms_per_target_step": 0.018928799999999996
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ClampScalarFunctor<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 80,
+      "total_us": 76.42399999999992,
+      "ms_per_target_step": 0.015284799999999984
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::AUnaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 80,
+      "total_us": 70.17599999999993,
+      "ms_per_target_step": 0.014035199999999986
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "count": 80,
+      "total_us": 63.41599999999995,
+      "ms_per_target_step": 0.01268319999999999
+    },
+    {
+      "name": "at::native::xpu::IndexSelectSmallIndexFunctor<c10::Half, long, unsigned int, 2, 2, -2>",
+      "count": 5,
+      "total_us": 36.769,
+      "ms_per_target_step": 0.0073538
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "count": 5,
+      "total_us": 6.25,
+      "ms_per_target_step": 0.00125
+    }
+  ]
+}

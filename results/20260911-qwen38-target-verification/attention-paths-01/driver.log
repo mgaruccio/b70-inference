@@ -1,0 +1,31 @@
+{
+  "tier": "development operator preflight",
+  "torch": "2.13.0+xpu",
+  "device": "Intel(R) Arc(TM) Pro B70 Graphics",
+  "q_shape": [
+    5,
+    24,
+    256
+  ],
+  "kv_shape": [
+    40,
+    1664,
+    4,
+    256
+  ],
+  "kv_dtype": "torch.float8_e4m3fn",
+  "used_kv": 65541,
+  "routes": {
+    "16": {
+      "threshold": 16,
+      "status": "failed",
+      "error": "Traceback (most recent call last):\n  File \"/experiment/check-attention-paths.py\", line 42, in <module>\n    y = forward()\n        ^^^^^^^^^\n  File \"/experiment/check-attention-paths.py\", line 27, in forward\n    return fa.flash_attn_varlen_func(q=q, k=k, v=v, cu_seqlens_q=cu,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py\", line 472, in flash_attn_varlen_func\n    k_descale = _normalize_descale_tensor(k_descale, \"k_descale\")\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py\", line 151, in _normalize_descale_tensor\n    assert descale.untyped_storage().nbytes() == descale.element_size(), \\\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: k_descale must be view of single scalar tensor\n"
+    },
+    "4": {
+      "threshold": 4,
+      "status": "failed",
+      "error": "Traceback (most recent call last):\n  File \"/experiment/check-attention-paths.py\", line 42, in <module>\n    y = forward()\n        ^^^^^^^^^\n  File \"/experiment/check-attention-paths.py\", line 27, in forward\n    return fa.flash_attn_varlen_func(q=q, k=k, v=v, cu_seqlens_q=cu,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py\", line 472, in flash_attn_varlen_func\n    k_descale = _normalize_descale_tensor(k_descale, \"k_descale\")\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py\", line 151, in _normalize_descale_tensor\n    assert descale.untyped_storage().nbytes() == descale.element_size(), \\\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: k_descale must be view of single scalar tensor\n"
+    }
+  },
+  "fallback_forbidden": true
+}
