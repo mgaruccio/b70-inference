@@ -313,6 +313,28 @@ def transformations():
              '        if self.model._b70_dspark_bf16:\n'
              '            hidden_states = hidden_states.to(torch.bfloat16)\n'
              '        result = self.model.fc(hidden_states)\n'),
+            ('        ops.rms_norm(\n'
+             '            all_k_normed,\n'
+             '            all_k,\n'
+             '            self._k_norm_weights,\n'
+             '            self._rms_norm_eps,\n'
+             '        )\n',
+             '        if self._b70_dspark_bf16:\n'
+             '            # Pinned XPU grouped RMSNorm reuses layer 0; select each layer weight.\n'
+             '            for i in range(all_k.shape[0]):\n'
+             '                ops.rms_norm(\n'
+             '                    all_k_normed[i],\n'
+             '                    all_k[i],\n'
+             '                    self._k_norm_weights[i],\n'
+             '                    self._rms_norm_eps,\n'
+             '                )\n'
+             '        else:\n'
+             '            ops.rms_norm(\n'
+             '                all_k_normed,\n'
+             '                all_k,\n'
+             '                self._k_norm_weights,\n'
+             '                self._rms_norm_eps,\n'
+             '            )\n'),
             ('            kv_cache = attn.kv_cache\n',
              '            kv_cache = attn.kv_cache\n'
              '            if self._b70_dspark_bf16 and kv_cache.dtype != torch.bfloat16:\n'

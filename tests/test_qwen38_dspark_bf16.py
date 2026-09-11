@@ -319,6 +319,19 @@ class SourceTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             overlay.prepare(broken)
 
+    def test_previous_grouped_context_norm_overlay_refuses_upgrade_without_writes(self):
+        sources = overlay.prepare(exported_sources())
+        old, new = next((old, new) for old, new in overlay.transformations()[DFLASH]
+                        if "all_k_normed[i]" in new)
+        self.assertEqual(sources[DFLASH].count(new), 1)
+        sources[DFLASH] = sources[DFLASH].replace(new, old, 1)
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp, patch.dict(os.environ, {"B70_DSPARK_BF16": "1"}):
+            root = Path(tmp)
+            self.write_sources(root, sources)
+            with patch.object(Path, "write_bytes", side_effect=AssertionError("unexpected write")), \
+                    self.assertRaisesRegex(RuntimeError, "incompatible source or damaged overlay"):
+                overlay.apply(root)
+
     def test_compilation_failure_and_crlf_refuse_all_writes(self):
         sources = exported_sources()
         edits = overlay.transformations()
@@ -801,6 +814,46 @@ class TensorTests(unittest.TestCase):
             attn.kv_cache = attn.kv_cache.bfloat16()
         attn.kv_cache = torch.empty(0)  # Profiling before allocation remains supported.
         obj._run_model(1, None, None, None)
+
+    def test_context_k_norm_uses_distinct_layer_weights_only_when_opted_in(self):
+        def rms_norm(out, x, weight, eps):
+            # Reproduce the pinned XPU bug: grouped calls reuse weight row 0.
+            if weight.ndim == 2:
+                weight = weight[0]
+            normalized = x.float() * torch.rsqrt(x.float().square().mean(-1, keepdim=True) + eps)
+            out.copy_((normalized * weight).to(out.dtype))
+
+        ops = NS(rms_norm=Mock(side_effect=rms_norm))
+        cls = actual_class(self.sources[DFLASH], "DFlashQwen3Model", ["_normalize_context_k"],
+                           {**self.scope, "ops": ops})
+        obj = cls()
+        obj._rms_norm_eps = 1e-6
+        for dtype in (torch.bfloat16, torch.float16):
+            for enabled in (False, True):
+                with self.subTest(dtype=dtype, enabled=enabled):
+                    obj._b70_dspark_bf16 = enabled
+                    weights = torch.arange(1, 6, dtype=dtype).view(5, 1).expand(5, 8).contiguous()
+                    obj._k_norm_weights = weights.clone()
+                    all_k = torch.ones(5, 3, 2, 8, dtype=dtype)
+                    ops.rms_norm.reset_mock()
+                    normed = obj._normalize_context_k(all_k)
+                    expected = weights[:, None, None, :] if enabled else weights[0]
+                    torch.testing.assert_close(normed, expected.expand_as(all_k), rtol=0, atol=0)
+                    self.assertEqual(normed.dtype, dtype)
+                    self.assertEqual(normed.shape, all_k.shape)
+                    self.assertTrue(normed.is_contiguous())
+                    self.assertNotEqual(normed.data_ptr(), all_k.data_ptr())
+                    torch.testing.assert_close(all_k, torch.ones_like(all_k), rtol=0, atol=0)
+                    torch.testing.assert_close(obj._k_norm_weights, weights, rtol=0, atol=0)
+                    self.assertEqual(ops.rms_norm.call_count, 5 if enabled else 1)
+                    for i, call in enumerate(ops.rms_norm.call_args_list):
+                        out, x, weight, eps = call.args
+                        self.assertEqual(out.data_ptr(), (normed[i] if enabled else normed).data_ptr())
+                        self.assertEqual(x.data_ptr(), (all_k[i] if enabled else all_k).data_ptr())
+                        self.assertEqual(weight.shape, (8,) if enabled else (5, 8))
+                        self.assertEqual(weight.data_ptr(),
+                                         (obj._k_norm_weights[i] if enabled else obj._k_norm_weights).data_ptr())
+                        self.assertEqual(eps, obj._rms_norm_eps)
 
     def test_fused_context_parameters_and_cache_write_boundary(self):
         def rms_norm(out, x, weight, eps):
