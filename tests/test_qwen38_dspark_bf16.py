@@ -535,7 +535,8 @@ class TensorTests(unittest.TestCase):
         model.model._hidden_norm_weight = torch.ones(4, dtype=torch.bfloat16)
         model.model._k_norm_weights = torch.ones(2, 2, dtype=torch.bfloat16)
         attn = NS(dtype=torch.bfloat16, kv_cache_dtype="bfloat16",
-                  kv_cache_torch_dtype=torch.bfloat16, backend=NS(name="FLASH_ATTN"))
+                  kv_cache_torch_dtype=torch.bfloat16, backend=NS(name="FLASH_ATTN"),
+                  impl=NS(kv_cache_dtype="bfloat16"))
         model.model.layers = [NS(self_attn=NS(attn=attn))]
         target_embed = nn.Embedding(16, 4, dtype=torch.float16)
         target_head = nn.Linear(4, 16, bias=False, dtype=torch.float16)
@@ -569,10 +570,14 @@ class TensorTests(unittest.TestCase):
         self.assertEqual(kwargs["vllm_config"].cache_config.cache_dtype, "bfloat16")
         self.assertIsNone(kwargs["vllm_config"].quant_config)
         self.assertEqual(c.cache_config.cache_dtype, "fp8")
+        self.assertEqual(attn.kv_cache_dtype, "bfloat16")  # Storage selection stays BF16.
+        self.assertEqual(attn.kv_cache_torch_dtype, torch.bfloat16)
+        self.assertEqual(attn.impl.kv_cache_dtype, "auto")  # Native dispatch uses auto.
         validate = self.scope["_b70_dspark_loaded"]
         for mutate, restore in (
             (lambda: setattr(model, "has_own_lm_head", True), lambda: setattr(model, "has_own_lm_head", False)),
             (lambda: setattr(attn, "kv_cache_torch_dtype", torch.float16), lambda: setattr(attn, "kv_cache_torch_dtype", torch.bfloat16)),
+            (lambda: setattr(attn.impl, "kv_cache_dtype", "fp8"), lambda: setattr(attn.impl, "kv_cache_dtype", "auto")),
             (lambda: setattr(model.model, "_fused_kv_weight", torch.ones(4, 4, dtype=torch.float16)),
              lambda: setattr(model.model, "_fused_kv_weight", torch.ones(4, 4, dtype=torch.bfloat16))),
         ):

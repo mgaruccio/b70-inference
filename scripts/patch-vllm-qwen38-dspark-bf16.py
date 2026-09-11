@@ -19,7 +19,9 @@ https://github.com/vllm-project/vllm/blob/73029d424/vllm/model_executor/models/q
 The loader's default-dtype context already creates implicit parameters in BF16.
 The confidence projection remains explicitly FP32, as upstream (unused with
 fixed verification); only activation boundaries to shared FP16 vocab modules
-are cast. Explicit BF16 KV is supported by this image's XPU FlashAttention.
+are cast. The draft cache stays explicitly BF16, while its FlashAttention implementation
+selector is normalized to 'auto' because the pinned XPU kernel rejects the explicit
+'bfloat16' selector.
 All touched sources AND their dtype/sharing/routing helpers are whole-file
 pinned. All transforms compile before any writes; only exact full replay is
 accepted. Offline tests are not the lead's real XPU/API acceptance gate.
@@ -205,6 +207,13 @@ def _b70_dspark_loaded(model, target_embed, target_head):
                 or attn.kv_cache_torch_dtype != torch.bfloat16
                 or attn.backend.name != "FLASH_ATTN"):
             raise ValueError("B70 DSpark requires BF16 query/context/cache and FlashAttention")
+        impl = getattr(attn, "impl", None)
+        if getattr(impl, "kv_cache_dtype", None) not in ("bfloat16", "auto"):
+            raise ValueError("B70 DSpark requires unquantized native FlashAttention KV dispatch")
+        # XPU 0.1.14.1 accepts only 'auto' for an unquantized cache. Keep
+        # the resolved BF16 allocation/spec; normalize the implementation
+        # selector shared by context updates and query forward.
+        impl.kv_cache_dtype = "auto"
 
 '''
 
