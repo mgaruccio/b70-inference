@@ -1,0 +1,9 @@
+[
+  "docker",
+  "exec",
+  "qwen38-dspark-acceptance-dspark",
+  "/opt/venv/bin/python",
+  "-P",
+  "-c",
+  "import hashlib, importlib.util, json, runpy\nfrom pathlib import Path\nroot = Path(importlib.util.find_spec(\"vllm\").origin).parent\nassert str(root).startswith(\"/opt/venv/\")\noverlay = runpy.run_path(\"/experiment/patch_dspark_bf16.py\")\nsources = {p: (root / p).read_bytes().decode() for p in overlay[\"PINNED_SHA256\"]}\nassert overlay[\"prepare\"](sources) == sources\nboundary = runpy.run_path(\"/experiment/patch-vllm-qwen38-xpu-boundary.py\")\nxpu_source = (root / \"_xpu_ops.py\").read_text()\nassert boundary[\"patch_text\"](xpu_source) == xpu_source\nsources[\"_xpu_ops.py\"] = xpu_source\nassert hashlib.sha256((root / \"v1/attention/backends/gdn_attn.py\").read_bytes()).hexdigest() == \"5173f3394c1385d215bd99f0d12290e8336da844b96da612954da01d62a0b062\"\nprint(json.dumps({\"root\": str(root), \"exact_replay\": True, \"sha256\": {p: hashlib.sha256(s.encode()).hexdigest() for p, s in sources.items()}}))\n"
+]

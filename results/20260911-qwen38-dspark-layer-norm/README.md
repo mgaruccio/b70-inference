@@ -43,4 +43,15 @@ Residual BF16/attention numerical differences remain. This is one real first-pro
 
 Only intended algorithm change versus matching pre-fix cells is per-layer context normalization. Fresh containers, C1, prefix cache disabled, fixed model/image/power. Compare native acceptance counters and decode throughput with prior target-only and DSpark cells. Historical MTP4 is not a contemporaneous control. The separate official FP8 target control remains a distinct experiment, not an explanation inferred from these numbers.
 
-Performance results were pending when this numerical validation record was written; do not infer them from the successful reference fixture. Raw results and failures will be retained in new `norm-*` cells; cleanup uses the existing invariant-checked driver. No benchmark result is standard-compliant or promoted by this development record.
+## Observed performance results
+
+`bash run-performance.sh` completed successfully on inference-host. All shared gates and both 36-request matrices passed; 64K completed one warmup plus six valid measured requests. All three cells report `host_unchanged: true`; their temporary containers were removed. Raw requests/SSE/metrics/server logs are retained under `norm-eager/`, `norm-graph/`, and `norm-graph-64k/`.
+
+`performance-comparison.json` verifies all 36 request payloads and rendered prompt IDs match the corresponding pre-fix cell in each short-context comparison. This is a sequential development comparison, not interleaved or a universal quality/output-identity claim.
+
+- Eager all-request median decode: **25.161 → 40.107 tok/s** (1.594×). Weighted emitted tokens per step: **2.169 → 3.497**; accepted/proposed fraction: **16.70% → 35.67%**.
+- Graph all-request median decode: **40.208 → 62.774 tok/s** (1.561×). Weighted emitted tokens per step: **2.158 → 3.482**; accepted/proposed fraction: **16.54% → 35.45%**.
+- Corrected graph group medians (nine requests each): thinking-off/temp0 **71.712**, thinking-off/temp1 **63.582**, thinking-on/temp0 **62.418**, thinking-on/temp1 **47.005 tok/s**.
+- Graph 64K median post-first-token decode: **16.976 → 26.445 tok/s**. Corrected inclusive IQR **1.496 tok/s**; median TTFT **57.370 s**. Warmup excluded.
+
+The historical MTP4 64K result (~55.75 tok/s) still exceeds corrected DSpark. It used a different pinned image and MTP-specific patches, so it is not a contemporaneous isolated algorithm comparison. This correction is a substantial measured improvement, not a claim that DSpark now wins or all acceptance causes are resolved. The genuine FP8 target control is a separate pending diagnostic. No benchmark result is standard-compliant or promoted by this development record.

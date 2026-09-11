@@ -1,0 +1,186 @@
+{
+  "tier": "development",
+  "comparison": "sequential same-workload cells, not interleaved; no standard-compliance claim",
+  "cells": {
+    "eager_before": {
+      "path": "20260911-qwen38-dspark-acceptance-diagnostics/native-markov-greedy",
+      "requests": 36,
+      "accepted_proposal_fraction": 0.16695251546946463,
+      "emitted_per_step": 2.1686676082862526,
+      "median_decode_tps": 25.160692783087367,
+      "groups": {
+        "think0_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 27.699805479963796,
+          "emitted_per_step": 2.328780981284775
+        },
+        "think0_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 28.45132810884026,
+          "emitted_per_step": 2.3262733232476047
+        },
+        "think1_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 23.26421202275451,
+          "emitted_per_step": 2.0742908599729852
+        },
+        "think1_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 22.20584532587455,
+          "emitted_per_step": 1.9874730021598273
+        }
+      }
+    },
+    "eager_after": {
+      "path": "20260911-qwen38-dspark-layer-norm/norm-eager",
+      "requests": 36,
+      "accepted_proposal_fraction": 0.3566827261408542,
+      "emitted_per_step": 3.4967790829859795,
+      "median_decode_tps": 40.107214385074435,
+      "groups": {
+        "think0_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 44.86226581224808,
+          "emitted_per_step": 3.9335038363171355
+        },
+        "think0_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 43.85587768228119,
+          "emitted_per_step": 3.692554043234588
+        },
+        "think1_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 39.12906061510262,
+          "emitted_per_step": 3.4781626506024095
+        },
+        "think1_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 37.838221661020185,
+          "emitted_per_step": 3.017670157068063
+        }
+      }
+    },
+    "graph_before": {
+      "path": "20260911-qwen38-dspark-acceptance-diagnostics/native-graph-greedy",
+      "requests": 36,
+      "accepted_proposal_fraction": 0.16537394269666678,
+      "emitted_per_step": 2.1576175988766675,
+      "median_decode_tps": 40.207563756421536,
+      "groups": {
+        "think0_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 44.48919168310866,
+          "emitted_per_step": 2.3506891271056665
+        },
+        "think0_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 43.76056985609345,
+          "emitted_per_step": 2.296369965191447
+        },
+        "think1_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 36.52240461953324,
+          "emitted_per_step": 2.1118752865657955
+        },
+        "think1_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 32.77076566258886,
+          "emitted_per_step": 1.9248434237995826
+        }
+      }
+    },
+    "graph_after": {
+      "path": "20260911-qwen38-dspark-layer-norm/norm-graph",
+      "requests": 36,
+      "accepted_proposal_fraction": 0.35451631152178015,
+      "emitted_per_step": 3.481614180652461,
+      "median_decode_tps": 62.7744247426606,
+      "groups": {
+        "think0_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 71.71214366815396,
+          "emitted_per_step": 3.9596566523605152
+        },
+        "think0_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 63.581528099705004,
+          "emitted_per_step": 3.6294256490952006
+        },
+        "think1_temp0.0": {
+          "requests": 9,
+          "median_decode_tps": 62.417996204430224,
+          "emitted_per_step": 3.506060606060606
+        },
+        "think1_temp1.0": {
+          "requests": 9,
+          "median_decode_tps": 47.004932200854576,
+          "emitted_per_step": 2.9793148028442147
+        }
+      }
+    }
+  },
+  "eager_pairing": {
+    "identical_request_payloads_and_rendered_prompt_ids": 36,
+    "output_identity_required": false
+  },
+  "graph_pairing": {
+    "identical_request_payloads_and_rendered_prompt_ids": 36,
+    "output_identity_required": false
+  },
+  "64k_before": {
+    "complete": true,
+    "invalid_count": 0,
+    "iqr_inclusive": {
+      "decode_elapsed_s": 0.122245887236204,
+      "decode_tps_post_first": 0.2776683258527477,
+      "e2e_tps": 0.00360019609476403,
+      "prefill_proxy_input_tps": 0.10008822411964502,
+      "total_time_s": 0.11833714497333858,
+      "ttft_s": 0.005029298787121661
+    },
+    "measured_count": 6,
+    "median": {
+      "decode_elapsed_s": 7.4811203540011775,
+      "decode_tps_post_first": 16.976282921937376,
+      "e2e_tps": 1.9732782524932766,
+      "prefill_proxy_input_tps": 1142.0293052532718,
+      "total_time_s": 64.8666881104873,
+      "ttft_s": 57.385567756486125
+    },
+    "required_valid_measurements": 6,
+    "statistics": "median and inclusive IQR over six valid measured rows only",
+    "valid_count": 6,
+    "warmups_excluded": true
+  },
+  "64k_after": {
+    "complete": true,
+    "invalid_count": 0,
+    "iqr_inclusive": {
+      "decode_elapsed_s": 0.2762395762692904,
+      "decode_tps_post_first": 1.4956597773819276,
+      "e2e_tps": 0.00910207080441472,
+      "prefill_proxy_input_tps": 0.06315434717862445,
+      "total_time_s": 0.275244985226891,
+      "ttft_s": 0.0031717462989035994
+    },
+    "measured_count": 6,
+    "median": {
+      "decode_elapsed_s": 4.803840026463149,
+      "decode_tps_post_first": 26.445473246840386,
+      "e2e_tps": 2.058813341382571,
+      "prefill_proxy_input_tps": 1142.3417990301673,
+      "total_time_s": 62.17186495749047,
+      "ttft_s": 57.36986955750035
+    },
+    "required_valid_measurements": 6,
+    "statistics": "median and inclusive IQR over six valid measured rows only",
+    "valid_count": 6,
+    "warmups_excluded": true
+  },
+  "historical_mtp4_64k": {
+    "decode_tps": 55.75,
+    "contemporaneous": false,
+    "different_image_and_MTP_patches": true,
+    "not_an_isolated_algorithm_comparison": true
+  }
+}

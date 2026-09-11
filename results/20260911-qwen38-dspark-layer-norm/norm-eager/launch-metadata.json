@@ -1,0 +1,69 @@
+{
+  "container_name": "qwen38-dspark-acceptance-dspark",
+  "serve": [
+    "vllm",
+    "serve",
+    "/model",
+    "--quantization",
+    "gptq",
+    "--dtype",
+    "float16",
+    "--max-model-len",
+    "8192",
+    "--gpu-memory-utilization",
+    "0.95",
+    "--kv-cache-dtype",
+    "fp8",
+    "--port",
+    "8000",
+    "--max-num-seqs",
+    "1",
+    "--max-num-batched-tokens",
+    "2048",
+    "--no-enable-prefix-caching",
+    "--mamba-cache-mode",
+    "align",
+    "--performance-mode",
+    "balanced",
+    "--chat-template-content-format",
+    "openai",
+    "--default-chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--reasoning-parser",
+    "qwen3",
+    "--served-model-name",
+    "qwen38",
+    "--language-model-only",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "qwen3_xml",
+    "--enforce-eager",
+    "--speculative-config",
+    "{\"method\":\"dspark\",\"model\":\"/draft\",\"num_speculative_tokens\":7,\"kv_cache_dtype\":\"bfloat16\",\"quantization\":null,\"rejection_sample_method\":\"standard\",\"draft_sample_method\":\"greedy\",\"enable_adaptive_verification\":false}"
+  ],
+  "speculative_config": {
+    "method": "dspark",
+    "model": "/draft",
+    "num_speculative_tokens": 7,
+    "kv_cache_dtype": "bfloat16",
+    "quantization": null,
+    "rejection_sample_method": "standard",
+    "draft_sample_method": "greedy",
+    "enable_adaptive_verification": false
+  },
+  "mounts": {
+    "target": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16:/model:ro",
+    "previous_campaign": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility:/experiment:ro",
+    "frozen_draft": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/draft:/draft:ro",
+    "output": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-layer-norm/norm-eager:/output"
+  },
+  "patch_order": [
+    "prefill",
+    "draft",
+    "boundary"
+  ],
+  "candidate_overlay": {
+    "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-layer-norm/patch-dspark-native.py",
+    "sha256": "0640edc7a72c4b6650bb6846cdc988c87883dad7c0cb86d36684513a1c070643"
+  }
+}
