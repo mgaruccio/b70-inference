@@ -1,0 +1,8 @@
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:251: UserWarning: Can't initialize Level Zero Sysman
+  return _enum_zes_device_infos(visible_mask)
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:278: UserWarning: XPU device count is zero! (Triggered internally at /__w/pytorch/pytorch/c10/xpu/XPUFunctions.cpp:117.)
+  count = torch._C._xpu_getDeviceCount() if zes_count < 0 else zes_count
+PASS: unchanged official HF model returns tensor; instrumentation leaves output identical
+PASS: two independent official eager BF16 zero-cache forwards + official Markov/head replay
+PASS: all 62 official checkpoint keys; stage metrics/ranks/margins and immutable snapshots
+SUPPLEMENTAL ONLY: tiny CPU model; real API capture/XPU numerical result remains unrun

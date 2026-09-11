@@ -298,8 +298,6 @@ def main():
             one = replay(model, dflash, inputs, data, head, n)
             two = replay(model, dflash, inputs, data, head, n)  # real second forward, fresh cache=None
         native = normalize_native(data)
-        torch.save(one, args.out / "official-first.pt")
-        torch.save(two, args.out / "official-repeat.pt")
         report = {"status": "measured-not-threshold-certified", "tier": "development", "environment": environment,
                   "weight_mapping": "all 62 keys + exact effective shared head checked; no missing/unexpected",
                   "native_vs_official": compare(native, one), "official_self_repeatability": compare(one, two),
@@ -307,6 +305,8 @@ def main():
                   "target_aux_registration": meta["target_aux_registration"],
                   "native_query_output_boundary": "CPU BF16 branch + residual diagnostic sum; raw addends retained",
                   "tolerance": "none imposed; report raw error, exact first difference, repeatability and decision margins"}
+        torch.save(one, args.out / "official-first.pt")
+        torch.save(two, args.out / "official-repeat.pt")
         (args.out / "comparison.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
         print(json.dumps({"status": report["status"], "first_nonexact_stage": report["native_vs_official"]["first_nonexact_stage"],
                           "proposed_ids": report["native_vs_official"]["proposed_ids"]}, indent=2))

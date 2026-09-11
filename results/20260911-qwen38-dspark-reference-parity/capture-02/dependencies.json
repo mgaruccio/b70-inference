@@ -1,0 +1,50 @@
+{
+  "previous_campaign": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility",
+  "files": {
+    "probe": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/qwen38_lossy_probe.py",
+      "sha256": "dd7d313cd7dc511420849646c627ae1e10e941f49456bc3c282e208c9d904fb1"
+    },
+    "checks": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/dspark-smoke-checks.py",
+      "sha256": "30ce71a29f5eddb8a281b059473a1d8d430feb8d40c889ca89ad63d14807e3ea"
+    },
+    "prefill_runner": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/apply-prefill.py",
+      "sha256": "58b5122d6b83b18df3f4803de75d31217743001a107975bcab5a4d54aad51edb"
+    },
+    "prefill_overlay": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/patch_xpu_prefill.py",
+      "sha256": "2e206c150de41c66db7d2568911933188c080ac3ebba35172c1027b31fae43ea"
+    },
+    "draft_overlay": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-reference-parity/_dependencies/patch-vllm-qwen38-dspark-bf16.py",
+      "sha256": "3cd21f859c2977978cc8f3e9f15f65a47b80d7e206e17bf1e099aee56eaab737"
+    },
+    "boundary_overlay": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/patch-vllm-qwen38-xpu-boundary.py",
+      "sha256": "81c4ee7ef6f07021f97063299d406fab20a7505331c77e7f86c1a6fabc3bd6ae"
+    }
+  },
+  "draft": {
+    "mount": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/draft",
+    "revision": "b9a5dbdf03bc999c6c73c426b19c2d9041cea393",
+    "config_sha256": "dd65fb1b01c2adea69512ff2990a79d58eb7fe2c7ea97375aa66f657a29a5bfd",
+    "model_sha256_expected": "2aff025f45823b40ebe726b9dfa40302f3512bd9a11c3a7347de32a567acd9a7",
+    "model_bytes": 3714723322,
+    "read_only": true
+  },
+  "driver": {
+    "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-reference-parity/_dependencies/run-acceptance-diagnostics.py",
+    "sha256": "26f7075a3b8677fd2ff8d210cd71a497b55b86e31ac5504affcc502ac41d90ce"
+  },
+  "hook_files": {
+    "parity_common.py": "3443a8ed32cc36f0e1edf74ccbf2175ce44d9ada3aaf3de48da2cf49bbfb8cf6",
+    "patch-capture.py": "4c524dab37e112615d8719bb3a73af845d0eaeba0f84108914b9983af9744c2b",
+    "run-capture.py": "12dc8535b68bdf81b813f6f0704217c71dafd65310ed26202cee70456d2983e8",
+    "test-parity.py": "8827e2a995ede6f5f2df5a39d246c1ef400509f507ccd3d49d0b968f8499966a",
+    "test-reference-cpu.py": "4b13e93a766a4038acf18e2dfd7ad31271beb8f0fa5257757fe017aa7dca7783",
+    "parity_capture.py": "df11ef3d88f0daa569391387d0d6e10c64c23752c7b58777496bd3053e4a28ff",
+    "replay-reference.py": "6289a2e81809bd177072dd7187ac39c26b2a272589db2d971ccd519727675212"
+  }
+}

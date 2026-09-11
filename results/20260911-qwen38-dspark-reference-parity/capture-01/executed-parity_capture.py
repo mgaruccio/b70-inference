@@ -114,7 +114,7 @@ class Capture:
         self.wrap(b, "embed_input_ids", after=lambda out: self.put("query_embedding", out))
         self.wrap(b, "precompute_and_store_context_kv", before=self.context)
         self.wrap(s, "_generate_draft", before=self.query)
-        self.wrap(b, "forward", after=lambda out: self.put("final_hidden", out))
+        self.post(b, "final_hidden")
         for i, layer in enumerate(b.layers):
             p = f"layers.{i}."
             self.post(layer.input_layernorm, p + "query_input_norm")
@@ -203,9 +203,6 @@ class Capture:
     def finish(self, output):
         import torch
         self.put("proposed_ids", output)
-        for required in ("final_hidden", "base_logits", "head_input_bf16", "context_fc", "context_norm"):
-            if required not in self.data:
-                raise ValueError(f"required native observation missing: {required}")
         if self.markov_step != K:
             raise ValueError("did not observe exactly seven real sampler calls")
         check_layout(self.data, self.n)

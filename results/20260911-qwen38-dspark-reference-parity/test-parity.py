@@ -113,6 +113,24 @@ class Assets(unittest.TestCase):
         self.assertNotIn("f", obj.__dict__)
         self.assertIs(obj.f(sentinel), sentinel)
 
+    def test_direct_backbone_forward_is_observed(self):
+        sentinel = object()
+        class Backbone:
+            def forward(self):
+                return sentinel
+        obj = Backbone()
+        observer = object.__new__(capture.Capture)
+        observer.restores, observer.handles, observer.errors = [], [], []
+        seen = []
+        observer.wrap(obj, "forward", after=seen.append)
+        self.assertIs(obj.forward(), sentinel)
+        self.assertEqual(seen, [sentinel])
+        observer.detach()
+        self.assertNotIn("forward", obj.__dict__)
+        source = (ROOT / "parity_capture.py").read_text()
+        self.assertIn('self.wrap(b, "forward", after=', source)
+        self.assertNotIn('self.post(b, "final_hidden")', source)
+
     def test_hook_returns_none_even_if_put_returns_object(self):
         callbacks = []
         class Module:
