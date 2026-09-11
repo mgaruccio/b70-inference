@@ -1,5 +1,15 @@
 # Qwen3.8 DSpark acceptance diagnostics (experiment only)
 
+## Final bounded outcome
+
+Native Markov precision was corrected and upstream probabilistic drafting enabled, but **neither materially improved acceptance**. The initial hypotheses are not established root causes. Keep corrected greedy as the simpler development candidate; probabilistic drafting is workload-dependent, not universally faster.
+
+The graph-configured corrected-greedy run is the largest observed improvement: short-matrix medians **32.771–44.489 tok/s**, versus corrected eager **22.206–28.451 tok/s** (about48–61% higher in corresponding groups). Acceptance remains similar. These are small ordered development comparisons, not interleaved standard benchmarks. The real64K boundary run completed all seven **65536-input +128-output** requests; six measured median decode **16.9763 tok/s**, inclusive IQR **0.27767**, median TTFT **57.3856s**. Prior uncorrected eager64K was14.7631tok/s; that comparison is a precision+graph bundle, not isolated graph attribution.
+
+Task `b306338ff` completed exit0 in20m26s. Shared canaries/131finite boundaries/eight functional checks passed in both graph cells; the short cell additionally passed36 forced512-token matrix requests. Installed overlay replay and host invariants passed. Server logs explicitly show **both target FULL and DSpark FULL graph captures**. Caveat: this V2 path emitted no per-dispatch graph tables/counters despite `--cudagraph-metrics`, so capture is confirmed but replay counts/padding are not independently quantified; do not claim those metrics were collected. `native-graph-greedy/` and `native-graph-64k/` retain logs, exact launch/client argv, requests, SSE, metrics and executed scripts. `comparison.json`/`summarize.py` include all180 short matrix requests.
+
+Production remains unchanged. No160K, concurrency, broad quality, full target-distribution fidelity or standard benchmark claim. Identical greedy prose is not bitwise repeatable even target-only. GPTQ target-weight mismatch remains plausible but unproven; a full same-input reference-draft numerical comparison and alternative target-weight A/B were not performed. Graph execution improves throughput without solving the low-acceptance diagnosis.
+
 This directory contains a bounded diagnostic driver, not a launcher, runtime fix,
 benchmark harness, or production configuration.  It does not change the host
 launcher, download models, alter repository runtime sources, or claim a speedup.
@@ -162,3 +172,11 @@ Predeclared execution: `run-native-sampling.py --draft-sample-method greedy --ce
 | on / 1 | 21.098 | 22.206 | 24.405 | 2.005 / 1.987 / 2.059 |
 
 **Neither Markov precision nor sampler choice materially recovered acceptance.** The precision-corrected greedy arm is modestly faster here (roughly5–7%), but this small ordered matrix has no interleaved confidence interval, so it is not a robust speedup claim. Probabilistic mode is a supported diagnostic option, not a universal recommendation. Long greedy exact matches against target-only remain10/18 (old),10/18 (corrected),11/18 (probabilistic), with baseline nondeterminism unresolved. No target-distribution equivalence or production readiness is asserted. Weight-quantization causality and full identical-input reference draft numerical parity remain unestablished; no compatible alternative target was installed on this B70.
+
+## Predeclared native graph check
+
+Read-only audit of the installed pin confirmed native XPU graph support. Fresh primary source review: [XPU runner adapter](https://github.com/vllm-project/vllm/blob/73029d424/vllm/v1/worker/xpu_model_runner.py) redirects CUDA graph APIs to `torch.xpu.graph`/`XPUGraph`; [V2 graph manager](https://raw.githubusercontent.com/vllm-project/vllm/73029d42441321b631779db3475031f5ec26dd6c/vllm/v1/worker/gpu/cudagraph_utils.py) otherwise appears CUDA-specific. The adapter is essential; the manager alone does not prove incompatibility. Torch2.13 satisfies the pinned graph-support gate. An attempted official XPU docs URL returned404; installed/pinned sources were used rather than assuming missing documentation meant missing support.
+
+Smallest native route: retain corrected-greedy overlay, remove `--enforce-eager`, set `VLLM_XPU_ENABLE_XPU_GRAPH=1`, and pass `--compilation-config '{"mode":0,"cudagraph_mode":"FULL_DECODE_ONLY","cudagraph_capture_sizes":[7,8]}' --cudagraph-metrics`. No torch.compile/Inductor port or new kernel. Keep all other settings unchanged. Requested sizes reflect seven draft queries and eight target verification positions; inspect actual capture/replay dispatch instead of trusting flags.
+
+Task `b306338ff` executes `run-native-sampling.py --draft-sample-method greedy --graphs --cell dspark --out native-graph-greedy` (same shared gates +36request8192 matrix), then only on success `--graphs --long-context --cell dspark --out native-graph-64k` (maxlen65664, same shared gates then exact65536input+128output, one warmup+six measured requests through the existing byte-identical long client). Each driver is bounded by2100s with owned-container cleanup; the long client has1200s. Preserve source replay, actual graph-stat tables, request/SSE/metrics and failures. Baseline for graph attribution is `native-markov-greedy/`; prior64K eager result is contextual until matched within this corrected stack. No graph/64K success is assumed by launch. Production launcher/power/Glimmer invariants remain mandatory.

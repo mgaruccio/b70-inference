@@ -5,7 +5,7 @@ from pathlib import Path
 import statistics
 
 ROOT = Path(__file__).resolve().parent
-CELLS = ("target-only", "current-dspark", "native-markov-greedy", "native-probabilistic")
+CELLS = ("target-only", "current-dspark", "native-markov-greedy", "native-probabilistic", "native-graph-greedy")
 
 
 def load(path):

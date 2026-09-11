@@ -1,0 +1,1037 @@
+{
+  "tier": "development",
+  "status": "passed",
+  "purpose": "bounded EXPERIMENT ONLY acceptance diagnostics; no production claim",
+  "cell": "dspark",
+  "image": "vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4",
+  "context": 8192,
+  "target": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16",
+  "kv_cache_dtype": "fp8",
+  "runner": "v2-graph-configured-C1",
+  "target_dtype": "FP16 compute, GPTQ Int4 symmetric G128",
+  "draft_dtype": "BF16",
+  "speculative_config": {
+    "method": "dspark",
+    "model": "/draft",
+    "num_speculative_tokens": 7,
+    "kv_cache_dtype": "bfloat16",
+    "quantization": null,
+    "rejection_sample_method": "standard",
+    "draft_sample_method": "greedy",
+    "enable_adaptive_verification": false
+  },
+  "matrix": {
+    "expected_requests": 36,
+    "forced_output_tokens": 512
+  },
+  "stochastic_token_parity_compared": false,
+  "shared_gate_contract": "3 canaries + 131 finite boundaries + 8 functional + previous 19-request greedy parity smoke",
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "qwen38",
+        "object": "model",
+        "created": 1789136508,
+        "owned_by": "vllm",
+        "root": "/model",
+        "parent": null,
+        "max_model_len": 8192,
+        "permission": [
+          {
+            "id": "modelperm-ae968fa9bcf22e16",
+            "object": "model_permission",
+            "created": 1789136508,
+            "allow_create_engine": false,
+            "allow_sampling": true,
+            "allow_logprobs": true,
+            "allow_search_indices": false,
+            "allow_view": true,
+            "allow_fine_tuning": false,
+            "organization": "*",
+            "group": null,
+            "is_blocking": false
+          }
+        ]
+      }
+    ]
+  },
+  "api_checks": {
+    "status": "passed",
+    "speculative": true,
+    "canaries": [
+      true,
+      true,
+      true
+    ],
+    "finite_boundaries": 131,
+    "functional": [
+      {
+        "label": "gcd",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "merge",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "brackets",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "lowerbound",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "chunks",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "dedup",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "transpose",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      },
+      {
+        "label": "rle",
+        "pass": true,
+        "stdout": "FUNCTIONAL_PASS\n"
+      }
+    ],
+    "repeatability": {
+      "code": 1,
+      "prose": 1
+    },
+    "acceptance": {
+      "steps": 544.0,
+      "accepted": 472.0,
+      "drafted": 3808.0,
+      "mean_emitted_per_step": 1.8676470588235294
+    }
+  },
+  "diagnostic": {
+    "expected_requests": 36,
+    "completed_requests": 36,
+    "transport_pass_count": 36,
+    "all_transport_pass": true,
+    "forced_output_tokens": 512,
+    "prompts": [
+      "code",
+      "math",
+      "prose"
+    ],
+    "thinking_values": [
+      false,
+      true
+    ],
+    "sampling": [
+      {
+        "name": "temp0",
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "top_k": -1
+      },
+      {
+        "name": "temp1",
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20
+      }
+    ],
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "draftsteps_delta": 8546.0,
+    "proposals_delta": 59822.0,
+    "accepts_delta": 9893.0,
+    "emitted_per_step": 2.1576175988766675,
+    "per_position_accepted_counters": {
+      "0": 4812.0,
+      "1": 2552.0,
+      "2": 1340.0,
+      "3": 613.0,
+      "4": 305.0,
+      "5": 159.0,
+      "6": 112.0
+    },
+    "stochastic_token_parity_compared": false,
+    "rows": [
+      {
+        "label": "experiment-code-think0-temp0-seed42",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 42,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 68,
+          "total_tokens": 580,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 194.0,
+        "proposals_delta": 1358.0,
+        "accepts_delta": 318.0,
+        "emitted_per_step": 2.6391752577319587,
+        "output_sha256": "54d4bf7e847a283efac44fb28e2b184bf9555549fdfdc57924db830aa767f2ff"
+      },
+      {
+        "label": "experiment-code-think0-temp0-seed43",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 43,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 68,
+          "total_tokens": 580,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 197.0,
+        "proposals_delta": 1379.0,
+        "accepts_delta": 315.0,
+        "emitted_per_step": 2.598984771573604,
+        "output_sha256": "54d4bf7e847a283efac44fb28e2b184bf9555549fdfdc57924db830aa767f2ff"
+      },
+      {
+        "label": "experiment-code-think0-temp0-seed44",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 44,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 68,
+          "total_tokens": 580,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 198.0,
+        "proposals_delta": 1386.0,
+        "accepts_delta": 314.0,
+        "emitted_per_step": 2.5858585858585856,
+        "output_sha256": "54d4bf7e847a283efac44fb28e2b184bf9555549fdfdc57924db830aa767f2ff"
+      },
+      {
+        "label": "experiment-code-think0-temp1-seed42",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 42,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 68,
+          "total_tokens": 580,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 197.0,
+        "proposals_delta": 1379.0,
+        "accepts_delta": 319.0,
+        "emitted_per_step": 2.619289340101523,
+        "output_sha256": "0482fed7958ed3adec1ef8ff1cececd317fceee435abe95f3ee1113ddf33e54f"
+      },
+      {
+        "label": "experiment-code-think0-temp1-seed43",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 43,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 68,
+          "total_tokens": 580,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 212.0,
+        "proposals_delta": 1484.0,
+        "accepts_delta": 303.0,
+        "emitted_per_step": 2.4292452830188678,
+        "output_sha256": "b4bb5493bb728b8f45efe79a6c9f8d1d8bf549bbeb6094c699736483ab1f42b5"
+      },
+      {
+        "label": "experiment-code-think0-temp1-seed44",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 44,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 68,
+          "total_tokens": 580,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 192.0,
+        "proposals_delta": 1344.0,
+        "accepts_delta": 324.0,
+        "emitted_per_step": 2.6875,
+        "output_sha256": "a0f4be8f44fbfb70dd6ddd7ec3a666452ba95caf2c72f88f3eb8aa7dd3675ef9"
+      },
+      {
+        "label": "experiment-code-think1-temp0-seed42",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 42,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 108,
+          "total_tokens": 620,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 257.0,
+        "proposals_delta": 1799.0,
+        "accepts_delta": 255.0,
+        "emitted_per_step": 1.9922178988326849,
+        "output_sha256": "6c010c23ac6c35d77e1f3d0711b090d15d854b1e7d7bc522afcb17106a487aea"
+      },
+      {
+        "label": "experiment-code-think1-temp0-seed43",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 43,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 108,
+          "total_tokens": 620,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 257.0,
+        "proposals_delta": 1799.0,
+        "accepts_delta": 255.0,
+        "emitted_per_step": 1.9922178988326849,
+        "output_sha256": "6e5b41b8cd1e3c6a79938a593061b1c52446fd6b1fb1e58257e795ffeff001ee"
+      },
+      {
+        "label": "experiment-code-think1-temp0-seed44",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 44,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 108,
+          "total_tokens": 620,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 257.0,
+        "proposals_delta": 1799.0,
+        "accepts_delta": 255.0,
+        "emitted_per_step": 1.9922178988326849,
+        "output_sha256": "6e5b41b8cd1e3c6a79938a593061b1c52446fd6b1fb1e58257e795ffeff001ee"
+      },
+      {
+        "label": "experiment-code-think1-temp1-seed42",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 42,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 108,
+          "total_tokens": 620,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 327.0,
+        "proposals_delta": 2289.0,
+        "accepts_delta": 186.0,
+        "emitted_per_step": 1.5688073394495414,
+        "output_sha256": "9e4ace6677e9a6a5e512ab44630ef9e0f8b100d583c8f2f14d0ae58e69e68a36"
+      },
+      {
+        "label": "experiment-code-think1-temp1-seed43",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 43,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 108,
+          "total_tokens": 620,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 288.0,
+        "proposals_delta": 2016.0,
+        "accepts_delta": 226.0,
+        "emitted_per_step": 1.7847222222222223,
+        "output_sha256": "242de907ed91a1e25ef9cbb0c0e5723eabd27019bba26a52081e0d1dc7482218"
+      },
+      {
+        "label": "experiment-code-think1-temp1-seed44",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 44,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 108,
+          "total_tokens": 620,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 275.0,
+        "proposals_delta": 1925.0,
+        "accepts_delta": 238.0,
+        "emitted_per_step": 1.8654545454545455,
+        "output_sha256": "c220a03ccf35c40aa9fdffcd25bc70acdedac124c05301ea7edf7d3a5c25acc9"
+      },
+      {
+        "label": "experiment-math-think0-temp0-seed42",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 42,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 72,
+          "total_tokens": 584,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 211.0,
+        "proposals_delta": 1477.0,
+        "accepts_delta": 300.0,
+        "emitted_per_step": 2.4218009478672986,
+        "output_sha256": "f553e90f4774977072d3af5434405297f983412031f87d704d0d8b885ad4c662"
+      },
+      {
+        "label": "experiment-math-think0-temp0-seed43",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 43,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 72,
+          "total_tokens": 584,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 211.0,
+        "proposals_delta": 1477.0,
+        "accepts_delta": 300.0,
+        "emitted_per_step": 2.4218009478672986,
+        "output_sha256": "f553e90f4774977072d3af5434405297f983412031f87d704d0d8b885ad4c662"
+      },
+      {
+        "label": "experiment-math-think0-temp0-seed44",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 44,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 72,
+          "total_tokens": 584,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 210.0,
+        "proposals_delta": 1470.0,
+        "accepts_delta": 301.0,
+        "emitted_per_step": 2.4333333333333336,
+        "output_sha256": "f553e90f4774977072d3af5434405297f983412031f87d704d0d8b885ad4c662"
+      },
+      {
+        "label": "experiment-math-think0-temp1-seed42",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 42,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 72,
+          "total_tokens": 584,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 207.0,
+        "proposals_delta": 1449.0,
+        "accepts_delta": 305.0,
+        "emitted_per_step": 2.4734299516908216,
+        "output_sha256": "3cdafc20bae767c4ecf2b39177e6c9c99b9b955995906962eaa6d5b10a2a9fa8"
+      },
+      {
+        "label": "experiment-math-think0-temp1-seed43",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 43,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 72,
+          "total_tokens": 584,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 210.0,
+        "proposals_delta": 1470.0,
+        "accepts_delta": 301.0,
+        "emitted_per_step": 2.4333333333333336,
+        "output_sha256": "32bcbafb19ad249253226c414e2d482ed7150813cde5aec56c0f07767ef63869"
+      },
+      {
+        "label": "experiment-math-think0-temp1-seed44",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 44,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 72,
+          "total_tokens": 584,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 220.0,
+        "proposals_delta": 1540.0,
+        "accepts_delta": 295.0,
+        "emitted_per_step": 2.340909090909091,
+        "output_sha256": "2932eff55c4f86fe54ed04eb66da07e7f77e8d8085d3ecacb0916228a4aa5524"
+      },
+      {
+        "label": "experiment-math-think1-temp0-seed42",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 42,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 112,
+          "total_tokens": 624,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 228
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 188.0,
+        "proposals_delta": 1316.0,
+        "accepts_delta": 323.0,
+        "emitted_per_step": 2.7180851063829787,
+        "output_sha256": "94ab39947adaa5e4088b46dab26469afa6c518ff6320d86fd8628175d6fec917"
+      },
+      {
+        "label": "experiment-math-think1-temp0-seed43",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 43,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 112,
+          "total_tokens": 624,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 228
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 189.0,
+        "proposals_delta": 1323.0,
+        "accepts_delta": 322.0,
+        "emitted_per_step": 2.7037037037037037,
+        "output_sha256": "94ab39947adaa5e4088b46dab26469afa6c518ff6320d86fd8628175d6fec917"
+      },
+      {
+        "label": "experiment-math-think1-temp0-seed44",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 44,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 112,
+          "total_tokens": 624,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 228
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 191.0,
+        "proposals_delta": 1337.0,
+        "accepts_delta": 322.0,
+        "emitted_per_step": 2.6858638743455496,
+        "output_sha256": "891fa685fe36cef970a8fbc99203ea9961f8bdfd38dbb7083f96c02046242556"
+      },
+      {
+        "label": "experiment-math-think1-temp1-seed42",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 42,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 112,
+          "total_tokens": 624,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 201
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 194.0,
+        "proposals_delta": 1358.0,
+        "accepts_delta": 317.0,
+        "emitted_per_step": 2.634020618556701,
+        "output_sha256": "192c45bbc1af44f7f00c24fdf50dfa7ff61344809e00181619670fb440d3fdec"
+      },
+      {
+        "label": "experiment-math-think1-temp1-seed43",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 43,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 112,
+          "total_tokens": 624,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 274
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 212.0,
+        "proposals_delta": 1484.0,
+        "accepts_delta": 299.0,
+        "emitted_per_step": 2.410377358490566,
+        "output_sha256": "8e91b615b32da83d68cd8a246c349b3ebe1098dedd0caa24da86fa8f93842101"
+      },
+      {
+        "label": "experiment-math-think1-temp1-seed44",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 44,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 112,
+          "total_tokens": 624,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 388
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 200.0,
+        "proposals_delta": 1400.0,
+        "accepts_delta": 314.0,
+        "emitted_per_step": 2.5700000000000003,
+        "output_sha256": "f7426e227cdf029eff189819d44577055d459ee4fe867c845e744df80445679f"
+      },
+      {
+        "label": "experiment-prose-think0-temp0-seed42",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 42,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 63,
+          "total_tokens": 575,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 246.0,
+        "proposals_delta": 1722.0,
+        "accepts_delta": 266.0,
+        "emitted_per_step": 2.08130081300813,
+        "output_sha256": "31616e5255647eab0d7f66e41e9883ac05d9fb4ba03598525684496be97a1800"
+      },
+      {
+        "label": "experiment-prose-think0-temp0-seed43",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 43,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 63,
+          "total_tokens": 575,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 246.0,
+        "proposals_delta": 1722.0,
+        "accepts_delta": 266.0,
+        "emitted_per_step": 2.08130081300813,
+        "output_sha256": "31616e5255647eab0d7f66e41e9883ac05d9fb4ba03598525684496be97a1800"
+      },
+      {
+        "label": "experiment-prose-think0-temp0-seed44",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 44,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 63,
+          "total_tokens": 575,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 246.0,
+        "proposals_delta": 1722.0,
+        "accepts_delta": 266.0,
+        "emitted_per_step": 2.08130081300813,
+        "output_sha256": "31616e5255647eab0d7f66e41e9883ac05d9fb4ba03598525684496be97a1800"
+      },
+      {
+        "label": "experiment-prose-think0-temp1-seed42",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 42,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 63,
+          "total_tokens": 575,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 253.0,
+        "proposals_delta": 1771.0,
+        "accepts_delta": 258.0,
+        "emitted_per_step": 2.0197628458498027,
+        "output_sha256": "e0bbdccdc19e38afa780659b2aeea2cb81c8aa09efdc0c9d6301b7f1cbb7d6d5"
+      },
+      {
+        "label": "experiment-prose-think0-temp1-seed43",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 43,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 63,
+          "total_tokens": 575,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 251.0,
+        "proposals_delta": 1757.0,
+        "accepts_delta": 260.0,
+        "emitted_per_step": 2.0358565737051793,
+        "output_sha256": "cedda27b95a695977dd0842d547ffea81a7e28c0913a9d3f711dff8fb029f7e9"
+      },
+      {
+        "label": "experiment-prose-think0-temp1-seed44",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 44,
+          "thinking": false
+        },
+        "usage": {
+          "prompt_tokens": 63,
+          "total_tokens": 575,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 269.0,
+        "proposals_delta": 1883.0,
+        "accepts_delta": 242.0,
+        "emitted_per_step": 1.899628252788104,
+        "output_sha256": "19ecc329a116ae2a2cda1bae46d7806656f5eb45f6da0807c859b5fc6a886605"
+      },
+      {
+        "label": "experiment-prose-think1-temp0-seed42",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 42,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 103,
+          "total_tokens": 615,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 281.0,
+        "proposals_delta": 1967.0,
+        "accepts_delta": 231.0,
+        "emitted_per_step": 1.8220640569395017,
+        "output_sha256": "8d720c91ef69de27466234de6563e574678a6272390c6688b7ad61104ca56071"
+      },
+      {
+        "label": "experiment-prose-think1-temp0-seed43",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 43,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 103,
+          "total_tokens": 615,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 281.0,
+        "proposals_delta": 1967.0,
+        "accepts_delta": 231.0,
+        "emitted_per_step": 1.8220640569395017,
+        "output_sha256": "8d720c91ef69de27466234de6563e574678a6272390c6688b7ad61104ca56071"
+      },
+      {
+        "label": "experiment-prose-think1-temp0-seed44",
+        "sampling": {
+          "temperature": 0.0,
+          "top_p": 1.0,
+          "top_k": -1,
+          "seed": 44,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 103,
+          "total_tokens": 615,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 280.0,
+        "proposals_delta": 1960.0,
+        "accepts_delta": 231.0,
+        "emitted_per_step": 1.825,
+        "output_sha256": "a29f39d1337c8bb3234c7c1e48f6b4cfc271998f521733e34166a4c858afe3ea"
+      },
+      {
+        "label": "experiment-prose-think1-temp1-seed42",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 42,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 103,
+          "total_tokens": 615,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 315.0,
+        "proposals_delta": 2205.0,
+        "accepts_delta": 196.0,
+        "emitted_per_step": 1.6222222222222222,
+        "output_sha256": "e80b0e6118bb9b1bfbf33c288d8251403b8fb8e4aaa5210d34205d3c8c514646"
+      },
+      {
+        "label": "experiment-prose-think1-temp1-seed43",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 43,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 103,
+          "total_tokens": 615,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 301.0,
+        "proposals_delta": 2107.0,
+        "accepts_delta": 210.0,
+        "emitted_per_step": 1.697674418604651,
+        "output_sha256": "bddfaf7e81929c9802d326f39874e19f63acd19fdc5c1f757efd28ee41c2531a"
+      },
+      {
+        "label": "experiment-prose-think1-temp1-seed44",
+        "sampling": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "seed": 44,
+          "thinking": true
+        },
+        "usage": {
+          "prompt_tokens": 103,
+          "total_tokens": 615,
+          "completion_tokens": 512,
+          "completion_tokens_details": {
+            "reasoning_tokens": 512
+          }
+        },
+        "transport_pass": true,
+        "draftsteps_delta": 283.0,
+        "proposals_delta": 1981.0,
+        "accepts_delta": 229.0,
+        "emitted_per_step": 1.8091872791519434,
+        "output_sha256": "8a0f575fffb836e2c17631f9a9e71d720cdceaa74b901220ae58a9c6929158da"
+      }
+    ]
+  },
+  "host_unchanged": true
+}
