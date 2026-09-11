@@ -1,0 +1,96 @@
+Worker verification, 2026-09-11 — development experiment ASSETS ONLY
+Base commit: 8b512a33421b4f51cf3315d7ab8aa637462fd8ce
+Worktree: /home/mike/code/.pi-worktrees/b70-inference/dspark-reference-parity
+Git dir: /home/mike/code/b70-inference/.git/worktrees/dspark-reference-parity
+Common dir: /home/mike/code/b70-inference/.git
+Linked-worktree check passed before writing; initial status clean.
+All changes confined to results/20260911-qwen38-dspark-reference-parity/.
+
+LOCAL CLOSE GATE
+Command:
+PYTHONDONTWRITEBYTECODE=1 python3 results/20260911-qwen38-dspark-reference-parity/test-parity.py -v
+
+Observed final output:
+test_all_assets_compile ... ok
+test_cache_visibility ... ok
+test_canonical_overlay_identity ... ok
+test_distinct_attention_inputs_label_shared_rope ... ok
+test_fused_weight_mapping ... ok
+test_hook_returns_none_even_if_put_returns_object ... ok
+test_installed_pinned_source_transform ... ok
+test_launch_reuses_native_corrected_configuration ... ok
+test_noop_wrapper_preserves_identity_and_restores ... ok
+test_prompt_stays_existing_code_prompt ... ok
+test_real_first_request_only ... ok
+test_selector_failure_cannot_replace_model_output ... ok
+test_unarmed_propose_returns_original_object ... ok
+test_unrelated_failed_proposal_is_not_retried ... ok
+Ran 14 tests in 0.250s
+OK
+
+Pinned source export /tmp/vllm-pinned-73029d424 was present, so the exact-source
+transform/replay/tamper test ran (not skipped). No installed sources were written.
+readSeek diagnostics: parity_capture.py, replay-reference.py, run-capture.py each
+reported error_count=0, missing_count=0. Every Python asset also compiled in the
+stdlib suite. git diff --check produced no output.
+
+Contracts tested: first real matching zero-cache prompt only; no warmup/chunked/
+cached/unrelated capture; full context/query visibility and disjoint resident
+slots; exact canonical correction must precede hook; reverse only exact hook
+identity before underlying source checks; fused native/HF row mapping; callback
+output/object preservation, including observation failure and original exceptions
+without double-executing the proposer.
+
+PINNED-IMAGE CPU TEST — NO /dev/dri OR GPU PASSTHROUGH, NO PULL, NO WEIGHTS
+Assets (*.py) plus the two freshly fetched official source files were packed into
+an in-memory tar stream by stdlib Python (TarInfo(name), size=len(bytes), addfile),
+then supplied as stdin through SSH. Official source locations inside that tar:
+  official/specforge/modeling/draft/dflash.py
+  official/specforge/modeling/draft/dspark.py
+Source URLs and SHA256 checks are recorded in parity_common.py and README.md.
+No files were staged in an earlier result directory or on the host filesystem;
+only this disposable container's /tmp tmpfs was used for the runtime test.
+
+Exact runtime command (SSH: -o BatchMode=yes -o ConnectTimeout=10 inference-host):
+docker run --rm -i --pull=never --network=none --read-only --tmpfs /tmp -e PYTHONDONTWRITEBYTECODE=1 -e HF_HUB_OFFLINE=1 --entrypoint bash vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4 -c 'set -e; tar -xf - -C /tmp; cd /tmp; /opt/venv/bin/python test-reference-cpu.py --official-source /tmp/official'
+
+Observed final output (exit 0):
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:251: UserWarning: Can't initialize Level Zero Sysman
+  return _enum_zes_device_infos(visible_mask)
+/opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:278: UserWarning: XPU device count is zero! (Triggered internally at /__w/pytorch/pytorch/c10/xpu/XPUFunctions.cpp:117.)
+  count = torch._C._xpu_getDeviceCount() if zes_count < 0 else zes_count
+PASS: unchanged official HF model returns tensor; instrumentation leaves output identical
+PASS: two independent official eager BF16 zero-cache forwards + official Markov/head replay
+PASS: all 62 official checkpoint keys; stage metrics/ranks/margins and immutable snapshots
+SUPPLEMENTAL ONLY: tiny CPU model; real API capture/XPU numerical result remains unrun
+
+Dependency preflight observed torch=2.13.0+xpu, transformers=5.15.0,
+find_spec('specforge')=None, official DFlash imports OK. The missing absolute
+SpecForge import was explicitly reported before the documented namespace-only
+accommodation. Both official files remain byte-identical; the runtime test uses
+their actual classes/forward/Markov methods, not mocks of reference behavior.
+
+RETAINED PREFLIGHT FAILURES / CORRECTIONS
+1. Initial no-GPU read-only Docker import probe omitted --tmpfs /tmp. PyTorch's
+   dill import failed with FileNotFoundError: [Errno 2] No usable temporary
+   directory found in ['/tmp', '/var/tmp', '/usr/tmp', '/workspace/vllm'].
+   Adding only the disposable /tmp tmpfs made the same dependency probe pass.
+2. A read-only host safetensors-header probe using a bare heredoc was rejected by
+   host fish: "Expected a string, but found a redirection". Retried as a quoted
+   python3 -c command; it read only JSON headers/index, not tensor payloads.
+   Observed target head key: lm_head.weight -> model-00002-of-00005.safetensors.
+   Observed embedding key: model.language_model.embed_tokens.weight (not needed
+   for replay; captured embeddings are used). Draft header contains 62 tensor keys.
+3. Initial reduced CPU test passed but warned its default max-position setting
+   implied YaRN factor 4 while explicit factor was 32. Test config now explicitly
+   uses the real checkpoint's max_position_embeddings=262144; final run above
+   has no RoPE configuration warning. Official source/config were not modified.
+
+NOT EXECUTED / UNRESOLVED
+No GPU server launch, real API capture, full-size official XPU replay or measured
+reference parity/acceptance result. Those are intentionally held for lead review
+and the predeclared E2E commands in README.md. Native GPU hook attachment and the
+full-size numerical comparison still require that real public-boundary gate.
+CPU reduced-dimension tests are supplemental and cannot prove native XPU parity.
+No cached-step extension, target quantization experiment or persistent launcher
+change is included. No publication/acceptance/speedup claim is made.
