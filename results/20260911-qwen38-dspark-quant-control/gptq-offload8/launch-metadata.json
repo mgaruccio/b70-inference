@@ -1,0 +1,140 @@
+{
+  "container_name": "qwen38-quant-gptq-c6a1b0ffeddf",
+  "serve": [
+    "vllm",
+    "serve",
+    "/model",
+    "--quantization",
+    "gptq",
+    "--dtype",
+    "float16",
+    "--max-model-len",
+    "8192",
+    "--gpu-memory-utilization",
+    "0.95",
+    "--kv-cache-dtype",
+    "fp8",
+    "--port",
+    "8000",
+    "--max-num-seqs",
+    "1",
+    "--max-num-batched-tokens",
+    "2048",
+    "--no-enable-prefix-caching",
+    "--mamba-cache-mode",
+    "align",
+    "--performance-mode",
+    "balanced",
+    "--chat-template-content-format",
+    "openai",
+    "--default-chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--reasoning-parser",
+    "qwen3",
+    "--served-model-name",
+    "qwen38",
+    "--language-model-only",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "qwen3_xml",
+    "--enforce-eager",
+    "--speculative-config",
+    "{\"method\":\"dspark\",\"model\":\"/draft\",\"num_speculative_tokens\":7,\"kv_cache_dtype\":\"bfloat16\",\"quantization\":null,\"rejection_sample_method\":\"standard\",\"draft_sample_method\":\"greedy\",\"enable_adaptive_verification\":false}",
+    "--cpu-offload-gb",
+    "8"
+  ],
+  "speculative_config": {
+    "method": "dspark",
+    "model": "/draft",
+    "num_speculative_tokens": 7,
+    "kv_cache_dtype": "bfloat16",
+    "quantization": null,
+    "rejection_sample_method": "standard",
+    "draft_sample_method": "greedy",
+    "enable_adaptive_verification": false
+  },
+  "mounts": {
+    "target": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16:/model:ro",
+    "previous_campaign": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility:/experiment:ro",
+    "frozen_draft": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/draft:/draft:ro",
+    "output": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-quant-control/gptq-offload8:/output"
+  },
+  "patch_order": [
+    "prefill",
+    "draft",
+    "boundary"
+  ],
+  "quant_control": {
+    "arm": "gptq",
+    "cpu_offload_budget_gb": 8,
+    "canonical_sha256": "0640edc7a72c4b6650bb6846cdc988c87883dad7c0cb86d36684513a1c070643",
+    "target_identity": {
+      "path": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16",
+      "config_sha256": "580f5caae29242b242d3bcab2ad5b8a942fc0a59df1d228bd2b3233cfc760372",
+      "index_sha256": "d511a969b32a16f1890326dadd4d04039779cebce7458b8e5d2ce7f3ce2550ed",
+      "quantization_config": {
+        "bits": 4,
+        "checkpoint_format": "gptq",
+        "desc_act": false,
+        "dynamic": {
+          "-:.*mtp.*": {}
+        },
+        "format": "gptq",
+        "group_size": 128,
+        "lm_head": false,
+        "meta": {
+          "act_group_aware": true,
+          "auto_forward_data_parallel": true,
+          "damp_auto_increment": 0.01,
+          "damp_percent": 0.05,
+          "dense_vram_strategy": "exclusive",
+          "dense_vram_strategy_devices": null,
+          "fallback": {
+            "smooth": null,
+            "strategy": "rtn",
+            "threshold": "0.5%"
+          },
+          "foem": null,
+          "gc_mode": "interval",
+          "gptaq": null,
+          "hessian": {
+            "chunk_bytes": null,
+            "chunk_size": null,
+            "staging_dtype": "float32"
+          },
+          "mock_quantization": false,
+          "moe_vram_strategy": "exclusive",
+          "moe_vram_strategy_devices": null,
+          "mse": 0.0,
+          "offload_to_disk": false,
+          "offload_to_disk_path": null,
+          "pack_impl": "cpu",
+          "quantizer": [
+            "gptqmodel:7.3.2"
+          ],
+          "static_groups": false,
+          "true_sequential": true,
+          "uri": "https://github.com/modelcloud/gptqmodel",
+          "wait_for_submodule_finalizers": false
+        },
+        "method": "gptq",
+        "pack_dtype": "int32",
+        "quant_method": "gptq",
+        "sym": true
+      },
+      "revision": "existing local GPTQ snapshot; config/index hashes, no invented upstream revision"
+    },
+    "no_offload_reference": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-layer-norm/norm-eager",
+      "summary_sha256": "4fe383fd2c703f02d27a9ec49b19d64071e4d38c9fa88d232fa54fa45a495418",
+      "launch_sha256": "0b15004bcbe59b2a9be6d7913c302eb0eea300e279fe568038c4fa5973325c19",
+      "effective_source_sha256": "2899ee402e311188436b771910ff07c187ff74f63cb0bda6c0133fc137b225ed",
+      "offload_budget_gb": 0,
+      "interpretation": "historical same-target no-offload diagnostic; overlay may differ; no isolated offload/performance inference"
+    },
+    "paired_reference": null,
+    "comparison": "target weight quantization plus native execution bundle; NOT bit precision alone",
+    "throughput_comparison_valid": false,
+    "cross_target_output_identity_required": false
+  }
+}

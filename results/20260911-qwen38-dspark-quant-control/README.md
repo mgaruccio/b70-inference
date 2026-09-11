@@ -1,6 +1,6 @@
 # Real target-weight / native-execution acceptance control
 
-**Development, quality-sensitive diagnostic assets; GPU results pending.** Not a standard-publishable benchmark, throughput comparison, production promotion, or isolated bit-precision experiment. No persistent launcher changes.
+**Development, quality-sensitive diagnostic: both actual GPU arms completed successfully.** See [observed-results.md](observed-results.md) for measured acceptance, native kernels, offload differences and cleanup. The sections below preserve the pre-launch protocol and its then-pending caveats. Not a standard-publishable benchmark, throughput comparison, production promotion, or isolated bit-precision experiment. No persistent launcher changes.
 
 ## Declared comparison and real end-to-end process
 
