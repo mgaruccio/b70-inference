@@ -122,3 +122,43 @@ python3 results/20260911-qwen38-dspark-acceptance-diagnostics/run-acceptance-dia
 
 These checks supplement, but do not replace, the real inference-host API
 journey above.
+
+## Completed first matrix and next diagnostic
+
+Paired task `b288c7a4e` completed in 39m18s, exit 0. Both `current-dspark/` and `target-only/` passed shared gates and all 36 forced 512-token streams. Host invariants matched and owned containers were removed. Executed drivers are frozen separately in each cell. Lead fixed the worker's missing `cell.rows.append` in the shared-chat adapter, added shell `set -e`, and skipped container cleanup when no launch was made, before running. Static row-accounting/metric regression checks passed.
+
+Aggregated by thinking/temperature across the three workload families and three seeds (development-only; small, ordered diagnostic sample):
+
+| Thinking | Temperature | DSpark emitted/step | First-position acceptance | DSpark median decode tok/s | Target median decode tok/s |
+|---|---|---|---|---|---|
+| off | 0 | 2.348 | 0.600 | 26.474 | 15.229 |
+| off | 1 | 2.296 | 0.597 | 26.666 | 15.090 |
+| on | 0 | 2.108 | 0.573 | 22.156 | 15.278 |
+| on | 1 | 2.005 | 0.520 | 21.098 | 15.108 |
+
+Thinking did not recover acceptance on these prompts. All paired request payloads and rendered prompt IDs match. However only **10/18 greedy 512-token outputs match exactly**: divergence starts at positions148–497. Target-only itself produced multiple outputs for identical greedy prompt/settings with different seeds (which should not affect argmax). This blocks attributing divergence to speculation or claiming full greedy identity; successful transport is not proof of distribution fidelity. Sampled output equality was not required.
+
+The source audits found no clear tap/residual, FC packing, anchor/position, RoPE/mask or Markov conditioning discrepancy. Quantization mismatch remains unproven. A follow-up corrected the initial audit's sampler-equivalence assumption: [SGLang v0.5.17 sampler](https://github.com/sgl-project/sglang/blob/v0.5.17/python/sglang/srt/speculative/dspark_components/dspark_draft_sampler.py), commit `29481685462732237d80d86076d6563e1f658102`, uses stochastic proposals with folded sampling/top_k20, draft temperature but no draft top-k/p filtering, and probability-ratio rejection. Our matrix changes target sampling but keeps **greedy drafts**. [vLLM's native Gumbel path](https://github.com/vllm-project/vllm/blob/73029d424/vllm/v1/worker/gpu/sample/gumbel.py) supports probabilistic drafts; testing it requires extending only the current opt-in guard, not inventing a sampler or relaxing rejection. The published score still cannot be directly attributed to this difference.
+
+Next real API diagnostic: `run-repeatability.py --cell target --out target-repeatability`, then `--cell dspark --out dspark-repeatability`. Same image/8192/eagerC1/runtime guards and shared gates; four exact-payload repetitions each of code/thinking-off and prose/thinking-on, seed42/temp0,512forced tokens. Within each family, even cache salt is identical; prefix caching remains disabled. Expected outcome is eight complete streams with explicit distinct-output/first-divergence reporting, not assumed bitwise stability. Raw request/SSE/metrics plus `repeatability.json` retained; no overwrites. Driver outer timeout1500s per cell and standard owned-container cleanup. This separates baseline repeatability from speculator-specific divergence before any optimization claim.
+
+Prime Lab preview/show-patch tools remain unavailable (`ENOENT` local socket); previews were stated in chat under the user's explicit optimization authorization. No production launcher was modified.
+
+## Native precision and probabilistic comparison results
+
+Fixed-seed task `b2eabe337` passed all streams and invariants. Code had one distinct output in both cells; identical-payload prose had **two target-only outputs** (first difference273) and **three DSpark outputs** (first difference267). These establish baseline nondeterminism, not its numerical cause. Retained `target-repeatability/` and `dspark-repeatability/` contain exact repeated payloads and results.
+
+Deeper installed-source inspection found a concrete precision discrepancy missed by the first audit: the draft-local [LogitsProcessor](https://raw.githubusercontent.com/vllm-project/vllm/73029d42441321b631779db3475031f5ec26dd6c/vllm/model_executor/layers/logits_processor.py) inherits the target FP16 head dtype, casting BF16 Markov operands to FP16. Original mocks concealed that cast. Worker `8c19fe4`, integrated as `2ae0e55`, corrects draft-local `head_dtype=None` in both modes while retaining the explicit FP16 shared-head activation cast, and preserves the combined logits in FP32 for native probabilistic cache/rejection. Native Gumbel and standard rejection remain unchanged. All new helpers are pinned. Apply from pristine installed sources; old overlays are not upgraded in place.
+
+Predeclared execution: `run-native-sampling.py --draft-sample-method greedy --cell dspark --out native-markov-greedy`, then `--draft-sample-method probabilistic --cell dspark --out native-probabilistic`, unchanged 36-request matrix/shared gates/8192/eagerC1. Nested read-only overlay bind leaves original campaign assets intact. Source replay and effective config are recorded; outer timeout2700s per arm, standard cleanup. Task `baac5f6ff` ran the full installed-image CPU suite first (**23/23, zero skips**, `cpu-native-sampling-tests.log`) and then both API arms; all passed, exit0 in30m46s, both host invariants unchanged. Selective probability/cache review found no blocking contract break.
+
+`python3 -B summarize.py > comparison.json` reproduces all 144 matrix-stream validations, identical paired payloads/prompt IDs, acceptance by position, medians and greedy divergence. Each candidate's executed driver/wrapper/overlay is frozen in its cell.
+
+| Thinking / target temp | Old greedy tok/s | Corrected greedy tok/s | Probabilistic tok/s | Old / corrected / probabilistic emitted per step |
+|---|---:|---:|---:|---|
+| off / 0 | 26.474 | 27.700 | 27.985 | 2.348 / 2.329 / 2.347 |
+| off / 1 | 26.666 | 28.451 | 25.378 | 2.296 / 2.326 / 2.188 |
+| on / 0 | 22.156 | 23.264 | 23.458 | 2.108 / 2.074 / 2.095 |
+| on / 1 | 21.098 | 22.206 | 24.405 | 2.005 / 1.987 / 2.059 |
+
+**Neither Markov precision nor sampler choice materially recovered acceptance.** The precision-corrected greedy arm is modestly faster here (roughly5–7%), but this small ordered matrix has no interleaved confidence interval, so it is not a robust speedup claim. Probabilistic mode is a supported diagnostic option, not a universal recommendation. Long greedy exact matches against target-only remain10/18 (old),10/18 (corrected),11/18 (probabilistic), with baseline nondeterminism unresolved. No target-distribution equivalence or production readiness is asserted. Weight-quantization causality and full identical-input reference draft numerical parity remain unestablished; no compatible alternative target was installed on this B70.
