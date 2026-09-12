@@ -146,10 +146,10 @@ def _kernels():
             # and V's pointer is already offset by 256. Do not assume NHD.
             kt = tl.load(K + safe_page[None, :] * K0
                          + (pos % 1664)[None, :] * K1 + head * K2
-                         + d[:, None], mask=valid[None, :], other=0)
+                         + d[:, None], mask=valid[None, :], other=0.0)
             vt = tl.load(V + safe_page[:, None] * V0
                          + (pos % 1664)[:, None] * V1 + head * V2
-                         + d[None, :], mask=valid[:, None], other=0)
+                         + d[None, :], mask=valid[:, None], other=0.0)
             # Each descaled FP16 tile is shared by all 5*6 query rows.
             kt = (kt.to(tl.float16).to(tl.float32) * ks).to(tl.float16)
             vt = (vt.to(tl.float16).to(tl.float32) * vs).to(tl.float16)

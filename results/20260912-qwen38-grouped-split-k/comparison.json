@@ -1,0 +1,27 @@
+{
+  "tier": "development, quality-sensitive; not standard-compliant",
+  "decision": "reject prototype for performance; no production promotion",
+  "baseline": "baseline-01",
+  "candidate": "candidate-01",
+  "candidate_variant": {"splits": 32, "stages": 1},
+  "fixed_contract": {"mtp_depth": 4, "max_model_len": 212992, "max_num_batched_tokens": 8192, "prompt_tokens": 65536, "output_tokens": 128, "concurrency": 1, "warmup_requests": 1, "measured_requests": 6, "power_watts": 275},
+  "decode_tps": {
+    "baseline_samples": [51.35670620272791, 56.38077769156602, 56.35773348855579, 52.59530540559594, 57.83679353104173, 55.087238362178965],
+    "baseline_median": 55.72248592536738,
+    "baseline_iqr": 3.1567279960717656,
+    "candidate_median": 5.83745254268418,
+    "candidate_iqr": 5.6367060417798225,
+    "median_delta_percent": -89.52406295996441,
+    "caveat": "Sequential development cells with large candidate variability; all raw samples retained, no steady-state or publication claim. See each long-context/summary.json."
+  },
+  "api_gates": {"baseline": "passed", "candidate": "passed", "canaries_per_cell": 3, "finite_boundaries_per_cell": 131, "functional_checks_per_cell": 8, "fixed_output_id_matches": 19, "fixed_output_id_total": 19},
+  "long_output_comparison": {"identical_request_json_pairs": 6, "identical_output_text_pairs": 2, "total": 6, "matching_trials": [3, 5], "caveat": "Not bitwise-output-qualified. No repeated-baseline control for these exact long requests to separate kernel effects from runtime nondeterminism."},
+  "pooled_measured_speculation": {
+    "baseline": {"steps": 255, "drafted": 1020, "accepted": 518, "accepted_fraction": 0.5078431372549019, "one_plus_accepted_per_step": 3.0313725490196077},
+    "candidate": {"steps": 255, "drafted": 1020, "accepted": 520, "accepted_fraction": 0.5098039215686274, "one_plus_accepted_per_step": 3.0392156862745097}
+  },
+  "operator_qualification": {"artifact": "operator-03/grouped-split-k.json", "policy": "v2 strict native equivalence plus FP16-aware independent reference", "checks_passed": 32, "strict_fp32_diagnostic_failures_retained": 8, "original_strict_fp32_gate_passed": false},
+  "execution_evidence": "candidate-01/server.log: eligible pre-expansion q5 dispatch during FULL graph capture; subsequent FULL five-token graph execution stats. Public operator qualification additionally asserts candidate vs native dispatch counts.",
+  "runtime_capacity": {"reported_kv_tokens_both": 226397, "available_kv_memory_gib_both": 8.23, "graph_capture_memory_gib_baseline": 0.15, "graph_capture_memory_gib_candidate": 0.21, "caveat": "Reported capacity, not a near-limit request test or peak-memory measurement."},
+  "host_unchanged": true
+}

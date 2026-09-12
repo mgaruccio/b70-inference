@@ -1,0 +1,36 @@
+{"tier": "development operator qualification; not standard-compliant", "baseline": "image0.1.12.3 unmodified _spec_decode_varlen_fwd", "candidate": "opt-in grouped q5*GQA6, FP16 DPAS/FP32 accum, Split-K", "test_process": {"boundary": "flash_attn_varlen_func through installed helper", "correctness": "boundary lengths, HND strides, permuted pages, nonunit descales", "graphs": "in-place Q, used lengths, page table, candidate cumulative lengths", "timing": "64K live65541 paired alternating graphs; warm3; measured12", "cleanup": "process exit releases graph/tensor owners; lead removes disposable container", "evidence": "/output/grouped-split-k.json"}}
+[B70_GROUPED_SPLIT_K] installed opt-in pre-expansion helper splits=16 stages=1
+[B70_GROUPED_SPLIT_K] eligible pre-expansion q5 C1 dispatch splits=16 stages=1
+split16-stage1/length5-nhd: failed
+split16-stage1/length5-hnd: failed
+split16-stage1/length0-hnd: failed
+split16-stage1/length1-hnd: failed
+split16-stage1/length4-hnd: failed
+split16-stage1/length1663-hnd: failed
+split16-stage1/length1664-hnd: failed
+split16-stage1/length1665-hnd: failed
+split16-stage1/length65541-hnd: failed
+split16-stage1/causal-1665: failed
+split16-stage1/causal-65541: failed
+split16-stage1/dummy-safety: failed
+split16-stage1/fallback-and-fail-loud: failed
+split16-stage1/graph-mutation-native: failed
+split16-stage1/graph-mutation-candidate: failed
+[B70_GROUPED_SPLIT_K] installed opt-in pre-expansion helper splits=32 stages=1
+[B70_GROUPED_SPLIT_K] eligible pre-expansion q5 C1 dispatch splits=32 stages=1
+split32-stage1/length5-nhd: failed
+split32-stage1/length5-hnd: failed
+split32-stage1/length0-hnd: failed
+split32-stage1/length1-hnd: failed
+split32-stage1/length4-hnd: failed
+split32-stage1/length1663-hnd: failed
+split32-stage1/length1664-hnd: failed
+split32-stage1/length1665-hnd: failed
+split32-stage1/length65541-hnd: failed
+split32-stage1/causal-1665: failed
+split32-stage1/causal-65541: failed
+split32-stage1/dummy-safety: failed
+split32-stage1/fallback-and-fail-loud: failed
+split32-stage1/graph-mutation-native: failed
+split32-stage1/graph-mutation-candidate: failed
+failed: /output/grouped-split-k.json
