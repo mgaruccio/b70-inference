@@ -1,0 +1,316 @@
+{
+  "AppArmorProfile": "",
+  "Args": [
+    "-lc",
+    "set -e; /opt/venv/bin/python -P /experiment/apply-prefill.py; /opt/venv/bin/python -P /experiment/patch_dspark_bf16.py; /opt/venv/bin/python -P /experiment/patch-vllm-qwen38-xpu-boundary.py; /opt/venv/bin/python -P /annotations/patch.py; exec vllm serve /model --quantization gptq --dtype float16 --max-model-len 65664 --gpu-memory-utilization 0.95 --kv-cache-dtype fp8 --port 8000 --max-num-seqs 1 --max-num-batched-tokens 2048 --no-enable-prefix-caching --mamba-cache-mode align --performance-mode balanced --chat-template-content-format openai --default-chat-template-kwargs '{\"enable_thinking\":false}' --reasoning-parser qwen3 --served-model-name qwen38 --language-model-only --enable-auto-tool-choice --tool-call-parser qwen3_xml --speculative-config '{\"method\":\"dspark\",\"model\":\"/draft\",\"num_speculative_tokens\":7,\"kv_cache_dtype\":\"bfloat16\",\"quantization\":null,\"rejection_sample_method\":\"standard\",\"draft_sample_method\":\"greedy\",\"enable_adaptive_verification\":false}' --profiler-config.profiler=torch --profiler-config.torch_profiler_dir=/output/profile --profiler-config.torch_profiler_with_stack=false --profiler-config.torch_profiler_with_flops=false --profiler-config.torch_profiler_use_gzip=true --profiler-config.torch_profiler_dump_cuda_time_total=false --profiler-config.torch_profiler_record_shapes=true --profiler-config.torch_profiler_with_memory=false --profiler-config.ignore_frontend=false --profiler-config.delay_iterations=3 --profiler-config.max_iterations=5 --profiler-config.warmup_iterations=0 --profiler-config.active_iterations=5 --profiler-config.wait_iterations=0 --enforce-eager"
+  ],
+  "Config": {
+    "AttachStderr": true,
+    "AttachStdin": false,
+    "AttachStdout": true,
+    "Cmd": [
+      "-lc",
+      "set -e; /opt/venv/bin/python -P /experiment/apply-prefill.py; /opt/venv/bin/python -P /experiment/patch_dspark_bf16.py; /opt/venv/bin/python -P /experiment/patch-vllm-qwen38-xpu-boundary.py; /opt/venv/bin/python -P /annotations/patch.py; exec vllm serve /model --quantization gptq --dtype float16 --max-model-len 65664 --gpu-memory-utilization 0.95 --kv-cache-dtype fp8 --port 8000 --max-num-seqs 1 --max-num-batched-tokens 2048 --no-enable-prefix-caching --mamba-cache-mode align --performance-mode balanced --chat-template-content-format openai --default-chat-template-kwargs '{\"enable_thinking\":false}' --reasoning-parser qwen3 --served-model-name qwen38 --language-model-only --enable-auto-tool-choice --tool-call-parser qwen3_xml --speculative-config '{\"method\":\"dspark\",\"model\":\"/draft\",\"num_speculative_tokens\":7,\"kv_cache_dtype\":\"bfloat16\",\"quantization\":null,\"rejection_sample_method\":\"standard\",\"draft_sample_method\":\"greedy\",\"enable_adaptive_verification\":false}' --profiler-config.profiler=torch --profiler-config.torch_profiler_dir=/output/profile --profiler-config.torch_profiler_with_stack=false --profiler-config.torch_profiler_with_flops=false --profiler-config.torch_profiler_use_gzip=true --profiler-config.torch_profiler_dump_cuda_time_total=false --profiler-config.torch_profiler_record_shapes=true --profiler-config.torch_profiler_with_memory=false --profiler-config.ignore_frontend=false --profiler-config.delay_iterations=3 --profiler-config.max_iterations=5 --profiler-config.warmup_iterations=0 --profiler-config.active_iterations=5 --profiler-config.wait_iterations=0 --enforce-eager"
+    ],
+    "Domainname": "",
+    "Entrypoint": [
+      "bash"
+    ],
+    "Env": [
+      "VLLM_USE_V2_MODEL_RUNNER=1",
+      "VLLM_TARGET_DEVICE=xpu",
+      "ZE_AFFINITY_MASK=0",
+      "PYTORCH_ALLOC_CONF=expandable_segments:True",
+      "VLLM_XPU_ENABLE_XPU_GRAPH=0",
+      "B70_DSPARK_BF16=1",
+      "PYTHONPATH=/annotations",
+      "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+      "B70_STEP_TIMING=1",
+      "PATH=/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "DEBIAN_FRONTEND=noninteractive",
+      "VIRTUAL_ENV=/opt/venv",
+      "UV_PYTHON_INSTALL_DIR=/opt/uv/python",
+      "UV_HTTP_TIMEOUT=500",
+      "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/xpu",
+      "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/xpu",
+      "UV_INDEX_STRATEGY=unsafe-best-match",
+      "UV_LINK_MODE=copy",
+      "LD_LIBRARY_PATH=/opt/ucx/lib:/opt/venv/lib:/usr/local/lib",
+      "VLLM_WORKER_MULTIPROC_METHOD=spawn"
+    ],
+    "ExposedPorts": {
+      "8000/tcp": {}
+    },
+    "Hostname": "3b384074277d",
+    "Image": "vllm/vllm-openai-xpu@sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4",
+    "Labels": {
+      "org.opencontainers.image.version": "24.04"
+    },
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Tty": false,
+    "User": "",
+    "Volumes": null,
+    "WorkingDir": "/workspace/vllm"
+  },
+  "Created": "2026-09-12T04:38:49.478175873Z",
+  "Driver": "overlayfs",
+  "ExecIDs": null,
+  "HostConfig": {
+    "AutoRemove": true,
+    "Binds": [
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/draft:/draft:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-layer-norm/patch-dspark-native.py:/experiment/patch_dspark_bf16.py:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260912-qwen38-dspark-draft-profile/profile-01:/output",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260912-qwen38-dspark-draft-profile/draft-annotations.py:/annotations/qwen38_step_timing_overlay.py:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-target-verification/qwen38_step_timing_patch.py:/annotations/patch.py:ro",
+      "/dev/dri:/dev/dri:ro",
+      "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16:/model:ro",
+      "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility:/experiment:ro"
+    ],
+    "BlkioDeviceReadBps": [],
+    "BlkioDeviceReadIOps": [],
+    "BlkioDeviceWriteBps": [],
+    "BlkioDeviceWriteIOps": [],
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": [],
+    "CapAdd": null,
+    "CapDrop": null,
+    "Cgroup": "",
+    "CgroupParent": "",
+    "CgroupnsMode": "private",
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "ContainerIDFile": "",
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpuShares": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "Devices": [
+      {
+        "CgroupPermissions": "rwm",
+        "PathInContainer": "/dev/dri",
+        "PathOnHost": "/dev/dri"
+      }
+    ],
+    "Dns": null,
+    "DnsOptions": [],
+    "DnsSearch": [],
+    "ExtraHosts": null,
+    "GroupAdd": [
+      "987"
+    ],
+    "IOMaximumBandwidth": 0,
+    "IOMaximumIOps": 0,
+    "IpcMode": "host",
+    "Isolation": "",
+    "Links": null,
+    "LogConfig": {
+      "Config": {},
+      "Type": "json-file"
+    },
+    "MaskedPaths": [
+      "/proc/acpi",
+      "/proc/asound",
+      "/proc/interrupts",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/sys/devices/virtual/powercap",
+      "/sys/firmware"
+    ],
+    "Memory": 0,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "NanoCpus": 0,
+    "NetworkMode": "bridge",
+    "OomKillDisable": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "PidsLimit": null,
+    "PortBindings": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "8000"
+        }
+      ]
+    },
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ],
+    "ReadonlyRootfs": false,
+    "RestartPolicy": {
+      "MaximumRetryCount": 0,
+      "Name": "no"
+    },
+    "Runtime": "runc",
+    "SecurityOpt": [
+      "label=disable"
+    ],
+    "ShmSize": 67108864,
+    "UTSMode": "",
+    "Ulimits": [],
+    "UsernsMode": "",
+    "VolumeDriver": "",
+    "VolumesFrom": null
+  },
+  "HostnamePath": "/var/lib/docker/containers/3b384074277df340a5947249af840e25660ec1db410fe81b2ab6be1233f89d13/hostname",
+  "HostsPath": "/var/lib/docker/containers/3b384074277df340a5947249af840e25660ec1db410fe81b2ab6be1233f89d13/hosts",
+  "Id": "3b384074277df340a5947249af840e25660ec1db410fe81b2ab6be1233f89d13",
+  "Image": "sha256:7a558f63b703a2b19020eea66483830dc33becfa2503b83074755bcceb8110d4",
+  "ImageManifestDescriptor": {
+    "digest": "sha256:774e4386f5b75522ae2ff302fa035f24c626aec5bbd320ec0ba180021ded3959",
+    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+    "platform": {
+      "architecture": "amd64",
+      "os": "linux"
+    },
+    "size": 4109
+  },
+  "LogPath": "/var/lib/docker/containers/3b384074277df340a5947249af840e25660ec1db410fe81b2ab6be1233f89d13/3b384074277df340a5947249af840e25660ec1db410fe81b2ab6be1233f89d13-json.log",
+  "MountLabel": "",
+  "Mounts": [
+    {
+      "Destination": "/draft",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/draft",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/experiment/patch_dspark_bf16.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-layer-norm/patch-dspark-native.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/output",
+      "Mode": "",
+      "Propagation": "rprivate",
+      "RW": true,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260912-qwen38-dspark-draft-profile/profile-01",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/annotations/qwen38_step_timing_overlay.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260912-qwen38-dspark-draft-profile/draft-annotations.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/annotations/patch.py",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-target-verification/qwen38_step_timing_patch.py",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/dev/dri",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/dev/dri",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/model",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/experiment",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility",
+      "Type": "bind"
+    }
+  ],
+  "Name": "/b70-dspark-draft-profile",
+  "NetworkSettings": {
+    "Networks": {
+      "bridge": {
+        "Aliases": null,
+        "DNSNames": null,
+        "DriverOpts": null,
+        "EndpointID": "5dbd4446deb3225fd00e4bcbba09840345bf96c7d9a5f1579a383e4669557b9c",
+        "Gateway": "172.17.0.1",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "GwPriority": 0,
+        "IPAMConfig": null,
+        "IPAddress": "172.17.0.2",
+        "IPPrefixLen": 16,
+        "IPv6Gateway": "",
+        "Links": null,
+        "MacAddress": "ae:22:38:22:cd:53",
+        "NetworkID": "a66f37caa987834568d5425af61ba49b2061be9ca8d0493cd060f088c9f21a97"
+      }
+    },
+    "Ports": {
+      "8000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "8000"
+        }
+      ]
+    },
+    "SandboxID": "7695d17d42a84c96b8647be076638e75a1ae803d8ee4ba8af5be65a59cc206b6",
+    "SandboxKey": "/var/run/docker/netns/7695d17d42a8"
+  },
+  "Path": "bash",
+  "Platform": "linux",
+  "ProcessLabel": "",
+  "ResolvConfPath": "/var/lib/docker/containers/3b384074277df340a5947249af840e25660ec1db410fe81b2ab6be1233f89d13/resolv.conf",
+  "RestartCount": 0,
+  "State": {
+    "Dead": false,
+    "Error": "",
+    "ExitCode": 0,
+    "FinishedAt": "0001-01-01T00:00:00Z",
+    "OOMKilled": false,
+    "Paused": false,
+    "Pid": 297759,
+    "Restarting": false,
+    "Running": true,
+    "StartedAt": "2026-09-12T04:38:49.594212172Z",
+    "Status": "running"
+  },
+  "Storage": {
+    "RootFS": {
+      "Snapshot": {
+        "Name": "overlayfs"
+      }
+    }
+  }
+}

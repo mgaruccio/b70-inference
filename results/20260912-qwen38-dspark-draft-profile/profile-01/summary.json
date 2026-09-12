@@ -1,0 +1,104 @@
+{
+  "campaign": "20260912-qwen38-dspark-draft-profile",
+  "cell": "dspark",
+  "finished_utc": "2026-09-12T04:41:38.665637+00:00",
+  "host_contract": {
+    "glimmer_stopped": true,
+    "no_running_containers": true,
+    "power_cap_microwatts": "275000000",
+    "production_launcher_sha256": "63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4"
+  },
+  "host_unchanged": true,
+  "mode": "profile",
+  "profile": {
+    "activation_contract": "start_profile launched only after first non-empty SSE output event; delay applies only to later worker steps",
+    "controls": {
+      "start": {
+        "finished_monotonic": 385145.201994199,
+        "label": "start",
+        "response_bytes": 0,
+        "started_monotonic": 385145.095171165,
+        "status": 200
+      },
+      "stop": {
+        "finished_monotonic": 385151.76557136,
+        "label": "stop",
+        "response_bytes": 0,
+        "started_monotonic": 385151.656742111,
+        "status": 200
+      }
+    },
+    "done": true,
+    "error_objects": [],
+    "event_count": 59,
+    "finish_reason": "length",
+    "first_output_elapsed_s": 57.74089046003064,
+    "first_output_event": 1,
+    "metric_validation": {
+      "counter_errors": [],
+      "parse_errors": {},
+      "raw_snapshot_count": 2,
+      "spec_counter_bases": [
+        "vllm:spec_decode_num_accepted_tokens_total",
+        "vllm:spec_decode_num_draft_tokens_total",
+        "vllm:spec_decode_num_drafts_total"
+      ]
+    },
+    "nonce": "291a02e17799d5350da671fc",
+    "nonempty_events": 57,
+    "parse_errors": [],
+    "requested_length": 65536,
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 65536,
+      "total_tokens": 65664
+    }
+  },
+  "profile_artifacts": {
+    "directory": "profile",
+    "files": [
+      {
+        "bytes": 4307960,
+        "path": "profile/rank0.1789188089953386895.pt.trace.json.gz"
+      }
+    ],
+    "trace_files_are_host_local": true,
+    "trace_interpretation": "inspect event annotations and reject any prefill/context-contaminated sample before ranking kernels"
+  },
+  "purpose": "64K profiling/paired throughput evidence; not a publishable result or production promotion",
+  "served_model": {
+    "created": 1789188022,
+    "id": "qwen38",
+    "max_model_len": 65664,
+    "object": "model",
+    "owned_by": "vllm",
+    "parent": null,
+    "permission": [
+      {
+        "allow_create_engine": false,
+        "allow_fine_tuning": false,
+        "allow_logprobs": true,
+        "allow_sampling": true,
+        "allow_search_indices": false,
+        "allow_view": true,
+        "created": 1789188022,
+        "group": null,
+        "id": "modelperm-a8a7c870be02bf5d",
+        "is_blocking": false,
+        "object": "model_permission",
+        "organization": "*"
+      }
+    ],
+    "root": "/model"
+  },
+  "status": "passed",
+  "tier": "development",
+  "workload_contract": {
+    "completion_tokens": 128,
+    "ignore_eos": true,
+    "prefix_cache": false,
+    "prompt_tokens": 65536,
+    "seed": 42,
+    "temperature": 0.0
+  }
+}

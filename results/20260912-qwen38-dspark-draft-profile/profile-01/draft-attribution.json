@@ -1,0 +1,783 @@
+{
+  "trace_sha256": "8c379d097929ef1f9f09ddbc7831292d665a781622212bcf01de7f71860c0341",
+  "draft_generation_steps": 5,
+  "phase_counts": {
+    "context_kv": 5,
+    "generate": 5,
+    "backbone": 5,
+    "sampling": 5
+  },
+  "decode_annotations": [
+    "execute_context_0(0)_generation_1(8)",
+    "execute_context_0(0)_generation_1(8)",
+    "execute_context_0(0)_generation_1(8)",
+    "execute_context_0(0)_generation_1(8)",
+    "execute_context_0(0)_generation_1(8)"
+  ],
+  "kernel_queues": [
+    [
+      0,
+      64
+    ]
+  ],
+  "all_kernel_ms": 463.20365399999656,
+  "draft_kernel_ms": 168.08119300000018,
+  "outside_draft_or_unmapped_ms": 295.1224610000006,
+  "unmapped_cpu_external_id": {
+    "count": 3089,
+    "kernel_ms": 53.09547199999788
+  },
+  "unmapped_kernel_runtime_correlation_audit": {
+    "outside_draft": {
+      "count": 3089,
+      "kernel_ms": 53.09547199999991
+    }
+  },
+  "caveat": "Eager diagnostic, not graph timing or throughput. Each kernel counted once in its innermost phase; context KV is outside draft generation. Summed device work is not critical-path latency.",
+  "phases": [
+    {
+      "name": "backbone",
+      "count": 395,
+      "total_us": 136266.18500000023,
+      "ms_per_generation_step": 27.253237000000045
+    },
+    {
+      "name": "sampling",
+      "count": 160,
+      "total_us": 30777.331000000013,
+      "ms_per_generation_step": 6.155466200000003
+    },
+    {
+      "name": "context_kv",
+      "count": 75,
+      "total_us": 1037.677,
+      "ms_per_generation_step": 0.20753539999999998
+    }
+  ],
+  "modules": [
+    {
+      "name": "sampling / b70_draft/logits_processor:LogitsProcessor",
+      "count": 40,
+      "total_us": 29137.381999999994,
+      "ms_per_generation_step": 5.827476399999999
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.self_attn.attn:Attention",
+      "count": 25,
+      "total_us": 21751.345999999998,
+      "ms_per_generation_step": 4.3502692
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.self_attn.attn:Attention",
+      "count": 25,
+      "total_us": 21741.970999999998,
+      "ms_per_generation_step": 4.3483941999999995
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.self_attn.attn:Attention",
+      "count": 25,
+      "total_us": 21739.361000000004,
+      "ms_per_generation_step": 4.347872200000001
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.self_attn.attn:Attention",
+      "count": 25,
+      "total_us": 21734.467,
+      "ms_per_generation_step": 4.3468934
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.self_attn.attn:Attention",
+      "count": 25,
+      "total_us": 21731.136,
+      "ms_per_generation_step": 4.3462271999999995
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.mlp.gate_up_proj:MergedColumnParallelLinear",
+      "count": 5,
+      "total_us": 2994.5800000000004,
+      "ms_per_generation_step": 0.5989160000000001
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.mlp.gate_up_proj:MergedColumnParallelLinear",
+      "count": 5,
+      "total_us": 2994.165,
+      "ms_per_generation_step": 0.598833
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.mlp.gate_up_proj:MergedColumnParallelLinear",
+      "count": 5,
+      "total_us": 2993.9570000000003,
+      "ms_per_generation_step": 0.5987914000000001
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.mlp.gate_up_proj:MergedColumnParallelLinear",
+      "count": 5,
+      "total_us": 2993.436,
+      "ms_per_generation_step": 0.5986872
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.mlp.gate_up_proj:MergedColumnParallelLinear",
+      "count": 5,
+      "total_us": 2992.811,
+      "ms_per_generation_step": 0.5985622
+    },
+    {
+      "name": "sampling / (phase only)",
+      "count": 85,
+      "total_us": 1537.151,
+      "ms_per_generation_step": 0.3074302
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.mlp.down_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 1510.622,
+      "ms_per_generation_step": 0.3021244
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.mlp.down_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 1510.3110000000001,
+      "ms_per_generation_step": 0.3020622
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.mlp.down_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 1508.9560000000001,
+      "ms_per_generation_step": 0.30179120000000004
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.mlp.down_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 1508.852,
+      "ms_per_generation_step": 0.3017704
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.mlp.down_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 1506.456,
+      "ms_per_generation_step": 0.3012912
+    },
+    {
+      "name": "context_kv / (phase only)",
+      "count": 75,
+      "total_us": 1037.677,
+      "ms_per_generation_step": 0.20753539999999998
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.self_attn.qkv_proj:QKVParallelLinear",
+      "count": 5,
+      "total_us": 557.497,
+      "ms_per_generation_step": 0.11149939999999998
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.self_attn.qkv_proj:QKVParallelLinear",
+      "count": 5,
+      "total_us": 542.2900000000001,
+      "ms_per_generation_step": 0.10845800000000001
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.self_attn.qkv_proj:QKVParallelLinear",
+      "count": 5,
+      "total_us": 542.289,
+      "ms_per_generation_step": 0.1084578
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.self_attn.qkv_proj:QKVParallelLinear",
+      "count": 5,
+      "total_us": 541.872,
+      "ms_per_generation_step": 0.1083744
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.self_attn.qkv_proj:QKVParallelLinear",
+      "count": 5,
+      "total_us": 540.8309999999999,
+      "ms_per_generation_step": 0.10816619999999998
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.self_attn.o_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 366.144,
+      "ms_per_generation_step": 0.0732288
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.self_attn.o_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 364.164,
+      "ms_per_generation_step": 0.0728328
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.self_attn.o_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 363.643,
+      "ms_per_generation_step": 0.07272859999999999
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.self_attn.o_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 363.228,
+      "ms_per_generation_step": 0.0726456
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.self_attn.o_proj:RowParallelLinear",
+      "count": 5,
+      "total_us": 362.289,
+      "ms_per_generation_step": 0.0724578
+    },
+    {
+      "name": "sampling / b70_draft/model.markov_head.markov_w1:Embedding",
+      "count": 35,
+      "total_us": 102.79799999999996,
+      "ms_per_generation_step": 0.02055959999999999
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.self_attn.rotary_emb:YaRNScalingRotaryEmbedding",
+      "count": 25,
+      "total_us": 74.675,
+      "ms_per_generation_step": 0.014934999999999999
+    },
+    {
+      "name": "backbone / b70_draft/model.embed_tokens:VocabParallelEmbedding",
+      "count": 10,
+      "total_us": 47.495999999999995,
+      "ms_per_generation_step": 0.0094992
+    },
+    {
+      "name": "backbone / b70_draft/root:Qwen3DSparkForCausalLM",
+      "count": 5,
+      "total_us": 26.768,
+      "ms_per_generation_step": 0.0053536
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.mlp.act_fn:SiluAndMul",
+      "count": 5,
+      "total_us": 21.144000000000002,
+      "ms_per_generation_step": 0.0042288000000000004
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.mlp.act_fn:SiluAndMul",
+      "count": 5,
+      "total_us": 20.831000000000003,
+      "ms_per_generation_step": 0.004166200000000001
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.mlp.act_fn:SiluAndMul",
+      "count": 5,
+      "total_us": 19.165,
+      "ms_per_generation_step": 0.003833
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.mlp.act_fn:SiluAndMul",
+      "count": 5,
+      "total_us": 18.54,
+      "ms_per_generation_step": 0.003708
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.mlp.act_fn:SiluAndMul",
+      "count": 5,
+      "total_us": 18.331,
+      "ms_per_generation_step": 0.0036662
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.self_attn.q_norm:RMSNorm",
+      "count": 5,
+      "total_us": 16.041,
+      "ms_per_generation_step": 0.0032082
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.input_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 15.415,
+      "ms_per_generation_step": 0.003083
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.post_attention_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 15.204999999999998,
+      "ms_per_generation_step": 0.003041
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.self_attn.q_norm:RMSNorm",
+      "count": 5,
+      "total_us": 14.788,
+      "ms_per_generation_step": 0.0029576
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.input_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 14.788,
+      "ms_per_generation_step": 0.0029576
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.self_attn.q_norm:RMSNorm",
+      "count": 5,
+      "total_us": 14.788,
+      "ms_per_generation_step": 0.0029576
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.self_attn.q_norm:RMSNorm",
+      "count": 5,
+      "total_us": 14.163999999999998,
+      "ms_per_generation_step": 0.0028327999999999995
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.input_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 13.02,
+      "ms_per_generation_step": 0.002604
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.post_attention_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 12.916,
+      "ms_per_generation_step": 0.0025832
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.post_attention_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 12.915,
+      "ms_per_generation_step": 0.002583
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.input_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 12.812000000000001,
+      "ms_per_generation_step": 0.0025624000000000003
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.post_attention_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 12.708,
+      "ms_per_generation_step": 0.0025416
+    },
+    {
+      "name": "backbone / b70_draft/model.norm:RMSNorm",
+      "count": 5,
+      "total_us": 12.708,
+      "ms_per_generation_step": 0.0025416
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.post_attention_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 12.5,
+      "ms_per_generation_step": 0.0025
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.self_attn.q_norm:RMSNorm",
+      "count": 5,
+      "total_us": 12.498999999999999,
+      "ms_per_generation_step": 0.0024998
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.self_attn.k_norm:RMSNorm",
+      "count": 5,
+      "total_us": 11.038999999999998,
+      "ms_per_generation_step": 0.0022077999999999998
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.3.self_attn.k_norm:RMSNorm",
+      "count": 5,
+      "total_us": 9.061,
+      "ms_per_generation_step": 0.0018122
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.0.input_layernorm:RMSNorm",
+      "count": 5,
+      "total_us": 8.851,
+      "ms_per_generation_step": 0.0017702000000000002
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.4.self_attn.k_norm:RMSNorm",
+      "count": 5,
+      "total_us": 8.850999999999999,
+      "ms_per_generation_step": 0.0017701999999999998
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.1.self_attn.k_norm:RMSNorm",
+      "count": 5,
+      "total_us": 8.85,
+      "ms_per_generation_step": 0.0017699999999999999
+    },
+    {
+      "name": "backbone / b70_draft/model.layers.2.self_attn.k_norm:RMSNorm",
+      "count": 5,
+      "total_us": 8.642,
+      "ms_per_generation_step": 0.0017284
+    }
+  ],
+  "operators": [
+    {
+      "name": "backbone / _vllm_fa2_C::varlen_fwd [[7, 32, 128], [227, 1664, 8, 128], [227, 1664, 8, 128], [7, 32, 128], [2], [2], [1], [], [1, 40], [], [], [], [], [1, 8], [1, 8], [], [], [], [], [], [], [], [], [], [], [], [], []]",
+      "count": 50,
+      "total_us": 108551.43500000001,
+      "ms_per_generation_step": 21.710287
+    },
+    {
+      "name": "sampling / aten::mm [[7, 5120], [5120, 248320]]",
+      "count": 5,
+      "total_us": 21459.685999999998,
+      "ms_per_generation_step": 4.2919372
+    },
+    {
+      "name": "backbone / aten::mm [[7, 5120], [5120, 34816]]",
+      "count": 25,
+      "total_us": 14968.948999999997,
+      "ms_per_generation_step": 2.993789799999999
+    },
+    {
+      "name": "sampling / aten::mm [[1, 256], [256, 248320]]",
+      "count": 35,
+      "total_us": 7677.695999999999,
+      "ms_per_generation_step": 1.5355391999999999
+    },
+    {
+      "name": "backbone / aten::mm [[7, 17408], [17408, 5120]]",
+      "count": 25,
+      "total_us": 7545.197,
+      "ms_per_generation_step": 1.5090394
+    },
+    {
+      "name": "backbone / aten::mm [[7, 5120], [5120, 6144]]",
+      "count": 25,
+      "total_us": 2724.779,
+      "ms_per_generation_step": 0.5449558
+    },
+    {
+      "name": "backbone / aten::mm [[7, 4096], [4096, 5120]]",
+      "count": 25,
+      "total_us": 1819.4679999999998,
+      "ms_per_generation_step": 0.3638936
+    },
+    {
+      "name": "sampling / aten::argmax [[1, 248320], [], []]",
+      "count": 35,
+      "total_us": 1174.7770000000003,
+      "ms_per_generation_step": 0.23495540000000006
+    },
+    {
+      "name": "context_kv / aten::mm [[8, 5120], [5120, 10240]]",
+      "count": 5,
+      "total_us": 894.9970000000001,
+      "ms_per_generation_step": 0.1789994
+    },
+    {
+      "name": "sampling / aten::add [[1, 248320], [1, 248320], []]",
+      "count": 35,
+      "total_us": 290.61000000000007,
+      "ms_per_generation_step": 0.058122000000000014
+    },
+    {
+      "name": "backbone / _C::fused_add_rms_norm [[7, 5120], [7, 5120], [5120], []]",
+      "count": 50,
+      "total_us": 134.987,
+      "ms_per_generation_step": 0.026997399999999998
+    },
+    {
+      "name": "sampling / aten::index_select [[248320, 256], [], [1]]",
+      "count": 35,
+      "total_us": 102.79799999999996,
+      "ms_per_generation_step": 0.02055959999999999
+    },
+    {
+      "name": "backbone / _C::silu_and_mul [[7, 17408], [7, 34816]]",
+      "count": 25,
+      "total_us": 98.01099999999997,
+      "ms_per_generation_step": 0.019602199999999993
+    },
+    {
+      "name": "backbone / _C::rotary_embedding [[7], [7, 4096], [7, 1024], [], [262144, 128], []]",
+      "count": 25,
+      "total_us": 74.675,
+      "ms_per_generation_step": 0.014934999999999999
+    },
+    {
+      "name": "backbone / _C::rms_norm [[7, 32, 128], [7, 32, 128], [128], []]",
+      "count": 25,
+      "total_us": 72.27999999999999,
+      "ms_per_generation_step": 0.014455999999999997
+    },
+    {
+      "name": "context_kv / _C::rms_norm [[8, 8, 128], [8, 8, 128], [128], []]",
+      "count": 25,
+      "total_us": 56.343999999999994,
+      "ms_per_generation_step": 0.011268799999999999
+    },
+    {
+      "name": "backbone / aten::sub [[1], [1], []]",
+      "count": 25,
+      "total_us": 51.34699999999998,
+      "ms_per_generation_step": 0.010269399999999996
+    },
+    {
+      "name": "backbone / aten::gt [[1], []]",
+      "count": 25,
+      "total_us": 50.09399999999999,
+      "ms_per_generation_step": 0.010018799999999998
+    },
+    {
+      "name": "backbone / _C::rms_norm [[7, 8, 128], [7, 8, 128], [128], []]",
+      "count": 25,
+      "total_us": 46.443,
+      "ms_per_generation_step": 0.0092886
+    },
+    {
+      "name": "backbone / _C_cache_ops::reshape_and_cache_flash [[7, 8, 128], [7, 8, 128], [227, 1664, 8, 128], [227, 1664, 8, 128], [7], [], [], []]",
+      "count": 25,
+      "total_us": 45.404999999999994,
+      "ms_per_generation_step": 0.009080999999999999
+    },
+    {
+      "name": "context_kv / _C_cache_ops::reshape_and_cache_flash [[8, 8, 128], [8, 8, 128], [227, 1664, 8, 128], [227, 1664, 8, 128], [8], [], [], []]",
+      "count": 25,
+      "total_us": 40.40699999999998,
+      "ms_per_generation_step": 0.008081399999999997
+    },
+    {
+      "name": "sampling / aten::copy_ [[7, 5120], [7, 5120], []]",
+      "count": 5,
+      "total_us": 39.997,
+      "ms_per_generation_step": 0.0079994
+    },
+    {
+      "name": "backbone / aten::index_select [[248320, 5120], [], [7]]",
+      "count": 5,
+      "total_us": 34.997,
+      "ms_per_generation_step": 0.0069994
+    },
+    {
+      "name": "backbone / aten::copy_ [[7, 5120], [7, 5120], []]",
+      "count": 5,
+      "total_us": 26.768,
+      "ms_per_generation_step": 0.0053536
+    },
+    {
+      "name": "sampling / aten::index [[2048], []]",
+      "count": 5,
+      "total_us": 21.768,
+      "ms_per_generation_step": 0.0043536
+    },
+    {
+      "name": "context_kv / _C::rms_norm [[8, 5120], [8, 5120], [5120], []]",
+      "count": 5,
+      "total_us": 12.915,
+      "ms_per_generation_step": 0.002583
+    },
+    {
+      "name": "context_kv / aten::copy_ [[2, 5, 8, 8, 128], [2, 5, 8, 8, 128], []]",
+      "count": 5,
+      "total_us": 12.604,
+      "ms_per_generation_step": 0.0025207999999999997
+    },
+    {
+      "name": "backbone / aten::copy_ [[7], [7], []]",
+      "count": 5,
+      "total_us": 12.499,
+      "ms_per_generation_step": 0.0024998
+    },
+    {
+      "name": "context_kv / _C::rotary_embedding [[40], [40, 1024], [], [], [262144, 128], []]",
+      "count": 5,
+      "total_us": 12.079999999999998,
+      "ms_per_generation_step": 0.0024159999999999997
+    },
+    {
+      "name": "sampling / aten::index [[7, 5120], []]",
+      "count": 5,
+      "total_us": 9.998999999999999,
+      "ms_per_generation_step": 0.0019998
+    },
+    {
+      "name": "backbone / _C::rms_norm [[7, 5120], [7, 5120], [5120], []]",
+      "count": 5,
+      "total_us": 8.851,
+      "ms_per_generation_step": 0.0017702000000000002
+    },
+    {
+      "name": "context_kv / aten::copy_ [[5, 8], [5, 8], []]",
+      "count": 5,
+      "total_us": 8.33,
+      "ms_per_generation_step": 0.001666
+    }
+  ],
+  "kernels": [
+    {
+      "name": "backbone / compat::experimental::detail::KernelFunctor<&(void cutlass::device_kernel<cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<128> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false> >(cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<128> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params const&)), sycl::_V1::nd_range<3>, sycl::_V1::ext::oneapi::experimental::properties<sycl::_V1::ext::oneapi::experimental::detail::properties_type_list<sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::oneapi::experimental::sub_group_size_key, std::integral_constant<unsigned int, 16u> >, sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::intel::experimental::grf_size_key, std::integral_constant<unsigned int, 256u> > > >, false, cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<16>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<16>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<128> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params>",
+      "count": 25,
+      "total_us": 108505.615,
+      "ms_per_generation_step": 21.701123000000003
+    },
+    {
+      "name": "sampling / gemm_kernel",
+      "count": 40,
+      "total_us": 29137.381999999994,
+      "ms_per_generation_step": 5.827476399999999
+    },
+    {
+      "name": "backbone / gemm_kernel",
+      "count": 100,
+      "total_us": 27058.393,
+      "ms_per_generation_step": 5.4116786
+    },
+    {
+      "name": "sampling / at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<float, at::native::xpu::ArgMaxOps<float>, unsigned int, long, 4> >",
+      "count": 35,
+      "total_us": 1174.7770000000003,
+      "ms_per_generation_step": 0.23495540000000006
+    },
+    {
+      "name": "context_kv / gemm_kernel",
+      "count": 5,
+      "total_us": 894.9970000000001,
+      "ms_per_generation_step": 0.1789994
+    },
+    {
+      "name": "sampling / at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::AddFunctor<float> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<2>, at::native::memory::StoreWithCast<1> >",
+      "count": 35,
+      "total_us": 290.61000000000007,
+      "ms_per_generation_step": 0.058122000000000014
+    },
+    {
+      "name": "backbone / vllm::fused_add_rms_norm_kernel<sycl::_V1::ext::oneapi::bfloat16, 8, true>",
+      "count": 50,
+      "total_us": 134.987,
+      "ms_per_generation_step": 0.026997399999999998
+    },
+    {
+      "name": "backbone / vllm::act_and_mul_vec_kernel<sycl::_V1::ext::oneapi::bfloat16, &(sycl::_V1::ext::oneapi::bfloat16 vllm::silu_kernel<sycl::_V1::ext::oneapi::bfloat16>(sycl::_V1::ext::oneapi::bfloat16 const&)), true, 8>",
+      "count": 25,
+      "total_us": 98.01099999999997,
+      "ms_per_generation_step": 0.019602199999999993
+    },
+    {
+      "name": "sampling / at::native::xpu::IndexSelectSmallIndexFunctor<c10::BFloat16, long, unsigned int, 2, 2, -2>",
+      "count": 30,
+      "total_us": 87.06899999999997,
+      "ms_per_generation_step": 0.017413799999999993
+    },
+    {
+      "name": "backbone / vllm::rotary_embedding_kernel<sycl::_V1::ext::oneapi::bfloat16, true>",
+      "count": 25,
+      "total_us": 74.675,
+      "ms_per_generation_step": 0.014934999999999999
+    },
+    {
+      "name": "backbone / vllm::rms_norm_multi_row_kernel<sycl::_V1::ext::oneapi::bfloat16, 3, 8, 16, true>",
+      "count": 25,
+      "total_us": 72.27999999999999,
+      "ms_per_generation_step": 0.014455999999999997
+    },
+    {
+      "name": "context_kv / vllm::rms_norm_multi_row_kernel<sycl::_V1::ext::oneapi::bfloat16, 3, 8, 16, true>",
+      "count": 25,
+      "total_us": 56.343999999999994,
+      "ms_per_generation_step": 0.011268799999999999
+    },
+    {
+      "name": "backbone / at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>",
+      "count": 25,
+      "total_us": 51.34699999999998,
+      "ms_per_generation_step": 0.010269399999999996
+    },
+    {
+      "name": "backbone / at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::CompareScalarFunctor<int, at::native::xpu::CompareFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "count": 25,
+      "total_us": 50.09399999999999,
+      "ms_per_generation_step": 0.010018799999999998
+    },
+    {
+      "name": "backbone / vllm::rms_norm_kernel<sycl::_V1::ext::oneapi::bfloat16, 3, 8, true>",
+      "count": 25,
+      "total_us": 46.443,
+      "ms_per_generation_step": 0.0092886
+    },
+    {
+      "name": "backbone / _ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_10bfloat16_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi4ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEES1I_NS19_IS1E_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0EEENSA_17DecodeFwdEpilogueIS1M_NSM_IJSU_NSN_ILi128EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS22_3ext6oneapi12experimental10propertiesINS27_6detail20properties_type_listIJNS27_14property_valueINS27_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2B_INS25_5intel12experimental12grf_size_keyEJS2D_IjLj256EEEEEEEEEELb0EJNS1W_6ParamsEEEE",
+      "count": 25,
+      "total_us": 45.81999999999999,
+      "ms_per_generation_step": 0.009163999999999999
+    },
+    {
+      "name": "backbone / vllm::reshape_and_cache_flash_strided_kernel<c10::BFloat16, c10::BFloat16, (vllm::Fp8KVCacheDataType)0>",
+      "count": 25,
+      "total_us": 45.404999999999994,
+      "ms_per_generation_step": 0.009080999999999999
+    },
+    {
+      "name": "context_kv / vllm::reshape_and_cache_flash_strided_kernel<c10::BFloat16, c10::BFloat16, (vllm::Fp8KVCacheDataType)0>",
+      "count": 25,
+      "total_us": 40.40699999999998,
+      "ms_per_generation_step": 0.008081399999999997
+    },
+    {
+      "name": "sampling / at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::BFloat16>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "count": 5,
+      "total_us": 39.997,
+      "ms_per_generation_step": 0.0079994
+    },
+    {
+      "name": "backbone / at::native::xpu::IndexSelectSmallIndexFunctor<c10::Half, long, unsigned int, 2, 2, -2>",
+      "count": 5,
+      "total_us": 34.997,
+      "ms_per_generation_step": 0.0069994
+    },
+    {
+      "name": "backbone / at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::Half>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "count": 5,
+      "total_us": 26.768,
+      "ms_per_generation_step": 0.0053536
+    },
+    {
+      "name": "sampling / at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "count": 5,
+      "total_us": 21.768,
+      "ms_per_generation_step": 0.0043536
+    },
+    {
+      "name": "sampling / at::native::xpu::IndexSelectSmallIndexFunctor<c10::BFloat16, int, unsigned int, 2, 2, -2>",
+      "count": 5,
+      "total_us": 15.729,
+      "ms_per_generation_step": 0.0031458
+    },
+    {
+      "name": "context_kv / vllm::rms_norm_kernel<sycl::_V1::ext::oneapi::bfloat16, 2, 8, true>",
+      "count": 5,
+      "total_us": 12.915,
+      "ms_per_generation_step": 0.002583
+    },
+    {
+      "name": "context_kv / at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::CopyScalarFunc<c10::BFloat16>, at::detail::Array<char*, 2>, OffsetCalculator<1, unsigned int, false> >",
+      "count": 5,
+      "total_us": 12.604,
+      "ms_per_generation_step": 0.0025207999999999997
+    },
+    {
+      "name": "backbone / at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "count": 5,
+      "total_us": 12.499,
+      "ms_per_generation_step": 0.0024998
+    },
+    {
+      "name": "context_kv / vllm::rotary_embedding_kernel<sycl::_V1::ext::oneapi::bfloat16, true>",
+      "count": 5,
+      "total_us": 12.079999999999998,
+      "ms_per_generation_step": 0.0024159999999999997
+    },
+    {
+      "name": "sampling / at::native::xpu::VectorizedGatherKernel<16, long>",
+      "count": 5,
+      "total_us": 9.998999999999999,
+      "ms_per_generation_step": 0.0019998
+    },
+    {
+      "name": "backbone / vllm::rms_norm_kernel<sycl::_V1::ext::oneapi::bfloat16, 2, 8, true>",
+      "count": 5,
+      "total_us": 8.851,
+      "ms_per_generation_step": 0.0017702000000000002
+    },
+    {
+      "name": "context_kv / at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >",
+      "count": 5,
+      "total_us": 8.33,
+      "ms_per_generation_step": 0.001666
+    }
+  ]
+}
