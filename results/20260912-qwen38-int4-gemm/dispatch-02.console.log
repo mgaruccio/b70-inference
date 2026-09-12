@@ -1,0 +1,52 @@
+GEMM_ROUTE gate_up native5 M5 K5120 N34816
+onednn_verbose,v1,info,oneDNN v3.12.0 (commit 80afa71049cd69a3df32adcccb623b12cd7baa22)
+onednn_verbose,v1,info,gpu,runtime:SYCL
+onednn_verbose,v1,info,gpu,engine,sycl gpu device count:1 
+onednn_verbose,v1,info,gpu,engine,0,backend:Level Zero,name:Intel(R) Arc(TM) Pro B70 Graphics,driver_version:1.15.39122,binary_kernels:enabled
+onednn_verbose,v1,info,graph,backend,0:dnnl_backend
+onednn_verbose,v1,info,experimental features are enabled
+onednn_verbose,v1,info,use batch_normalization stats one pass is enabled
+onednn_verbose,v1,info,GPU convolution v2 is disabled
+onednn_verbose,v1,primitive,info,template:operation,engine,primitive,implementation,prop_kind,memory_descriptors,attributes,auxiliary,problem_desc,exec_time
+onednn_verbose,v1,graph,info,template:operation,engine,partition_id,partition_kind,op_names,data_formats,logical_tensors,fpmath_mode,implementation,backend,exec_time
+onednn_verbose,v1,common,info,filter format is enabled, hit components: matmul
+onednn_verbose,v1,primitive,create:cache_miss,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,5x5120:5120x34816,12.1841
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,5x5120:5120x34816,0.0249023
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,5x5120:5120x34816,0.436035
+GEMM_ROUTE gate_up pad8 M5 K5120 N34816
+onednn_verbose,v1,primitive,create:kernel_cache_hit,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,8x5120:5120x34816,0.00390625
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,8x5120:5120x34816,0.0119629
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,8x5120:5120x34816,0.189941
+GEMM_ROUTE gate_up pad16 M5 K5120 N34816
+onednn_verbose,v1,primitive,create:cache_miss,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,16x5120:5120x34816,19.5469
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,16x5120:5120x34816,0.0178223
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,16x5120:5120x34816,0.431152
+GEMM_ROUTE gate_up five_native1 M5 K5120 N34816
+onednn_verbose,v1,primitive,create:kernel_cache_hit,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x5120:5120x34816,0.00219727
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x5120:5120x34816,0.00976562
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x5120:5120x34816,0.184082
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x5120:5120x34816,0.175049
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x5120:5120x34816,0.173096
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x5120:5120x34816,0.174072
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x5120:5120x34816,0.175781
+GEMM_ROUTE down native5 M5 K17408 N5120
+onednn_verbose,v1,primitive,create:kernel_cache_hit,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,5x17408:17408x5120,0.00512695
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,5x17408:17408x5120,0.019043
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,5x17408:17408x5120,0.156982
+GEMM_ROUTE down pad8 M5 K17408 N5120
+onednn_verbose,v1,primitive,create:kernel_cache_hit,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,8x17408:17408x5120,0.00195312
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,8x17408:17408x5120,0.0168457
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,8x17408:17408x5120,0.105957
+GEMM_ROUTE down pad16 M5 K17408 N5120
+onednn_verbose,v1,primitive,create:cache_miss,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,16x17408:17408x5120,15.9312
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,16x17408:17408x5120,0.0180664
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,16x17408:17408x5120,0.52002
+GEMM_ROUTE down five_native1 M5 K17408 N5120
+onednn_verbose,v1,primitive,create:kernel_cache_hit,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x17408:17408x5120,0.00292969
+onednn_verbose,v1,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x17408:17408x5120,0.0100098
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x17408:17408x5120,0.131104
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x17408:17408x5120,0.0939941
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x17408:17408x5120,0.0930176
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x17408:17408x5120,0.0930176
+onednn_verbose,v1,primitive,exec,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,1x17408:17408x5120,0.0939941
+passed: /output/dispatch-02/results.json

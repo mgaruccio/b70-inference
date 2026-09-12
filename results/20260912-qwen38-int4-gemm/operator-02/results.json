@@ -1,0 +1,237 @@
+{
+  "tier": "development native operator investigation",
+  "status": "passed",
+  "command": "/opt/venv/bin/python -P /experiment/probe-native-gemm.py --out /output/operator-02",
+  "describe_only": false,
+  "source_sha256": "84549fd9eccba630ce1d352e01a44fff92cfbe5d235a823cef0b94dfc429f820",
+  "contract": "FP16 compute, symmetric packed INT4, G128, scalar int8 zero point 8; no activation quantization",
+  "cases": [
+    {
+      "name": "gate_up",
+      "m": 5,
+      "n": 34816,
+      "k": 5120,
+      "weight_shape": [
+        640,
+        34816
+      ],
+      "weight_stride": [
+        1,
+        640
+      ],
+      "scales_shape": [
+        40,
+        34816
+      ],
+      "routes": {
+        "native5": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true,
+          "sampled_fp32_max_abs": 0.0027256011962890625,
+          "mutated_graph_max_abs": 0.0,
+          "replay_ms": [
+            0.189792,
+            0.173541,
+            0.17526,
+            0.17635499999999998,
+            0.201458,
+            0.177708,
+            0.17625,
+            0.17421899999999998,
+            0.194323,
+            0.175677,
+            0.17526,
+            0.175
+          ],
+          "median_ms": 0.1759635,
+          "iqr_ms": 0.005534000000000011
+        },
+        "pad8": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true,
+          "sampled_fp32_max_abs": 0.0027256011962890625,
+          "mutated_graph_max_abs": 0.0,
+          "replay_ms": [
+            0.16921799999999998,
+            0.182812,
+            0.17166599999999999,
+            0.17130199999999998,
+            0.47651099999999996,
+            0.180365,
+            0.172708,
+            0.17296799999999998,
+            0.45349,
+            0.181927,
+            0.174427,
+            0.169011
+          ],
+          "median_ms": 0.1736975,
+          "iqr_ms": 0.010573250000000034
+        },
+        "pad16": {
+          "max_abs_vs_native5": 0.0078125,
+          "exact_vs_native5": false,
+          "sampled_fp32_max_abs": 0.0027256011962890625,
+          "mutated_graph_max_abs": 0.0078125,
+          "replay_ms": [
+            0.305156,
+            0.179219,
+            0.18395899999999998,
+            0.177708,
+            0.366094,
+            0.17625,
+            0.177135,
+            0.18145799999999998,
+            0.36703199999999997,
+            0.179427,
+            0.182969,
+            0.17598999999999998
+          ],
+          "median_ms": 0.1804425,
+          "iqr_ms": 0.03669349999999999
+        },
+        "five_native1": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true,
+          "sampled_fp32_max_abs": 0.0027256011962890625,
+          "mutated_graph_max_abs": 0.0,
+          "replay_ms": [
+            1.052239,
+            0.812187,
+            0.810677,
+            0.809218,
+            0.987448,
+            0.812031,
+            0.812292,
+            0.81448,
+            1.0099479999999998,
+            0.8140109999999999,
+            0.8121879999999999,
+            0.8125519999999999
+          ],
+          "median_ms": 0.812422,
+          "iqr_ms": 0.04557399999999989
+        }
+      },
+      "timing_wall_seconds": 0.018853044020943344,
+      "timing_contract": "12 rotated/interleaved graph samples per route; warm calls3/replays3; verbose off; includes route padding and concatenation"
+    },
+    {
+      "name": "down",
+      "m": 5,
+      "n": 5120,
+      "k": 17408,
+      "weight_shape": [
+        2176,
+        5120
+      ],
+      "weight_stride": [
+        1,
+        2176
+      ],
+      "scales_shape": [
+        136,
+        5120
+      ],
+      "routes": {
+        "native5": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true,
+          "sampled_fp32_max_abs": 0.0038328170776367188,
+          "mutated_graph_max_abs": 0.0,
+          "replay_ms": [
+            0.113646,
+            0.17260399999999998,
+            0.093594,
+            0.09453199999999999,
+            0.365052,
+            0.16744799999999999,
+            0.096511,
+            0.17296899999999998,
+            0.35348999999999997,
+            0.175729,
+            0.094844,
+            0.17848999999999998
+          ],
+          "median_ms": 0.17002599999999998,
+          "iqr_ms": 0.08032499999999998
+        },
+        "pad8": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true,
+          "sampled_fp32_max_abs": 0.0038328170776367188,
+          "mutated_graph_max_abs": 0.0,
+          "replay_ms": [
+            0.321198,
+            0.0925,
+            0.08968799999999999,
+            0.373229,
+            0.350365,
+            0.090625,
+            0.094271,
+            0.444895,
+            0.36619799999999997,
+            0.09281299999999999,
+            0.09281199999999999,
+            0.44536499999999996
+          ],
+          "median_ms": 0.2077345,
+          "iqr_ms": 0.27522175
+        },
+        "pad16": {
+          "max_abs_vs_native5": 0.0078125,
+          "exact_vs_native5": false,
+          "sampled_fp32_max_abs": 0.0038328170776367188,
+          "mutated_graph_max_abs": 0.015625,
+          "replay_ms": [
+            0.375886,
+            0.09432299999999999,
+            0.45911399999999997,
+            0.44437499999999996,
+            0.35645899999999997,
+            0.09322899999999999,
+            0.448073,
+            0.364844,
+            0.369063,
+            0.096042,
+            0.451563,
+            0.35734299999999997
+          ],
+          "median_ms": 0.3669535,
+          "iqr_ms": 0.15394475000000002
+        },
+        "five_native1": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true,
+          "sampled_fp32_max_abs": 0.0038328170776367188,
+          "mutated_graph_max_abs": 0.0,
+          "replay_ms": [
+            0.686094,
+            0.5052599999999999,
+            0.683542,
+            0.41651,
+            0.669948,
+            0.49630199999999997,
+            0.669948,
+            0.49791599999999997,
+            0.6934899999999999,
+            0.494791,
+            0.670573,
+            0.502969
+          ],
+          "median_ms": 0.587604,
+          "iqr_ms": 0.17630275
+        }
+      },
+      "timing_wall_seconds": 0.016492350958287716,
+      "timing_contract": "12 rotated/interleaved graph samples per route; warm calls3/replays3; verbose off; includes route padding and concatenation"
+    }
+  ],
+  "environment": {
+    "torch": "2.13.0+xpu",
+    "device": "Intel(R) Arc(TM) Pro B70 Graphics",
+    "platform": "Linux-7.2.0-1-cachyos-x86_64-with-glibc2.39",
+    "ONEDNN_VERBOSE": "0",
+    "native_schema": "_xpu_C::int4_gemm_w4a16(Tensor A, Tensor B, Tensor? bias, Tensor B_scale, Tensor B_zp, int group_size, Tensor? g_idx) -> Tensor"
+  }
+}

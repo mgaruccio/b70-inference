@@ -1,0 +1,89 @@
+{
+  "tier": "development native operator investigation",
+  "status": "passed",
+  "command": "/opt/venv/bin/python -P /experiment/probe-native-gemm.py --out /output/dispatch-02 --describe",
+  "describe_only": true,
+  "source_sha256": "84549fd9eccba630ce1d352e01a44fff92cfbe5d235a823cef0b94dfc429f820",
+  "contract": "FP16 compute, symmetric packed INT4, G128, scalar int8 zero point 8; no activation quantization",
+  "cases": [
+    {
+      "name": "gate_up",
+      "m": 5,
+      "n": 34816,
+      "k": 5120,
+      "weight_shape": [
+        640,
+        34816
+      ],
+      "weight_stride": [
+        1,
+        640
+      ],
+      "scales_shape": [
+        40,
+        34816
+      ],
+      "routes": {
+        "native5": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true
+        },
+        "pad8": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true
+        },
+        "pad16": {
+          "max_abs_vs_native5": 0.0078125,
+          "exact_vs_native5": false
+        },
+        "five_native1": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true
+        }
+      }
+    },
+    {
+      "name": "down",
+      "m": 5,
+      "n": 5120,
+      "k": 17408,
+      "weight_shape": [
+        2176,
+        5120
+      ],
+      "weight_stride": [
+        1,
+        2176
+      ],
+      "scales_shape": [
+        136,
+        5120
+      ],
+      "routes": {
+        "native5": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true
+        },
+        "pad8": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true
+        },
+        "pad16": {
+          "max_abs_vs_native5": 0.0078125,
+          "exact_vs_native5": false
+        },
+        "five_native1": {
+          "max_abs_vs_native5": 0.0,
+          "exact_vs_native5": true
+        }
+      }
+    }
+  ],
+  "environment": {
+    "torch": "2.13.0+xpu",
+    "device": "Intel(R) Arc(TM) Pro B70 Graphics",
+    "platform": "Linux-7.2.0-1-cachyos-x86_64-with-glibc2.39",
+    "ONEDNN_VERBOSE": "profile,filter=matmul",
+    "native_schema": "_xpu_C::int4_gemm_w4a16(Tensor A, Tensor B, Tensor? bias, Tensor B_scale, Tensor B_zp, int group_size, Tensor? g_idx) -> Tensor"
+  }
+}

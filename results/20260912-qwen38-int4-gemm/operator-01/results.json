@@ -1,0 +1,10 @@
+{
+  "tier": "development native operator investigation",
+  "status": "failed",
+  "command": "/opt/venv/bin/python -P /experiment/probe-native-gemm.py --out /output/operator-01",
+  "describe_only": false,
+  "source_sha256": "2d3aab3774a83b04daf795b20ed1697116ab224f58b5751ee6d023d51a805f37",
+  "contract": "FP16 compute, symmetric packed INT4, G128, scalar int8 zero point 8; no activation quantization",
+  "cases": [],
+  "error": "Traceback (most recent call last):\n  File \"/experiment/probe-native-gemm.py\", line 42, in main\n    'native_schema': str(torch.ops._xpu_C.int4_gemm_w4a16.default._schema)}\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/venv/lib/python3.12/site-packages/torch/_ops.py\", line 1392, in __getattr__\n    raise AttributeError(\nAttributeError: '_OpNamespace' '_xpu_C' object has no attribute 'int4_gemm_w4a16'\n"
+}

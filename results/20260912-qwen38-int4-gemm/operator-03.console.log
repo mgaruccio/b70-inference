@@ -1,0 +1,11 @@
+GEMM_ROUTE gate_up native5 M5 K5120 N34816
+GEMM_ROUTE gate_up pad8 M5 K5120 N34816
+GEMM_ROUTE gate_up pad16 M5 K5120 N34816
+GEMM_ROUTE gate_up five_native1 M5 K5120 N34816
+{"case": "gate_up", "medians": {"native5": 0.18659015624999997, "pad8": 0.19018390624999998, "pad16": 0.19577471875, "five_native1": 0.83297203125}}
+GEMM_ROUTE down native5 M5 K17408 N5120
+GEMM_ROUTE down pad8 M5 K17408 N5120
+GEMM_ROUTE down pad16 M5 K17408 N5120
+GEMM_ROUTE down five_native1 M5 K17408 N5120
+{"case": "down", "medians": {"native5": 0.1110775, "pad8": 0.10864421875, "pad16": 0.117041, "five_native1": 0.43699709374999995}}
+passed: /output/operator-03/results.json

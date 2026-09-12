@@ -1,0 +1,7 @@
+Based on the deployment notes and the specific constraints provided, here is the response for the deployment review:
+
+**Recovery Action**
+Execute the tested rollback behavior to revert the service to the last known stable state. This action is safe to perform because the system is configured to retry only idempotent operations, ensuring that the rollback process does not introduce duplicate states or data inconsistencies during the recovery phase.
+
+**Health Boundary Verification**
+Verify that the active model and cache policy are correctly captured and that admission and memory pressure metrics remain within defined bounds. Crucially, do not infer that the system has reached full capacity based on the success of
