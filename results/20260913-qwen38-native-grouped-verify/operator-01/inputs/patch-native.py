@@ -30,15 +30,14 @@ def patched_mainloop(source):
   static constexpr bool PackedVerify = PackedVerify_;
   static_assert(!PackedVerify || (PagedKV && !LocalMask && !CausalMask),
                 "Packed verification requires paged, non-local decode");
-  static_assert(!PackedVerify || ((get<0>(TileShapeQK{}) == 8 ||
-                                   get<0>(TileShapeQK{}) == 16) &&
+  static_assert(!PackedVerify || (get<0>(TileShapeQK{}) == 16 &&
                                   get<1>(TileShapeQK{}) == 64),
-                "Packed verification is qualified only for q8/q16/p64");""")
+                "Packed verification is qualified only for q16/p64");""")
     decode = once(decode, "      /* Local/sliding window masking */", """      // Experimental C1/MTP4 verification: Q rows are t*6 + group, not
       // positions in a single-token decode. seq_len comes from the DEVICE
       // lengths tensor on every launch/replay (Python clamps it to >= 1).
-      // partition_C of the GLOBAL identity tile includes the Q-tile offset;
-      // using a tile-local row would incorrectly remask later tiles.
+      // partition_C of the GLOBAL identity tile includes blk_qv[0]*16;
+      // using a tile-local row would incorrectly remask rows 16..29.
       if constexpr (PackedVerify) {
         Tensor cVerify = make_identity_tensor(make_shape(30, seq_len));
         Tensor gVerify = local_tile(

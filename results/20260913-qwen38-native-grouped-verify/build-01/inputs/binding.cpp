@@ -1,6 +1,6 @@
 #include <torch/all.h>
 #include <torch/library.h>
-#include <c10/core/DeviceGuard.h>
+#include <c10/xpu/XPUGuard.h>
 #include <c10/xpu/XPUStream.h>
 #include <cmath>
 
@@ -27,7 +27,7 @@ void check_scale(const at::Tensor& t, const at::Tensor& q) {
   }
 }
 
-at::Tensor b70_grouped_verify_forward(const at::Tensor& q, const at::Tensor& k,
+at::Tensor forward(const at::Tensor& q, const at::Tensor& k,
                    const at::Tensor& v, const at::Tensor& used,
                    const at::Tensor& table, const at::Tensor& cu,
                    const at::Tensor& ks, const at::Tensor& vs,
@@ -35,7 +35,7 @@ at::Tensor b70_grouped_verify_forward(const at::Tensor& q, const at::Tensor& k,
   TORCH_CHECK(q.is_xpu() && q.scalar_type() == at::kHalf &&
                   q.sizes() == at::IntArrayRef({1, 120, 256}) && q.is_contiguous(),
               "b70_grouped_verify: expected packed FP16 Q[1,120,256]");
-  c10::DeviceGuard guard(q.device());
+  c10::xpu::XPUGuard guard(q.device());
   for (const auto* cache : {&k, &v}) {
     TORCH_CHECK(cache->device() == q.device() &&
                     cache->scalar_type() == at::ScalarType::Float8_e4m3fn &&
@@ -98,7 +98,7 @@ at::Tensor b70_grouped_verify_forward(const at::Tensor& q, const at::Tensor& k,
   args.q_stride_seq = q.stride(0);
   args.q_stride_heads = q.stride(1);
 
-  using Policy = decode_policy_q8_h256_p64;
+  using Policy = decode_policy_q16_h256_p64;
   using RowStride = cute::Stride<int, cute::_1, int, int>;
   using VStride = cute::Stride<cute::_1, int, int, int>;
   using Config = PagedDecodeConfig<
@@ -119,5 +119,5 @@ at::Tensor b70_grouped_verify_forward(const at::Tensor& q, const at::Tensor& k,
 TORCH_LIBRARY(b70_grouped_verify, ops) {
   ops.def("forward(Tensor q, Tensor k, Tensor v, Tensor used, Tensor table, "
           "Tensor cu, Tensor ks, Tensor vs, int max_k, float scale) -> Tensor");
-  ops.impl("forward", torch::kXPU, &b70_grouped_verify_forward);
+  ops.impl("forward", torch::kXPU, &forward);
 }

@@ -138,16 +138,17 @@ def python_seam_fixture():
 
 
 def mask_fixture():
-    # Include both global row tiles, <5 lengths, page/64-key boundaries and
-    # a split with no visible keys for early query rows. No device execution.
+    # Include q8 and q16 global row tiles, <5 lengths, and key boundaries.
+    # No device execution; real graph mutation qualification remains required.
     for used in (0, 1, 2, 3, 4, 5, 6, 63, 64, 65, 1663, 1664, 1665, 1985, 2049, 65541):
-        for tile, local in itertools.product(range(2), range(16)):
-            row = tile * 16 + local
-            limit = max(max(used, 1) - 4 + row // 6, 1)
-            for key in (0, 1, 63, 64, 1663, 1664, max(used - 1, 0), used):
-                candidate = row < 30 and key < limit
-                expected = row < 30 and key < max(used - 4 + row // 6, 1)
-                assert candidate == expected
+        for width in (8, 16):
+            for tile, local in itertools.product(range(32 // width), range(width)):
+                row = tile * width + local
+                limit = max(max(used, 1) - 4 + row // 6, 1)
+                for key in (0, 1, 63, 64, 1663, 1664, max(used - 1, 0), used):
+                    candidate = row < 30 and key < limit
+                    expected = row < 30 and key < max(used - 4 + row // 6, 1)
+                    assert candidate == expected
     assert max(1665 - 4 + 16 // 6, 1) != max(1665 - 4 + 0 // 6, 1)
     # Lowest finite max + zero sum is native's empty-row/split representation.
     assert math.exp(-math.inf - (-3.4028235e38)) == 0

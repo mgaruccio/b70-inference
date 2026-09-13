@@ -29,10 +29,11 @@ date -Is
 mkdir "$O/inputs"
 cp "$R"/{build.sh,run-probe.sh,CMakeLists.txt,binding.cpp,patch-native.py,grouped_verify.py,probe.py,README.md,check-grouped-split-k.py} "$O/inputs/"
 docker image inspect vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f
-# Fetch pinned source into this build cell; never lazy-fetch into shared assets.
+# The source mount is read-only, including its Git objects. Missing promisor
+# objects fail the build instead of fetching into the shared source checkout.
 timeout --signal=TERM --kill-after=30s 90m docker run --pull=never --rm \
   --name "$NAME" --cpus=12 --memory=24g --memory-swap=24g \
-  -v "$O:/build-cell" \
+  -v "$O:/build-cell" -v "$A/native:/assets/native:ro" \
   -v "$A/compiler:/opt/intel/oneapi/compiler/2026.0:ro" \
   --entrypoint /bin/bash \
   vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f -lc '
@@ -47,14 +48,10 @@ NATIVE=1796aa8bc8db4ac68d9cd19636cef88f3af81d2b
 TLA=cd763790ad2f74d7294435ecf77682bac0062c3a
 [[ ${#NATIVE} == 40 && ${#TLA} == 40 ]]
 mkdir "$O/native" "$O/tla"
-curl --fail --location --retry 2 --max-time 300 \
-  "https://codeload.github.com/vllm-project/vllm-xpu-kernels/tar.gz/$NATIVE" -o "$O/native.tar.gz"
-tar -xzf "$O/native.tar.gz" -C "$O/native" --strip-components=1 \
-  "vllm-xpu-kernels-$NATIVE/csrc/xpu/attn/xe_2" \
-  "vllm-xpu-kernels-$NATIVE/csrc/xpu/attn/paged_kv_utils.h" \
-  "vllm-xpu-kernels-$NATIVE/LICENSE" "vllm-xpu-kernels-$NATIVE/CMakeLists.txt"
-cp "$O/native/CMakeLists.txt" "$O/native-CMakeLists.txt"
-sha256sum "$O/native.tar.gz"
+git -c safe.directory=/assets/native -C /assets/native archive "$NATIVE" \
+  csrc/xpu/attn/xe_2 csrc/xpu/attn/paged_kv_utils.h LICENSE > "$O/native.tar"
+tar -xf "$O/native.tar" -C "$O/native"
+git -c safe.directory=/assets/native -C /assets/native show "$NATIVE:CMakeLists.txt" > "$O/native-CMakeLists.txt"
 grep -F "\"$TLA\"" "$O/native-CMakeLists.txt"
 curl --fail --location --retry 2 --max-time 300 \
   "https://codeload.github.com/intel/sycl-tla/tar.gz/$TLA" -o "$O/sycl-tla.tar.gz"

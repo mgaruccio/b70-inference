@@ -1,0 +1,184 @@
++ date -Is
+2026-09-13T04:12:24-04:00
++ mkdir /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/build-04/inputs
++ cp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/build.sh /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/run-probe.sh /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/CMakeLists.txt /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/binding.cpp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/patch-native.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/grouped_verify.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/probe.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/README.md /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/check-grouped-split-k.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/build-04/inputs/
++ docker image inspect vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f
+[
+    {
+        "Id": "sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+        "RepoTags": [
+            "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f"
+        ],
+        "RepoDigests": [
+            "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-08-14T05:09:36.607926454Z",
+        "Config": {
+            "Env": [
+                "PATH=/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "DEBIAN_FRONTEND=noninteractive",
+                "VIRTUAL_ENV=/opt/venv",
+                "UV_PYTHON_INSTALL_DIR=/opt/uv/python",
+                "UV_HTTP_TIMEOUT=500",
+                "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/xpu",
+                "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/xpu",
+                "UV_INDEX_STRATEGY=unsafe-best-match",
+                "UV_LINK_MODE=copy",
+                "LD_LIBRARY_PATH=/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib",
+                "VLLM_TARGET_DEVICE=xpu",
+                "VLLM_WORKER_MULTIPROC_METHOD=spawn"
+            ],
+            "Entrypoint": [
+                "vllm",
+                "serve"
+            ],
+            "WorkingDir": "/workspace/vllm",
+            "Labels": {
+                "org.opencontainers.image.version": "24.04"
+            },
+            "ArgsEscaped": true,
+            "Shell": [
+                "bash",
+                "-c"
+            ]
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 4649189937,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:42724e448bf499ec7d4b3c21d6cc68fe665ef677ed393c3dbb5357394e89ff91",
+                "sha256:6e0daf7833b70d66d5f1a3257deadfc733cea6eb70fc2a28a2710bbe6fd48ee3",
+                "sha256:5eee47704dd070cdbefd7b56d6a7c9908760c682cd25bfcabc9a6f1499c0ad86",
+                "sha256:9e813fffcaa0ca8c930d7e21c750b40a0d5d175c8216c9d14bd934c3d9bf7d70",
+                "sha256:1d39b99cde8161e5e4f74b6ffd92511f4c57d14725adbce394a855fa87e9d787",
+                "sha256:f1adb9f2814b94f5828b18074db149a08ce74fdf13ccb094d502ab5cb7307756",
+                "sha256:71aa28d3fa3bdc934fac6f5461784401a620de58750ab1405958f5d610d73a5f",
+                "sha256:092050bd252b179161bb01c291cd7fc9203118a8e44707a57969ab31c505f1cf",
+                "sha256:5e63bde4496a3065b2e8d861e65ae8da334269674595f1b99d695a51a466f71b",
+                "sha256:026f1c2d9f9df792624e9035d638f4f84d38d043a00e4545ad42bbff90fb8c96",
+                "sha256:e9ca8d6b3282aff80df2da01c2fd7f981883feb2cf16fdb3400140e642bd33d4",
+                "sha256:dc38a47632fb2b76225b78f9df4ac04aa1b01e8ac983e267882f36888c179623",
+                "sha256:6ddad800633e3e319655401acaf0c6c4386107762c41338c52680a05bbe50626",
+                "sha256:d67902c87efeb109dbe1e3e78279ae5281d09334012c802ff1a047a440c18abe",
+                "sha256:a13e48d5d3c63e330b60b47b2eec2a93e034142c5b450060153302807acdd7b2",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+                "sha256:c587105fef614a8cc6a397f4095f92a3738ca0dc811a6974d1ae9b9977621efd",
+                "sha256:2628dc497f2afc74ed2d386c75488ad117e501aa3527ec123e6bd47f3476d8a8"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-08-23T01:54:14.33964554Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+            "digest": "sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+            "size": 434
+        },
+        "Identity": {
+            "Pull": [
+                {
+                    "Repository": "docker.io/vllm/vllm-openai-xpu"
+                }
+            ]
+        }
+    }
+]
++ timeout --signal=TERM --kill-after=30s 90m docker run --pull=never --rm --name b70-grouped-verify-build-04 --cpus=12 --memory=24g --memory-swap=24g -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/build-04:/build-cell -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/compiler:/opt/intel/oneapi/compiler/2026.0:ro --entrypoint /bin/bash vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f -lc $'\nset -euxo pipefail\nO=/build-cell\nC=/opt/intel/oneapi/compiler/2026.0\nexport PATH="$C/bin:/opt/venv/bin:$PATH"\nexport LD_LIBRARY_PATH="/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:$C/lib:${LD_LIBRARY_PATH:-}"\nexport CC="$C/bin/icx" CXX="$C/bin/icpx" SYCL_ROOT="$C"\nexport GIT_NO_LAZY_FETCH=1\nNATIVE=1796aa8bc8db4ac68d9cd19636cef88f3af81d2b\nTLA=cd763790ad2f74d7294435ecf77682bac0062c3a\n[[ ${#NATIVE} == 40 && ${#TLA} == 40 ]]\nmkdir "$O/native" "$O/tla"\ncurl --fail --location --retry 2 --max-time 300 \\\n  "https://codeload.github.com/vllm-project/vllm-xpu-kernels/tar.gz/$NATIVE" -o "$O/native.tar.gz"\ntar -xzf "$O/native.tar.gz" -C "$O/native" --strip-components=1 \\\n  "vllm-xpu-kernels-$NATIVE/csrc/xpu/attn/xe_2" \\\n  "vllm-xpu-kernels-$NATIVE/csrc/xpu/attn/paged_kv_utils.h" \\\n  "vllm-xpu-kernels-$NATIVE/LICENSE" "vllm-xpu-kernels-$NATIVE/CMakeLists.txt"\ncp "$O/native/CMakeLists.txt" "$O/native-CMakeLists.txt"\nsha256sum "$O/native.tar.gz"\ngrep -F "\\"$TLA\\"" "$O/native-CMakeLists.txt"\ncurl --fail --location --retry 2 --max-time 300 \\\n  "https://codeload.github.com/intel/sycl-tla/tar.gz/$TLA" -o "$O/sycl-tla.tar.gz"\ntar -xzf "$O/sycl-tla.tar.gz" -C "$O/tla" --strip-components=1 \\\n  "sycl-tla-$TLA/include" "sycl-tla-$TLA/tools/util/include" \\\n  "sycl-tla-$TLA/applications/flash_attention_v2" "sycl-tla-$TLA/LICENSE.txt"\npython -P "$O/inputs/patch-native.py" "$O/native" > "$O/native.patch"\ngit -C "$O/native" apply --check "$O/native.patch"\ngit -C "$O/native" apply "$O/native.patch"\nicpx --version\ncmake --version\ncmake -S "$O/inputs" -B "$O/build" -G Ninja \\\n  -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER="$CXX" \\\n  -DNATIVE_SOURCE_DIR="$O/native" -DTLA_SOURCE_DIR="$O/tla" \\\n  -DCMAKE_PREFIX_PATH=/opt/venv/lib/python3.12/site-packages/torch/share/cmake \\\n  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON\ncmake --build "$O/build" --parallel 2\nsha256sum "$O/build/libb70_grouped_verify.so"\nnm -D --defined-only "$O/build/libb70_grouped_verify.so" > "$O/exported-symbols.txt"\n'
++ O=/build-cell
++ C=/opt/intel/oneapi/compiler/2026.0
++ export PATH=/opt/intel/oneapi/compiler/2026.0/bin:/opt/venv/bin:/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ PATH=/opt/intel/oneapi/compiler/2026.0/bin:/opt/venv/bin:/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ export LD_LIBRARY_PATH=/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:/opt/intel/oneapi/compiler/2026.0/lib:/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib
++ LD_LIBRARY_PATH=/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:/opt/intel/oneapi/compiler/2026.0/lib:/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib
++ export CC=/opt/intel/oneapi/compiler/2026.0/bin/icx CXX=/opt/intel/oneapi/compiler/2026.0/bin/icpx SYCL_ROOT=/opt/intel/oneapi/compiler/2026.0
++ CC=/opt/intel/oneapi/compiler/2026.0/bin/icx
++ CXX=/opt/intel/oneapi/compiler/2026.0/bin/icpx
++ SYCL_ROOT=/opt/intel/oneapi/compiler/2026.0
++ export GIT_NO_LAZY_FETCH=1
++ GIT_NO_LAZY_FETCH=1
++ NATIVE=1796aa8bc8db4ac68d9cd19636cef88f3af81d2b
++ TLA=cd763790ad2f74d7294435ecf77682bac0062c3a
++ [[ 40 == 40 ]]
++ [[ 40 == 40 ]]
++ mkdir /build-cell/native /build-cell/tla
++ curl --fail --location --retry 2 --max-time 300 https://codeload.github.com/vllm-project/vllm-xpu-kernels/tar.gz/1796aa8bc8db4ac68d9cd19636cef88f3af81d2b -o /build-cell/native.tar.gz
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  231k    0  231k    0     0   345k      0 --:--:-- --:--:-- --:--:--  344k100  568k    0  568k    0     0   520k      0 --:--:--  0:00:01 --:--:--  520k
++ tar -xzf /build-cell/native.tar.gz -C /build-cell/native --strip-components=1 vllm-xpu-kernels-1796aa8bc8db4ac68d9cd19636cef88f3af81d2b/csrc/xpu/attn/xe_2 vllm-xpu-kernels-1796aa8bc8db4ac68d9cd19636cef88f3af81d2b/csrc/xpu/attn/paged_kv_utils.h vllm-xpu-kernels-1796aa8bc8db4ac68d9cd19636cef88f3af81d2b/LICENSE vllm-xpu-kernels-1796aa8bc8db4ac68d9cd19636cef88f3af81d2b/CMakeLists.txt
++ cp /build-cell/native/CMakeLists.txt /build-cell/native-CMakeLists.txt
++ sha256sum /build-cell/native.tar.gz
+7a90c3f4a8a505bb555247e3673ff379f527c7e87457afcd4fbea5491046b120  /build-cell/native.tar.gz
++ grep -F '"cd763790ad2f74d7294435ecf77682bac0062c3a"' /build-cell/native-CMakeLists.txt
+      "cd763790ad2f74d7294435ecf77682bac0062c3a"
++ curl --fail --location --retry 2 --max-time 300 https://codeload.github.com/intel/sycl-tla/tar.gz/cd763790ad2f74d7294435ecf77682bac0062c3a -o /build-cell/sycl-tla.tar.gz
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 1470k    0 1470k    0     0  2682k      0 --:--:-- --:--:-- --:--:-- 2678k100 6749k    0 6749k    0     0  3623k      0 --:--:--  0:00:01 --:--:-- 3622k100 16.7M    0 16.7M    0     0  6723k      0 --:--:--  0:00:02 --:--:-- 6721k100 29.5M    0 29.5M    0     0  9807k      0 --:--:--  0:00:03 --:--:-- 9810k
++ tar -xzf /build-cell/sycl-tla.tar.gz -C /build-cell/tla --strip-components=1 sycl-tla-cd763790ad2f74d7294435ecf77682bac0062c3a/include sycl-tla-cd763790ad2f74d7294435ecf77682bac0062c3a/tools/util/include sycl-tla-cd763790ad2f74d7294435ecf77682bac0062c3a/applications/flash_attention_v2 sycl-tla-cd763790ad2f74d7294435ecf77682bac0062c3a/LICENSE.txt
++ python -P /build-cell/inputs/patch-native.py /build-cell/native
++ git -C /build-cell/native apply --check /build-cell/native.patch
++ git -C /build-cell/native apply /build-cell/native.patch
++ icpx --version
+Intel(R) oneAPI DPC++/C++ Compiler 2026.0.0 (2026.0.0.20260331)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /opt/intel/oneapi/compiler/2026.0/bin/compiler
+Configuration file: /opt/intel/oneapi/compiler/2026.0/bin/compiler/../icpx.cfg
++ cmake --version
+cmake version 4.4.2
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
++ cmake -S /build-cell/inputs -B /build-cell/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/opt/intel/oneapi/compiler/2026.0/bin/icpx -DNATIVE_SOURCE_DIR=/build-cell/native -DTLA_SOURCE_DIR=/build-cell/tla -DCMAKE_PREFIX_PATH=/opt/venv/lib/python3.12/site-packages/torch/share/cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-- The CXX compiler identification is IntelLLVM 2026.0.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /opt/intel/oneapi/compiler/2026.0/bin/icpx - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+CMake Warning (author) at /opt/venv/lib/python3.12/site-packages/cmake/data/share/cmake-4.4/Modules/FindPackageHandleStandardArgs.cmake:493 (message):
+  The package name passed to find_package_handle_standard_args() (SYCL) does
+  not match the name of the calling package (SYCLToolkit).  This can lead to
+  problems in calling code that expects find_package() result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Caffe2/FindSYCLToolkit.cmake:171 (find_package_handle_standard_args)
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Caffe2/public/xpu.cmake:26 (find_package)
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake:101 (include)
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Torch/TorchConfig.cmake:62 (find_package)
+  CMakeLists.txt:16 (find_package)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Found SYCL: /opt/intel/oneapi/compiler/2026.0/include;/opt/intel/oneapi/compiler/2026.0/include/sycl (found version "20260000")
+CMake Warning at /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Torch/TorchConfig.cmake:22 (message):
+  library kineto not found.
+Call Stack (most recent call first):
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Torch/TorchConfig.cmake:119 (append_torchlib_if_found)
+  CMakeLists.txt:16 (find_package)
+
+
+-- Found Torch: /opt/venv/lib/python3.12/site-packages/torch/lib/libtorch.so
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /build-cell/build
++ cmake --build /build-cell/build --parallel 2
+[1/2] Building CXX object CMakeFiles/b70_grouped_verify.dir/binding.cpp.o
+[2/2] Linking CXX shared library libb70_grouped_verify.so
+Compilation from IR - skipping loading of FCL
+Build succeeded.
+Compilation from IR - skipping loading of FCL
+Build succeeded.
++ sha256sum /build-cell/build/libb70_grouped_verify.so
+f13465c6f7470b3591abf78df7d93e4e1f5c4d26fb1a5697572ba32e63d8503a  /build-cell/build/libb70_grouped_verify.so
++ nm -D --defined-only /build-cell/build/libb70_grouped_verify.so
++ finish
++ rc=0
++ trap - EXIT
++ docker rm -f b70-grouped-verify-build-04
++ printf '%s\n' 0
++ date -Is
+2026-09-13T04:13:26-04:00
++ exit 0

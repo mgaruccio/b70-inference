@@ -98,7 +98,7 @@ at::Tensor b70_grouped_verify_forward(const at::Tensor& q, const at::Tensor& k,
   args.q_stride_seq = q.stride(0);
   args.q_stride_heads = q.stride(1);
 
-  using Policy = decode_policy_q8_h256_p64;
+  using Policy = decode_policy_q16_h256_p64;
   using RowStride = cute::Stride<int, cute::_1, int, int>;
   using VStride = cute::Stride<cute::_1, int, int, int>;
   using Config = PagedDecodeConfig<
