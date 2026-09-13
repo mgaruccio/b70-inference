@@ -71,3 +71,78 @@ Adding the two shape medians as a rough operator-pair comparison gives 0.297668 
 **Decision:** keep native M5. No useful general padding/decomposition change was found for the two measured dominant GEMMs. This does not prove the oneDNN kernel optimal or rule out native-kernel work; it rules out these inexpensive dispatch alternatives as a compelling next optimization. No custom GEMM, activation quantization, weight repacking, deployment or DSpark/DFlash change was made.
 
 Final checks found the launcher SHA and 275 W cap unchanged, Glimmer exited, no running containers and no render-device holders. All failed probes, successful qualification, verbose dispatch, and real-request artifacts are retained.
+
+## 2026-09-13 follow-up: installed native policy audit
+
+**No supported runtime candidate found; no new GPU benchmark or serving A/B.**
+After the bounded attention split-count trial, inspect the native small-M
+GEMM policy before repeating any experiment. Baseline remains best MTP4;
+no padding/M1 decomposition rerun, custom kernel, precision change or package
+upgrade is part of this audit. The earlier eager gate/up sum11.3ms identifies
+where time is spent, not achievable savings or graph-mode serving latency.
+
+Fresh exact-revision sources (lead checked the implementation passages):
+
+- [oneDNN commit80afa71049cd69a3df32adcccb623b12cd7baa22](https://github.com/uxlfoundation/oneDNN/commit/80afa71049cd69a3df32adcccb623b12cd7baa22)
+  exists upstream and corresponds to v3.12 release notes, matching the revision
+  observed by the earlier real serving profile. No newly inferred runtime version.
+- [jit.hpp](https://github.com/uxlfoundation/oneDNN/blob/80afa71049cd69a3df32adcccb623b12cd7baa22/src/gpu/intel/gemm/jit.hpp):
+  `gen_t::pd_t` names itself `jit:gemm:any`, derives compute mode from attributes,
+  and calls `select_kernel` with device/shape/layout information, then tries
+  internal catalog entries. The Python GPTQ operator has no policy argument.
+- [jit/gen_kernel.cpp](https://github.com/uxlfoundation/oneDNN/blob/80afa71049cd69a3df32adcccb623b12cd7baa22/src/gpu/intel/gemm/jit/gen_kernel.cpp):
+  `gen_nocopy_desc_t::select_kernel` selects catalog entries. Important nuance:
+  there **is** a `GEMM_KERNEL` strategy override in `gen_desc_t::finalize`, but
+  only inside `#ifdef DNNL_DEV_MODE`. Its own warning says it overrides problem
+  datatypes and can cause inaccuracies for incompatible precision/layouts.
+  It is not a supported production runtime tiling control. `ALLOW_IACC` applies
+  only when both operands are integer and grouped scales do not require floating
+  DPAS; it is not applicable to this FP16×INT4 G128 path.
+- [intel/utils.hpp](https://github.com/uxlfoundation/oneDNN/blob/80afa71049cd69a3df32adcccb623b12cd7baa22/src/gpu/intel/utils.hpp):
+  `gpu_utils::dev_getenv` returns defaults without reading the environment when
+  `DNNL_DEV_MODE` is absent. This also bounds the generator-DSL controls.
+- [jit_xe_hp_systolic.cpp](https://github.com/uxlfoundation/oneDNN/blob/80afa71049cd69a3df32adcccb623b12cd7baa22/src/gpu/intel/gemm/jit_xe_hp_systolic.cpp):
+  `pd_t::init` accepts matched FP16/BF16 operands or int8 pairs, not mixed W4A16.
+  Its attractive small-M unroll policies therefore are not a usable substitute.
+- [native W4A16 wrapper](https://github.com/vllm-project/vllm-xpu-kernels/blob/v0.1.12/csrc/xpu/onednn/int4_gemm_w4a16.h):
+  explicitly sets FP16 fpmath for FP16 input. Changing global default fpmath
+  is not an exposed tiling control and does not override this explicit choice.
+
+### Installed evidence and checks
+
+`native-policy-audit-20260913.log` retains a fresh CPU-only inspection of the
+same immutable MTP image on inference-host. Container used `--pull=never --rm
+--name b70-gemm-policy-inspect --entrypoint /bin/bash` and **no GPU devices**.
+Inside `/opt/venv/lib/python3.12/site-packages`, checks were:
+
+```bash
+F=vllm_xpu_kernels/_xpu_C.abi3.so
+sha256sum "$F" vllm/model_executor/kernels/linear/mixed_precision/xpu.py
+head -4 vllm_xpu_kernels-0.1.12.3.dist-info/METADATA
+sed -n '103,122p' vllm/model_executor/kernels/linear/mixed_precision/xpu.py
+for S in GEMM_KERNEL ALLOW_IACC enable_generator_dsl generator_dsl_specialize DEFAULT_FPMATH_MODE; do
+  if strings "$F" | grep -Fx "$S"; then echo "present: $S"; else echo "absent: $S"; fi
+done
+nm -C "$F" | grep -E 'int4_gemm_w4a16|gen_t::pd_t::init|xe_hp_systolic_t::pd_t::init|gen_desc_t::finalize|enable_generator_dsl'
+```
+
+Installed native extension SHA256 remained
+`71c21e5231908cfa67f45b389de7cef6e96e564c769198a675725197234d07fc`.
+Wrapper SHA256 was
+`de94f0fc2813c5f86e44369490809a7c1aab44cac8e20e5a64a5a1896ba7d9ba`.
+All four development-control literals were absent; `DEFAULT_FPMATH_MODE` was
+present. Native W4A16/gen/systolic symbols were present. Literal absence alone
+is not a general ABI/build proof; combined with the exact-revision compile
+and datatype guards, no reachable supported alternative was established.
+No fake tuning env var was passed to the server and no speedup is claimed.
+
+Inspection exit0; final host check at2026-09-13T00:15:39-04:00 showed no running
+containers or reported render-device users, unchanged launcher SHA and275W.
+Several initial guessed upstream source paths returned404; the valid paths
+above were subsequently retrieved. Native Lab preview was again unavailable.
+
+**Decision:** stop this configuration-only route. A different GEMM tile policy
+would require a separately scoped source/kernel/build experiment. No application
+code was modified, so no new numerical/graph/HTTP test was applicable; the prior
+real-request dispatch evidence remains the serving-path evidence, not a new
+A/B. Do not represent this audit as proving the current kernel optimal.

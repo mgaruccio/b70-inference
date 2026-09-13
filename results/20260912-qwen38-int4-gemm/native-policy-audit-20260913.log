@@ -1,0 +1,48 @@
+2026-09-13T00:15:36-04:00
+63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4  /home/mike/inference/launchers/start-qwen38.sh
+275000000
+71c21e5231908cfa67f45b389de7cef6e96e564c769198a675725197234d07fc  /opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/_xpu_C.abi3.so
+de94f0fc2813c5f86e44369490809a7c1aab44cac8e20e5a64a5a1896ba7d9ba  /opt/venv/lib/python3.12/site-packages/vllm/model_executor/kernels/linear/mixed_precision/xpu.py
+Metadata-Version: 2.4
+Name: vllm-xpu-kernels
+Version: 0.1.12.3
+Summary: A high-throughput and memory-efficient inference and serving engine for LLMs
+=== Installed wrapper call ===
+            setattr(layer, self.w_gidx_name, None)
+
+    def apply_weights(
+        self,
+        layer: torch.nn.Module,
+        x: torch.Tensor,
+        bias: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        reshaped_x = x.reshape(-1, x.shape[-1])
+        w_q, w_s, w_zp, w_gidx = self._get_weight_params(layer)
+        out = torch.ops._xpu_C.int4_gemm_w4a16(
+            reshaped_x,
+            w_q.t(),
+            bias if bias is not None else None,
+            w_s,
+            w_zp,
+            self.config.group_size,
+            w_gidx,
+        )
+        return out
+=== Control literal scan (absence alone is not a general ABI proof) ===
+absent: GEMM_KERNEL
+absent: ALLOW_IACC
+absent: enable_generator_dsl
+absent: generator_dsl_specialize
+DEFAULT_FPMATH_MODE
+present: DEFAULT_FPMATH_MODE
+=== Native implementation symbols ===
+00000000005b3750 T int4_gemm_w4a16(at::Tensor const&, at::Tensor const&, std::optional<at::Tensor> const&, at::Tensor const&, at::Tensor const&, long, std::optional<at::Tensor> const&)
+00000000013cc3d0 t dnnl::impl::gpu::intel::gemm::xe_hp_systolic_t::pd_t::init(dnnl_engine*)
+0000000001271be0 t dnnl::impl::gpu::intel::gemm::jit::gen_desc_t::finalize(char const*)
+0000000001271820 t dnnl::impl::gpu::intel::gemm::jit::enable_generator_dsl()
+000000000125b520 t dnnl::impl::gpu::intel::gemm::gen_t::pd_t::init(dnnl_engine*)
+0000000001263f00 t dnnl::impl::gpu::intel::gemm::gen_t::pd_t::init(dnnl_engine*)::{lambda()#1}::operator()() const
+=== Final host ===
+2026-09-13T00:15:39-04:00
+63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4  /home/mike/inference/launchers/start-qwen38.sh
+275000000
