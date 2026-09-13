@@ -180,6 +180,177 @@ def upstream_fixture():
             raise AssertionError("patch accepted an already-patched header")
 
 
+def serving_overlay_fixture():
+    """Exercise the import hook with fake modules, never Torch or an XPU."""
+    import contextlib
+    import hashlib
+    import io
+    import os
+    import sys
+    import tempfile
+    import types
+
+    names = ("torch", "vllm_xpu_kernels", "vllm_xpu_kernels.flash_attn_interface", "grouped_verify")
+    saved_modules = {name: sys.modules.get(name) for name in names}
+    saved_env = {name: os.environ.get(name) for name in (
+        "B70_GROUPED_SERVING", "B70_GROUPED_SERVING_LIBRARY"
+    )}
+
+    class FakeTensor:
+        def __init__(self, shape, pitch, dtype="fp16"):
+            self.shape = tuple(shape)
+            self._pitch = tuple(pitch)
+            self.dtype = dtype
+            self.device = "xpu"
+
+        def stride(self):
+            return self._pitch
+
+    loaded = []
+    dispatch_natives = []
+    native_calls = []
+    eligible_failure = []
+    torch = types.ModuleType("torch")
+    torch.ops = SimpleNamespace(load_library=lambda path: loaded.append(path))
+    torch.xpu = SimpleNamespace(is_current_stream_capturing=lambda: True)
+
+    fa = types.ModuleType("vllm_xpu_kernels.flash_attn_interface")
+    original_vllm_fa2 = object()
+
+    def native(*args, **kwargs):
+        native_calls.append((args, kwargs))
+        return "native"
+
+    fa._spec_decode_varlen_fwd = native
+    fa._vllm_fa2_C = original_vllm_fa2
+    kernels = types.ModuleType("vllm_xpu_kernels")
+    kernels.flash_attn_interface = fa
+
+    def unsupported_reason(*args, **kwargs):
+        key = args[1] if len(args) > 1 else kwargs.get("k")
+        return None if getattr(key, "shape", ()) == (176, 1664, 4, 256) else "wrong KV geometry"
+
+    def dispatch(original, *args, **kwargs):
+        dispatch_natives.append(original)
+        if eligible_failure:
+            raise RuntimeError("eligible failure")
+        if unsupported_reason(*args, **kwargs) is not None:
+            return original(*args, **kwargs)
+        return "candidate"
+
+    seam = types.ModuleType("grouped_verify")
+    seam.dispatch = dispatch
+    seam.unsupported_reason = unsupported_reason
+    sys.modules.update({
+        "torch": torch,
+        "vllm_xpu_kernels": kernels,
+        "vllm_xpu_kernels.flash_attn_interface": fa,
+        "grouped_verify": seam,
+    })
+
+    try:
+        with tempfile.NamedTemporaryFile(dir=ROOT, delete=True) as library:
+            library.write(b"CPU fixture, not a shared object")
+            library.flush()
+            namespace = runpy.run_path(str(ROOT / "serving-overlay.py"))
+            assert namespace["install"]() is False
+            assert namespace["install_worker_profile"](type("Worker", (), {})) is False
+            assert not loaded
+
+            os.environ["B70_GROUPED_SERVING"] = "1"
+            os.environ["B70_GROUPED_SERVING_LIBRARY"] = library.name
+            worker = type("Worker", (), {})
+            try:
+                namespace["install_worker_profile"](worker)
+            except RuntimeError as exc:
+                assert "hash mismatch" in str(exc)
+            else:
+                raise AssertionError("library hash mismatch was not rejected")
+            assert not loaded
+            library.seek(0)
+            overlay_globals = namespace["install_worker_profile"].__globals__
+            overlay_globals["EXPECTED_LIBRARY_SHA256"] = hashlib.sha256(
+                library.read()
+            ).hexdigest()
+            q = FakeTensor((5, 24, 256), (12288, 512, 1))
+            good_k = FakeTensor(
+                (176, 1664, 4, 256),
+                (176 * 1664 * 4 * 256, 256, 1664 * 256, 1),
+                "fp8",
+            )
+            bad_k = FakeTensor((136, 1664, 4, 256), (136 * 1664 * 4 * 256, 256, 1664 * 256, 1), "fp8")
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                assert namespace["install_worker_profile"](worker) is True
+                wrapped = fa._spec_decode_varlen_fwd
+                assert wrapped(q, bad_k, bad_k) == "native"
+                assert wrapped(q, good_k, good_k) == "candidate"
+                assert wrapped(q, good_k, good_k) == "candidate"
+                assert wrapped(q, bad_k, bad_k) == "native"
+            text = output.getvalue()
+            assert loaded == [library.name]
+            assert all(original is native for original in dispatch_natives)
+            assert fa._vllm_fa2_C is original_vllm_fa2
+            assert text.count('"event":"unsupported-q5"') == 1
+            assert text.count('"event":"eligible-dispatch"') == 1
+            assert '"capture_state":"capturing"' in text
+            assert '"q_shape":[5,24,256]' in text
+            assert '"k_shape":[176,1664,4,256]' in text
+            assert '"reason":"wrong KV geometry"' in text
+            eligible_failure.append(True)
+            try:
+                wrapped(q, good_k, good_k)
+            except RuntimeError as exc:
+                assert str(exc) == "eligible failure"
+            else:
+                raise AssertionError("eligible exception swallowed")
+            assert len(native_calls) == 2
+    finally:
+        for name, previous in saved_modules.items():
+            if previous is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = previous
+        for name, previous in saved_env.items():
+            if previous is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = previous
+
+
+def launch_contract_fixture():
+    """Check the disposable wrapper's pure launch/evidence contract."""
+    import tempfile
+    namespace = runpy.run_path(str(ROOT / "run-serving.py"))
+    assert namespace["EXPECTED_LIBRARY_SHA256"] == (
+        "4630ef2db027c3443ff63b16a611699c0db250c2cc53ed67aaad8a1a318f4490"
+    )
+    mounts = namespace["_candidate_mounts"](
+        ROOT / "serving-overlay.py",
+        ROOT / "qwen38_step_timing_patch.py",
+        ROOT / "grouped_verify.py",
+        ROOT / "libb70_grouped_verify.so",
+    )
+    assert [mount["container"] for mount in mounts] == [
+        "/experiment/qwen38_step_timing_overlay.py",
+        "/experiment/qwen38_step_timing_patch.py",
+        "/experiment/grouped_verify.py",
+        "/candidate/libb70_grouped_verify.so",
+    ]
+    assert all(mount["mode"] == "ro" for mount in mounts)
+    with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+        out = Path(directory)
+        (out / "server.log").write_text(
+            "Capturing CUDA graphs (decode, FULL)\n"
+            "[B70_GROUPED_SERVING] {\"event\":\"eligible-dispatch\"}\n"
+            "| FULL         |\n",
+            encoding="utf-8",
+        )
+        evidence = namespace["_candidate_execution_evidence"](out)
+        assert evidence["eligible_dispatch_log_count"] == 1
+        assert evidence["full_graph_capture_seen"]
+        assert evidence["full_graph_run_seen"]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--upstream", action="store_true", help="also check pinned headers over HTTPS")
@@ -190,7 +361,9 @@ if __name__ == "__main__":
         subprocess.run(["bash", "-n", str(path)], check=True)
     python_seam_fixture()
     mask_fixture()
+    serving_overlay_fixture()
+    launch_contract_fixture()
     if options.upstream:
         upstream_fixture()
-    print("PASS: stdlib pack/unpack, device-metadata seam, fail-closed dispatch, two-tile mask, Python AST, shell syntax"
+    print("PASS: stdlib pack/unpack, device-metadata seam, fail-closed dispatch, two-tile mask, serving hook/launch contract, Python AST, shell syntax"
           + (", pinned upstream patch/drift checks" if options.upstream else ""))

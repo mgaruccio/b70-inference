@@ -164,3 +164,19 @@ Commands: `bash build.sh build-01` through `build-05`;
 the scoped remote campaign directory. Inputs/patches/logs/exits retain each
 executed version. Review of the original native mask found no contract break;
 lead independently ran updated q8/q16 symbolic and pinned-source checks.
+
+## Disposable serving A/B adapter (lead-run)
+
+`run-serving.py` reuses the `20260911-qwen38-step-profile-64k` lifecycle and the existing 3-canary/131-finite/8-functional/repeatability gates. It fixes MTP4 K4, capacity `212992`, batched tokens `8192`, graph captures `[1,2,4,8]`, FP16/GPTQ target with FP8 KV, archived INT4 draft S+M1, aligned Mamba cache and prefix caching off. It rejects profile mode and runs the inherited deterministic 64K/128-token, greedy seed-42 long client.
+
+Run each fresh cell on `inference-host` after staging this directory and the sibling canonical worker patch:
+
+```bash
+R=/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify
+python3 -u "$R/run-serving.py" --out "$R/baseline-01"
+python3 -u "$R/run-serving.py" --candidate --out "$R/candidate-01"
+```
+
+The candidate mounts `grouped_verify.py`, `serving-overlay.py`, the canonical import shim and the q8 library read-only; it verifies library SHA256 `4630ef2db027c3443ff63b16a611699c0db250c2cc53ed67aaad8a1a318f4490` before loading. Candidate validation requires a real eligible-dispatch log with Q/KV shapes and capture state plus both FULL graph capture and FULL graph-run evidence; an import-only marker is insufficient. The adapter remains opt-in (`B70_GROUPED_SERVING=1`) and unsupported routes delegate to native.
+
+Limitations: this worker did not run GPU/compiler/ML runtime tests and makes no serving-gain claim. Eligibility is intentionally exact to HND FP8 KV `[176,1664,4,256]`; the observed production capacity may expose a different page count, which must fail qualification with the logged shape rather than broaden this adapter. Production launchers remain untouched; the lead owns remote execution, interleaving and final cleanup.
