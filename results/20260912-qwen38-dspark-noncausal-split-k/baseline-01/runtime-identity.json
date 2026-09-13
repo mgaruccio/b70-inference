@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "docker",
+    "exec",
+    "b70-dspark-noncausal-baseline",
+    "/opt/venv/bin/python",
+    "-P",
+    "-c",
+    "import json, torch, vllm; print(json.dumps({'vllm': getattr(vllm, '__version__', 'unknown'), 'torch': getattr(torch, '__version__', 'unknown'), 'xpu_available': bool(getattr(torch, 'xpu', None) and torch.xpu.is_available())}))"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "stdout": "{\"vllm\": \"0.28.1rc1.dev278+g73029d424\", \"torch\": \"2.13.0+xpu\", \"xpu_available\": true}\n"
+}

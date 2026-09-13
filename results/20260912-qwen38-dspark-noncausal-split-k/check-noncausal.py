@@ -75,7 +75,7 @@ def make_case(torch, length, layout="hnd", pitched=False, fixture=False):
     else:
         k = torch.randn((pages, PAGE, 8, 128), device="xpu", dtype=torch.bfloat16)
         v = torch.randn((pages, PAGE, 8, 128), device="xpu", dtype=torch.bfloat16)
-    q0 = torch.randn((7, 32, 136), device="xpu", dtype=torch.bfloat16)
+    q0 = torch.randn((7, 32, 136 if pitched else 128), device="xpu", dtype=torch.bfloat16)
     q = q0[..., :128] if pitched else q0
     table = torch.randperm(pages, device="xpu", dtype=torch.int32)[:math.ceil(max(1, length) / PAGE)].unsqueeze(0)
     used = torch.tensor([length], device="xpu", dtype=torch.int32)
@@ -88,9 +88,11 @@ def make_case(torch, length, layout="hnd", pitched=False, fixture=False):
         k[page, start:, :, :].fill_(100)
         v[page, start:, :, :].fill_(100)
     if fixture:
+        q.zero_(); k.zero_(); v.zero_()
         page, off = int(table[0, (length - 1) // PAGE]), (length - 1) % PAGE
-        k[page, off].zero_(); v[page, off].fill_(17)
-    return [q, k, v, torch.empty_like(q), cu, used, table]
+        v[page, off].fill_(length)  # Uniform logits: every output element must be 1.
+    out = torch.empty((7, 32, 128), device="xpu", dtype=torch.bfloat16)
+    return [q, k, v, out, cu, used, table]
 
 
 def invoke(fn, c, out=True, **overrides):
@@ -114,44 +116,53 @@ def guard_checks(torch, fa, native, prototype):
     wrapped = prototype.make_wrapper(spy)
     c = make_case(torch, 7)
     # These values are actual public overrides, not ignored test-only flags.
-    for overrides in ({"causal": True}, {"window_size": (0, 0)},
-                      {"dropout_p": .1}, {"deterministic": True},
-                      {"is_mix_batch": True}):
+    options = ({"causal": True}, {"window_size": (0, 0)},
+               {"dropout_p": .1}, {"deterministic": True},
+               {"q": c[0].to(torch.float16)}, {"return_softmax_lse": True},
+               {"max_seqlen_q": 1},
+               {"q": c[0].repeat(2, 1, 1), "cu_seqlens_q": torch.tensor([0, 7, 14], dtype=torch.int32, device="xpu")})
+    for overrides in options:
         assert invoke(wrapped, c, **overrides) is sentinel
+        assert calls[-1][1]['seqused_k'] is c[5] and calls[-1][1]['block_table'] is c[6]
+        for key, value in overrides.items():
+            assert calls[-1][1][key] is value
     assert wrapped.dispatches == 0
-    assert len(calls) == 5
+    assert len(calls) == len(options)
     return {"dispatches": wrapped.dispatches, "fallthrough_calls": len(calls),
-            "unsupported_overrides": [sorted(x[1]) for x in calls]}
+            "unsupported_overrides": [sorted(x) for x in options]}
 
 
-def graph_check(torch, fa, native, candidate):
-    c = make_case(torch, 65562, fixture=True)
-    def run(fn, x): return invoke(fn, x)
-    graphs, results = {}, {}
+def graph_check(torch, fa, native, candidate, report, path):
+    c = make_case(torch, 65562)
+    report['graphs'] = {}
     for name, fn in (("native", native), ("candidate", candidate)):
-        for _ in range(3): run(fn, c)
+        for _ in range(3): invoke(fn, c)
         torch.xpu.synchronize(); graph = torch.xpu.XPUGraph()
-        with torch.xpu.graph(graph): run(fn, c)
+        before = candidate.dispatches
+        with torch.xpu.graph(graph): invoke(fn, c)
+        if name == 'candidate':
+            assert candidate.dispatches == before + 1, 'candidate not captured'
         rows = []
-        for i, used in enumerate((65562, 8192, 1665)):
+        report['graphs'][name] = {'captured': True, 'rows': rows}
+        lengths = (65562, 0, 8192, 0, 1665) if name == 'candidate' else (65562, 8192, 1665)
+        for i, used in enumerate(lengths):
             c[0].add_(torch.randn_like(c[0]) * .01)
             c[1].add_(torch.randn_like(c[1]) * .01)
             c[2].add_(torch.randn_like(c[2]) * .01)
             c[5].fill_(used); c[6].copy_(torch.roll(c[6], 1, 1))
             graph.replay(); torch.xpu.synchronize()
-            expected = reference(*c[:3], used, c[6])
             actual = c[3].clone()
-            rows.append({"used": used, "table": c[6].cpu().tolist(), "comparison": compare(actual, expected)})
-            assert rows[-1]["comparison"]["passed"], f"{name} graph mutation {i} failed"
-        graphs[name] = {"captured": True, "rows": rows}
-    results["graphs"] = graphs
-    assert candidate.dispatches > 0, "candidate graph captured no eligible dispatch"
-    results["candidate_dispatches"] = candidate.dispatches
-    return results
+            expected = reference(*c[:3], used, c[6])
+            baseline = invoke(native, c).clone() if used else None
+            rows.append({'used': used, 'table': c[6].cpu().tolist(),
+                         'reference': compare(actual, expected),
+                         'native': compare(actual, baseline) if used else {'status': 'not_applicable_empty_KV'}})
+            save(path, report)
+            assert rows[-1]['reference']['passed'] and (not used or rows[-1]['native']['passed']), f'{name} graph mutation {i} failed'
 
 
 def timings(torch, native, candidate):
-    c = make_case(torch, 65562, fixture=True)
+    c = make_case(torch, 65562)
     ng, cg = torch.xpu.XPUGraph(), torch.xpu.XPUGraph()
     for _ in range(3): invoke(native, c); invoke(candidate, c)
     torch.xpu.synchronize()
@@ -173,8 +184,9 @@ def timings(torch, native, candidate):
         samples.append(row)
     nm = [x["native_ms_per_call"] for x in samples]; cm = [x["candidate_ms_per_call"] for x in samples]
     def summary(xs):
-        q = sorted(xs)
-        return {"samples_ms_per_call": xs, "median_ms_per_call": statistics.median(xs), "iqr_ms_per_call": q[9] - q[3]}
+        quartiles = statistics.quantiles(xs, n=4, method='inclusive')
+        return {"samples_ms_per_call": xs, "median_ms_per_call": statistics.median(xs),
+                "iqr_ms_per_call": quartiles[2] - quartiles[0]}
     return {"warm": 3, "replays": 16, "intervals": 12, "compile_included": False,
             "samples": samples, "native": summary(nm), "candidate": summary(cm),
             "speedup": statistics.median(nm) / statistics.median(cm)}
@@ -209,7 +221,7 @@ def main():
         report["guards"] = guard_checks(torch, fa, native, prototype)
         for length in LENGTHS:
             for layout, pitched in (("hnd", False), ("combined", True)):
-                c = make_case(torch, length, layout, pitched, fixture=True)
+                c = make_case(torch, length, layout, pitched)
                 ref = reference(*c[:3], length, c[6])
                 before = candidate.dispatches
                 c[3].fill_(float("nan")); baseline = invoke(native, c).clone()
@@ -219,12 +231,25 @@ def main():
                 actual = actual_result.clone()
                 assert candidate.dispatches == before + 1, "eligible public call did not increment dispatches"
                 allocated = invoke(candidate, c, out=False).clone()
+                assert candidate.dispatches == before + 2, 'allocated-out path did not dispatch'
                 row = {"length": length, "layout": layout, "pitched_q": pitched,
                     "baseline_vs_reference": compare(baseline, ref), "candidate_vs_reference": compare(actual, ref),
                     "candidate_vs_native": compare(actual, baseline), "allocated_out": compare(allocated, ref),
                     "candidate_dispatches": candidate.dispatches}
                 report["checks"].append(row); save(path, report)
                 assert all(row[x]["passed"] for x in ("baseline_vs_reference", "candidate_vs_reference", "candidate_vs_native", "allocated_out")), f"numeric gate failed at {length}/{layout}"
+        final = make_case(torch, 7, fixture=True)
+        ref = reference(*final[:3], 7, final[6])
+        expected = torch.ones((7, 32, 128), dtype=torch.float32)
+        baseline = invoke(native, final).clone()
+        before = candidate.dispatches
+        actual = invoke(candidate, final).clone()
+        assert candidate.dispatches == before + 1
+        report['final_key'] = {'reference': compare(ref, expected),
+                               'native': compare(baseline, expected),
+                               'candidate': compare(actual, expected)}
+        save(path, report)
+        assert all(value['passed'] for value in report['final_key'].values()), 'noncausal final-key visibility failed'
         report["zero_length"] = {}
         z = make_case(torch, 0)
         z[3].fill_(3); baseline_result = invoke(native, z)
@@ -233,9 +258,16 @@ def main():
         z[3].fill_(3); candidate_result = invoke(candidate, z)
         assert candidate_result is z[3], "candidate zero-length out identity failed"
         candidate_zero = candidate_result.clone()
-        report["zero_length"] = {"baseline": compare(baseline_zero, baseline_zero), "candidate": compare(candidate_zero, baseline_zero), "finite": bool(torch.isfinite(candidate_zero).all())}
-        assert report["zero_length"]["candidate"]["passed"] and report["zero_length"]["finite"]
-        report.update(graph_check(torch, fa, native, candidate))
+        report['zero_length'] = {
+            'native_vs_self_diagnostic': compare(baseline_zero, baseline_zero),
+            'candidate_vs_native_diagnostic': compare(candidate_zero, baseline_zero),
+            'candidate_zero_output': compare(candidate_zero, torch.zeros_like(candidate_zero)),
+            'native_comparison_applicable': False,
+            'reason': 'C1/Q7 DSpark capture initializes active seq_len=7; used=0 with seven queries is an artificial empty-KV stress case. Native chunk attention is nonfinite; retain diagnostics, require candidate zero output and zero-to-live replay isolation.'}
+        save(path, report)
+        assert report['zero_length']['candidate_zero_output']['passed']
+        assert torch.count_nonzero(candidate_zero).item() == 0
+        graph_check(torch, fa, native, candidate, report, path)
         report["timing"] = timings(torch, native, candidate)
         report["status"] = "passed"
     except Exception:

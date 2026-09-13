@@ -1,0 +1,668 @@
+{
+  "status": "failed",
+  "tier": "development operator qualification; not publication compliant",
+  "command": [
+    "/opt/venv/bin/python",
+    "-P",
+    "/experiment/check-noncausal.py",
+    "--out",
+    "/output"
+  ],
+  "baseline": "unmodified native public flash_attn_varlen_func",
+  "candidate": "B70_DSPARK_NONCAUSAL_SPLIT_K native Q=1 row expansion",
+  "geometry": {
+    "C": 1,
+    "Q": 7,
+    "H": 32,
+    "KV": 8,
+    "D": 128,
+    "dtype": "bfloat16",
+    "page": 1664
+  },
+  "tolerance": {
+    "rtol": 0.02,
+    "atol": 0.002,
+    "silently_relaxed": false
+  },
+  "checks": [
+    {
+      "length": 1,
+      "layout": "hnd",
+      "pitched_q": false,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "candidate_dispatches": 2
+    },
+    {
+      "length": 1,
+      "layout": "combined",
+      "pitched_q": true,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "candidate_dispatches": 4
+    },
+    {
+      "length": 7,
+      "layout": "hnd",
+      "pitched_q": false,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.008055686950683594,
+        "rmse": 0.0009639489580877125,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.008055686950683594,
+        "rmse": 0.0009639489580877125,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.008055686950683594,
+        "rmse": 0.0009639489580877125,
+        "passed": true
+      },
+      "candidate_dispatches": 6
+    },
+    {
+      "length": 7,
+      "layout": "combined",
+      "pitched_q": true,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0073697566986083984,
+        "rmse": 0.0009667003760114312,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0073697566986083984,
+        "rmse": 0.0009667003760114312,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0073697566986083984,
+        "rmse": 0.0009667003760114312,
+        "passed": true
+      },
+      "candidate_dispatches": 8
+    },
+    {
+      "length": 1663,
+      "layout": "hnd",
+      "pitched_q": false,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005720406770706177,
+        "rmse": 9.080075687961653e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.000567317008972168,
+        "rmse": 8.762686047703028e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0009765625,
+        "rmse": 0.00010663062130333856,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.000567317008972168,
+        "rmse": 8.762686047703028e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 10
+    },
+    {
+      "length": 1663,
+      "layout": "combined",
+      "pitched_q": true,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.000568389892578125,
+        "rmse": 9.102116746362299e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005503147840499878,
+        "rmse": 8.858952787704766e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0009765625,
+        "rmse": 0.00010505491081858054,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005503147840499878,
+        "rmse": 8.858952787704766e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 12
+    },
+    {
+      "length": 1664,
+      "layout": "hnd",
+      "pitched_q": false,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005950033664703369,
+        "rmse": 8.981311839306727e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00048550963401794434,
+        "rmse": 8.645067282486707e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0009765625,
+        "rmse": 0.00010547263082116842,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00048550963401794434,
+        "rmse": 8.645067282486707e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 14
+    },
+    {
+      "length": 1664,
+      "layout": "combined",
+      "pitched_q": true,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.000523984432220459,
+        "rmse": 8.987556793726981e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0006011128425598145,
+        "rmse": 8.61525913933292e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0009765625,
+        "rmse": 0.00010531642328714952,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0006011128425598145,
+        "rmse": 8.61525913933292e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 16
+    },
+    {
+      "length": 1665,
+      "layout": "hnd",
+      "pitched_q": false,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005207657814025879,
+        "rmse": 9.048368519870564e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005686134099960327,
+        "rmse": 8.75860350788571e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0009765625,
+        "rmse": 0.00010574625775916502,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005686134099960327,
+        "rmse": 8.75860350788571e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 18
+    },
+    {
+      "length": 1665,
+      "layout": "combined",
+      "pitched_q": true,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0005791038274765015,
+        "rmse": 9.068597864825279e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0004768967628479004,
+        "rmse": 8.753845759201795e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0009765625,
+        "rmse": 0.00010575161286396906,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0004768967628479004,
+        "rmse": 8.753845759201795e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 20
+    },
+    {
+      "length": 8192,
+      "layout": "hnd",
+      "pitched_q": false,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00023051351308822632,
+        "rmse": 4.128198270336725e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0002577677369117737,
+        "rmse": 4.855798033531755e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00048828125,
+        "rmse": 6.094131458667107e-05,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0002577677369117737,
+        "rmse": 4.855798033531755e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 22
+    },
+    {
+      "length": 8192,
+      "layout": "combined",
+      "pitched_q": true,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00028315186500549316,
+        "rmse": 4.210060433251783e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00030194222927093506,
+        "rmse": 4.8869740567170084e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00048828125,
+        "rmse": 6.171287532197312e-05,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00030194222927093506,
+        "rmse": 4.8869740567170084e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 24
+    },
+    {
+      "length": 65562,
+      "layout": "hnd",
+      "pitched_q": false,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 7.960200309753418e-05,
+        "rmse": 1.483848609495908e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 9.241700172424316e-05,
+        "rmse": 1.7610722352401353e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0001220703125,
+        "rmse": 2.215308450104203e-05,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 9.241700172424316e-05,
+        "rmse": 1.7610722352401353e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 26
+    },
+    {
+      "length": 65562,
+      "layout": "combined",
+      "pitched_q": true,
+      "baseline_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 8.372031152248383e-05,
+        "rmse": 1.506796706962632e-05,
+        "passed": true
+      },
+      "candidate_vs_reference": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00011113658547401428,
+        "rmse": 1.7887798094307072e-05,
+        "passed": true
+      },
+      "candidate_vs_native": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.0001220703125,
+        "rmse": 2.2432152036344633e-05,
+        "passed": true
+      },
+      "allocated_out": {
+        "finite": true,
+        "rtol": 0.02,
+        "atol": 0.002,
+        "max_abs": 0.00011113658547401428,
+        "rmse": 1.7887798094307072e-05,
+        "passed": true
+      },
+      "candidate_dispatches": 28
+    }
+  ],
+  "test_process": {
+    "boundary": "fa.flash_attn_varlen_func",
+    "metadata": "cu_q=[0,7], used=[L], table=[1,N]",
+    "reference": "independent CPU FP32 full noncausal grouped attention",
+    "graph": "Q/K/V/used/table mutation",
+    "timing": "64K graphs warm3, 12 interleaved intervals x16 replays",
+    "evidence": "/output/noncausal-split-k.json"
+  },
+  "environment": {
+    "python": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]",
+    "platform": "Linux-7.2.0-1-cachyos-x86_64-with-glibc2.39",
+    "torch": "2.13.0+xpu",
+    "native": "/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py",
+    "prototype": "/experiment/qwen38_noncausal_split_k.py",
+    "vllm": "0.28.1rc1.dev278+g73029d424.xpu",
+    "vllm-xpu-kernels": "0.1.14.1"
+  },
+  "guards": {
+    "dispatches": 0,
+    "fallthrough_calls": 8,
+    "unsupported_overrides": [
+      [
+        "causal"
+      ],
+      [
+        "window_size"
+      ],
+      [
+        "dropout_p"
+      ],
+      [
+        "deterministic"
+      ],
+      [
+        "q"
+      ],
+      [
+        "return_softmax_lse"
+      ],
+      [
+        "max_seqlen_q"
+      ],
+      [
+        "cu_seqlens_q",
+        "q"
+      ]
+    ]
+  },
+  "final_key": {
+    "reference": {
+      "finite": true,
+      "rtol": 0.02,
+      "atol": 0.002,
+      "max_abs": 0.0,
+      "rmse": 0.0,
+      "passed": true
+    },
+    "native": {
+      "finite": true,
+      "rtol": 0.02,
+      "atol": 0.002,
+      "max_abs": 0.0,
+      "rmse": 0.0,
+      "passed": true
+    },
+    "candidate": {
+      "finite": true,
+      "rtol": 0.02,
+      "atol": 0.002,
+      "max_abs": 0.0,
+      "rmse": 0.0,
+      "passed": true
+    }
+  },
+  "zero_length": {
+    "native_vs_self_diagnostic": {
+      "finite": false,
+      "rtol": 0.02,
+      "atol": 0.002,
+      "max_abs": null,
+      "rmse": null,
+      "passed": false,
+      "error": "nonfinite output/reference"
+    },
+    "candidate_vs_native_diagnostic": {
+      "finite": false,
+      "rtol": 0.02,
+      "atol": 0.002,
+      "max_abs": null,
+      "rmse": null,
+      "passed": false,
+      "error": "nonfinite output/reference"
+    },
+    "candidate_zero_output": {
+      "finite": true,
+      "rtol": 0.02,
+      "atol": 0.002,
+      "max_abs": 3.0,
+      "rmse": 3.0,
+      "passed": false,
+      "error": "Tensor-likes are not close!\n\nMismatched elements: 28672 / 28672 (100.0%)\nGreatest absolute difference: 3.0 at index (0, 0, 0) (up to 0.002 allowed)\nGreatest relative difference: inf at index (0, 0, 0) (up to 0.02 allowed)"
+    },
+    "native_comparison_applicable": false,
+    "reason": "C1/Q7 DSpark capture initializes active seq_len=7; used=0 with seven queries is an artificial empty-KV stress case. Native chunk attention is nonfinite; retain diagnostics, require candidate zero output and zero-to-live replay isolation."
+  },
+  "error": "Traceback (most recent call last):\n  File \"/experiment/check-noncausal.py\", line 268, in main\n    assert report['zero_length']['candidate_zero_output']['passed']\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\nAssertionError\n",
+  "candidate_dispatches": 30
+}

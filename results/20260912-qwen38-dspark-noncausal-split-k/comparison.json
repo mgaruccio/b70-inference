@@ -1,0 +1,232 @@
+{
+  "tier": "development; not standard-compliant or bitwise-output-qualified",
+  "decision": "retain opt-in experiment; no production promotion",
+  "baseline": "baseline-01",
+  "candidate": "candidate-01",
+  "same_serve_arguments": true,
+  "qualified_and_served_source_sha256": "e19d3fa94a11942aeb9db4ca4552ab4357373c14d7095f7612761a05b1d924ff",
+  "fixed_contract": {
+    "draft_depth": 7,
+    "context": 65664,
+    "batch": 2048,
+    "concurrency": 1,
+    "prompt_tokens": 65536,
+    "output_tokens": 128,
+    "warmup": 1,
+    "measured": 6,
+    "graphs": "FULL_DECODE_ONLY [7,8]",
+    "power_watts": 275
+  },
+  "decode_tps": {
+    "baseline_median": 26.241498611355823,
+    "candidate_median": 30.659911807536837,
+    "baseline_iqr": 0.9089046474356373,
+    "candidate_iqr": 1.088664071986365,
+    "delta_percent": 16.837503305809598,
+    "samples": {
+      "baseline-01": [
+        25.862720873883475,
+        26.499048696516525,
+        25.98394852619512,
+        26.90289368035719,
+        31.060665282200553,
+        25.653199262416024
+      ],
+      "candidate-01": [
+        30.420748473971884,
+        30.515199859129535,
+        31.77582593768217,
+        29.98954949197059,
+        37.40194106316426,
+        30.804623755944135
+      ]
+    }
+  },
+  "request_timing": {
+    "baseline-01": {
+      "median": {
+        "decode_elapsed_s": 4.840128856012598,
+        "decode_tps_post_first": 26.241498611355823,
+        "e2e_tps": 2.058959991294575,
+        "prefill_proxy_input_tps": 1142.7455889908254,
+        "total_time_s": 62.167330460011726,
+        "ttft_s": 57.349598067987245
+      },
+      "iqr": {
+        "decode_elapsed_s": 0.16614781973476056,
+        "decode_tps_post_first": 0.9089046474356373,
+        "e2e_tps": 0.00460109792466179,
+        "prefill_proxy_input_tps": 0.2936077918236606,
+        "total_time_s": 0.1388708544691326,
+        "ttft_s": 0.014733334275661036
+      }
+    },
+    "candidate-01": {
+      "median": {
+        "decode_elapsed_s": 4.1423090224852785,
+        "decode_tps_post_first": 30.659911807536837,
+        "e2e_tps": 2.090231280204371,
+        "prefill_proxy_input_tps": 1147.866658064253,
+        "total_time_s": 61.23724552048952,
+        "ttft_s": 57.09373954051989
+      },
+      "iqr": {
+        "decode_elapsed_s": 0.1433005892613437,
+        "decode_tps_post_first": 1.088664071986365,
+        "e2e_tps": 0.004440967967217713,
+        "prefill_proxy_input_tps": 0.19017023006153977,
+        "total_time_s": 0.12984431072254665,
+        "ttft_s": 0.009459265769692138
+      }
+    }
+  },
+  "api": {
+    "canaries_per_cell": 3,
+    "finite_boundaries_per_cell": 131,
+    "functional_per_cell": 8,
+    "both_passed": true,
+    "fixed_id_matches": 17,
+    "fixed_id_total": 19,
+    "different_fixed_id_files": [
+      "parity-code-1-output-ids.json",
+      "parity-code-2-output-ids.json"
+    ],
+    "repeatability_observations": {
+      "baseline-01": {
+        "code": 2,
+        "prose": 1
+      },
+      "candidate-01": {
+        "code": 1,
+        "prose": 1
+      }
+    }
+  },
+  "long_output_pairs": [
+    {
+      "trial": 1,
+      "identical_request": true,
+      "identical_output_text": true
+    },
+    {
+      "trial": 2,
+      "identical_request": true,
+      "identical_output_text": false
+    },
+    {
+      "trial": 3,
+      "identical_request": true,
+      "identical_output_text": true
+    },
+    {
+      "trial": 4,
+      "identical_request": true,
+      "identical_output_text": false
+    },
+    {
+      "trial": 5,
+      "identical_request": true,
+      "identical_output_text": true
+    },
+    {
+      "trial": 6,
+      "identical_request": true,
+      "identical_output_text": false
+    }
+  ],
+  "pooled_measured_speculation": {
+    "baseline-01": {
+      "steps": 283.0,
+      "drafted": 1847.0,
+      "accepted": 472.0,
+      "accepted_fraction": 0.255549539794261,
+      "one_plus_accepted_per_step": 2.667844522968198,
+      "per_request": [
+        {
+          "steps": 49.0,
+          "drafted": 317.0,
+          "accepted": 77.0
+        },
+        {
+          "steps": 47.0,
+          "drafted": 303.0,
+          "accepted": 78.0
+        },
+        {
+          "steps": 48.0,
+          "drafted": 310.0,
+          "accepted": 77.0
+        },
+        {
+          "steps": 47.0,
+          "drafted": 304.0,
+          "accepted": 79.0
+        },
+        {
+          "steps": 42.0,
+          "drafted": 281.0,
+          "accepted": 85.0
+        },
+        {
+          "steps": 50.0,
+          "drafted": 332.0,
+          "accepted": 76.0
+        }
+      ]
+    },
+    "candidate-01": {
+      "steps": 288.0,
+      "drafted": 1881.0,
+      "accepted": 466.0,
+      "accepted_fraction": 0.2477405635300372,
+      "one_plus_accepted_per_step": 2.6180555555555554,
+      "per_request": [
+        {
+          "steps": 50.0,
+          "drafted": 324.0,
+          "accepted": 76.0
+        },
+        {
+          "steps": 49.0,
+          "drafted": 317.0,
+          "accepted": 76.0
+        },
+        {
+          "steps": 47.0,
+          "drafted": 303.0,
+          "accepted": 78.0
+        },
+        {
+          "steps": 50.0,
+          "drafted": 324.0,
+          "accepted": 75.0
+        },
+        {
+          "steps": 42.0,
+          "drafted": 281.0,
+          "accepted": 85.0
+        },
+        {
+          "steps": 50.0,
+          "drafted": 332.0,
+          "accepted": 76.0
+        }
+      ]
+    }
+  },
+  "operator": {
+    "artifact": "operator-04/noncausal-split-k.json",
+    "speedup": 4.447657456949478,
+    "native_ms": 4.436892875,
+    "candidate_ms": 0.99757971875,
+    "nonempty_cases": 14,
+    "native_empty_comparison": "inapplicable diagnostic; original failures retained",
+    "empty_graph_isolation": "candidate exact-zero and zero-to-live transitions passed"
+  },
+  "host_unchanged": true,
+  "limitations": [
+    "Sequential development cells; no interleaved server A/B or confidence interval. All six samples retained, including faster trial5 in both cells.",
+    "17/19 fixed output-ID files and 3/6 long output texts match. Baseline code repeatability already has two unique variants; no repeated-baseline control for these exact long requests, so divergence cannot be attributed solely to this route.",
+    "No full BetterBench/bench-serve/context sweep, peak-memory or near-limit qualification; no production promotion."
+  ]
+}
