@@ -119,3 +119,48 @@ python3 results/20260913-qwen38-mtp4-draft-attribution/test-draft-attribution.py
 ```
 
 These checks do not import the ML runtime or exercise a GPU.
+
+## Observed baseline and attribution
+
+`baseline-01` passed: 3 canaries, 131 finite boundaries, 8 functional checks,
+and one warmup plus six measured 65536/128 HTTP completions. Measured decode
+tok/s: 52.604882, 56.389909, 55.041815, 53.837301, 57.823587, 55.061446.
+Median 55.051631 tok/s; inclusive IQR 1.919364; TTFT median 53.877306 s.
+No samples excluded. Driver exit 0 and host-unchanged checks passed.
+
+Baseline command on inference-host (R is the campaign path above):
+```bash
+python3 -u "$R/../20260911-qwen38-step-profile-64k/run-mtp-depth.py" \
+  --depth 4 --cell mtp4 --out "$R/baseline-01"
+```
+
+`profile-01` also exited 0, completed the real HTTP response and host checks,
+and reported no annotation errors. Its native trace contains five draft
+generation steps. Exclusive eager device attribution per captured step:
+- draft vocabulary LM head: 4.390061 ms (20 GEMMs total);
+- remaining propose work: 2.239318 ms, predominantly attention;
+- greedy selection: 0.153519 ms.
+
+The separate deferred-event window contains 23 complete propose spans, median
+8.613854 ms. These intervals include current-stream scheduling effects and are
+not unprofiled draft latency. Do not add different windows into a step budget.
+Observed dispatcher calls: 23 target FULL 5-to-5; 23 draft PIECEWISE 5-to-5;
+23 draft PIECEWISE 1-to-5. No NONE fallback observed. Continuation padding
+exists in the draft; the target already uses exact-five full graphs.
+
+Raw trace remains on inference-host under
+`profile-01/profile/rank0.1789282253597902610.pt.trace.json.gz` (295152 bytes),
+SHA256 `edefd5241e513d2df27b258312518cd2bfd5b30a1bf8feab65cbc313554b340c`.
+The local summary retains full trace attribution, dispatcher and event samples.
+
+Decision: no gain claimed. Device computation dominates observed draft work;
+this does not establish a large recoverable host-launch gap. Continue only
+with a separately identified equivalent native/runtime candidate. A candidate
+must exceed 5% median 64K throughput gain, independently confirm via
+interleaved baseline/candidate runs, pass correctness gates, and avoid >5%
+regressions at 512/8K/32K. Precision, capacity, depth and acceptance stay fixed.
+
+Lead reran all four CPU fixtures and both CLI help checks successfully.
+Read-only review found no blocking defects before the real profile. Lab
+preview/patch tools were unavailable (ENOENT); scoped CLI execution used the
+user's explicit authorization. Production launcher and 275W cap are unchanged.
