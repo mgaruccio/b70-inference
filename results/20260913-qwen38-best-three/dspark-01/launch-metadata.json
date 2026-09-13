@@ -1,0 +1,130 @@
+{
+  "common_contract": {
+    "concurrency": 1,
+    "dtype": "float16",
+    "max_model_len": 65664,
+    "prefix_cache": false,
+    "prompt_lengths": [
+      512,
+      8192,
+      32768,
+      65536
+    ],
+    "target_kv": "fp8",
+    "target_quantization": "gptq"
+  },
+  "comparison": "user-selected best configuration bundles, not isolated algorithms",
+  "environment": [
+    "VLLM_USE_V2_MODEL_RUNNER=1",
+    "VLLM_TARGET_DEVICE=xpu",
+    "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+    "ZE_AFFINITY_MASK=0",
+    "PYTORCH_ALLOC_CONF=expandable_segments:True",
+    "VLLM_XPU_ENABLE_XPU_GRAPH=1",
+    "B70_DSPARK_BF16=1",
+    "PYTHONPATH=/noncausal",
+    "B70_STEP_TIMING=1",
+    "B70_DSPARK_NONCAUSAL_SPLIT_K=1"
+  ],
+  "intentional_changes": [
+    "unique container name",
+    "new output directory",
+    "historical profile source mounted read-only"
+  ],
+  "mounts": [
+    {
+      "container": "/dev/dri",
+      "host": "/dev/dri",
+      "mode": "ro"
+    },
+    {
+      "container": "/model",
+      "host": "/home/mike/inference/models/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16",
+      "mode": "ro"
+    },
+    {
+      "container": "/experiment",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility",
+      "mode": "ro"
+    },
+    {
+      "container": "/draft",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260910-dspark-v2-feasibility/draft",
+      "mode": "ro"
+    },
+    {
+      "container": "/experiment/patch_dspark_bf16.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-dspark-layer-norm/patch-dspark-native.py",
+      "mode": "ro"
+    },
+    {
+      "container": "/output",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-best-three/dspark-01",
+      "mode": "rw"
+    },
+    {
+      "container": "/noncausal/qwen38_step_timing_overlay.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260912-qwen38-dspark-noncausal-split-k/qwen38_noncausal_split_k.py",
+      "mode": "ro"
+    },
+    {
+      "container": "/noncausal/patch.py",
+      "host": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260911-qwen38-target-verification/qwen38_step_timing_patch.py",
+      "mode": "ro"
+    }
+  ],
+  "reference_launch": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-best-three/dspark-reference-launch.json",
+  "serve": [
+    "vllm",
+    "serve",
+    "/model",
+    "--quantization",
+    "gptq",
+    "--dtype",
+    "float16",
+    "--max-model-len",
+    "65664",
+    "--gpu-memory-utilization",
+    "0.95",
+    "--kv-cache-dtype",
+    "fp8",
+    "--port",
+    "8000",
+    "--max-num-seqs",
+    "1",
+    "--max-num-batched-tokens",
+    "2048",
+    "--no-enable-prefix-caching",
+    "--mamba-cache-mode",
+    "align",
+    "--performance-mode",
+    "balanced",
+    "--chat-template-content-format",
+    "openai",
+    "--default-chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--reasoning-parser",
+    "qwen3",
+    "--served-model-name",
+    "qwen38",
+    "--language-model-only",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "qwen3_xml",
+    "--speculative-config",
+    "{\"method\":\"dspark\",\"model\":\"/draft\",\"num_speculative_tokens\":7,\"kv_cache_dtype\":\"bfloat16\",\"quantization\":null,\"rejection_sample_method\":\"standard\",\"draft_sample_method\":\"greedy\",\"enable_adaptive_verification\":false}",
+    "--compilation-config",
+    "{\"mode\":0,\"cudagraph_mode\":\"FULL_DECODE_ONLY\",\"cudagraph_capture_sizes\":[7,8]}",
+    "--cudagraph-metrics"
+  ],
+  "speculation": {
+    "draft_sample_method": "greedy",
+    "enable_adaptive_verification": false,
+    "kv_cache_dtype": "bfloat16",
+    "method": "dspark",
+    "model": "/draft",
+    "num_speculative_tokens": 7,
+    "quantization": null,
+    "rejection_sample_method": "standard"
+  }
+}

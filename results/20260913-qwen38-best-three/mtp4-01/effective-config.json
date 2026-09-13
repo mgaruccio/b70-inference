@@ -1,0 +1,91 @@
+{
+  "common_contract": {
+    "concurrency": 1,
+    "dtype": "float16",
+    "max_model_len": 212992,
+    "prefix_cache": false,
+    "prompt_lengths": [
+      512,
+      8192,
+      32768,
+      65536
+    ],
+    "target_kv": "fp8",
+    "target_quantization": "gptq"
+  },
+  "profiler_config": null,
+  "requested_server_arguments": [
+    "vllm",
+    "serve",
+    "/model",
+    "--performance-mode",
+    "balanced",
+    "--compilation-config",
+    "{\"cudagraph_capture_sizes\":[1,2,4,8]}",
+    "--cudagraph-metrics",
+    "--quantization",
+    "gptq",
+    "--dtype",
+    "float16",
+    "--max-model-len",
+    "212992",
+    "--gpu-memory-utilization",
+    "0.95",
+    "--kv-cache-dtype",
+    "fp8",
+    "--port",
+    "8000",
+    "--max-num-seqs",
+    "1",
+    "--max-num-batched-tokens",
+    "8192",
+    "--no-enable-prefix-caching",
+    "--mamba-cache-mode",
+    "align",
+    "--chat-template-content-format",
+    "openai",
+    "--default-chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--reasoning-parser",
+    "qwen3",
+    "--override-generation-config",
+    "{\"temperature\":0.6,\"top_p\":0.95,\"top_k\":20,\"min_p\":0}",
+    "--served-model-name",
+    "qwen38",
+    "--language-model-only",
+    "--speculative-config",
+    "{\"method\": \"mtp\", \"num_speculative_tokens\": 4}",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "qwen3_xml"
+  ],
+  "served_model": {
+    "created": 1789266316,
+    "id": "qwen38",
+    "max_model_len": 212992,
+    "object": "model",
+    "owned_by": "vllm",
+    "parent": null,
+    "permission": [
+      {
+        "allow_create_engine": false,
+        "allow_fine_tuning": false,
+        "allow_logprobs": true,
+        "allow_sampling": true,
+        "allow_search_indices": false,
+        "allow_view": true,
+        "created": 1789266316,
+        "group": null,
+        "id": "modelperm-a0c904d654f6aa09",
+        "is_blocking": false,
+        "object": "model_permission",
+        "organization": "*"
+      }
+    ],
+    "root": "/model"
+  },
+  "speculation": {
+    "method": "mtp",
+    "num_speculative_tokens": 4
+  }
+}

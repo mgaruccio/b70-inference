@@ -1,0 +1,92 @@
+{
+  "common_contract": {
+    "concurrency": 1,
+    "dtype": "float16",
+    "max_model_len": 180224,
+    "prefix_cache": false,
+    "prompt_lengths": [
+      512,
+      8192,
+      32768,
+      65536
+    ],
+    "target_kv": "fp8",
+    "target_quantization": "gptq"
+  },
+  "profiler_config": null,
+  "requested_server_arguments": [
+    "vllm",
+    "serve",
+    "/model",
+    "--quantization",
+    "gptq",
+    "--dtype",
+    "float16",
+    "--max-model-len",
+    "180224",
+    "--gpu-memory-utilization",
+    "0.95",
+    "--kv-cache-dtype",
+    "fp8",
+    "--port",
+    "8000",
+    "--max-num-seqs",
+    "1",
+    "--max-num-batched-tokens",
+    "2048",
+    "--no-enable-prefix-caching",
+    "--mamba-cache-mode",
+    "align",
+    "--performance-mode",
+    "balanced",
+    "--chat-template-content-format",
+    "openai",
+    "--default-chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--reasoning-parser",
+    "qwen3",
+    "--served-model-name",
+    "qwen38",
+    "--language-model-only",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "qwen3_xml",
+    "--compilation-config",
+    "{\"cudagraph_capture_sizes\":[1,2,4,8]}",
+    "--cudagraph-metrics",
+    "--speculative-config",
+    "{\"method\": \"dflash\", \"model\": \"/draft\", \"kv_cache_dtype\": \"auto\", \"num_speculative_tokens\": 7, \"quantization\": \"gptq\"}"
+  ],
+  "served_model": {
+    "created": 1789268014,
+    "id": "qwen38",
+    "max_model_len": 180224,
+    "object": "model",
+    "owned_by": "vllm",
+    "parent": null,
+    "permission": [
+      {
+        "allow_create_engine": false,
+        "allow_fine_tuning": false,
+        "allow_logprobs": true,
+        "allow_sampling": true,
+        "allow_search_indices": false,
+        "allow_view": true,
+        "created": 1789268014,
+        "group": null,
+        "id": "modelperm-b906d8a1e35f6bcc",
+        "is_blocking": false,
+        "object": "model_permission",
+        "organization": "*"
+      }
+    ],
+    "root": "/model"
+  },
+  "speculation": {
+    "kv_cache_dtype": "auto",
+    "method": "dflash",
+    "model": "/draft",
+    "num_speculative_tokens": 7,
+    "quantization": "gptq"
+  }
+}
