@@ -177,6 +177,42 @@ python3 -u "$R/run-serving.py" --out "$R/baseline-01"
 python3 -u "$R/run-serving.py" --candidate --out "$R/candidate-01"
 ```
 
-The candidate mounts `grouped_verify.py`, `serving-overlay.py`, the canonical import shim and the q8 library read-only; it verifies library SHA256 `4630ef2db027c3443ff63b16a611699c0db250c2cc53ed67aaad8a1a318f4490` before loading. Candidate validation requires a real eligible-dispatch log with Q/KV shapes and capture state plus both FULL graph capture and FULL graph-run evidence; an import-only marker is insufficient. The adapter remains opt-in (`B70_GROUPED_SERVING=1`) and unsupported routes delegate to native.
+The candidate mounts `grouped_verify.py`, `serving-overlay.py`, the canonical import shim and the q8 library read-only; the current build06 SHA256 is `e0c6f2a78a1a50eef9dcc11b9c378c2e94799a3f5ffa0c8971849f03b3c1ddec`. Candidate validation requires a real eligible-dispatch log with Q/KV shapes plus FULL graph capture and FULL graph-run evidence; an import-only marker is insufficient. The adapter remains opt-in (`B70_GROUPED_SERVING=1`), and unsupported routes delegate to native. The first eligible log reports `not-capturing` during warmup: graph evidence comes from subsequent FULL capture/run logs, not that flag alone.
 
-Limitations: this worker did not run GPU/compiler/ML runtime tests and makes no serving-gain claim. Eligibility is intentionally exact to HND FP8 KV `[176,1664,4,256]`; the observed production capacity may expose a different page count, which must fail qualification with the logged shape rather than broaden this adapter. Production launchers remain untouched; the lead owns remote execution, interleaving and final cleanup.
+## Actual serving layout and requalification
+
+The original HND176-only adapter failed closed in `serving-candidate-01` (exit1, no eligible dispatch); its throughput is excluded. Real serving uses interleaved FP8 KV `[152,1664,4,256]` with strides `[3407872,2048,512,1]`. Python/C++ guards now accept exactly that layout plus the previously qualified HND176 layout. No arithmetic/template change accompanied this correction. Build06 exited0. Operator03 uses the actual interleaved backing layout and adds contiguous serving Q; all35 numerical/graph cases passed the predefined policy. Candidate/native strict checks passed; strict FP32 diagnostics failed in the same four cases for BOTH native and candidate (`eager/3`, `/4`, `/6`, `allocated_output`). Both passed the separately predeclared FP16-V-rounding allowance; this is not universal strict FP32 parity.
+
+Operator03 candidate latency fell **15.89% / 16.76% / 17.70%** at 8K/32K/64K, including pack/unpack. Build05 q8 ISA metadata reports 5632 bytes spill versus q16's 33024; q8 is not spill-free. Executed commands: `bash build.sh build-06` and `B70_IDLE_CONFIRMED=1 bash run-probe.sh build-06 operator-03` in the scoped remote directory. Original build/source/input snapshots and failures remain retained.
+
+## Independent serving confirmation — positive development result
+
+Discovery (`serving-baseline-01` vs `serving-candidate-02`) gave 55.7508 → 58.5942 tok/s (+5.10%); these samples are NOT pooled into confirmation. An independent fresh-container A–B–B–A run then executed on inference-host:
+
+```bash
+for cell in confirm-a1 confirm-b1 confirm-b2 confirm-a2; do
+  extra=()
+  [[ "$cell" == confirm-b* ]] && extra=(--candidate)
+  python3 -u "$R/run-serving.py" --confirmation "${extra[@]}" --out "$R/$cell" > "$R/$cell.console.log" 2>&1
+  # Each cell must exit0 before continuing; retained *.exit-code.txt records all four.
+done
+```
+
+Each cell ran the real HTTP 3-canary/131-finite/8-functional suite, then 512/8192/32768/65536-token prompts, one warmup plus six measured requests per length. Generation is128 tokens, greedy seed42, C1, EOS ignored, prefix caching off. All four cells exited0 and all96 measured requests validated. All same-index measured request JSONs are byte-identical across arms. No samples were removed. Both candidates show the exact build06 eligible dispatch, no unsupported-q5 log, and FULL graph capture/run. The configured capacity212992, batch8192, K4, weights/precision, acceptance policy and275W are unchanged.
+
+Pooled medians over12 independent confirmation measurements per arm/length (IQR in parentheses, tok/s):
+
+| Prompt tokens | Native | Candidate | Change |
+|---:|---:|---:|---:|
+|512|70.8663 (6.5089)|70.1855 (1.9678)|−0.96%|
+|8192|63.2092 (1.6412)|65.5345 (5.7124)|+3.68%|
+|32768|61.2679 (0.8083)|63.2420 (1.6110)|+3.22%|
+|65536|54.4637 (2.6435)|59.2835 (4.5539)|**+8.85%**|
+
+The predeclared development gate (at least5% at64K, no greater than5% median regression at shorter points) passes. Both64K candidate-cell medians (59.3266,57.9335) exceed both baseline-cell medians (55.1080,54.4319). A post-run paired prompt-cluster bootstrap (20000 resamples, seed42) gives a conditional95% interval of **+1.63% to +11.68%** at64K. Only six prompt clusters and two cells per arm were collected; this is not cross-day robustness evidence. At512 the interval crosses zero and extends below−5%; passing the median guard does not establish statistical noninferiority. TTFT at64K stayed approximately53.9s in all cells: this is a decode improvement, not prefill acceleration.
+
+At64K, native proposed2036/accepted1037 draft tokens across509 steps; candidate proposed2032/accepted1042 across508 steps (acceptance50.93% vs51.28%). Actual1536 emitted tokens give3.018 vs3.024 emitted/step. The throughput difference is not explained by a large acceptance improvement. Per-request counters, all lengths, TTFTs and distributions are retained and analyzed in `analysis-confirmation.json`.
+
+**Fidelity limitations:** all19 short output-ID files match across all confirmation cells. Long text matches are only2/6 and3/6 for A1:B1 and A2:B2 at64K; baseline A1:A2 itself matches2/6, candidate B1:B2 matches1/6. Long token IDs were not collected, so text identity is not token parity. Native nondeterminism does not prove candidate quality equivalence. This is a **quality-sensitive development result**, not a standard-publishable/community-comparable result: the full500-prompt divergence suite, IFEval/GSM8K/HumanEval+/MBPP+, BetterBench20-pass, `vllm bench serve`, concurrency and full near-limit sweep were not run. Configured capacity was preserved; maximum tested prompt length was65536, not212992.
+
+Reproduce offline analysis with `python3 results/20260913-qwen38-native-grouped-verify/analysis-confirmation.py > results/20260913-qwen38-native-grouped-verify/analysis-confirmation.json`; `check-local.py` passed all stdlib fixtures/AST/shell checks. A read-only review found no blocking implementation contract break; it inspected the operator, discovery evidence and confirmation loop, not confirmation outcomes. Lead verified all confirmation outcomes independently. Raw evidence is in `confirm-{a1,b1,b2,a2}/`, their console/exit files, `operator-03/`, and `build-06/`. Every cell records unchanged launcher hash/power and successful cleanup. Production was not promoted or modified.

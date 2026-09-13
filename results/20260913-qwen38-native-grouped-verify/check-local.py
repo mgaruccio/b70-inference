@@ -322,7 +322,7 @@ def launch_contract_fixture():
     import tempfile
     namespace = runpy.run_path(str(ROOT / "run-serving.py"))
     assert namespace["EXPECTED_LIBRARY_SHA256"] == (
-        "4630ef2db027c3443ff63b16a611699c0db250c2cc53ed67aaad8a1a318f4490"
+        "e0c6f2a78a1a50eef9dcc11b9c378c2e94799a3f5ffa0c8971849f03b3c1ddec"
     )
     mounts = namespace["_candidate_mounts"](
         ROOT / "serving-overlay.py",

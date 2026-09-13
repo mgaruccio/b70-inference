@@ -1,0 +1,732 @@
+---
+version:         '1.73'
+kernels:
+  - name:            _ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0ELb1EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE
+    user_attributes:
+      intel_reqd_sub_group_size: 16
+      intel_reqd_workgroup_walk_order: [ 0, 1, 2 ]
+    execution_env:
+      barrier_count:   2
+      grf_count:       256
+      has_4gb_buffers: true
+      has_dpas:        true
+      has_no_stateless_write: true
+      indirect_stateless_count: 13
+      inline_data_payload_size: 32
+      offset_to_skip_per_thread_data_load: 128
+      simd_size:       16
+      spill_size:      5632
+      subgroup_independent_forward_progress: true
+      eu_thread_count: 4
+    payload_arguments:
+      - arg_type:        arg_bypointer
+        offset:          0
+        size:            8
+        arg_index:       1
+        addrmode:        slm
+        addrspace:       local
+        access_type:     readwrite
+        slm_alignment:   1
+      - arg_type:        arg_byvalue
+        offset:          8
+        size:            4
+        arg_index:       0
+        source_offset:   0
+      - arg_type:        arg_byvalue
+        offset:          12
+        size:            4
+        arg_index:       0
+        source_offset:   4
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          16
+        size:            4
+        arg_index:       0
+        source_offset:   8
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          20
+        size:            1
+        arg_index:       0
+        source_offset:   12
+      - arg_type:        arg_byvalue
+        offset:          24
+        size:            1
+        arg_index:       0
+        source_offset:   13
+      - arg_type:        arg_byvalue
+        offset:          28
+        size:            1
+        arg_index:       0
+        source_offset:   14
+      - arg_type:        arg_byvalue
+        offset:          32
+        size:            1
+        arg_index:       0
+        source_offset:   15
+      - arg_type:        arg_byvalue
+        offset:          36
+        size:            5
+        arg_index:       0
+        source_offset:   16
+      - arg_type:        arg_byvalue
+        offset:          44
+        size:            1
+        arg_index:       0
+        source_offset:   21
+      - arg_type:        arg_byvalue
+        offset:          48
+        size:            1
+        arg_index:       0
+        source_offset:   22
+      - arg_type:        arg_byvalue
+        offset:          52
+        size:            1
+        arg_index:       0
+        source_offset:   23
+      - arg_type:        arg_byvalue
+        offset:          56
+        size:            8
+        arg_index:       0
+        source_offset:   24
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          64
+        size:            5
+        arg_index:       0
+        source_offset:   32
+      - arg_type:        arg_byvalue
+        offset:          72
+        size:            1
+        arg_index:       0
+        source_offset:   37
+      - arg_type:        arg_byvalue
+        offset:          76
+        size:            1
+        arg_index:       0
+        source_offset:   38
+      - arg_type:        arg_byvalue
+        offset:          80
+        size:            1
+        arg_index:       0
+        source_offset:   39
+      - arg_type:        arg_byvalue
+        offset:          88
+        size:            8
+        arg_index:       0
+        source_offset:   40
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          96
+        size:            4
+        arg_index:       0
+        source_offset:   48
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          100
+        size:            4
+        arg_index:       0
+        source_offset:   52
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          104
+        size:            8
+        arg_index:       0
+        source_offset:   56
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          112
+        size:            4
+        arg_index:       0
+        source_offset:   64
+      - arg_type:        arg_byvalue
+        offset:          116
+        size:            4
+        arg_index:       0
+        source_offset:   68
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          120
+        size:            5
+        arg_index:       0
+        source_offset:   72
+      - arg_type:        arg_byvalue
+        offset:          128
+        size:            1
+        arg_index:       0
+        source_offset:   77
+      - arg_type:        arg_byvalue
+        offset:          132
+        size:            1
+        arg_index:       0
+        source_offset:   78
+      - arg_type:        arg_byvalue
+        offset:          136
+        size:            1
+        arg_index:       0
+        source_offset:   79
+      - arg_type:        arg_byvalue
+        offset:          144
+        size:            8
+        arg_index:       0
+        source_offset:   80
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          152
+        size:            4
+        arg_index:       0
+        source_offset:   88
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          156
+        size:            9
+        arg_index:       0
+        source_offset:   92
+      - arg_type:        arg_byvalue
+        offset:          168
+        size:            1
+        arg_index:       0
+        source_offset:   101
+      - arg_type:        arg_byvalue
+        offset:          172
+        size:            1
+        arg_index:       0
+        source_offset:   102
+      - arg_type:        arg_byvalue
+        offset:          176
+        size:            1
+        arg_index:       0
+        source_offset:   103
+      - arg_type:        arg_byvalue
+        offset:          184
+        size:            8
+        arg_index:       0
+        source_offset:   104
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          192
+        size:            4
+        arg_index:       0
+        source_offset:   112
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          196
+        size:            9
+        arg_index:       0
+        source_offset:   116
+      - arg_type:        arg_byvalue
+        offset:          208
+        size:            1
+        arg_index:       0
+        source_offset:   125
+      - arg_type:        arg_byvalue
+        offset:          212
+        size:            1
+        arg_index:       0
+        source_offset:   126
+      - arg_type:        arg_byvalue
+        offset:          216
+        size:            1
+        arg_index:       0
+        source_offset:   127
+      - arg_type:        arg_byvalue
+        offset:          224
+        size:            8
+        arg_index:       0
+        source_offset:   128
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          232
+        size:            13
+        arg_index:       0
+        source_offset:   136
+      - arg_type:        arg_byvalue
+        offset:          248
+        size:            1
+        arg_index:       0
+        source_offset:   149
+      - arg_type:        arg_byvalue
+        offset:          252
+        size:            1
+        arg_index:       0
+        source_offset:   150
+      - arg_type:        arg_byvalue
+        offset:          256
+        size:            1
+        arg_index:       0
+        source_offset:   151
+      - arg_type:        arg_byvalue
+        offset:          264
+        size:            8
+        arg_index:       0
+        source_offset:   152
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          272
+        size:            13
+        arg_index:       0
+        source_offset:   160
+      - arg_type:        arg_byvalue
+        offset:          288
+        size:            1
+        arg_index:       0
+        source_offset:   173
+      - arg_type:        arg_byvalue
+        offset:          292
+        size:            1
+        arg_index:       0
+        source_offset:   174
+      - arg_type:        arg_byvalue
+        offset:          296
+        size:            1
+        arg_index:       0
+        source_offset:   175
+      - arg_type:        arg_byvalue
+        offset:          304
+        size:            8
+        arg_index:       0
+        source_offset:   176
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          312
+        size:            13
+        arg_index:       0
+        source_offset:   184
+      - arg_type:        arg_byvalue
+        offset:          328
+        size:            1
+        arg_index:       0
+        source_offset:   197
+      - arg_type:        arg_byvalue
+        offset:          332
+        size:            1
+        arg_index:       0
+        source_offset:   198
+      - arg_type:        arg_byvalue
+        offset:          336
+        size:            1
+        arg_index:       0
+        source_offset:   199
+      - arg_type:        arg_byvalue
+        offset:          344
+        size:            8
+        arg_index:       0
+        source_offset:   200
+      - arg_type:        arg_byvalue
+        offset:          352
+        size:            8
+        arg_index:       0
+        source_offset:   208
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          360
+        size:            8
+        arg_index:       0
+        source_offset:   216
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          368
+        size:            5
+        arg_index:       0
+        source_offset:   224
+      - arg_type:        arg_byvalue
+        offset:          376
+        size:            1
+        arg_index:       0
+        source_offset:   229
+      - arg_type:        arg_byvalue
+        offset:          380
+        size:            1
+        arg_index:       0
+        source_offset:   230
+      - arg_type:        arg_byvalue
+        offset:          384
+        size:            1
+        arg_index:       0
+        source_offset:   231
+      - arg_type:        arg_byvalue
+        offset:          392
+        size:            8
+        arg_index:       0
+        source_offset:   232
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          400
+        size:            8
+        arg_index:       0
+        source_offset:   240
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          408
+        size:            8
+        arg_index:       0
+        source_offset:   248
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          416
+        size:            8
+        arg_index:       0
+        source_offset:   256
+      - arg_type:        arg_byvalue
+        offset:          424
+        size:            4
+        arg_index:       0
+        source_offset:   264
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          428
+        size:            13
+        arg_index:       0
+        source_offset:   268
+      - arg_type:        arg_byvalue
+        offset:          444
+        size:            1
+        arg_index:       0
+        source_offset:   281
+      - arg_type:        arg_byvalue
+        offset:          448
+        size:            1
+        arg_index:       0
+        source_offset:   282
+      - arg_type:        arg_byvalue
+        offset:          452
+        size:            1
+        arg_index:       0
+        source_offset:   283
+      - arg_type:        arg_byvalue
+        offset:          456
+        size:            1
+        arg_index:       0
+        source_offset:   284
+      - arg_type:        arg_byvalue
+        offset:          460
+        size:            1
+        arg_index:       0
+        source_offset:   285
+      - arg_type:        arg_byvalue
+        offset:          464
+        size:            1
+        arg_index:       0
+        source_offset:   286
+      - arg_type:        arg_byvalue
+        offset:          468
+        size:            1
+        arg_index:       0
+        source_offset:   287
+      - arg_type:        arg_byvalue
+        offset:          472
+        size:            40
+        arg_index:       0
+        source_offset:   288
+      - arg_type:        arg_byvalue
+        offset:          512
+        size:            8
+        arg_index:       0
+        source_offset:   328
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          520
+        size:            5
+        arg_index:       0
+        source_offset:   336
+      - arg_type:        arg_byvalue
+        offset:          528
+        size:            1
+        arg_index:       0
+        source_offset:   341
+      - arg_type:        arg_byvalue
+        offset:          532
+        size:            1
+        arg_index:       0
+        source_offset:   342
+      - arg_type:        arg_byvalue
+        offset:          536
+        size:            1
+        arg_index:       0
+        source_offset:   343
+      - arg_type:        const_base
+        offset:          544
+        size:            8
+    per_thread_payload_arguments:
+      - arg_type:        local_id
+        offset:          0
+        size:            64
+    per_thread_memory_buffers:
+      - type:            scratch
+        usage:           single_space
+        size:            8192
+  - name:            _ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_27XeReduceSplitKTileSchedulerENS6_22XeFMHAFwdSplitKVKernelIS9_NS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSG_8MMA_AtomIJNSG_10XE_DPAS_TTILi8EfNS3_6half_tESK_fEEEEENSG_6LayoutINSG_5tupleIJNSG_1CILi1EEENSP_ILi4EEESQ_EEENSO_IJNSP_ILi0EEESQ_ST_EEEEEKNSO_IJNSN_INSP_ILi8EEESQ_EENSN_INSP_ILi64EEESQ_EESZ_EEEEENSH_ISM_NSN_INSO_IJSQ_SQ_SR_EEENSO_IJST_ST_SQ_EEEEEKNSO_IJSX_NSN_INSP_ILi32EEESQ_EESZ_EEEEELi8ENSG_6TensorINSG_10ViewEngineINSG_8gmem_ptrIPSK_EEEENSN_INSO_IJiiiiEEENSO_IJiSQ_iiEEEEEEENS1B_INS1C_INS1D_IPNS3_12float_e4m3_tEEEEES1J_EENS1B_IS1O_NSN_IS1H_NSO_IJSQ_iiiEEEEEEEvvvLb0ELb1EEENSC_17DecodeFwdEpilogueIS1T_NSO_IJSW_NSP_ILi256EEEEEES1K_NS1B_INS1C_INS1D_IPfEEEES1J_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS2A_3ext6oneapi12experimental10propertiesINS2F_6detail20properties_type_listIJNS2F_14property_valueINS2F_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2J_INS2D_5intel12experimental12grf_size_keyEJS2L_IjLj256EEEEEEEEEELb0EJNS24_6ParamsEEEE
+    user_attributes:
+      intel_reqd_sub_group_size: 16
+      intel_reqd_workgroup_walk_order: [ 0, 1, 2 ]
+    execution_env:
+      barrier_count:   1
+      grf_count:       256
+      has_4gb_buffers: true
+      has_no_stateless_write: true
+      indirect_stateless_count: 4
+      inline_data_payload_size: 32
+      offset_to_skip_per_thread_data_load: 192
+      simd_size:       16
+      slm_size:        4096
+      subgroup_independent_forward_progress: true
+      eu_thread_count: 4
+    payload_arguments:
+      - arg_type:        arg_bypointer
+        offset:          0
+        size:            8
+        arg_index:       1
+        addrmode:        slm
+        addrspace:       local
+        access_type:     readwrite
+        slm_alignment:   1
+      - arg_type:        arg_byvalue
+        offset:          8
+        size:            13
+        arg_index:       0
+        source_offset:   0
+      - arg_type:        arg_byvalue
+        offset:          24
+        size:            1
+        arg_index:       0
+        source_offset:   13
+      - arg_type:        arg_byvalue
+        offset:          28
+        size:            1
+        arg_index:       0
+        source_offset:   14
+      - arg_type:        arg_byvalue
+        offset:          32
+        size:            1
+        arg_index:       0
+        source_offset:   15
+      - arg_type:        arg_byvalue
+        offset:          36
+        size:            5
+        arg_index:       0
+        source_offset:   16
+      - arg_type:        arg_byvalue
+        offset:          44
+        size:            1
+        arg_index:       0
+        source_offset:   21
+      - arg_type:        arg_byvalue
+        offset:          48
+        size:            1
+        arg_index:       0
+        source_offset:   22
+      - arg_type:        arg_byvalue
+        offset:          52
+        size:            1
+        arg_index:       0
+        source_offset:   23
+      - arg_type:        arg_byvalue
+        offset:          56
+        size:            8
+        arg_index:       0
+        source_offset:   24
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          64
+        size:            5
+        arg_index:       0
+        source_offset:   32
+      - arg_type:        arg_byvalue
+        offset:          72
+        size:            1
+        arg_index:       0
+        source_offset:   37
+      - arg_type:        arg_byvalue
+        offset:          76
+        size:            1
+        arg_index:       0
+        source_offset:   38
+      - arg_type:        arg_byvalue
+        offset:          80
+        size:            1
+        arg_index:       0
+        source_offset:   39
+      - arg_type:        arg_byvalue
+        offset:          88
+        size:            8
+        arg_index:       0
+        source_offset:   40
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          96
+        size:            8
+        arg_index:       0
+        source_offset:   48
+      - arg_type:        arg_byvalue
+        offset:          104
+        size:            8
+        arg_index:       0
+        source_offset:   56
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          112
+        size:            13
+        arg_index:       0
+        source_offset:   64
+      - arg_type:        arg_byvalue
+        offset:          128
+        size:            1
+        arg_index:       0
+        source_offset:   77
+      - arg_type:        arg_byvalue
+        offset:          132
+        size:            1
+        arg_index:       0
+        source_offset:   78
+      - arg_type:        arg_byvalue
+        offset:          136
+        size:            1
+        arg_index:       0
+        source_offset:   79
+      - arg_type:        arg_byvalue
+        offset:          144
+        size:            8
+        arg_index:       0
+        source_offset:   80
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          152
+        size:            13
+        arg_index:       0
+        source_offset:   88
+      - arg_type:        arg_byvalue
+        offset:          168
+        size:            1
+        arg_index:       0
+        source_offset:   101
+      - arg_type:        arg_byvalue
+        offset:          172
+        size:            1
+        arg_index:       0
+        source_offset:   102
+      - arg_type:        arg_byvalue
+        offset:          176
+        size:            1
+        arg_index:       0
+        source_offset:   103
+      - arg_type:        arg_byvalue
+        offset:          184
+        size:            8
+        arg_index:       0
+        source_offset:   104
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          192
+        size:            13
+        arg_index:       0
+        source_offset:   112
+      - arg_type:        arg_byvalue
+        offset:          208
+        size:            1
+        arg_index:       0
+        source_offset:   125
+      - arg_type:        arg_byvalue
+        offset:          212
+        size:            1
+        arg_index:       0
+        source_offset:   126
+      - arg_type:        arg_byvalue
+        offset:          216
+        size:            1
+        arg_index:       0
+        source_offset:   127
+      - arg_type:        arg_byvalue
+        offset:          224
+        size:            8
+        arg_index:       0
+        source_offset:   128
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          232
+        size:            16
+        arg_index:       0
+        source_offset:   136
+      - arg_type:        arg_byvalue
+        offset:          248
+        size:            8
+        arg_index:       0
+        source_offset:   152
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          256
+        size:            8
+        arg_index:       0
+        source_offset:   160
+        is_ptr:          true
+      - arg_type:        arg_byvalue
+        offset:          264
+        size:            29
+        arg_index:       0
+        source_offset:   168
+      - arg_type:        arg_byvalue
+        offset:          296
+        size:            1
+        arg_index:       0
+        source_offset:   197
+      - arg_type:        arg_byvalue
+        offset:          300
+        size:            1
+        arg_index:       0
+        source_offset:   198
+      - arg_type:        arg_byvalue
+        offset:          304
+        size:            1
+        arg_index:       0
+        source_offset:   199
+      - arg_type:        const_base
+        offset:          312
+        size:            8
+      - arg_type:        group_count
+        offset:          320
+        size:            12
+      - arg_type:        global_size
+        offset:          332
+        size:            12
+      - arg_type:        local_size
+        offset:          352
+        size:            12
+    per_thread_payload_arguments:
+      - arg_type:        local_id
+        offset:          0
+        size:            192
+  - name:            Intel_Symbol_Table_Void_Program
+    execution_env:
+      grf_count:       256
+      has_4gb_buffers: true
+      has_no_stateless_write: true
+      inline_data_payload_size: 32
+      simd_size:       32
+      subgroup_independent_forward_progress: true
+      work_group_walk_order_dimensions: [ 0, 0, 0 ]
+      eu_thread_count: 4
+kernels_misc_info:
+  - name:            _ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0ELb1EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE
+    args_info:
+      - index:           0
+        address_qualifier: __private
+        access_qualifier: NONE
+        type_name:       'class.std::__generated_tuple;344'
+        type_qualifiers: NONE
+      - index:           1
+        address_qualifier: __local
+        access_qualifier: NONE
+        type_name:       'char*;8'
+        type_qualifiers: restrict
+  - name:            _ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_27XeReduceSplitKTileSchedulerENS6_22XeFMHAFwdSplitKVKernelIS9_NS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSG_8MMA_AtomIJNSG_10XE_DPAS_TTILi8EfNS3_6half_tESK_fEEEEENSG_6LayoutINSG_5tupleIJNSG_1CILi1EEENSP_ILi4EEESQ_EEENSO_IJNSP_ILi0EEESQ_ST_EEEEEKNSO_IJNSN_INSP_ILi8EEESQ_EENSN_INSP_ILi64EEESQ_EESZ_EEEEENSH_ISM_NSN_INSO_IJSQ_SQ_SR_EEENSO_IJST_ST_SQ_EEEEEKNSO_IJSX_NSN_INSP_ILi32EEESQ_EESZ_EEEEELi8ENSG_6TensorINSG_10ViewEngineINSG_8gmem_ptrIPSK_EEEENSN_INSO_IJiiiiEEENSO_IJiSQ_iiEEEEEEENS1B_INS1C_INS1D_IPNS3_12float_e4m3_tEEEEES1J_EENS1B_IS1O_NSN_IS1H_NSO_IJSQ_iiiEEEEEEEvvvLb0ELb1EEENSC_17DecodeFwdEpilogueIS1T_NSO_IJSW_NSP_ILi256EEEEEES1K_NS1B_INS1C_INS1D_IPfEEEES1J_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS2A_3ext6oneapi12experimental10propertiesINS2F_6detail20properties_type_listIJNS2F_14property_valueINS2F_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2J_INS2D_5intel12experimental12grf_size_keyEJS2L_IjLj256EEEEEEEEEELb0EJNS24_6ParamsEEEE
+    args_info:
+      - index:           0
+        address_qualifier: __private
+        access_qualifier: NONE
+        type_name:       'class.std::__generated_tuple.11703;200'
+        type_qualifiers: NONE
+      - index:           1
+        address_qualifier: __local
+        access_qualifier: NONE
+        type_name:       'char*;8'
+        type_qualifiers: restrict
+...

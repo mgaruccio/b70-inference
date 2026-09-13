@@ -1,0 +1,53 @@
+{
+  "campaign": "20260913-qwen38-native-grouped-verify",
+  "cell": "mtp4",
+  "error": {
+    "message": "candidate produced no eligible grouped-serving dispatch log; unsupported-q5 evidence=['Capturing CUDA graphs (decode, FULL):   0%|          | 0/1 [00:00<?, ?it/s](EngineCore pid=285) [B70_GROUPED_SERVING] {\"event\":\"unsupported-q5\",\"k_device\":\"xpu:0\",\"k_dtype\":\"torch.float8_e4m3fn\",\"k_shape\":[152,1664,4,256],\"k_stride\":[3407872,2048,512,1],\"q_device\":\"xpu:0\",\"q_dtype\":\"torch.float16\",\"q_shape\":[5,24,256],\"q_stride\":[6144,256,1],\"reason\":\"only production HND FP8e4m3fn KV geometry\",\"v_device\":\"xpu:0\",\"v_dtype\":\"torch.float8_e4m3fn\",\"v_shape\":[152,1664,4,256],\"v_stride\":[3407872,2048,512,1]}']",
+    "type": "ServingContractError"
+  },
+  "finished_utc": "2026-09-13T09:19:52.958101+00:00",
+  "host_contract": {
+    "glimmer_stopped": true,
+    "no_running_containers": true,
+    "power_cap_microwatts": "275000000",
+    "production_launcher_sha256": "63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4"
+  },
+  "host_unchanged": true,
+  "mode": "benchmark",
+  "purpose": "64K profiling/paired throughput evidence; not a publishable result or production promotion",
+  "served_model": {
+    "created": 1789290708,
+    "id": "qwen38",
+    "max_model_len": 212992,
+    "object": "model",
+    "owned_by": "vllm",
+    "parent": null,
+    "permission": [
+      {
+        "allow_create_engine": false,
+        "allow_fine_tuning": false,
+        "allow_logprobs": true,
+        "allow_sampling": true,
+        "allow_search_indices": false,
+        "allow_view": true,
+        "created": 1789290708,
+        "group": null,
+        "id": "modelperm-9e161d3ffce01621",
+        "is_blocking": false,
+        "object": "model_permission",
+        "organization": "*"
+      }
+    ],
+    "root": "/model"
+  },
+  "status": "failed",
+  "tier": "development",
+  "workload_contract": {
+    "completion_tokens": 128,
+    "ignore_eos": true,
+    "prefix_cache": false,
+    "prompt_tokens": 65536,
+    "seed": 42,
+    "temperature": 0.0
+  }
+}

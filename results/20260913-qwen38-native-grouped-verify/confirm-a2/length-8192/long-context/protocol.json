@@ -1,0 +1,27 @@
+{
+  "configured_max_model_len": 212992,
+  "near_limit_length": 8192,
+  "nonce": "sha256(qwen38-cold-long-context-v1|length|trial)[:24]; same across baseline/candidate",
+  "prompt_rendering": {
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "completion_endpoint": "/v1/completions",
+    "empty_chat_messages": [
+      {
+        "content": "",
+        "role": "user"
+      }
+    ],
+    "prompt_transport": "rendered token IDs",
+    "qwen_im_end_id": 248046,
+    "template_endpoint": "/tokenize"
+  },
+  "requested_lengths": [
+    8192
+  ],
+  "selected_lengths": [
+    8192
+  ],
+  "standard": "B70 + Qwen 3.8 cold long-context sweep"
+}

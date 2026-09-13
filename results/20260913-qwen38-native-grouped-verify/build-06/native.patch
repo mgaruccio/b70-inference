@@ -1,0 +1,97 @@
+--- a/csrc/xpu/attn/xe_2/collective/chunk_prefill_mainloop.hpp
++++ b/csrc/xpu/attn/xe_2/collective/chunk_prefill_mainloop.hpp
+@@ -737,7 +737,8 @@
+     class TiledCopyQ_ = void,  // Optional TiledCopy for loading Q
+     class TiledCopyK_ = void,  // Optional TiledCopy for loading K
+     class TiledCopyV_ = void,  // Optional TiledCopy for loading V
+-    bool LocalMask_ = false>
++    bool LocalMask_ = false,
++    bool PackedVerify_ = false>
+ struct DecodeFwdMainloop {
+   static_assert(
+       cutlass::detail::dependent_false<DispatchPolicy_>,
+@@ -759,7 +760,8 @@
+     class TiledCopyQ_,
+     class TiledCopyK_,
+     class TiledCopyV_,
+-    bool LocalMask_>
++    bool LocalMask_,
++    bool PackedVerify_>
+ struct DecodeFwdMainloop<
+     XeDefault<Stages>,
+     PagedKV_,
+@@ -773,7 +775,8 @@
+     TiledCopyQ_,
+     TiledCopyK_,
+     TiledCopyV_,
+-    LocalMask_> {
++    LocalMask_,
++    PackedVerify_> {
+   //
+   // Type Aliases
+   //
+@@ -847,6 +850,13 @@
+   static constexpr bool Fp8KV =
+       is_any_of_v<ElementK, float_e5m2_t, float_e4m3_t>;
+   static constexpr bool LocalMask = LocalMask_;
++  static constexpr bool PackedVerify = PackedVerify_;
++  static_assert(!PackedVerify || (PagedKV && !LocalMask && !CausalMask),
++                "Packed verification requires paged, non-local decode");
++  static_assert(!PackedVerify || ((get<0>(TileShapeQK{}) == 8 ||
++                                   get<0>(TileShapeQK{}) == 16) &&
++                                  get<1>(TileShapeQK{}) == 64),
++                "Packed verification is qualified only for q8/q16/p64");
+ 
+   // User-facing arguments
+   struct Arguments {
+@@ -1239,6 +1249,28 @@
+       //   }
+       // }
+ 
++      // Experimental C1/MTP4 verification: Q rows are t*6 + group, not
++      // positions in a single-token decode. seq_len comes from the DEVICE
++      // lengths tensor on every launch/replay (Python clamps it to >= 1).
++      // partition_C of the GLOBAL identity tile includes the Q-tile offset;
++      // using a tile-local row would incorrectly remask later tiles.
++      if constexpr (PackedVerify) {
++        Tensor cVerify = make_identity_tensor(make_shape(30, seq_len));
++        Tensor gVerify = local_tile(
++            cVerify, take<0, 2>(TileShapeQK{}),
++            make_coord(get<0>(blk_qv), K));
++        auto cVerify_thread = thr_mma_qk.partition_C(gVerify);
++        CUTLASS_PRAGMA_UNROLL
++        for (int i = 0; i < tSrS.size(); ++i) {
++          int group_row = get<0>(cVerify_thread(i));
++          int key_pos = get<1>(cVerify_thread(i));
++          int causal_limit = cute::max(seq_len - 4 + group_row / 6, 1);
++          if (group_row >= 30 || key_pos >= causal_limit) {
++            tSrS(i) = ElementS(-INFINITY);
++          }
++        }
++      }
++
+       /* Local/sliding window masking */
+       if constexpr (LocalMask) {
+         // For decode, all packed GQA heads share the same KV position
+--- a/csrc/xpu/attn/xe_2/paged_decode.hpp
++++ b/csrc/xpu/attn/xe_2/paged_decode.hpp
+@@ -479,7 +479,8 @@
+     typename GmemTiledCopyQ = void, /* void -> default block 2D */
+     typename GmemTiledCopyK = void,
+     typename GmemTiledCopyV = void,
+-    typename GmemTiledCopyO = void>
++    typename GmemTiledCopyO = void,
++    bool PackedVerify = false>
+ struct PagedDecodeConfig {
+   static constexpr int SGTileQ =
+       get<0>(shape_div(TileShapeQK{}, shape(SubgroupLayoutQK{})))();
+@@ -544,7 +545,8 @@
+         GmemTiledCopyQ,
+         GmemTiledCopyK,
+         GmemTiledCopyV,
+-        Local>;
++        Local,
++        PackedVerify>;
+ 
+     // Epilogue
+     using CollectiveEpilogue = cutlass::fmha::collective::DecodeFwdEpilogue<
