@@ -216,3 +216,51 @@ checks passed for12 retained Python files,4 JSON files and10 shell scripts;
 The unrestricted staged whitespace check reports trailing whitespace/EOF blanks
 in raw CMake logs/cache and unified-diff context lines. These artifacts remain
 unchanged; the staged check excluding only those generated artifacts passes.
+
+## Follow-up: all remaining entries rejected
+
+After the separate MTP4 draft-attribution campaign, the user authorized continued
+evidence-led optimization. This follow-up extends the same isolated native
+selector to indices3–12; entries1/2 were not rerun. All original numerical
+operations and oneDNN validation remain unchanged. Fresh source check:
+<https://raw.githubusercontent.com/uxlfoundation/oneDNN/80afa71049cd69a3df32adcccb623b12cd7baa22/src/gpu/intel/gemm/jit.hpp>.
+
+Before `build-04`, the previous library and patch were preserved remotely in
+`pre-remaining-backup/`; its library SHA256 is the original `f69aed9a...` above.
+The exact build-03 patch was reverse-checked/reversed and `git diff --exit-code`
+confirmed pristine pinned oneDNN source before applying the expanded selector.
+Build-04 exited0 with the same compiler/runtime/configuration. Current scoped
+library SHA256 is
+`17b2350f5885607dba229ac87c6cd5ba723173485f37e2d75cb938e547d6cd64`.
+
+Executed local commands (scripts execute all compiler/GPU work on inference-host):
+```bash
+bash results/20260913-qwen38-gemm-catalog/build.sh build-04
+bash results/20260913-qwen38-gemm-catalog/run-probe.sh operator-auto-02 -1 timing
+for index in {3..12}; do
+  bash results/20260913-qwen38-gemm-catalog/run-probe.sh "operator-index${index}-01" "$index" timing
+done
+python3 results/20260913-qwen38-gemm-catalog/analyze-remaining.py
+```
+
+Rebuilt automatic again passed initial and mutated-input bit identity against
+installed on both shapes. Its gate/up median was0.186606ms versus0.187576ms
+installed. All ten forced candidates passed unchanged `rtol=atol=0.01`, sampled
+FP32 reference and captured-graph mutation assertions. All selected identities
+matched the requested entries; down remained exact. No failed cells or excluded
+samples.11 processes ×2 shapes ×2 routes ×12 batches ×16 replays =8448 timed
+replays in528 batches, including the fresh automatic qualification.
+
+Gate/up changes versus each process's installed control:
+- index3: +42.95%; index4: +53.74%; index5: +77.23%;
+- index6: +133.74%; index7: +172.91%; index8: +204.61%;
+- index9: +126.33%; index10: +120.36%; index11: +116.84%; index12: +117.74%.
+
+**No qualifying candidate and no serving A/B.** Together with the original
+trial this screens all13 returned entries for this exact gate/up descriptor,
+not all possible kernels/shapes or global optimality. `analysis-remaining.json`
+retains medians, installed-normalized comparisons and native identities; raw
+operator files retain every timing batch. Original `analysis.json` remains
+reproducible. `final-remaining-host.log` confirms no running containers or
+reported render-device users, unchanged launcher SHA and275W. Production was
+not modified. Python AST checks, shell syntax and both analyzers passed.

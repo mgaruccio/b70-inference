@@ -1,0 +1,148 @@
++ cp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/build.sh /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/patch-catalog.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/CMakeLists.txt /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/binding.cpp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/probe.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/build-04/
++ date -Is
+2026-09-13T03:04:24-04:00
++ trap 'docker rm -f b70-gemm-catalog-build >/dev/null 2>&1 || true' EXIT
++ set +e
++ timeout --signal=TERM --kill-after=30s 90m docker run --pull=never --rm --name b70-gemm-catalog-build --cpus=12 --memory=24g --memory-swap=24g -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog:/experiment -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/compiler:/opt/intel/oneapi/compiler/2026.0:ro -e BUILD_CELL=build-04 --entrypoint /bin/bash vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f -lc $'\nset -euxo pipefail\nC=/opt/intel/oneapi/compiler/2026.0\nexport PATH="$C/bin:/opt/venv/bin:$PATH"\nexport LD_LIBRARY_PATH="/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:$C/lib:${LD_LIBRARY_PATH:-}"\nexport CC="$C/bin/icx" CXX="$C/bin/icpx" SYCL_ROOT="$C"\nO=/experiment/$BUILD_CELL\nicpx --version\ngit config --global --add safe.directory /experiment/oneDNN\npython -P /experiment/patch-catalog.py /experiment/oneDNN > "$O/onednn.patch"\ngit -C /experiment/oneDNN apply --check "$O/onednn.patch"\ngit -C /experiment/oneDNN apply "$O/onednn.patch"\ncmake -S /experiment/oneDNN -B /experiment/onednn-build -G Ninja \\\n -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/experiment/onednn-install \\\n -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \\\n -DCMAKE_POSITION_INDEPENDENT_CODE=ON \\\n -DDNNL_LIBRARY_TYPE=STATIC -DDNNL_CPU_RUNTIME=NONE -DDNNL_GPU_RUNTIME=SYCL \\\n -DDNNL_BUILD_TESTS=OFF -DDNNL_BUILD_EXAMPLES=OFF -DONEDNN_BUILD_GRAPH=OFF \\\n -DDNNL_ENABLE_PRIMITIVE=ALL -DDNNL_ENABLE_PRIMITIVE_GPU_ISA=XE2 \\\n -DDNNL_ENABLE_PRIMITIVE_CACHE=ON -DDNNL_DEV_MODE=OFF\ncp /experiment/onednn-build/CMakeCache.txt "$O/onednn-CMakeCache.txt"\ncmake --build /experiment/onednn-build --parallel 8\ncmake --install /experiment/onednn-build\ncmake -S /experiment -B /experiment/binding-build -G Ninja \\\n -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER="$CXX" \\\n -DNATIVE_SOURCE_DIR=/experiment/native -DONEDNN_INSTALL_PREFIX=/experiment/onednn-install \\\n -DCMAKE_PREFIX_PATH="/experiment/onednn-install;/opt/venv/lib/python3.12/site-packages/torch/share/cmake"\ncp /experiment/binding-build/CMakeCache.txt "$O/binding-CMakeCache.txt"\ncmake --build /experiment/binding-build --parallel 2\nfind /experiment/binding-build -maxdepth 2 -name "*.so" -exec sha256sum {} \\;\n'
++ C=/opt/intel/oneapi/compiler/2026.0
++ export PATH=/opt/intel/oneapi/compiler/2026.0/bin:/opt/venv/bin:/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ PATH=/opt/intel/oneapi/compiler/2026.0/bin:/opt/venv/bin:/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ export LD_LIBRARY_PATH=/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:/opt/intel/oneapi/compiler/2026.0/lib:/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib
++ LD_LIBRARY_PATH=/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:/opt/intel/oneapi/compiler/2026.0/lib:/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib
++ export CC=/opt/intel/oneapi/compiler/2026.0/bin/icx CXX=/opt/intel/oneapi/compiler/2026.0/bin/icpx SYCL_ROOT=/opt/intel/oneapi/compiler/2026.0
++ CC=/opt/intel/oneapi/compiler/2026.0/bin/icx
++ CXX=/opt/intel/oneapi/compiler/2026.0/bin/icpx
++ SYCL_ROOT=/opt/intel/oneapi/compiler/2026.0
++ O=/experiment/build-04
++ icpx --version
+Intel(R) oneAPI DPC++/C++ Compiler 2026.0.0 (2026.0.0.20260331)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /opt/intel/oneapi/compiler/2026.0/bin/compiler
+Configuration file: /opt/intel/oneapi/compiler/2026.0/bin/compiler/../icpx.cfg
++ git config --global --add safe.directory /experiment/oneDNN
++ python -P /experiment/patch-catalog.py /experiment/oneDNN
++ git -C /experiment/oneDNN apply --check /experiment/build-04/onednn.patch
++ git -C /experiment/oneDNN apply /experiment/build-04/onednn.patch
++ cmake -S /experiment/oneDNN -B /experiment/onednn-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/experiment/onednn-install -DCMAKE_C_COMPILER=/opt/intel/oneapi/compiler/2026.0/bin/icx -DCMAKE_CXX_COMPILER=/opt/intel/oneapi/compiler/2026.0/bin/icpx -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DDNNL_LIBRARY_TYPE=STATIC -DDNNL_CPU_RUNTIME=NONE -DDNNL_GPU_RUNTIME=SYCL -DDNNL_BUILD_TESTS=OFF -DDNNL_BUILD_EXAMPLES=OFF -DONEDNN_BUILD_GRAPH=OFF -DDNNL_ENABLE_PRIMITIVE=ALL -DDNNL_ENABLE_PRIMITIVE_GPU_ISA=XE2 -DDNNL_ENABLE_PRIMITIVE_CACHE=ON -DDNNL_DEV_MODE=OFF
+CMake Warning (deprecated) at CMakeLists.txt:36 (cmake_policy):
+  The OLD behavior for policy CMP0146 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- DNNL_TARGET_ARCH: X64
+-- DNNL_LIBRARY_NAME: dnnl
+-- DPC++ support is enabled (OpenCL and Level Zero)
+-- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) 
+-- Could NOT find Doxyrest (missing: DOXYREST_EXECUTABLE) 
+-- Could NOT find Sphinx (missing: SPHINX_EXECUTABLE) 
+-- Enabled testing coverage: CI
+-- Enabled workload: TRAINING
+-- Enabled primitives: ALL
+-- Enabled primitive CPU ISA: ALL
+-- Enabled primitive GPU ISA: XE2
+-- Enabled GeMM kernels ISA: ALL
+-- Primitive cache is enabled
+-- GPU Compute reference kernels are enabled
+-- Configuring done (0.2s)
+-- Generating done (0.1s)
+-- Build files have been written to: /experiment/onednn-build
++ cp /experiment/onednn-build/CMakeCache.txt /experiment/build-04/onednn-CMakeCache.txt
++ cmake --build /experiment/onednn-build --parallel 8
+[1/3] Building CXX object src/gpu/intel/CMakeFiles/dnnl_gpu_intel.dir/gemm/jit.cpp.o
+[2/3] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_gemm_list.cpp.o
+[3/3] Linking CXX static library src/libdnnl.a
++ cmake --install /experiment/onednn-build
+-- Install configuration: "Release"
+-- Installing: /experiment/onednn-install/lib/libdnnl.a
+-- Up-to-date: /experiment/onednn-install/include/dnnl.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl.hpp
+-- Up-to-date: /experiment/onednn-install/include/dnnl_config.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl_debug.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl_ocl.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl_ocl.hpp
+-- Up-to-date: /experiment/onednn-install/include/dnnl_sycl.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl_sycl.hpp
+-- Up-to-date: /experiment/onednn-install/include/dnnl_sycl_types.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl_threadpool.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl_threadpool.hpp
+-- Up-to-date: /experiment/onednn-install/include/dnnl_threadpool_iface.hpp
+-- Up-to-date: /experiment/onednn-install/include/dnnl_types.h
+-- Up-to-date: /experiment/onednn-install/include/dnnl_version.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_common.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_common.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_common_types.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_debug.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_graph_ocl.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_graph_ocl.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ocl.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ocl.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ocl_types.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_sycl.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_sycl.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_sycl_types.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_threadpool.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_threadpool.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_threadpool_iface.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_types.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ukernel.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ukernel.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ukernel_types.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ze.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_ze.hpp
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_config.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_version.h
+-- Up-to-date: /experiment/onednn-install/include/oneapi/dnnl/dnnl_version_hash.h
+-- Up-to-date: /experiment/onednn-install/lib/cmake/dnnl/dnnl-config.cmake
+-- Up-to-date: /experiment/onednn-install/lib/cmake/dnnl/dnnl-config-version.cmake
+-- Up-to-date: /experiment/onednn-install/lib/cmake/dnnl/dnnl-targets.cmake
+-- Up-to-date: /experiment/onednn-install/lib/cmake/dnnl/dnnl-targets-release.cmake
+-- Up-to-date: /experiment/onednn-install/share/doc/dnnl/LICENSE
+-- Up-to-date: /experiment/onednn-install/share/doc/dnnl/THIRD-PARTY-PROGRAMS
+-- Up-to-date: /experiment/onednn-install/share/doc/dnnl/README
++ cmake -S /experiment -B /experiment/binding-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/opt/intel/oneapi/compiler/2026.0/bin/icpx -DNATIVE_SOURCE_DIR=/experiment/native -DONEDNN_INSTALL_PREFIX=/experiment/onednn-install '-DCMAKE_PREFIX_PATH=/experiment/onednn-install;/opt/venv/lib/python3.12/site-packages/torch/share/cmake'
+CMake Warning (author) at /opt/venv/lib/python3.12/site-packages/cmake/data/share/cmake-4.4/Modules/FindPackageHandleStandardArgs.cmake:493 (message):
+  The package name passed to find_package_handle_standard_args() (SYCL) does
+  not match the name of the calling package (SYCLToolkit).  This can lead to
+  problems in calling code that expects find_package() result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Caffe2/FindSYCLToolkit.cmake:171 (find_package_handle_standard_args)
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Caffe2/public/xpu.cmake:26 (find_package)
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake:101 (include)
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Torch/TorchConfig.cmake:62 (find_package)
+  CMakeLists.txt:35 (find_package)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+CMake Warning at /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Torch/TorchConfig.cmake:22 (message):
+  library kineto not found.
+Call Stack (most recent call first):
+  /opt/venv/lib/python3.12/site-packages/torch/share/cmake/Torch/TorchConfig.cmake:119 (append_torchlib_if_found)
+  CMakeLists.txt:35 (find_package)
+
+
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /experiment/binding-build
++ cp /experiment/binding-build/CMakeCache.txt /experiment/build-04/binding-CMakeCache.txt
++ cmake --build /experiment/binding-build --parallel 2
+[1/2] Building CXX object CMakeFiles/b70_gemm_catalog.dir/binding.cpp.o
+[2/2] Linking CXX shared library libb70_gemm_catalog.so
++ find /experiment/binding-build -maxdepth 2 -name '*.so' -exec sha256sum '{}' ';'
+17b2350f5885607dba229ac87c6cd5ba723173485f37e2d75cb938e547d6cd64  /experiment/binding-build/libb70_gemm_catalog.so
++ rc=0
++ set -e
++ printf '%s\n' 0
++ docker rm -f b70-gemm-catalog-build
++ date -Is
+2026-09-13T03:04:51-04:00
++ exit 0
++ docker rm -f b70-gemm-catalog-build

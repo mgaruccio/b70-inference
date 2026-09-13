@@ -1,0 +1,414 @@
+{
+  "status": "passed",
+  "tier": "development",
+  "argv": [
+    "/opt/venv/bin/python",
+    "-u",
+    "-P",
+    "/output/probe.py",
+    "--library",
+    "/experiment/binding-build/libb70_gemm_catalog.so",
+    "--out",
+    "/output/results"
+  ],
+  "catalog_index": "3",
+  "describe": false,
+  "tolerance": {
+    "rtol": 0.01,
+    "atol": 0.01
+  },
+  "cases": [
+    {
+      "name": "gate_up",
+      "m": 5,
+      "k": 5120,
+      "n": 34816,
+      "weight_shape": [
+        640,
+        34816
+      ],
+      "weight_stride": [
+        1,
+        640
+      ],
+      "scales_shape": [
+        40,
+        34816
+      ],
+      "routes": {
+        "installed": {
+          "max_abs_vs_installed": 0.0,
+          "exact_vs_installed": true,
+          "sampled_fp32_max_abs": 0.0027256011962890625,
+          "mutated_graph_max_abs": 0.0,
+          "batch_elapsed_ms": [
+            2.982188,
+            3.029947,
+            2.9968749999999997,
+            3.002656,
+            2.997083,
+            2.998907,
+            2.982344,
+            3.023125,
+            3.0093229999999997,
+            3.007813,
+            3.05375,
+            3.025417
+          ],
+          "replay_ms": [
+            0.18638675,
+            0.1893716875,
+            0.18730468749999998,
+            0.187666,
+            0.1873176875,
+            0.1874316875,
+            0.1863965,
+            0.1889453125,
+            0.18808268749999998,
+            0.1879883125,
+            0.190859375,
+            0.1890885625
+          ],
+          "replays_per_sample": 16,
+          "median_ms": 0.18782715625000002,
+          "iqr_ms": 0.0016666874999999859
+        },
+        "rebuilt": {
+          "max_abs_vs_installed": 0.0078125,
+          "exact_vs_installed": false,
+          "sampled_fp32_max_abs": 0.0027256011962890625,
+          "mutated_graph_max_abs": 0.0078125,
+          "batch_elapsed_ms": [
+            4.327135999999999,
+            4.343542,
+            4.2803119999999995,
+            4.293698,
+            4.247032,
+            4.292761,
+            4.29,
+            4.320417,
+            4.29802,
+            4.35625,
+            4.271561999999999,
+            4.305104
+          ],
+          "replay_ms": [
+            0.27044599999999996,
+            0.271471375,
+            0.26751949999999997,
+            0.268356125,
+            0.2654395,
+            0.2682975625,
+            0.268125,
+            0.2700260625,
+            0.26862625,
+            0.272265625,
+            0.26697262499999996,
+            0.269069
+          ],
+          "replays_per_sample": 16,
+          "median_ms": 0.2684911875,
+          "iqr_ms": 0.0021574218750000096
+        }
+      },
+      "timing_order": [
+        [
+          0,
+          "installed"
+        ],
+        [
+          0,
+          "rebuilt"
+        ],
+        [
+          1,
+          "rebuilt"
+        ],
+        [
+          1,
+          "installed"
+        ],
+        [
+          2,
+          "installed"
+        ],
+        [
+          2,
+          "rebuilt"
+        ],
+        [
+          3,
+          "rebuilt"
+        ],
+        [
+          3,
+          "installed"
+        ],
+        [
+          4,
+          "installed"
+        ],
+        [
+          4,
+          "rebuilt"
+        ],
+        [
+          5,
+          "rebuilt"
+        ],
+        [
+          5,
+          "installed"
+        ],
+        [
+          6,
+          "installed"
+        ],
+        [
+          6,
+          "rebuilt"
+        ],
+        [
+          7,
+          "rebuilt"
+        ],
+        [
+          7,
+          "installed"
+        ],
+        [
+          8,
+          "installed"
+        ],
+        [
+          8,
+          "rebuilt"
+        ],
+        [
+          9,
+          "rebuilt"
+        ],
+        [
+          9,
+          "installed"
+        ],
+        [
+          10,
+          "installed"
+        ],
+        [
+          10,
+          "rebuilt"
+        ],
+        [
+          11,
+          "rebuilt"
+        ],
+        [
+          11,
+          "installed"
+        ]
+      ]
+    },
+    {
+      "name": "down",
+      "m": 5,
+      "k": 17408,
+      "n": 5120,
+      "weight_shape": [
+        2176,
+        5120
+      ],
+      "weight_stride": [
+        1,
+        2176
+      ],
+      "scales_shape": [
+        136,
+        5120
+      ],
+      "routes": {
+        "installed": {
+          "max_abs_vs_installed": 0.0,
+          "exact_vs_installed": true,
+          "sampled_fp32_max_abs": 0.0038328170776367188,
+          "mutated_graph_max_abs": 0.0,
+          "batch_elapsed_ms": [
+            1.7838539999999998,
+            1.813855,
+            1.7925,
+            1.806719,
+            1.793958,
+            1.801666,
+            1.796511,
+            1.806146,
+            1.811146,
+            1.805521,
+            1.7958859999999999,
+            1.792657
+          ],
+          "replay_ms": [
+            0.11149087499999999,
+            0.1133659375,
+            0.11203125,
+            0.1129199375,
+            0.112122375,
+            0.112604125,
+            0.1122819375,
+            0.112884125,
+            0.113196625,
+            0.1128450625,
+            0.11224287499999999,
+            0.1120410625
+          ],
+          "replays_per_sample": 16,
+          "median_ms": 0.11244303124999999,
+          "iqr_ms": 0.0007910312500000044
+        },
+        "rebuilt": {
+          "max_abs_vs_installed": 0.0,
+          "exact_vs_installed": true,
+          "sampled_fp32_max_abs": 0.0038328170776367188,
+          "mutated_graph_max_abs": 0.0,
+          "batch_elapsed_ms": [
+            1.846511,
+            1.829739,
+            1.818698,
+            1.7978649999999998,
+            1.7839589999999999,
+            1.7894789999999998,
+            1.795937,
+            1.803906,
+            1.820209,
+            1.798541,
+            1.785104,
+            1.790052
+          ],
+          "replay_ms": [
+            0.1154069375,
+            0.1143586875,
+            0.113668625,
+            0.11236656249999999,
+            0.11149743749999999,
+            0.11184243749999999,
+            0.1122460625,
+            0.112744125,
+            0.1137630625,
+            0.1124088125,
+            0.111569,
+            0.11187825
+          ],
+          "replays_per_sample": 16,
+          "median_ms": 0.1123876875,
+          "iqr_ms": 0.0018229375000000103
+        }
+      },
+      "timing_order": [
+        [
+          0,
+          "installed"
+        ],
+        [
+          0,
+          "rebuilt"
+        ],
+        [
+          1,
+          "rebuilt"
+        ],
+        [
+          1,
+          "installed"
+        ],
+        [
+          2,
+          "installed"
+        ],
+        [
+          2,
+          "rebuilt"
+        ],
+        [
+          3,
+          "rebuilt"
+        ],
+        [
+          3,
+          "installed"
+        ],
+        [
+          4,
+          "installed"
+        ],
+        [
+          4,
+          "rebuilt"
+        ],
+        [
+          5,
+          "rebuilt"
+        ],
+        [
+          5,
+          "installed"
+        ],
+        [
+          6,
+          "installed"
+        ],
+        [
+          6,
+          "rebuilt"
+        ],
+        [
+          7,
+          "rebuilt"
+        ],
+        [
+          7,
+          "installed"
+        ],
+        [
+          8,
+          "installed"
+        ],
+        [
+          8,
+          "rebuilt"
+        ],
+        [
+          9,
+          "rebuilt"
+        ],
+        [
+          9,
+          "installed"
+        ],
+        [
+          10,
+          "installed"
+        ],
+        [
+          10,
+          "rebuilt"
+        ],
+        [
+          11,
+          "rebuilt"
+        ],
+        [
+          11,
+          "installed"
+        ]
+      ]
+    }
+  ],
+  "environment": {
+    "torch": "2.13.0+xpu",
+    "device": "_XpuDeviceProperties(name='Intel(R) Arc(TM) Pro B70 Graphics', platform_name='Intel(R) oneAPI Unified Runtime over Level-Zero V2', type='gpu', device_id=0xE223, uuid=868023e2-0000-0000-0b00-000000000000, driver_version='1.15.39122+11', total_memory=32656MB, local_mem_size=128KB, last_level_cache_size=24576KB, max_compute_units=256, memory_clock_rate=2800MHz, memory_bus_width=64-bit, gpu_eu_count=256, gpu_subslice_count=32, max_work_group_size=1024, max_num_sub_groups=64, sub_group_sizes=[16 32], has_fp16=1, has_fp64=1, has_atomic64=1, is_integrated_gpu=0)",
+    "rebuilt_sha256": "17b2350f5885607dba229ac87c6cd5ba723173485f37e2d75cb938e547d6cd64",
+    "installed_sha256": "71c21e5231908cfa67f45b389de7cef6e96e564c769198a675725197234d07fc",
+    "installed_schema": "_xpu_C::int4_gemm_w4a16(Tensor A, Tensor B, Tensor? bias, Tensor B_scale, Tensor B_zp, int group_size, Tensor? g_idx) -> Tensor",
+    "rebuilt_schema": "b70_gemm_catalog::int4_gemm_w4a16(Tensor A, Tensor B, Tensor? bias, Tensor B_scale, Tensor B_zp, int group_size, Tensor? g_idx) -> Tensor"
+  }
+}
