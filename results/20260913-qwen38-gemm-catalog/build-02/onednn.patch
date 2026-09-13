@@ -1,0 +1,95 @@
+--- a/src/gpu/intel/gemm/jit.hpp
++++ b/src/gpu/intel/gemm/jit.hpp
+@@ -18,6 +18,9 @@
+ #define GPU_INTEL_GEMM_JIT_HPP
+ 
+ #include <assert.h>
++#include <cstdlib>
++#include <cstdio>
++#include <stdexcept>
+ #include <limits>
+ #include <memory>
+ 
+@@ -274,7 +277,59 @@
+                     problem, alpha(), beta(), m, n, d->k(), lda, ldb, d->ldc(),
+                     d->batch());
+ 
++            // B70_M5_GATEUP_CATALOG_INDEX: isolated, creation-only experiment.
++            const auto &b70_a_scales = attr()->scales_.get(DNNL_ARG_A);
++            const auto &b70_b_scales = attr()->scales_.get(DNNL_ARG_B);
++            const bool b70_gateup = d->batch() == 1 && d->k() == 5120
++                    && ((m == 5 && n == 34816) || (m == 34816 && n == 5))
++                    && d->c_type() == f16
++                    && ((d->a_type() == u4 && d->b_type() == f16
++                                && !b70_a_scales.has_default_groups()
++                                && b70_a_scales.get_group(0) == 128
++                                && b70_a_scales.get_group(1) == 1)
++                            || (d->a_type() == f16 && d->b_type() == u4
++                                    && !b70_b_scales.has_default_groups()
++                                    && b70_b_scales.get_group(0) == 1
++                                    && b70_b_scales.get_group(1) == 128));
++            int b70_forced_index = -1;
++            int b70_attempt_index = -1;
++            if (b70_gateup) {
++                const char *b70_value = std::getenv("B70_M5_GATEUP_CATALOG_INDEX");
++                if (b70_value) {
++                    if (b70_value[0] == '-' && b70_value[1] == '1'
++                            && b70_value[2] == '\0') {
++                        // Explicit auto, identical to the unset default.
++                    } else if (b70_value[0] >= '0' && b70_value[0] <= '2'
++                            && b70_value[1] == '\0') {
++                        b70_forced_index = b70_value[0] - '0';
++                    } else {
++                        throw std::runtime_error(
++                                "B70_M5_GATEUP_CATALOG_INDEX: expected -1, 0, 1, or 2");
++                    }
++                }
++                std::fprintf(stderr,
++                        "b70_gemm_catalog,create,m=%lld,n=%lld,k=5120,batch=1,"
++                        "group_k=128,requested=%d,entries=%zu\n",
++                        static_cast<long long>(m), static_cast<long long>(n),
++                        b70_forced_index, entries.size());
++                for (size_t b70_i = 0; b70_i < entries.size() && b70_i < 3;
++                        ++b70_i) {
++                    std::fprintf(stderr,
++                            "b70_gemm_catalog,candidate,index=%zu,identity=%s\n",
++                            b70_i, entries[b70_i]->str().c_str());
++                }
++                if (b70_forced_index >= 0) {
++                    if (static_cast<size_t>(b70_forced_index) >= entries.size())
++                        throw std::runtime_error(
++                                "B70_M5_GATEUP_CATALOG_INDEX: index outside returned catalog; "
++                                "refusing implementation fallback");
++                    const auto *b70_entry = entries[b70_forced_index];
++                    entries = {b70_entry};
++                }
++            }
++
+             for (auto &entry : entries) {
++                ++b70_attempt_index;
+                 kernel_desc_.set_entry(entry);
+                 kernel_desc_.set_problem(problem);
+                 auto status = kernel_desc_.finalize();
+@@ -352,10 +407,22 @@
+                     status = try_create();
+                     if (status == status::success) {
+                         kernel_success = true;
++                        if (b70_gateup)
++                            std::fprintf(stderr,
++                                    "b70_gemm_catalog,selected,mode=%s,index=%d,identity=%s\n",
++                                    b70_forced_index < 0 ? "auto" : "forced",
++                                    b70_forced_index < 0 ? b70_attempt_index
++                                                         : b70_forced_index,
++                                    kernel_desc_.entry().str().c_str());
+                         break;
+                     }
+                 }
+             }
++
++            if (b70_gateup && b70_forced_index >= 0 && !kernel_success)
++                throw std::runtime_error(
++                        "B70_M5_GATEUP_CATALOG_INDEX: forced entry failed original "
++                        "validation or kernel creation; refusing implementation fallback");
+ 
+             VDISPATCH_GEMM(
+                     kernel_success, "matching kernel not found in catalog");

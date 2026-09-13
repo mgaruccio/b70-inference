@@ -1,0 +1,19 @@
+2026-09-13T01:03:38-04:00
+63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4  /home/mike/inference/launchers/start-qwen38.sh
+275000000
+f69aed9aec33459b4484095ce4e03899856ce892f6451d719dcb5f42a0e38f3a  /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/binding-build/libb70_gemm_catalog.so
+GEMM_CATALOG_ROUTE gate_up installed
+GEMM_CATALOG_ROUTE gate_up rebuilt
+b70_gemm_catalog,create,m=34816,n=5,k=5120,batch=1,group_k=128,requested=2,entries=13
+b70_gemm_catalog,candidate,index=0,identity=G gemm FHS T@16N@16N 16 8 at32 am128 aB wg 2x1x8 ikr xaf st vav hi pt sr br sb128 bk0 bm0 nmk sys
+b70_gemm_catalog,candidate,index=1,identity=F gemm FHS T@8N@4N 16 16 aB64 at32 aS wg 1x1x16 ikr af vav sr sb256 bk0 bm0 sys rr dm
+b70_gemm_catalog,candidate,index=2,identity=F gemm FHS T@4N@8N 16 16 at16x2+m32@48 am32+m16@64 aB wg 4x2x4 kr xaf st vav hi pt sr br sb64 bk0 sm sn grf256 sys kv afb
+b70_gemm_catalog,selected,mode=forced,index=2,identity=F gemm FHS T@4N@8N 16 16 at16x2+m32@48 am32+m16@64 aB wg 4x2x4 kr xaf st vav hi pt sr br sb64 bk0 sm sn grf256 sys kv afb
+{"case": "gate_up", "routes": {"installed": {"max_abs_vs_installed": 0.0, "exact_vs_installed": true, "sampled_fp32_max_abs": 0.0027256011962890625, "mutated_graph_max_abs": 0.0, "batch_elapsed_ms": [2.961198, 2.9847919999999997, 2.9988539999999997, 3.004636, 3.004063, 3.0088019999999998, 3.0188539999999997, 2.991615, 2.984375, 2.985781, 3.000521, 2.9881249999999997], "replay_ms": [0.185074875, 0.18654949999999998, 0.18742837499999998, 0.18778975, 0.1877539375, 0.18805012499999998, 0.18867837499999998, 0.1869759375, 0.1865234375, 0.1866113125, 0.1875325625, 0.18675781249999998], "replays_per_sample": 16, "median_ms": 0.18720215624999997, "iqr_ms": 0.001167031249999978}, "rebuilt": {"max_abs_vs_installed": 0.0078125, "exact_vs_installed": false, "sampled_fp32_max_abs": 0.0027256011962890625, "mutated_graph_max_abs": 0.0078125, "batch_elapsed_ms": [3.8325, 3.835105, 3.831458, 3.846875, 3.827552, 3.814635, 3.807083, 3.8074999999999997, 3.827552, 3.824791, 3.8117189999999996, 3.8258859999999997], "replay_ms": [0.23953125, 0.2396940625, 0.239466125, 0.2404296875, 0.239222, 0.2384146875, 0.2379426875, 0.23796874999999998, 0.239222, 0.2390494375, 0.23823243749999998, 0.23911787499999998], "replays_per_sample": 16, "median_ms": 0.23916993749999998, "iqr_ms": 0.0011132812499999867}}}
+GEMM_CATALOG_ROUTE down installed
+GEMM_CATALOG_ROUTE down rebuilt
+{"case": "down", "routes": {"installed": {"max_abs_vs_installed": 0.0, "exact_vs_installed": true, "sampled_fp32_max_abs": 0.0038328170776367188, "mutated_graph_max_abs": 0.0, "batch_elapsed_ms": [1.792188, 1.793698, 1.7823959999999999, 1.7914059999999998, 1.785364, 1.777448, 1.7864579999999999, 1.78, 1.781771, 1.789896, 1.7872919999999999, 1.7815619999999999], "replay_ms": [0.11201175, 0.112106125, 0.11139974999999999, 0.11196287499999999, 0.11158525, 0.1110905, 0.11165362499999999, 0.11125, 0.1113606875, 0.1118685, 0.11170574999999999, 0.11134762499999999], "replays_per_sample": 16, "median_ms": 0.1116194375, "iqr_ms": 0.0005346718750000035}, "rebuilt": {"max_abs_vs_installed": 0.0, "exact_vs_installed": true, "sampled_fp32_max_abs": 0.0038328170776367188, "mutated_graph_max_abs": 0.0, "batch_elapsed_ms": [1.843125, 1.8115109999999999, 1.78677, 1.773385, 1.776563, 1.767656, 1.7797919999999998, 1.770573, 1.780416, 1.7777079999999998, 1.776146, 1.7789579999999998], "replay_ms": [0.1151953125, 0.11321943749999999, 0.111673125, 0.1108365625, 0.1110351875, 0.1104785, 0.11123699999999999, 0.1106608125, 0.111276, 0.11110674999999999, 0.111009125, 0.11118487499999999], "replays_per_sample": 16, "median_ms": 0.1111458125, "iqr_ms": 0.00040929687499999257}}}
+{"status": "passed", "out": "/output/results"}
+2026-09-13T01:03:42-04:00
+63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4  /home/mike/inference/launchers/start-qwen38.sh
+275000000

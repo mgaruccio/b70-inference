@@ -1,0 +1,159 @@
+{
+  "tier": "development",
+  "status": "validated",
+  "library_sha256": "f69aed9aec33459b4484095ce4e03899856ce892f6451d719dcb5f42a0e38f3a",
+  "build_exit_codes": {
+    "1": 1,
+    "2": 1,
+    "3": 0
+  },
+  "operators": {
+    "auto": {
+      "requested": -1,
+      "selected": 0,
+      "identity": "G gemm FHS T@16N@16N 16 8 at32 am128 aB wg 2x1x8 ikr xaf st vav hi pt sr br sb128 bk0 bm0 nmk sys",
+      "shapes": {
+        "gate_up": {
+          "installed": {
+            "median_ms": 0.18721025,
+            "iqr_ms": 0.0007324062499999839,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0027256011962890625,
+            "mutated_graph_max_abs": 0.0
+          },
+          "rebuilt": {
+            "median_ms": 0.18665365625,
+            "iqr_ms": 0.0007690625000000284,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0027256011962890625,
+            "mutated_graph_max_abs": 0.0
+          },
+          "latency_change_vs_installed_pct": -0.29730944219132915
+        },
+        "down": {
+          "installed": {
+            "median_ms": 0.11193687499999999,
+            "iqr_ms": 0.0007535312500000085,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0038328170776367188,
+            "mutated_graph_max_abs": 0.0
+          },
+          "rebuilt": {
+            "median_ms": 0.11118328124999999,
+            "iqr_ms": 0.0007315781250000208,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0038328170776367188,
+            "mutated_graph_max_abs": 0.0
+          },
+          "latency_change_vs_installed_pct": -0.6732310063149449
+        }
+      }
+    },
+    "index1": {
+      "requested": 1,
+      "selected": 1,
+      "identity": "F gemm FHS T@8N@4N 16 16 aB64 at32 aS wg 1x1x16 ikr af vav sr sb256 bk0 bm0 sys rr dm",
+      "shapes": {
+        "gate_up": {
+          "installed": {
+            "median_ms": 0.18701496875,
+            "iqr_ms": 0.0005623593750000155,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0027256011962890625,
+            "mutated_graph_max_abs": 0.0
+          },
+          "rebuilt": {
+            "median_ms": 0.1949560625,
+            "iqr_ms": 0.0011279531250000252,
+            "max_abs_vs_installed": 0.00390625,
+            "exact_vs_installed": false,
+            "sampled_fp32_max_abs": 0.0027256011962890625,
+            "mutated_graph_max_abs": 0.0078125
+          },
+          "latency_change_vs_installed_pct": 4.246234300429497,
+          "latency_change_vs_rebuilt_auto_pct": 4.448027655498987,
+          "installed_normalized_change_vs_rebuilt_auto_pct": 4.557092408641106
+        },
+        "down": {
+          "installed": {
+            "median_ms": 0.11307128124999999,
+            "iqr_ms": 0.0015144687499999976,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0038328170776367188,
+            "mutated_graph_max_abs": 0.0
+          },
+          "rebuilt": {
+            "median_ms": 0.11249515625,
+            "iqr_ms": 0.001464828124999984,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0038328170776367188,
+            "mutated_graph_max_abs": 0.0
+          },
+          "latency_change_vs_installed_pct": -0.5095237213472159,
+          "latency_change_vs_rebuilt_auto_pct": 1.1799211043701963,
+          "installed_normalized_change_vs_rebuilt_auto_pct": 0.1648168833299435
+        }
+      }
+    },
+    "index2": {
+      "requested": 2,
+      "selected": 2,
+      "identity": "F gemm FHS T@4N@8N 16 16 at16x2+m32@48 am32+m16@64 aB wg 4x2x4 kr xaf st vav hi pt sr br sb64 bk0 sm sn grf256 sys kv afb",
+      "shapes": {
+        "gate_up": {
+          "installed": {
+            "median_ms": 0.18720215624999997,
+            "iqr_ms": 0.001167031249999978,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0027256011962890625,
+            "mutated_graph_max_abs": 0.0
+          },
+          "rebuilt": {
+            "median_ms": 0.23916993749999998,
+            "iqr_ms": 0.0011132812499999867,
+            "max_abs_vs_installed": 0.0078125,
+            "exact_vs_installed": false,
+            "sampled_fp32_max_abs": 0.0027256011962890625,
+            "mutated_graph_max_abs": 0.0078125
+          },
+          "latency_change_vs_installed_pct": 27.760247152601924,
+          "latency_change_vs_rebuilt_auto_pct": 28.135683117645872,
+          "installed_normalized_change_vs_rebuilt_auto_pct": 28.141223108242187
+        },
+        "down": {
+          "installed": {
+            "median_ms": 0.1116194375,
+            "iqr_ms": 0.0005346718750000035,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0038328170776367188,
+            "mutated_graph_max_abs": 0.0
+          },
+          "rebuilt": {
+            "median_ms": 0.1111458125,
+            "iqr_ms": 0.00040929687499999257,
+            "max_abs_vs_installed": 0.0,
+            "exact_vs_installed": true,
+            "sampled_fp32_max_abs": 0.0038328170776367188,
+            "mutated_graph_max_abs": 0.0
+          },
+          "latency_change_vs_installed_pct": -0.4243212567703547,
+          "latency_change_vs_rebuilt_auto_pct": -0.03369998580609046,
+          "installed_normalized_change_vs_rebuilt_auto_pct": 0.2505968452073626
+        }
+      }
+    }
+  },
+  "qualified_candidates": [],
+  "event_batches": 144,
+  "timed_graph_replays": 2304,
+  "decision": "Keep installed native GEMM; no serving A/B, no promotion."
+}

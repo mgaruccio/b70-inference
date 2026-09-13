@@ -1,0 +1,71 @@
++ date -Is
+2026-09-13T00:34:15-04:00
+++ docker ps -q
++ test -z ''
++ sha256sum /home/mike/inference/launchers/start-qwen38.sh
+63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4  /home/mike/inference/launchers/start-qwen38.sh
++ cat /sys/class/drm/card0/device/hwmon/hwmon2/power1_cap
+275000000
++ cp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/prepare.sh /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/preparation-01/prepare.sh
++ cp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/README.md /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/preparation-01/protocol.md
++ mkdir /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/compiler
++ trap 'docker rm -f b70-gemm-compiler-copy >/dev/null 2>&1 || true' EXIT
++ docker create --name b70-gemm-compiler-copy intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0 /bin/true
+f1cc47e9ffcb2c61f82b7b48c5ef51d9ad82abace5d61d3227d2cd6389af28c6
++ docker cp b70-gemm-compiler-copy:/opt/intel/oneapi/compiler/2026.0/. /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/compiler/
++ docker rm b70-gemm-compiler-copy
+b70-gemm-compiler-copy
++ git init /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN/.git/
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN remote add origin https://github.com/uxlfoundation/oneDNN.git
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN fetch --depth=1 origin 80afa71049cd69a3df32adcccb623b12cd7baa22
+From https://github.com/uxlfoundation/oneDNN
+ * branch            80afa71049cd69a3df32adcccb623b12cd7baa22 -> FETCH_HEAD
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN checkout --detach FETCH_HEAD
+HEAD is now at 80afa71 doc: added release notes for v3.12
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN submodule update --init --recursive --depth=1
++ git clone --depth=1 --branch v0.1.12 --filter=blob:none --sparse https://github.com/vllm-project/vllm-xpu-kernels.git /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/native
+Cloning into '/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/native'...
+Note: switching to '1796aa8bc8db4ac68d9cd19636cef88f3af81d2b'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/native sparse-checkout set csrc/xpu/onednn
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN rev-parse HEAD
+80afa71049cd69a3df32adcccb623b12cd7baa22
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN submodule status --recursive
++ git -C /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/native rev-parse HEAD
+1796aa8bc8db4ac68d9cd19636cef88f3af81d2b
++ du -sh /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/compiler /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/native
+2.9G	/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/compiler
+99M	/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/oneDNN
+852K	/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/native
++ date -Is
+2026-09-13T00:34:23-04:00
++ docker rm -f b70-gemm-compiler-copy

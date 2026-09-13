@@ -1,0 +1,344 @@
++ cp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/build.sh /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/patch-catalog.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/CMakeLists.txt /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/binding.cpp /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/probe.py /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/build-01/
++ date -Is
+2026-09-13T00:52:16-04:00
++ trap 'docker rm -f b70-gemm-catalog-build >/dev/null 2>&1 || true' EXIT
++ set +e
++ timeout --signal=TERM --kill-after=30s 90m docker run --pull=never --rm --name b70-gemm-catalog-build --cpus=12 --memory=24g --memory-swap=24g -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog:/experiment -v /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-gemm-catalog/compiler:/opt/intel/oneapi/compiler/2026.0:ro -e BUILD_CELL=build-01 --entrypoint /bin/bash vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f -lc $'\nset -euxo pipefail\nC=/opt/intel/oneapi/compiler/2026.0\nexport PATH="$C/bin:/opt/venv/bin:$PATH"\nexport LD_LIBRARY_PATH="/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:$C/lib:${LD_LIBRARY_PATH:-}"\nexport CC="$C/bin/icx" CXX="$C/bin/icpx"\nO=/experiment/$BUILD_CELL\nicpx --version\ngit config --global --add safe.directory /experiment/oneDNN\npython -P /experiment/patch-catalog.py /experiment/oneDNN > "$O/onednn.patch"\ngit -C /experiment/oneDNN apply --check "$O/onednn.patch"\ngit -C /experiment/oneDNN apply "$O/onednn.patch"\ncmake -S /experiment/oneDNN -B /experiment/onednn-build -G Ninja \\\n -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/experiment/onednn-install \\\n -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \\\n -DCMAKE_POSITION_INDEPENDENT_CODE=ON \\\n -DDNNL_LIBRARY_TYPE=STATIC -DDNNL_CPU_RUNTIME=NONE -DDNNL_GPU_RUNTIME=SYCL \\\n -DDNNL_BUILD_TESTS=OFF -DDNNL_BUILD_EXAMPLES=OFF -DONEDNN_BUILD_GRAPH=OFF \\\n -DDNNL_ENABLE_PRIMITIVE="MATMUL;REORDER" -DDNNL_ENABLE_PRIMITIVE_GPU_ISA=XE2 \\\n -DDNNL_ENABLE_PRIMITIVE_CACHE=ON -DDNNL_DEV_MODE=OFF\ncp /experiment/onednn-build/CMakeCache.txt "$O/onednn-CMakeCache.txt"\ncmake --build /experiment/onednn-build --parallel 8\ncmake --install /experiment/onednn-build\ncmake -S /experiment -B /experiment/binding-build -G Ninja \\\n -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER="$CXX" \\\n -DNATIVE_SOURCE_DIR=/experiment/native -DONEDNN_INSTALL_PREFIX=/experiment/onednn-install \\\n -DCMAKE_PREFIX_PATH="/experiment/onednn-install;/opt/venv/lib/python3.12/site-packages/torch/share/cmake"\ncp /experiment/binding-build/CMakeCache.txt "$O/binding-CMakeCache.txt"\ncmake --build /experiment/binding-build --parallel 2\nfind /experiment/binding-build -maxdepth 2 -name "*.so" -exec sha256sum {} \\;\n'
++ C=/opt/intel/oneapi/compiler/2026.0
++ export PATH=/opt/intel/oneapi/compiler/2026.0/bin:/opt/venv/bin:/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ PATH=/opt/intel/oneapi/compiler/2026.0/bin:/opt/venv/bin:/opt/venv/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ export LD_LIBRARY_PATH=/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:/opt/intel/oneapi/compiler/2026.0/lib:/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib
++ LD_LIBRARY_PATH=/opt/venv/lib:/opt/venv/lib/python3.12/site-packages/torch/lib:/opt/intel/oneapi/compiler/2026.0/lib:/tmp/ucx_install/lib:/opt/venv/lib:/usr/local/lib
++ export CC=/opt/intel/oneapi/compiler/2026.0/bin/icx CXX=/opt/intel/oneapi/compiler/2026.0/bin/icpx
++ CC=/opt/intel/oneapi/compiler/2026.0/bin/icx
++ CXX=/opt/intel/oneapi/compiler/2026.0/bin/icpx
++ O=/experiment/build-01
++ icpx --version
+Intel(R) oneAPI DPC++/C++ Compiler 2026.0.0 (2026.0.0.20260331)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /opt/intel/oneapi/compiler/2026.0/bin/compiler
+Configuration file: /opt/intel/oneapi/compiler/2026.0/bin/compiler/../icpx.cfg
++ git config --global --add safe.directory /experiment/oneDNN
++ python -P /experiment/patch-catalog.py /experiment/oneDNN
++ git -C /experiment/oneDNN apply --check /experiment/build-01/onednn.patch
++ git -C /experiment/oneDNN apply /experiment/build-01/onednn.patch
++ cmake -S /experiment/oneDNN -B /experiment/onednn-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/experiment/onednn-install -DCMAKE_C_COMPILER=/opt/intel/oneapi/compiler/2026.0/bin/icx -DCMAKE_CXX_COMPILER=/opt/intel/oneapi/compiler/2026.0/bin/icpx -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DDNNL_LIBRARY_TYPE=STATIC -DDNNL_CPU_RUNTIME=NONE -DDNNL_GPU_RUNTIME=SYCL -DDNNL_BUILD_TESTS=OFF -DDNNL_BUILD_EXAMPLES=OFF -DONEDNN_BUILD_GRAPH=OFF '-DDNNL_ENABLE_PRIMITIVE=MATMUL;REORDER' -DDNNL_ENABLE_PRIMITIVE_GPU_ISA=XE2 -DDNNL_ENABLE_PRIMITIVE_CACHE=ON -DDNNL_DEV_MODE=OFF
+CMake Warning (deprecated) at CMakeLists.txt:36 (cmake_policy):
+  The OLD behavior for policy CMP0146 will be removed from a future version
+  of CMake.
+
+  The cmake-policies(7) manual explains that the OLD behaviors of all
+  policies are deprecated and that a policy should be set to OLD only under
+  specific short-term circumstances.  Projects should be ported to the NEW
+  behavior and not rely on setting a policy to OLD.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- The C compiler identification is IntelLLVM 2026.0.0
+-- The CXX compiler identification is IntelLLVM 2026.0.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /opt/intel/oneapi/compiler/2026.0/bin/icx - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /opt/intel/oneapi/compiler/2026.0/bin/icpx - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- DNNL_TARGET_ARCH: X64
+-- DNNL_LIBRARY_NAME: dnnl
+-- Performing Test SYCL_FLAG_SUPPORTED
+-- Performing Test SYCL_FLAG_SUPPORTED - Success
+-- DPC++ support is enabled (OpenCL and Level Zero)
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found OpenMP_C: -fiopenmp (found version "5.1")
+-- Found OpenMP_CXX: -fiopenmp (found version "5.1")
+-- Found OpenMP: TRUE (found version "5.1")
+-- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) 
+-- Could NOT find Doxyrest (missing: DOXYREST_EXECUTABLE) 
+-- Found Python: /opt/venv/bin/python3.12 (found suitable version "3.12.3", minimum required is "3.7") found components: Interpreter
+-- Could NOT find Sphinx (missing: SPHINX_EXECUTABLE) 
+-- Found Git: /usr/bin/git (found version "2.43.0")
+-- Enabled testing coverage: CI
+-- Enabled workload: TRAINING
+-- Enabled primitives: MATMUL;REORDER
+-- Enabled primitive CPU ISA: ALL
+-- Enabled primitive GPU ISA: XE2
+-- Enabled GeMM kernels ISA: ALL
+-- Primitive cache is enabled
+-- The ASM compiler identification is IntelLLVM
+-- Found assembler: /opt/intel/oneapi/compiler/2026.0/bin/icx
+-- Performing Test COMPILER_ALLOWS_ALIAS_ATTRIBUTES
+-- Performing Test COMPILER_ALLOWS_ALIAS_ATTRIBUTES - Success
+-- GPU Compute reference kernels are enabled
+-- Configuring done (2.0s)
+-- Generating done (0.1s)
+-- Build files have been written to: /experiment/onednn-build
++ cp /experiment/onednn-build/CMakeCache.txt /experiment/build-01/onednn-CMakeCache.txt
++ cmake --build /experiment/onednn-build --parallel 8
+[1/560] Generating bnorm_nhwc_reusable_header.cpp
+[2/560] Generating bnorm_xe_header.cpp
+[3/560] Generating include_custom_types_header.cpp
+[4/560] Generating bnorm_xe_reduce_header.cpp
+[5/560] Generating concat_common_header.cpp
+[6/560] Generating include_conversion_header.cpp
+[7/560] Generating binary_common_header.cpp
+[8/560] Generating include_dispatch_header.cpp
+[9/560] Generating include_dnnl_interop_header.cpp
+[10/560] Generating include_generic_vector_ops_header.cpp
+[11/560] Generating include_eltwise_header.cpp
+[12/560] Generating include_philox_header.cpp
+[13/560] Generating include_io_header.cpp
+[14/560] Generating include_offsets_header.cpp
+[15/560] Generating include_post_ops_header.cpp
+[16/560] Generating include_scales_header.cpp
+[17/560] Generating include_math_utils_header.cpp
+[18/560] Generating include_types_interop_header.cpp
+[19/560] Generating lnorm_common_header.cpp
+[20/560] Generating include_utils_header.cpp
+[21/560] Generating reduction_common_header.cpp
+[22/560] Generating include_types_header.cpp
+[23/560] Generating rnn_cell_compute_header.cpp
+[24/560] Generating reorder_common_header.cpp
+[25/560] Generating rnn_cell_kind_utility_header.cpp
+[26/560] Generating include_types_specific_header.cpp
+[27/560] Generating sdpa_utils_header.cpp
+[28/560] Generating rnn_common_header.cpp
+[29/560] Generating softmax_simple_header.cpp
+[30/560] Generating binary_simple_kernel.cpp
+[31/560] Generating include_tile_ops_header.cpp
+[32/560] Generating bnorm_reusable_kernel.cpp
+[33/560] Generating bnorm_ref_kernel.cpp
+[34/560] Generating bnorm_simple_kernel.cpp
+[35/560] Generating binary_xe_kernel.cpp
+[36/560] Generating bnorm_xe_bwd_kernel.cpp
+[37/560] Generating bnorm_xe_nhwc_bwd_kernel.cpp
+[38/560] Generating bnorm_xe_fwd_kernel.cpp
+[39/560] Generating conv_deconv_backward_bias_kernel.cpp
+[40/560] Generating concat_xe_kernel.cpp
+[41/560] Generating bnorm_xe_nhwc_fwd_kernel.cpp
+[42/560] Generating concat_simple_kernel.cpp
+[43/560] Generating bnorm_nhwc_reusable_kernel.cpp
+[44/560] Generating conv_ref_kernel.cpp
+[45/560] Generating gpu_intel_dynamic_scale_kernel.cpp
+[46/560] Generating eltwise_ref_kernel.cpp
+[47/560] Generating conv_xe_wino_fwd_data_2x3_kernel.cpp
+[48/560] Generating eltwise_xe_kernel.cpp
+[49/560] Generating gpu_intel_fill_random_kernel.cpp
+[50/560] Generating conv_xe_wino_fwd_data_fused_kernel.cpp
+[51/560] Generating gemm_ref_kernel.cpp
+[52/560] Generating gemm_with_post_ops_kernel.cpp
+[53/560] Generating graph_gen_index_kernel.cpp
+[54/560] Generating gnorm_ref_kernel.cpp
+[55/560] Generating gemm_xe_hp_systolic_copy_kernel.cpp
+[56/560] Generating ip_ref_kernel.cpp
+[57/560] Generating gemm_xe_hpc_systolic_copy_kernel.cpp
+[58/560] Generating lnorm_reusable_vectorized_kernel.cpp
+[59/560] Generating lnorm_ref_kernel.cpp
+[60/560] Generating lnorm_reusable_kernel.cpp
+[61/560] Generating lnorm_simple_kernel.cpp
+[62/560] Generating lrn_ref_kernel.cpp
+[63/560] Generating lnorm_vectorized_fused_kernel.cpp
+[64/560] Generating lnorm_vectorized_kernel.cpp
+[65/560] Generating matmul_ref_grouped_gemm_kernel.cpp
+[66/560] Generating matmul_sparse_ref_kernel.cpp
+[67/560] Generating matmul_grouped_micro_gemm_kernel.cpp
+[68/560] Generating matmul_ref_kernel.cpp
+[69/560] Generating pool_ref_kernel.cpp
+[70/560] Generating pool_xe_global_kernel.cpp
+[71/560] Generating prelu_ref_kernel.cpp
+[72/560] Generating reduction_atomic_kernel.cpp
+[73/560] Generating reduction_ref_kernel.cpp
+[74/560] Generating reduction_reusable_ref_kernel.cpp
+[75/560] Generating reduction_combined_kernel.cpp
+[76/560] Generating pool_xe_kernel.cpp
+[77/560] Generating reorder_ref_kernel.cpp
+[78/560] Generating reorder_generic_kernel.cpp
+[79/560] Generating resampling_ref_kernel.cpp
+[80/560] Generating resampling_vectorized_kernel.cpp
+[81/560] Generating rnn_reorder_kernel.cpp
+[82/560] Generating sdpa_ref_kernel.cpp
+[83/560] Generating reorder_custom_kernel.cpp
+[84/560] Generating shuffle_ref_kernel.cpp
+[85/560] Generating softmax_reusable_kernel.cpp
+[86/560] Generating softmax_simple_kernel.cpp
+[87/560] Generating rnn_grid_kernel.cpp
+[88/560] Generating sdpa_micro_kernel.cpp
+[89/560] Generating gpu_intel_subbyte_pack_kernel.cpp
+[90/560] Generating sum_many_inputs_kernel.cpp
+[91/560] Generating sdpa_micro_bwd_kernel.cpp
+[92/560] Generating sum_simple_kernel.cpp
+[93/560] Generating softmax_xe_kernel.cpp
+[94/560] Generating sum_xe_kernel.cpp
+[95/560] Generating zeropad_simple_kernel.cpp
+[96/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/bfloat16.cpp.o
+[97/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/broadcast_strategy.cpp.o
+[98/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/convolution_pd.cpp.o
+[99/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/cache_blob_id.cpp.o
+[100/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/dnnl_threadpool.cpp.o
+[101/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/batch_normalization.cpp.o
+[102/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/binary.cpp.o
+[103/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/dnnl_debug_autogenerated.cpp.o
+[104/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/concat.cpp.o
+[105/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/convolution.cpp.o
+[106/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/deconvolution.cpp.o
+[107/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/experimental.cpp.o
+[108/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/float4.cpp.o
+[109/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/dnnl_debug.cpp.o
+[110/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/float8.cpp.o
+[111/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/fpmath_mode.cpp.o
+[112/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/gemm.cpp.o
+[113/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/ittnotify.cpp.o
+[114/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/eltwise.cpp.o
+[115/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/gated_mlp_iface.cpp.o
+[116/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/kernel_cache.cpp.o
+[117/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/group_normalization.cpp.o
+[118/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/inner_product.cpp.o
+[119/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/lrn.cpp.o
+[120/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/layer_normalization.cpp.o
+[121/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/memory_debug.cpp.o
+[122/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/matmul.cpp.o
+[123/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/memory.cpp.o
+[124/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/engine.cpp.o
+[125/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/memory_desc_wrapper.cpp.o
+[126/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/memory_desc.cpp.o
+[127/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/memory_storage.cpp.o
+[128/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/memory_tracking.cpp.o
+[129/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/prelu.cpp.o
+[130/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/pooling.cpp.o
+[131/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_attr_quant.cpp.o
+[132/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_attr.cpp.o
+[133/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_desc_iface.cpp.o
+[134/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_cache.cpp.o
+[135/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_exec_types.cpp.o
+[136/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_iface.cpp.o
+[137/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_hashing.cpp.o
+[138/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/primitive_serialization.cpp.o
+[139/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/query.cpp.o
+[140/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/rw_mutex.cpp.o
+[141/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/reduction.cpp.o
+[142/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/resampling.cpp.o
+[143/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/reorder.cpp.o
+[144/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/scratchpad.cpp.o
+[145/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/scratchpad_debug.cpp.o
+[146/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/rnn.cpp.o
+[147/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/shuffle.cpp.o
+[148/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/sdpa_test_iface.cpp.o
+[149/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/softmax.cpp.o
+[150/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/stream.cpp.o
+[151/560] Building ASM object src/common/CMakeFiles/dnnl_common.dir/__/__/third_party/ittnotify/ittptmark64.S.o
+[152/560] Building C object src/common/CMakeFiles/dnnl_common.dir/__/__/third_party/ittnotify/jitprofiling.c.o
+[153/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/utils.cpp.o
+[154/560] Building C object src/common/CMakeFiles/dnnl_common.dir/__/__/third_party/ittnotify/ittnotify_static.c.o
+[155/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/stream_profiler.cpp.o
+[156/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/sum.cpp.o
+[157/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_binary_list.cpp.o
+[158/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_concat_list.cpp.o
+[159/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_deconvolution_list.cpp.o
+[160/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_convolution_list.cpp.o
+[161/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_eltwise_list.cpp.o
+[162/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_impl_list.cpp.o
+[163/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_gated_mlp_list.cpp.o
+[164/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_group_normalization_list.cpp.o
+[165/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_inner_product_list.cpp.o
+[166/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_batch_normalization_list.cpp.o
+[167/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_lrn_list.cpp.o
+[168/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/verbose.cpp.o
+[169/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_prelu_list.cpp.o
+[170/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_matmul_list.cpp.o
+[171/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_gemm_list.cpp.o
+[172/560] Building CXX object src/common/CMakeFiles/dnnl_common.dir/memory_zero_pad.cpp.o
+[173/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_layer_normalization_list.cpp.o
+[174/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_reorder_pd.cpp.o
+[175/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_resampling_list.cpp.o
+[176/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_reduction_list.cpp.o
+[177/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_shuffle_list.cpp.o
+[178/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_sdpa_list.cpp.o
+FAILED: [code=1] src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_sdpa_list.cpp.o 
+/opt/intel/oneapi/compiler/2026.0/bin/icpx -DCL_TARGET_OPENCL_VERSION=300 -DDNNL_ENABLE_CPU_ISA_HINTS -DDNNL_ENABLE_MAX_CPU_ISA -DDNNL_STATUS_NODISCARD -DDNNL_X64=1 -DGEMMSTONE_CONFIG -DNGEN_CONFIG -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -I/experiment/onednn-build/include -I/experiment/oneDNN/include -I/experiment/oneDNN/third_party/opencl -I/experiment/oneDNN/third_party -I/experiment/oneDNN/src -I/experiment/oneDNN/src/gpu/intel/jit/config -I/experiment/oneDNN/third_party/ngen -I/experiment/oneDNN/src/gpu/intel/gemm/jit/include -fno-sycl-id-queries-fit-in-int -Wno-#pragma-messages -fsycl -fiopenmp -fvisibility-inlines-hidden  -ffp-model=precise -fno-reciprocal-math -Wno-unknown-warning-option -Wsign-compare -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Wall -Wno-unknown-pragmas -Wundef -fvisibility=internal   -fPIC -Wformat -Wformat-security -D_FORTIFY_SOURCE=2  -Wmissing-field-initializers  -Wno-pass-failed -Wno-tautological-compare -Wno-pass-failed -Wno-recommended-option  -O3 -DNDEBUG -fPIC -MD -MT src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_sdpa_list.cpp.o -MF src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_sdpa_list.cpp.o.d -o src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_sdpa_list.cpp.o -c /experiment/oneDNN/src/gpu/gpu_sdpa_list.cpp
+/experiment/oneDNN/src/gpu/gpu_sdpa_list.cpp:35:9: error: no matching constructor for initialization of 'const std::map<pk_impl_key_t, std::vector<impl_list_item_t>>'
+   35 |         impl_list_map REG_SDPA_P({
+      |         ^             ~~~~~~~~~~~~
+   36 |     {{forward}, {
+      |     ~~~~~~~~~~~~~
+   37 |         GPU_INSTANCE_INTEL(intel::sdpa::micro_fwd_t)
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   38 |         GPU_INSTANCE_INTEL_DEVMODE(intel::sdpa::ref_fwd_t)
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   39 |         nullptr,
+      |         ~~~~~~~~
+   40 |     }},
+      |     ~~~
+   41 |     {{backward}, REG_BWD_PK({
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~
+   42 |         GPU_INSTANCE_INTEL(intel::sdpa::micro_bwd_t)
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   43 |         nullptr,
+      |         ~~~~~~~~
+   44 |     })},
+      |     ~~~~
+   45 | });
+      | ~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:206:7: note: candidate constructor not viable: no known conversion from 'std::nullptr_t' to 'const std::less<dnnl::impl::pk_impl_key_t>' for 1st argument
+  206 |       map(const _Compare& __comp,
+      |       ^   ~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:219:7: note: candidate constructor not viable: no known conversion from 'std::nullptr_t' to 'const map<dnnl::impl::pk_impl_key_t, std::vector<dnnl::impl::impl_list_item_t>>' for 1st argument
+  219 |       map(const map&) = default;
+      |       ^   ~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:227:7: note: candidate constructor not viable: no known conversion from 'std::nullptr_t' to 'map<dnnl::impl::pk_impl_key_t, std::vector<dnnl::impl::impl_list_item_t>>' for 1st argument
+  227 |       map(map&&) = default;
+      |       ^   ~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:240:7: note: candidate constructor not viable: no known conversion from 'std::nullptr_t' to 'initializer_list<value_type>' (aka 'initializer_list<std::pair<const dnnl::impl::pk_impl_key_t, std::vector<dnnl::impl::impl_list_item_t, std::allocator<dnnl::impl::impl_list_item_t>>>>') for 1st argument
+  240 |       map(initializer_list<value_type> __l,
+      |       ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:248:7: note: candidate constructor not viable: no known conversion from 'std::nullptr_t' to 'const allocator_type' (aka 'const std::allocator<std::pair<const dnnl::impl::pk_impl_key_t, std::vector<dnnl::impl::impl_list_item_t>>>') for 1st argument
+  248 |       map(const allocator_type& __a)
+      |       ^   ~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:197:7: note: candidate constructor not viable: requires 0 arguments, but 1 was provided
+  197 |       map() = default;
+      |       ^
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:252:7: note: candidate constructor not viable: requires 2 arguments, but 1 was provided
+  252 |       map(const map& __m, const __type_identity_t<allocator_type>& __a)
+      |       ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:256:7: note: candidate constructor not viable: requires 2 arguments, but 1 was provided
+  256 |       map(map&& __m, const __type_identity_t<allocator_type>& __a)
+      |       ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:262:7: note: candidate constructor not viable: requires 2 arguments, but 1 was provided
+  262 |       map(initializer_list<value_type> __l, const allocator_type& __a)
+      |       ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:285:2: note: candidate constructor template not viable: requires 2 arguments, but 1 was provided
+  285 |         map(_InputIterator __first, _InputIterator __last)
+      |         ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:268:2: note: candidate constructor template not viable: requires 3 arguments, but 1 was provided
+  268 |         map(_InputIterator __first, _InputIterator __last,
+      |         ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  269 |             const allocator_type& __a)
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/lib/gcc/x86_64-linux-gnu/13/../../../../include/c++/13/bits/stl_map.h:302:2: note: candidate constructor template not viable: requires at least 3 arguments, but 1 was provided
+  302 |         map(_InputIterator __first, _InputIterator __last,
+      |         ^   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  303 |             const _Compare& __comp,
+      |             ~~~~~~~~~~~~~~~~~~~~~~~
+  304 |             const allocator_type& __a = allocator_type())
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+[179/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_sum_list.cpp.o
+[180/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_pooling_list.cpp.o
+[181/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_zero_points_conv.cpp.o
+[182/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_zero_pad_list.cpp.o
+[183/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_rnn_list.cpp.o
+[184/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_softmax_list.cpp.o
+[185/560] Building CXX object src/gpu/CMakeFiles/dnnl_gpu.dir/gpu_reorder_list.cpp.o
+ninja: build stopped: subcommand failed.
++ rc=1
++ set -e
++ printf '%s\n' 1
++ docker rm -f b70-gemm-catalog-build
++ date -Is
+2026-09-13T00:52:51-04:00
++ exit 1
++ docker rm -f b70-gemm-catalog-build
