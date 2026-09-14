@@ -1,0 +1,139 @@
+set: invalid option combination
+
+Standard input (line 1):
+set -eu; cd /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260914-mtp-quant-aware-tiny; python3 source/qwen38_mtp_tune_probe.py --make-corpus corpus; python3 -u source/qwen38_mtp_tune_probe.py --out stock-baseline --prompts corpus/heldout.jsonl --tokens 256; python3 -u source/qwen38_mtp_tune_probe.py --out onpolicy-train --prompts corpus/train.jsonl --tokens 256 --generate
+^
+
+(Type 'help set' for related documentation)
+CELL_READY=/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260914-mtp-quant-aware-tiny/stock-baseline
+{"label": "warmup", "usage": {"prompt_tokens": 25, "total_tokens": 89, "completion_tokens": 64}, "decode_tps": 88.94778405665163, "transport_pass": true}
+{"label": "mbpp-511", "usage": {"prompt_tokens": 92, "total_tokens": 348, "completion_tokens": 256}, "decode_tps": 111.50365933135637, "transport_pass": true}
+{"label": "mbpp-512", "usage": {"prompt_tokens": 242, "total_tokens": 498, "completion_tokens": 256}, "decode_tps": 99.11554573084999, "transport_pass": true}
+{"label": "mbpp-513", "usage": {"prompt_tokens": 227, "total_tokens": 483, "completion_tokens": 256}, "decode_tps": 77.63443445388766, "transport_pass": true}
+{"label": "mbpp-514", "usage": {"prompt_tokens": 133, "total_tokens": 389, "completion_tokens": 256}, "decode_tps": 76.91219339549647, "transport_pass": true}
+{"label": "mbpp-515", "usage": {"prompt_tokens": 113, "total_tokens": 369, "completion_tokens": 256}, "decode_tps": 105.9781091875432, "transport_pass": true}
+{"label": "mbpp-516", "usage": {"prompt_tokens": 183, "total_tokens": 439, "completion_tokens": 256}, "decode_tps": 97.7668184638712, "transport_pass": true}
+{"label": "mbpp-517", "usage": {"prompt_tokens": 107, "total_tokens": 363, "completion_tokens": 256}, "decode_tps": 78.82033386041307, "transport_pass": true}
+{"label": "mbpp-518", "usage": {"prompt_tokens": 78, "total_tokens": 334, "completion_tokens": 256}, "decode_tps": 82.93299454794577, "transport_pass": true}
+{"label": "mbpp-519", "usage": {"prompt_tokens": 104, "total_tokens": 360, "completion_tokens": 256}, "decode_tps": 89.69826477650255, "transport_pass": true}
+{"label": "mbpp-520", "usage": {"prompt_tokens": 122, "total_tokens": 378, "completion_tokens": 256}, "decode_tps": 79.68678164927051, "transport_pass": true}
+{"label": "mbpp-521", "usage": {"prompt_tokens": 101, "total_tokens": 357, "completion_tokens": 256}, "decode_tps": 82.77450353464803, "transport_pass": true}
+{"label": "mbpp-522", "usage": {"prompt_tokens": 175, "total_tokens": 431, "completion_tokens": 256}, "decode_tps": 109.23125618412097, "transport_pass": true}
+{"label": "mbpp-523", "usage": {"prompt_tokens": 133, "total_tokens": 389, "completion_tokens": 256}, "decode_tps": 105.82238799906212, "transport_pass": true}
+{"label": "mbpp-524", "usage": {"prompt_tokens": 151, "total_tokens": 407, "completion_tokens": 256}, "decode_tps": 99.27821884966649, "transport_pass": true}
+{"label": "mbpp-525", "usage": {"prompt_tokens": 107, "total_tokens": 363, "completion_tokens": 256}, "decode_tps": 97.65288450593317, "transport_pass": true}
+{"label": "mbpp-526", "usage": {"prompt_tokens": 103, "total_tokens": 359, "completion_tokens": 256}, "decode_tps": 87.21074094525423, "transport_pass": true}
+{"label": "mbpp-527", "usage": {"prompt_tokens": 138, "total_tokens": 394, "completion_tokens": 256}, "decode_tps": 90.91698111004075, "transport_pass": true}
+{"label": "mbpp-528", "usage": {"prompt_tokens": 151, "total_tokens": 407, "completion_tokens": 256}, "decode_tps": 107.48704284657381, "transport_pass": true}
+{"label": "mbpp-529", "usage": {"prompt_tokens": 96, "total_tokens": 352, "completion_tokens": 256}, "decode_tps": 107.75534745586646, "transport_pass": true}
+{"label": "mbpp-530", "usage": {"prompt_tokens": 186, "total_tokens": 442, "completion_tokens": 256}, "decode_tps": 83.66230601558136, "transport_pass": true}
+{"label": "mbpp-531", "usage": {"prompt_tokens": 118, "total_tokens": 374, "completion_tokens": 256}, "decode_tps": 102.34375909613397, "transport_pass": true}
+{"label": "mbpp-532", "usage": {"prompt_tokens": 95, "total_tokens": 351, "completion_tokens": 256}, "decode_tps": 88.35698280854847, "transport_pass": true}
+{"label": "mbpp-533", "usage": {"prompt_tokens": 147, "total_tokens": 403, "completion_tokens": 256}, "decode_tps": 79.59358285705083, "transport_pass": true}
+{"label": "mbpp-534", "usage": {"prompt_tokens": 113, "total_tokens": 369, "completion_tokens": 256}, "decode_tps": 83.91365513512842, "transport_pass": true}
+GLIMMER_LEFT_DOWN=1
+SUMMARY={"status": "completed", "head": "dense", "suite": "mtp-tune", "cascade_enabled": false, "cascade_probability_ratio": 0, "tier": "development", "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f", "context": 212992, "draft_quantization": "existing S+M1 RTN INT4", "speculative_tokens": 4, "prefix_caching": false, "thinking": false, "temperature": 0, "seed": 42, "reference_patch_sha256": {"patch_mtp_nightly.py": "4d7a02c4ea10ca7c00dc89ad927fa3dafa747dbf0553d2adf24e30a3c53e9c14", "patch_mtp_boundary.py": "41d2f74e5fef1f074b76b5a90dd1016de437228431802cfb1fa7bd7ce4cc9b50", "patch_gdn_mixed_split_v5.py": "8e4a3cbe5f424f308af74ff215d0fcb8d31f63ac3f07cf359ed2269956c3fc80", "patch_draft_lmhead_int4.py": "ffae41926d5f05f4f38bb985301b5e572092441d06d6063c8820a63a39b8cefc", "patch_draft_mtp_int4.py": "4df179c3e77fd7a248f9b9c0b60217c60caea14ebfd16b7860536fbff3b2a1e9"}, "weights": "stock", "intentional_difference": "none", "models": {"object": "list", "data": [{"id": "qwen38", "object": "model", "created": 1789399705, "owned_by": "vllm", "root": "/model", "parent": null, "max_model_len": 212992, "permission": [{"id": "modelperm-bdfa7ff0ffbef6f2", "object": "model_permission", "created": 1789399705, "allow_create_engine": false, "allow_sampling": true, "allow_logprobs": true, "allow_search_indices": false, "allow_view": true, "allow_fine_tuning": false, "organization": "*", "group": null, "is_blocking": false}]}]}, "measurements": {"requests": 24, "draft_passes": 1702.0, "proposed": 6808.0, "accepted": 4446.0, "accepted_per_draft_pass": 2.6122209165687424, "draft_token_acceptance": 0.6530552291421856, "accepted_per_position": {"0": 1616.0, "1": 1473.0, "2": 742.0, "3": 615.0}, "position_acceptance_per_draft_pass": {"0": 0.9494712103407755, "1": 0.8654524089306698, "2": 0.43595769682726204, "3": 0.36133960047003527}, "median_decode_tps": 90.30762294327165, "median_elapsed_s": 3.0212706715683453, "note": "Draft-pass counters are not asserted to count every verifier call. Position denominator includes all draft passes, including boundary-truncated passes."}, "generate": false, "max_tokens": 256, "launcher_unchanged": true, "power_unchanged": true}
+CELL_READY=/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260914-mtp-quant-aware-tiny/onpolicy-train
+{"label": "warmup", "usage": {"prompt_tokens": 25, "total_tokens": 89, "completion_tokens": 64}, "decode_tps": 89.18119508618621, "transport_pass": true}
+{"label": "mbpp-601", "usage": {"prompt_tokens": 200, "total_tokens": 376, "completion_tokens": 176}, "decode_tps": 98.52595177394008, "transport_pass": true}
+{"label": "mbpp-602", "usage": {"prompt_tokens": 97, "total_tokens": 146, "completion_tokens": 49}, "decode_tps": 111.01120127865717, "transport_pass": true}
+{"label": "mbpp-603", "usage": {"prompt_tokens": 187, "total_tokens": 443, "completion_tokens": 256}, "decode_tps": 97.70880612761499, "transport_pass": true}
+{"label": "mbpp-604", "usage": {"prompt_tokens": 85, "total_tokens": 113, "completion_tokens": 28}, "decode_tps": 98.14214733852172, "transport_pass": true}
+{"label": "mbpp-605", "usage": {"prompt_tokens": 79, "total_tokens": 165, "completion_tokens": 86}, "decode_tps": 113.7889058808871, "transport_pass": true}
+{"label": "mbpp-606", "usage": {"prompt_tokens": 128, "total_tokens": 152, "completion_tokens": 24}, "decode_tps": 97.36973771608704, "transport_pass": true}
+{"label": "mbpp-607", "usage": {"prompt_tokens": 152, "total_tokens": 209, "completion_tokens": 57}, "decode_tps": 101.54837203911424, "transport_pass": true}
+{"label": "mbpp-608", "usage": {"prompt_tokens": 78, "total_tokens": 334, "completion_tokens": 256}, "decode_tps": 99.458135386944, "transport_pass": true}
+{"label": "mbpp-609", "usage": {"prompt_tokens": 100, "total_tokens": 356, "completion_tokens": 256}, "decode_tps": 101.01258609380673, "transport_pass": true}
+{"label": "mbpp-610", "usage": {"prompt_tokens": 297, "total_tokens": 412, "completion_tokens": 115}, "decode_tps": 110.69899568631219, "transport_pass": true}
+{"label": "mbpp-611", "usage": {"prompt_tokens": 176, "total_tokens": 265, "completion_tokens": 89}, "decode_tps": 111.56215365578592, "transport_pass": true}
+{"label": "mbpp-612", "usage": {"prompt_tokens": 205, "total_tokens": 305, "completion_tokens": 100}, "decode_tps": 89.5624666749411, "transport_pass": true}
+{"label": "mbpp-613", "usage": {"prompt_tokens": 250, "total_tokens": 297, "completion_tokens": 47}, "decode_tps": 105.87853337595831, "transport_pass": true}
+{"label": "mbpp-614", "usage": {"prompt_tokens": 151, "total_tokens": 195, "completion_tokens": 44}, "decode_tps": 99.23633189830572, "transport_pass": true}
+{"label": "mbpp-615", "usage": {"prompt_tokens": 321, "total_tokens": 400, "completion_tokens": 79}, "decode_tps": 98.4257449447394, "transport_pass": true}
+{"label": "mbpp-616", "usage": {"prompt_tokens": 183, "total_tokens": 218, "completion_tokens": 35}, "decode_tps": 95.7995792515782, "transport_pass": true}
+{"label": "mbpp-617", "usage": {"prompt_tokens": 117, "total_tokens": 373, "completion_tokens": 256}, "decode_tps": 88.49269327205407, "transport_pass": true}
+{"label": "mbpp-618", "usage": {"prompt_tokens": 148, "total_tokens": 183, "completion_tokens": 35}, "decode_tps": 107.91196022553743, "transport_pass": true}
+{"label": "mbpp-619", "usage": {"prompt_tokens": 171, "total_tokens": 234, "completion_tokens": 63}, "decode_tps": 104.72603282830288, "transport_pass": true}
+{"label": "mbpp-620", "usage": {"prompt_tokens": 142, "total_tokens": 301, "completion_tokens": 159}, "decode_tps": 105.44331288818812, "transport_pass": true}
+{"label": "mbpp-621", "usage": {"prompt_tokens": 251, "total_tokens": 308, "completion_tokens": 57}, "decode_tps": 117.87752028641036, "transport_pass": true}
+{"label": "mbpp-622", "usage": {"prompt_tokens": 200, "total_tokens": 456, "completion_tokens": 256}, "decode_tps": 107.4343158301742, "transport_pass": true}
+{"label": "mbpp-623", "usage": {"prompt_tokens": 195, "total_tokens": 222, "completion_tokens": 27}, "decode_tps": 94.03264018124464, "transport_pass": true}
+{"label": "mbpp-624", "usage": {"prompt_tokens": 82, "total_tokens": 99, "completion_tokens": 17}, "decode_tps": 101.80381668496315, "transport_pass": true}
+{"label": "mbpp-625", "usage": {"prompt_tokens": 117, "total_tokens": 165, "completion_tokens": 48}, "decode_tps": 99.53279160042457, "transport_pass": true}
+{"label": "mbpp-626", "usage": {"prompt_tokens": 87, "total_tokens": 343, "completion_tokens": 256}, "decode_tps": 95.13022630382711, "transport_pass": true}
+{"label": "mbpp-627", "usage": {"prompt_tokens": 122, "total_tokens": 301, "completion_tokens": 179}, "decode_tps": 110.07281941713562, "transport_pass": true}
+{"label": "mbpp-628", "usage": {"prompt_tokens": 143, "total_tokens": 165, "completion_tokens": 22}, "decode_tps": 88.71407504905346, "transport_pass": true}
+{"label": "mbpp-629", "usage": {"prompt_tokens": 120, "total_tokens": 154, "completion_tokens": 34}, "decode_tps": 104.70501174138778, "transport_pass": true}
+{"label": "mbpp-630", "usage": {"prompt_tokens": 247, "total_tokens": 315, "completion_tokens": 68}, "decode_tps": 120.76497945028468, "transport_pass": true}
+{"label": "mbpp-631", "usage": {"prompt_tokens": 110, "total_tokens": 148, "completion_tokens": 38}, "decode_tps": 104.45978547611865, "transport_pass": true}
+{"label": "mbpp-632", "usage": {"prompt_tokens": 154, "total_tokens": 287, "completion_tokens": 133}, "decode_tps": 104.61073578098075, "transport_pass": true}
+{"label": "mbpp-633", "usage": {"prompt_tokens": 113, "total_tokens": 193, "completion_tokens": 80}, "decode_tps": 118.07977981338274, "transport_pass": true}
+{"label": "mbpp-634", "usage": {"prompt_tokens": 102, "total_tokens": 135, "completion_tokens": 33}, "decode_tps": 101.69772561375468, "transport_pass": true}
+{"label": "mbpp-635", "usage": {"prompt_tokens": 225, "total_tokens": 326, "completion_tokens": 101}, "decode_tps": 105.5228697827049, "transport_pass": true}
+{"label": "mbpp-636", "usage": {"prompt_tokens": 105, "total_tokens": 361, "completion_tokens": 256}, "decode_tps": 92.40021159400817, "transport_pass": true}
+{"label": "mbpp-637", "usage": {"prompt_tokens": 110, "total_tokens": 128, "completion_tokens": 18}, "decode_tps": 86.40740555553836, "transport_pass": true}
+{"label": "mbpp-638", "usage": {"prompt_tokens": 91, "total_tokens": 239, "completion_tokens": 148}, "decode_tps": 100.88982845836782, "transport_pass": true}
+{"label": "mbpp-639", "usage": {"prompt_tokens": 142, "total_tokens": 208, "completion_tokens": 66}, "decode_tps": 109.93145583026968, "transport_pass": true}
+{"label": "mbpp-640", "usage": {"prompt_tokens": 96, "total_tokens": 173, "completion_tokens": 77}, "decode_tps": 91.97907201726265, "transport_pass": true}
+{"label": "mbpp-641", "usage": {"prompt_tokens": 91, "total_tokens": 164, "completion_tokens": 73}, "decode_tps": 107.70152015375236, "transport_pass": true}
+{"label": "mbpp-642", "usage": {"prompt_tokens": 266, "total_tokens": 405, "completion_tokens": 139}, "decode_tps": 94.12420734872056, "transport_pass": true}
+{"label": "mbpp-643", "usage": {"prompt_tokens": 113, "total_tokens": 369, "completion_tokens": 256}, "decode_tps": 86.17381166280163, "transport_pass": true}
+{"label": "mbpp-644", "usage": {"prompt_tokens": 171, "total_tokens": 299, "completion_tokens": 128}, "decode_tps": 103.84088937504458, "transport_pass": true}
+{"label": "mbpp-645", "usage": {"prompt_tokens": 181, "total_tokens": 285, "completion_tokens": 104}, "decode_tps": 100.38290005583012, "transport_pass": true}
+{"label": "mbpp-646", "usage": {"prompt_tokens": 99, "total_tokens": 191, "completion_tokens": 92}, "decode_tps": 96.30136480364821, "transport_pass": true}
+{"label": "mbpp-647", "usage": {"prompt_tokens": 93, "total_tokens": 188, "completion_tokens": 95}, "decode_tps": 91.92212957620279, "transport_pass": true}
+{"label": "mbpp-648", "usage": {"prompt_tokens": 183, "total_tokens": 244, "completion_tokens": 61}, "decode_tps": 101.40643525522391, "transport_pass": true}
+{"label": "mbpp-649", "usage": {"prompt_tokens": 164, "total_tokens": 289, "completion_tokens": 125}, "decode_tps": 98.24183207807467, "transport_pass": true}
+{"label": "mbpp-650", "usage": {"prompt_tokens": 123, "total_tokens": 187, "completion_tokens": 64}, "decode_tps": 123.2373272271597, "transport_pass": true}
+{"label": "mbpp-651", "usage": {"prompt_tokens": 128, "total_tokens": 218, "completion_tokens": 90}, "decode_tps": 102.75979985814504, "transport_pass": true}
+{"label": "mbpp-652", "usage": {"prompt_tokens": 337, "total_tokens": 593, "completion_tokens": 256}, "decode_tps": 94.45865095533745, "transport_pass": true}
+{"label": "mbpp-653", "usage": {"prompt_tokens": 260, "total_tokens": 307, "completion_tokens": 47}, "decode_tps": 116.16683751530047, "transport_pass": true}
+{"label": "mbpp-654", "usage": {"prompt_tokens": 87, "total_tokens": 112, "completion_tokens": 25}, "decode_tps": 122.28047022487232, "transport_pass": true}
+{"label": "mbpp-655", "usage": {"prompt_tokens": 98, "total_tokens": 131, "completion_tokens": 33}, "decode_tps": 90.19954794817454, "transport_pass": true}
+{"label": "mbpp-656", "usage": {"prompt_tokens": 129, "total_tokens": 222, "completion_tokens": 93}, "decode_tps": 116.68977175317627, "transport_pass": true}
+{"label": "mbpp-657", "usage": {"prompt_tokens": 87, "total_tokens": 319, "completion_tokens": 232}, "decode_tps": 97.71904000874224, "transport_pass": true}
+{"label": "mbpp-658", "usage": {"prompt_tokens": 176, "total_tokens": 267, "completion_tokens": 91}, "decode_tps": 108.68266708355092, "transport_pass": true}
+{"label": "mbpp-659", "usage": {"prompt_tokens": 168, "total_tokens": 231, "completion_tokens": 63}, "decode_tps": 112.3064469992885, "transport_pass": true}
+{"label": "mbpp-660", "usage": {"prompt_tokens": 119, "total_tokens": 375, "completion_tokens": 256}, "decode_tps": 92.34125050535457, "transport_pass": true}
+{"label": "mbpp-661", "usage": {"prompt_tokens": 180, "total_tokens": 436, "completion_tokens": 256}, "decode_tps": 96.34460629640999, "transport_pass": true}
+{"label": "mbpp-662", "usage": {"prompt_tokens": 330, "total_tokens": 358, "completion_tokens": 28}, "decode_tps": 113.1343277066553, "transport_pass": true}
+{"label": "mbpp-663", "usage": {"prompt_tokens": 118, "total_tokens": 374, "completion_tokens": 256}, "decode_tps": 92.17115038326702, "transport_pass": true}
+{"label": "mbpp-664", "usage": {"prompt_tokens": 90, "total_tokens": 302, "completion_tokens": 212}, "decode_tps": 111.5852148325527, "transport_pass": true}
+{"label": "mbpp-665", "usage": {"prompt_tokens": 133, "total_tokens": 167, "completion_tokens": 34}, "decode_tps": 119.60316841437387, "transport_pass": true}
+{"label": "mbpp-666", "usage": {"prompt_tokens": 80, "total_tokens": 95, "completion_tokens": 15}, "decode_tps": 88.82517950864558, "transport_pass": true}
+{"label": "mbpp-667", "usage": {"prompt_tokens": 115, "total_tokens": 159, "completion_tokens": 44}, "decode_tps": 121.46580412654703, "transport_pass": true}
+{"label": "mbpp-668", "usage": {"prompt_tokens": 90, "total_tokens": 164, "completion_tokens": 74}, "decode_tps": 109.21343769450439, "transport_pass": true}
+{"label": "mbpp-669", "usage": {"prompt_tokens": 124, "total_tokens": 380, "completion_tokens": 256}, "decode_tps": 102.53139693329555, "transport_pass": true}
+{"label": "mbpp-670", "usage": {"prompt_tokens": 99, "total_tokens": 199, "completion_tokens": 100}, "decode_tps": 114.36424373080945, "transport_pass": true}
+{"label": "mbpp-671", "usage": {"prompt_tokens": 100, "total_tokens": 356, "completion_tokens": 256}, "decode_tps": 86.25321808700383, "transport_pass": true}
+{"label": "mbpp-672", "usage": {"prompt_tokens": 98, "total_tokens": 119, "completion_tokens": 21}, "decode_tps": 127.29697278447132, "transport_pass": true}
+{"label": "mbpp-673", "usage": {"prompt_tokens": 98, "total_tokens": 120, "completion_tokens": 22}, "decode_tps": 89.07647696274923, "transport_pass": true}
+{"label": "mbpp-674", "usage": {"prompt_tokens": 103, "total_tokens": 172, "completion_tokens": 69}, "decode_tps": 108.04958526231206, "transport_pass": true}
+{"label": "mbpp-675", "usage": {"prompt_tokens": 116, "total_tokens": 154, "completion_tokens": 38}, "decode_tps": 104.45771670335324, "transport_pass": true}
+{"label": "mbpp-676", "usage": {"prompt_tokens": 129, "total_tokens": 162, "completion_tokens": 33}, "decode_tps": 116.05999387911449, "transport_pass": true}
+{"label": "mbpp-677", "usage": {"prompt_tokens": 96, "total_tokens": 119, "completion_tokens": 23}, "decode_tps": 93.1386780779794, "transport_pass": true}
+{"label": "mbpp-678", "usage": {"prompt_tokens": 91, "total_tokens": 115, "completion_tokens": 24}, "decode_tps": 117.07032545089596, "transport_pass": true}
+{"label": "mbpp-679", "usage": {"prompt_tokens": 129, "total_tokens": 156, "completion_tokens": 27}, "decode_tps": 110.04189049469635, "transport_pass": true}
+{"label": "mbpp-680", "usage": {"prompt_tokens": 103, "total_tokens": 232, "completion_tokens": 129}, "decode_tps": 112.06153857327973, "transport_pass": true}
+{"label": "mbpp-681", "usage": {"prompt_tokens": 91, "total_tokens": 181, "completion_tokens": 90}, "decode_tps": 107.77015620015054, "transport_pass": true}
+{"label": "mbpp-682", "usage": {"prompt_tokens": 125, "total_tokens": 160, "completion_tokens": 35}, "decode_tps": 108.05904585395876, "transport_pass": true}
+{"label": "mbpp-683", "usage": {"prompt_tokens": 91, "total_tokens": 170, "completion_tokens": 79}, "decode_tps": 104.32167155908624, "transport_pass": true}
+{"label": "mbpp-684", "usage": {"prompt_tokens": 92, "total_tokens": 348, "completion_tokens": 256}, "decode_tps": 81.77549701959246, "transport_pass": true}
+{"label": "mbpp-685", "usage": {"prompt_tokens": 94, "total_tokens": 244, "completion_tokens": 150}, "decode_tps": 114.63146511493005, "transport_pass": true}
+{"label": "mbpp-686", "usage": {"prompt_tokens": 250, "total_tokens": 306, "completion_tokens": 56}, "decode_tps": 107.01920022363167, "transport_pass": true}
+{"label": "mbpp-687", "usage": {"prompt_tokens": 100, "total_tokens": 144, "completion_tokens": 44}, "decode_tps": 109.38822646936643, "transport_pass": true}
+{"label": "mbpp-688", "usage": {"prompt_tokens": 114, "total_tokens": 143, "completion_tokens": 29}, "decode_tps": 88.99056585261609, "transport_pass": true}
+{"label": "mbpp-689", "usage": {"prompt_tokens": 207, "total_tokens": 405, "completion_tokens": 198}, "decode_tps": 95.8974154903268, "transport_pass": true}
+{"label": "mbpp-690", "usage": {"prompt_tokens": 221, "total_tokens": 332, "completion_tokens": 111}, "decode_tps": 103.12999091126336, "transport_pass": true}
+{"label": "mbpp-691", "usage": {"prompt_tokens": 273, "total_tokens": 329, "completion_tokens": 56}, "decode_tps": 106.87901331587658, "transport_pass": true}
+{"label": "mbpp-692", "usage": {"prompt_tokens": 92, "total_tokens": 232, "completion_tokens": 140}, "decode_tps": 107.04904120157967, "transport_pass": true}
+{"label": "mbpp-693", "usage": {"prompt_tokens": 100, "total_tokens": 128, "completion_tokens": 28}, "decode_tps": 114.45505349357701, "transport_pass": true}
+{"label": "mbpp-694", "usage": {"prompt_tokens": 399, "total_tokens": 444, "completion_tokens": 45}, "decode_tps": 100.56521972482327, "transport_pass": true}
+{"label": "mbpp-695", "usage": {"prompt_tokens": 135, "total_tokens": 175, "completion_tokens": 40}, "decode_tps": 98.87666951189615, "transport_pass": true}
+{"label": "mbpp-696", "usage": {"prompt_tokens": 269, "total_tokens": 371, "completion_tokens": 102}, "decode_tps": 102.12691959827261, "transport_pass": true}
+{"label": "mbpp-697", "usage": {"prompt_tokens": 131, "total_tokens": 161, "completion_tokens": 30}, "decode_tps": 92.07049117135506, "transport_pass": true}
+{"label": "mbpp-698", "usage": {"prompt_tokens": 321, "total_tokens": 443, "completion_tokens": 122}, "decode_tps": 95.44907729043372, "transport_pass": true}
+{"label": "mbpp-699", "usage": {"prompt_tokens": 125, "total_tokens": 381, "completion_tokens": 256}, "decode_tps": 97.9356120472434, "transport_pass": true}
+{"label": "mbpp-700", "usage": {"prompt_tokens": 154, "total_tokens": 293, "completion_tokens": 139}, "decode_tps": 112.89177203242924, "transport_pass": true}
+GLIMMER_LEFT_DOWN=1
+SUMMARY={"status": "completed", "head": "dense", "suite": "mtp-tune", "cascade_enabled": false, "cascade_probability_ratio": 0, "tier": "development", "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f", "context": 212992, "draft_quantization": "existing S+M1 RTN INT4", "speculative_tokens": 4, "prefix_caching": false, "thinking": false, "temperature": 0, "seed": 42, "reference_patch_sha256": {"patch_mtp_nightly.py": "4d7a02c4ea10ca7c00dc89ad927fa3dafa747dbf0553d2adf24e30a3c53e9c14", "patch_mtp_boundary.py": "41d2f74e5fef1f074b76b5a90dd1016de437228431802cfb1fa7bd7ce4cc9b50", "patch_gdn_mixed_split_v5.py": "8e4a3cbe5f424f308af74ff215d0fcb8d31f63ac3f07cf359ed2269956c3fc80", "patch_draft_lmhead_int4.py": "ffae41926d5f05f4f38bb985301b5e572092441d06d6063c8820a63a39b8cefc", "patch_draft_mtp_int4.py": "4df179c3e77fd7a248f9b9c0b60217c60caea14ebfd16b7860536fbff3b2a1e9"}, "weights": "stock", "intentional_difference": "none", "models": {"object": "list", "data": [{"id": "qwen38", "object": "model", "created": 1789399933, "owned_by": "vllm", "root": "/model", "parent": null, "max_model_len": 212992, "permission": [{"id": "modelperm-bdc2e887cd995c7e", "object": "model_permission", "created": 1789399933, "allow_create_engine": false, "allow_sampling": true, "allow_logprobs": true, "allow_search_indices": false, "allow_view": true, "allow_fine_tuning": false, "organization": "*", "group": null, "is_blocking": false}]}]}, "measurements": {"requests": 100, "draft_passes": 2607.0, "proposed": 10428.0, "accepted": 7872.0, "accepted_per_draft_pass": 3.0195627157652476, "draft_token_acceptance": 0.7548906789413119, "accepted_per_position": {"0": 2400.0, "1": 2117.0, "2": 1820.0, "3": 1535.0}, "position_acceptance_per_draft_pass": {"0": 0.9205983889528193, "1": 0.8120444955887994, "2": 0.698120444955888, "3": 0.5887993862677406}, "median_decode_tps": 102.94489538470421, "median_elapsed_s": 0.894979951553978, "note": "Draft-pass counters are not asserted to count every verifier call. Position denominator includes all draft passes, including boundary-truncated passes."}, "generate": true, "max_tokens": 256, "launcher_unchanged": true, "power_unchanged": true}

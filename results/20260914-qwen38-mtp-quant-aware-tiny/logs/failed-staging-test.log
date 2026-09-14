@@ -1,0 +1,64 @@
+Running 100 items in this shard
+........................................................................ [ 72%]
+..................F.........                                             [100%]
+=================================== FAILURES ===================================
+________________ test_effective_head_matches_deployed_rtn_patch ________________
+
+trainer = <module 'qwen38_train_mtp' from '/experiment/source/scripts/experiments/qwen38_train_mtp.py'>
+
+    def test_effective_head_matches_deployed_rtn_patch(trainer):
+        """Execute the repo's actual packer, then unpack its nibbles/scales on CPU."""
+        torch = trainer.runtime().torch
+>       source = ast.parse(RTN_PATCH.read_text())
+                           ^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_qwen38_train_mtp.py:253:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/usr/lib/python3.12/pathlib.py:1029: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = PosixPath('/experiment/source/results/20260909-qwen38-dflash2-rtn-standard/mtp4-clients/reference-source/patches/patch_draft_lmhead_int4.py')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/experiment/source/results/20260909-qwen38-dflash2-rtn-standard/mtp4-clients/reference-source/patches/patch_draft_lmhead_int4.py'
+
+/usr/lib/python3.12/pathlib.py:1015: FileNotFoundError
+=============================== warnings summary ===============================
+tests/test_qwen38_mtp_training_runtime.py::test_real_native_loader_packs_overlay_before_existing_rtn_hooks[True]
+tests/test_qwen38_mtp_training_runtime.py::test_real_native_loader_packs_overlay_before_existing_rtn_hooks[True]
+tests/test_qwen38_mtp_training_runtime.py::test_real_native_loader_packs_overlay_before_existing_rtn_hooks[True]
+tests/test_qwen38_train_mtp.py::test_native_gradients_frozen_heads_and_strict_export
+  /opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:251: UserWarning: Can't initialize Level Zero Sysman
+    return _enum_zes_device_infos(visible_mask)
+
+tests/test_qwen38_mtp_training_runtime.py::test_real_native_loader_packs_overlay_before_existing_rtn_hooks[True]
+  /opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:278: UserWarning: XPU device count is zero! (Triggered internally at /__w/pytorch/pytorch/c10/xpu/XPUFunctions.cpp:117.)
+    count = torch._C._xpu_getDeviceCount() if zes_count < 0 else zes_count
+
+tests/test_qwen38_mtp_training_runtime.py::test_real_native_loader_packs_overlay_before_existing_rtn_hooks[True]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+tests/test_qwen38_mtp_training_runtime.py::test_real_native_loader_packs_overlay_before_existing_rtn_hooks[True]
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+tests/test_qwen38_mtp_training_runtime.py: 14 warnings
+  /opt/venv/lib/python3.12/site-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_qwen38_train_mtp.py::test_effective_head_matches_deployed_rtn_patch
+1 failed, 99 passed, 21 warnings in 17.38s
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

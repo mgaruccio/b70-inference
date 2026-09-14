@@ -1,0 +1,82 @@
+{
+  "status": "completed",
+  "head": "dense",
+  "suite": "mtp-tune",
+  "cascade_enabled": false,
+  "cascade_probability_ratio": 0,
+  "tier": "development",
+  "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+  "context": 212992,
+  "draft_quantization": "existing S+M1 RTN INT4",
+  "speculative_tokens": 4,
+  "prefix_caching": false,
+  "thinking": false,
+  "temperature": 0,
+  "seed": 42,
+  "reference_patch_sha256": {
+    "patch_mtp_nightly.py": "4d7a02c4ea10ca7c00dc89ad927fa3dafa747dbf0553d2adf24e30a3c53e9c14",
+    "patch_mtp_boundary.py": "41d2f74e5fef1f074b76b5a90dd1016de437228431802cfb1fa7bd7ce4cc9b50",
+    "patch_gdn_mixed_split_v5.py": "8e4a3cbe5f424f308af74ff215d0fcb8d31f63ac3f07cf359ed2269956c3fc80",
+    "patch_draft_lmhead_int4.py": "ffae41926d5f05f4f38bb985301b5e572092441d06d6063c8820a63a39b8cefc",
+    "patch_draft_mtp_int4.py": "4df179c3e77fd7a248f9b9c0b60217c60caea14ebfd16b7860536fbff3b2a1e9"
+  },
+  "weights": "stock",
+  "intentional_difference": "none",
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "qwen38",
+        "object": "model",
+        "created": 1789400249,
+        "owned_by": "vllm",
+        "root": "/model",
+        "parent": null,
+        "max_model_len": 212992,
+        "permission": [
+          {
+            "id": "modelperm-bcf435ba58c47b34",
+            "object": "model_permission",
+            "created": 1789400249,
+            "allow_create_engine": false,
+            "allow_sampling": true,
+            "allow_logprobs": true,
+            "allow_search_indices": false,
+            "allow_view": true,
+            "allow_fine_tuning": false,
+            "organization": "*",
+            "group": null,
+            "is_blocking": false
+          }
+        ]
+      }
+    ]
+  },
+  "measurements": {
+    "requests": 24,
+    "draft_passes": 751.0,
+    "proposed": 3004.0,
+    "accepted": 2441.0,
+    "accepted_per_draft_pass": 3.2503328894806924,
+    "draft_token_acceptance": 0.8125832223701731,
+    "accepted_per_position": {
+      "0": 715.0,
+      "1": 649.0,
+      "2": 581.0,
+      "3": 496.0
+    },
+    "position_acceptance_per_draft_pass": {
+      "0": 0.952063914780293,
+      "1": 0.8641810918774967,
+      "2": 0.7736351531291611,
+      "3": 0.6604527296937417
+    },
+    "median_decode_tps": 106.02102801576056,
+    "median_elapsed_s": 1.2682062559761107,
+    "note": "Draft-pass counters are not asserted to count every verifier call. Position denominator includes all draft passes, including boundary-truncated passes."
+  },
+  "generate": true,
+  "max_tokens": 256,
+  "launcher_unchanged": true,
+  "power_unchanged": true
+}

@@ -1,0 +1,148 @@
+{
+  "tier": "development",
+  "runs": {
+    "abba-stock-1": {
+      "requests": 24,
+      "draft_passes": 741.0,
+      "proposed": 2964.0,
+      "accepted": 2426.0,
+      "accepted_per_draft_pass": 3.2739541160593792,
+      "draft_token_acceptance": 0.8184885290148448,
+      "accepted_per_position": {
+        "0": 708.0,
+        "1": 646.0,
+        "2": 579.0,
+        "3": 493.0
+      },
+      "position_acceptance_per_draft_pass": {
+        "0": 0.9554655870445344,
+        "1": 0.8717948717948718,
+        "2": 0.7813765182186235,
+        "3": 0.6653171390013495
+      },
+      "median_decode_tps": 106.92152155268835,
+      "median_elapsed_s": 1.266600882052444,
+      "note": "Draft-pass counters are not asserted to count every verifier call. Position denominator includes all draft passes, including boundary-truncated passes.",
+      "functional_passed": 17,
+      "output_tokens": 3147
+    },
+    "abba-tuned-1": {
+      "requests": 24,
+      "draft_passes": 750.0,
+      "proposed": 3000.0,
+      "accepted": 2421.0,
+      "accepted_per_draft_pass": 3.228,
+      "draft_token_acceptance": 0.807,
+      "accepted_per_position": {
+        "0": 708.0,
+        "1": 640.0,
+        "2": 572.0,
+        "3": 501.0
+      },
+      "position_acceptance_per_draft_pass": {
+        "0": 0.944,
+        "1": 0.8533333333333334,
+        "2": 0.7626666666666667,
+        "3": 0.668
+      },
+      "median_decode_tps": 106.97993507908608,
+      "median_elapsed_s": 1.2543692460749298,
+      "note": "Draft-pass counters are not asserted to count every verifier call. Position denominator includes all draft passes, including boundary-truncated passes.",
+      "functional_passed": 17,
+      "output_tokens": 3151
+    },
+    "abba-tuned-2": {
+      "requests": 24,
+      "draft_passes": 747.0,
+      "proposed": 2988.0,
+      "accepted": 2423.0,
+      "accepted_per_draft_pass": 3.2436412315930387,
+      "draft_token_acceptance": 0.8109103078982597,
+      "accepted_per_position": {
+        "0": 706.0,
+        "1": 642.0,
+        "2": 574.0,
+        "3": 501.0
+      },
+      "position_acceptance_per_draft_pass": {
+        "0": 0.9451137884872824,
+        "1": 0.8594377510040161,
+        "2": 0.7684069611780455,
+        "3": 0.6706827309236948
+      },
+      "median_decode_tps": 106.8668962939876,
+      "median_elapsed_s": 1.2452381130424328,
+      "note": "Draft-pass counters are not asserted to count every verifier call. Position denominator includes all draft passes, including boundary-truncated passes.",
+      "functional_passed": 17,
+      "output_tokens": 3147
+    },
+    "abba-stock-2": {
+      "requests": 24,
+      "draft_passes": 745.0,
+      "proposed": 2980.0,
+      "accepted": 2427.0,
+      "accepted_per_draft_pass": 3.257718120805369,
+      "draft_token_acceptance": 0.8144295302013422,
+      "accepted_per_position": {
+        "0": 709.0,
+        "1": 645.0,
+        "2": 580.0,
+        "3": 493.0
+      },
+      "position_acceptance_per_draft_pass": {
+        "0": 0.9516778523489933,
+        "1": 0.8657718120805369,
+        "2": 0.7785234899328859,
+        "3": 0.661744966442953
+      },
+      "median_decode_tps": 106.51013840675932,
+      "median_elapsed_s": 1.2682085025007837,
+      "note": "Draft-pass counters are not asserted to count every verifier call. Position denominator includes all draft passes, including boundary-truncated passes.",
+      "functional_passed": 17,
+      "output_tokens": 3151
+    }
+  },
+  "pooled": {
+    "stock": {
+      "accepted_per_draft_pass": 3.265814266487214,
+      "draft_token_acceptance": 0.8164535666218035,
+      "mean_of_run_median_decode_tps": 106.71582997972384
+    },
+    "tuned": {
+      "accepted_per_draft_pass": 3.235804943219773,
+      "draft_token_acceptance": 0.8089512358049432,
+      "mean_of_run_median_decode_tps": 106.92341568653683
+    }
+  },
+  "deltas": {
+    "accepted_per_draft_pass_percent": -0.9188925278264426,
+    "mean_run_median_decode_percent": 0.19452194379450116
+  },
+  "natural_output_identity": {
+    "abba-stock-1 vs abba-stock-2": {
+      "exact_output_matches": 23,
+      "mismatches": [
+        "mbpp-515"
+      ]
+    },
+    "abba-tuned-1 vs abba-tuned-2": {
+      "exact_output_matches": 23,
+      "mismatches": [
+        "mbpp-515"
+      ]
+    },
+    "abba-stock-1 vs abba-tuned-1": {
+      "exact_output_matches": 23,
+      "mismatches": [
+        "mbpp-515"
+      ]
+    },
+    "abba-stock-2 vs abba-tuned-2": {
+      "exact_output_matches": 23,
+      "mismatches": [
+        "mbpp-515"
+      ]
+    }
+  },
+  "conclusion": "Tiny end-to-end pipeline passed; acceptance regressed; no meaningful throughput improvement; stock retained."
+}

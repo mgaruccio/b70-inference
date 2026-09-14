@@ -92,7 +92,7 @@ def counters():
     return {
         key: float(value)
         for line in get("/metrics").splitlines()
-        if line.startswith("vllm:") and re.search(r"(spec_decode_num_(?:drafts|draft_tokens|accepted_tokens)_total|prefix_cache_(?:hits|queries)_total)", line)
+        if line.startswith("vllm:") and re.search(r"(spec_decode_num_(?:drafts|draft_tokens|accepted_tokens|accepted_tokens_per_pos)_total|prefix_cache_(?:hits|queries)_total)", line)
         for key, value in [line.rsplit(" ", 1)]
     }
 
