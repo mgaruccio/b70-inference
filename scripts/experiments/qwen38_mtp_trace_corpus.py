@@ -44,11 +44,6 @@ _TEXT_BLOCK_TYPES = frozenset({"text", "input_text", "output_text"})
 _THINKING_BLOCK_TYPES = frozenset({"thinking", "reasoning"})
 _TOOL_CALL_BLOCK_TYPES = frozenset({"toolCall", "tool_call", "function_call"})
 _TOOL_RESULT_ROLES = frozenset({"tool", "toolResult", "tool_result"})
-_REDACTION_RE = re.compile(
-    r"^(?:<\s*(?:redacted|filtered|secret)\s*>|\[\s*(?:redacted|filtered|secret)\s*\]|"
-    r"redacted|filtered|secret|\*{3,})$",
-    re.IGNORECASE,
-)
 _SENSITIVE_COMMAND_RE = re.compile(
     r"(?:^|[\s/])(?:\.env(?:[.\w-]*)?|\.ssh)(?:$|[\s/])"
     r"|\b(?:credentials?|auth(?:orization)?|passwords?|passwd|tokens?|api[_ -]?keys?|secrets?)\b"
@@ -537,26 +532,6 @@ def _sensitive_arguments(name: str, arguments: Mapping[str, Any]) -> bool:
     return True
 
 
-def _is_redaction_placeholder(text: str) -> bool:
-    parts = [part.strip() for part in text.splitlines() if part.strip()]
-    return bool(parts) and all(_REDACTION_RE.fullmatch(part) for part in parts)
-
-
-def _redact_arguments(name: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
-    redacted = dict(arguments)
-    if name == "bash":
-        redacted["command"] = "<redacted>"
-    elif name == "read":
-        redacted["path"] = "<redacted>"
-    elif name == "write":
-        redacted["path"] = "<redacted>"
-        redacted["content"] = "<redacted>"
-    elif name == "replace":
-        redacted["path"] = "<redacted>"
-        redacted["remove_from"] = "<redacted>"
-        redacted["remove_to"] = "<redacted>"
-        redacted["replacement_lines"] = ["<redacted>"]
-    return {key: redacted[key] for key in sorted(redacted)}
 
 
 def _message(entry: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -595,8 +570,16 @@ def _tool_stdout(message: Mapping[str, Any]) -> str:
 
 def _thinking_value(entry: Mapping[str, Any]) -> bool | None:
     for obj in (entry, entry.get("message")):
-        if isinstance(obj, Mapping) and isinstance(obj.get("thinking_level_change"), bool):
+        if not isinstance(obj, Mapping):
+            continue
+        if isinstance(obj.get("thinking_level_change"), bool):
             return bool(obj["thinking_level_change"])
+        if obj.get("type") == "thinking_level_change":
+            level = obj.get("thinkingLevel")
+            if isinstance(level, bool):
+                return level
+            if isinstance(level, str) and level.strip():
+                return level.strip().lower() not in {"off", "none", "disabled"}
     return None
 
 
@@ -608,21 +591,26 @@ def _is_assistant_entry(entry: Mapping[str, Any]) -> bool:
 
 
 def _chain(session: _Session, target_id: str) -> list[dict[str, Any]] | None:
-    current = target_id
+    current: str | None = target_id
     seen: set[str] = set()
     reverse: list[dict[str, Any]] = []
-    while current != session.session_id:
+    while current is not None and current != session.session_id:
         if current in seen:
             return None
         seen.add(current)
         entry = session.entries.get(current)
-        if entry is None:
+        if entry is None or "parentId" not in entry:
             return None
         reverse.append(entry)
-        parent = entry.get("parentId")
-        if not isinstance(parent, str):
+        parent = entry["parentId"]
+        if parent is None:
+            current = None
+        elif isinstance(parent, str):
+            current = parent
+        else:
             return None
-        current = parent
+    if current not in {None, session.session_id}:
+        return None
     reverse.reverse()
     return reverse
 
@@ -713,17 +701,7 @@ def _normalize_candidate_context(
             if family_chars[call.name] > MAX_TOOL_FAMILY_OUTPUT_CHARS:
                 raise SessionRejected("tool output family cap exceeded")
             if call.sensitive:
-                if not _is_redaction_placeholder(stdout):
-                    raise SessionRejected("sensitive tool context is not redacted")
-                normalized = _redact_arguments(call.name, call.arguments)
-                call.arguments = normalized
-                target_message = messages[call.message_index]
-                for raw_call in target_message.get("tool_calls", []):
-                    if raw_call.get("id") == call.canonical_id:
-                        raw_call["function"]["arguments"] = json.dumps(
-                            normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-                        )
-                        break
+                raise SessionRejected("sensitive tool context")
             if original in used_results:
                 raise SessionRejected("duplicate tool result")
             used_results.add(original)

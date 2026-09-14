@@ -76,16 +76,18 @@ def test_extract_cli_uses_branch_ancestry_drops_thinking_and_pairs_tools(tmp_pat
     sessions.mkdir()
     rows = [
         _header("session-1"),
-        _message("u1", "session-1", "user", LONG_USER),
+        {"type": "model_change", "id": "model-root", "parentId": None, "model": "synthetic"},
+        {"type": "thinking_level_change", "id": "thinking-off", "parentId": "model-root", "thinkingLevel": "off"},
+        _message("u1", "thinking-off", "user", LONG_USER),
         _message("sibling", "u1", "assistant", "sibling must not enter branch"),
         _message(
             "branch-answer",
             "u1",
             "assistant",
             [{"type": "thinking", "thinking": "private reasoning"}, {"type": "text", "text": "branch output"}],
-            thinking_level_change=False,
         ),
-        _message("u2", "branch-answer", "user", LONG_USER + " second turn"),
+        {"type": "thinking_level_change", "id": "thinking-high", "parentId": "branch-answer", "thinkingLevel": "high"},
+        _message("u2", "thinking-high", "user", LONG_USER + " second turn"),
         _message(
             "call",
             "u2",
@@ -133,6 +135,7 @@ def test_extract_cli_uses_branch_ancestry_drops_thinking_and_pairs_tools(tmp_pat
     assert "branch output" not in json.dumps(branch)
 
     tool_record = next(record for record in records if record["tools"] == ["bash"])
+    assert tool_record["thinking"] is True
     assert tool_record["messages"][-1] == {
         "role": "tool",
         "tool_call_id": "tool_0001",
@@ -191,7 +194,7 @@ def test_extract_rejects_unsupported_sensitive_and_incomplete_contexts(tmp_path:
                 }
             ],
         ),
-        _message("result", "call", "tool", "SECRET=not-allowed", tool_call_id="call-secret", name="read"),
+        _message("result", "call", "tool", "[REDACTED]", tool_call_id="call-secret", name="read"),
         _message("target", "result", "assistant", "should be dropped"),
     ]
     orphan_rows = [
@@ -224,7 +227,7 @@ def test_extract_rejects_unsupported_sensitive_and_incomplete_contexts(tmp_path:
     records = _load_candidates(extract)
     assert len(records) == 1
     assert ".env" not in json.dumps(records)
-    assert "SECRET=not-allowed" not in json.dumps(records)
+    assert "[REDACTED]" not in json.dumps(records)
 
 
 def test_extract_skips_recent_active_malformed_cyclic_and_symlink_inputs(tmp_path: Path) -> None:
@@ -241,6 +244,13 @@ def test_extract_skips_recent_active_malformed_cyclic_and_symlink_inputs(tmp_pat
         _message("a", "u", "assistant", "cyclic"),
     ]
     _write_session(sessions, "cyclic.jsonl", cyclic_rows)
+    missing_parent = _message("u", "missing", "user", LONG_USER)
+    missing_parent.pop("parentId")
+    _write_session(
+        sessions,
+        "missing-parent.jsonl",
+        [_header("missing"), missing_parent, _message("a", "u", "assistant", "missing")],
+    )
     (sessions / "malformed.jsonl").write_text("not-json\n", encoding="utf-8")
     old = (OLD - timedelta(hours=1)).timestamp()
     os.utime(sessions / "malformed.jsonl", (old, old))
