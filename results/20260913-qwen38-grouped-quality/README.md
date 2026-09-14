@@ -263,3 +263,59 @@ and retain container logs and image inspection. The public journey is:
 The worker ran only local stdlib syntax/contract checks; no dataset download,
 package install, inference request, GPU/ML runtime, or remote execution was
 performed in Pi.
+
+
+## Executed validation (2026-09-13–14)
+
+**Verdict: quality neutrality is NOT established.** All three full arms completed and scored, but the candidate lost three HumanEval+ passes relative to native MTP4. Do not promote this kernel on the strength of throughput alone. This is a quality-sensitive development evaluation, not the complete standard-publishable performance package or a statistical equivalence test.
+
+| Quality metric (%) | Target-only | Native MTP4 | Grouped candidate | Candidate − native (pp) |
+|---|---:|---:|---:|---:|
+| IFEval prompt strict (541) |83.36|82.26|82.07|−0.18|
+| GSM8K strict (1319) |96.66|96.29|96.36|+0.08|
+| HumanEval+ pass@1 (164) |85.37|84.76|82.93|−1.83|
+| MBPP+ pass@1 (378) |71.16|70.90|71.16|+0.26|
+
+HumanEval/1, /19 and /130 changed from native pass to candidate fail, with no offsetting passes. IFEval had7 regressions/6 improvements, GSM8K strict1/2, MBPP+0/1. The descriptive paired normal95% interval for the HumanEval+ delta is −3.89 to +0.23pp: an observed regression, not proof of a deterministic causal quality loss. Only one full sample per task/arm was taken. No non-inferiority margin was prespecified. Code prompts explicitly request unfenced complete scripts; official EvalPlus scoring is used without sanitizing generated text. GSM8K uses a fixed first-five-training-example prompt rather than randomized few-shot sampling. These are paired-regression settings, not a claim of canonical leaderboard comparability.
+
+### Speed comparison (separate completed ABBA experiment)
+
+| Context | Native tok/s | Candidate tok/s | Change |
+|---:|---:|---:|---:|
+|512|70.8663|70.1855|−0.96%|
+|8192|63.2092|65.5345|+3.68%|
+|32768|61.2679|63.2420|+3.22%|
+|65536|54.4637|59.2835|+8.85%|
+
+Source: `../20260913-qwen38-native-grouped-verify/analysis-confirmation.json`, 12 samples/arm/length. The64K conditional prompt-cluster bootstrap interval was +1.63 to +11.68%; TTFT remained approximately53.9s. These are NOT throughput estimates from the quality corpus, and target-only has no matched ABBA speed cell.
+
+### Fidelity and limitations
+
+All2,466 request payload hashes and rendered prompt-token sequences match across arms; zero failed requests. Among the500 preselected IFEval prompts, exact target-output token identity was54.4% for native and56.2% for candidate. Candidate/native identity was55.6% (278/500), with median first divergence111.5 (one-based). The target control itself is nonrepeatable: of32 repeated prompts, base/repeat1 match30, base/repeat2 match29, and repeat1/repeat2 match28. Native matches30/32 in each comparison; candidate29/29/30. Thus native does not reproduce target-only exactly, and these results do not isolate kernel-induced divergence from ordinary runtime nondeterminism. No batching-invariance or precision change was introduced to hide this discrepancy.
+
+Each full arm also completed two repeats of the same six real65536-token prompts, generating128 tokens with EOS ignored and retaining actual prompt/output IDs. Target/native matched4/12; target/candidate6/12; native/candidate5/12. Within-arm repeat identity was target4/6, native2/6, candidate4/6. This is a long-input fidelity diagnostic, not a long-context task-accuracy benchmark.
+
+Scored output budget4096, EOS normal. Truncated requests were retained: target2, native3, candidate4. Inspect `comparison.json` for their IDs, strict/loose IFEval, GSM8K strict/flexible, base/extra code scores, repeatability and full divergence histograms. `analysis-native-candidate.json` adds direct task transitions and64K identity. No samples were discarded and no quality score was substituted for an error.
+
+### Execution, corrections and artifacts
+
+All model/evaluator execution occurred on `inference-host`. The pinned server image, target/draft weights, K4, FP8 KV,212992 configured capacity,8192 batch,C1 and275W remained unchanged; target-only removes only `--speculative-config`. Candidate build06 SHA is `e0c6f2a78a1a50eef9dcc11b9c378c2e94799a3f5ffa0c8971849f03b3c1ddec`; `full-candidate-01/candidate-execution-evidence.json` records eligible observed152-page interleaved dispatch plus FULL capture/run evidence, with no unsupported-q5 logs. Production launcher SHA stayed `63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4`; all full summaries report successful cleanup/host unchanged, and final `docker ps` was empty.
+
+Two initial shell commands failed127 before Docker because Fish rejected Bash syntax; saved Bash scripts fixed the launch boundary. Build01 succeeded with CPU Torch2.6.0+cpu and pinned evaluators. Preparation01 failed on official MBPP/404 IEEE infinity. The fix preserves complete native EvalPlus source JSON in each row's `source_json` string and hashes those bytes; `source` retains ordinary metadata, while the scorer restores original test-input JSON verbatim. No infinity was coerced and no example removed. Build02/preparation02 succeeded. The first target smoke generated/scored inputs successfully but scorer import failed on missing `langdetect`; build03 installs the official `lm-eval[ifeval]==0.4.13` extra and downloads `punkt_tab` at build time for offline use. Review also caught/fixed GSM8K flexible extraction (last number, per pinned YAML `group_select:-1`), with a multi-number regression test.
+
+The final executed continuation command was:
+
+```bash
+ssh inference-host bash /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-grouped-quality/continue-quality.sh
+```
+
+It rebuilt evaluator03, scored the retained target smoke, generated/scored native and candidate smokes, then generated/scored all three full arms serially and ran comparison. Exit0, elapsed8h40m. `continue-quality.sh`, `run-quality.py`, `score-cell.sh` retain exact steps; full per-arm generation timeout86400s. Every code scorer container had no network, read-only root, no capabilities, no-new-privileges, non-root UID, CPU/memory/PID limits, tmpfs, and only dedicated input/output mounts—no host home, Docker socket or GPU. Build metadata identifies evaluator image; each score cell retains its image ID. Raw results are in `full-{target,native,candidate}-01/`; preparation02 holds the frozen corpus/manifest/source hashes. Original source download URLs/checksums and the remote archives allow reacquisition of excluded parquet/gzip downloads.
+
+Offline verification:
+
+```bash
+python3 results/20260913-qwen38-grouped-quality/check-local.py
+python3 results/20260913-qwen38-grouped-quality/analyze-native-candidate.py > results/20260913-qwen38-grouped-quality/analysis-native-candidate.json
+```
+
+No model/runtime was installed in Pi. Native Lab preview/patch UI was unavailable (`ENOENT lab.sock`); the previously authorized CLI fallback was used. Production remains unchanged.

@@ -1,0 +1,132 @@
+{
+  "interpretation": "Observed quality is not neutral; no statistical equivalence or production promotion.",
+  "tasks": {
+    "ifeval": {
+      "metric": "prompt_level_strict_acc",
+      "n": 541,
+      "scores_percent": {
+        "target": 83.3641404805915,
+        "native": 82.2550831792976,
+        "candidate": 82.0702402957486
+      },
+      "candidate_minus_native_pp": -0.18484288354898337,
+      "descriptive_normal_95ci_pp": [
+        -1.492221439868872,
+        1.1225356727709053
+      ],
+      "regressed_ids": [
+        "ifeval/1129",
+        "ifeval/1217",
+        "ifeval/1220",
+        "ifeval/1781",
+        "ifeval/2246",
+        "ifeval/3245",
+        "ifeval/3350"
+      ],
+      "improved_ids": [
+        "ifeval/167",
+        "ifeval/1216",
+        "ifeval/1823",
+        "ifeval/2143",
+        "ifeval/2844",
+        "ifeval/3109"
+      ]
+    },
+    "gsm8k": {
+      "metric": "strict_exact",
+      "n": 1319,
+      "scores_percent": {
+        "target": 96.66413949962093,
+        "native": 96.28506444275968,
+        "candidate": 96.36087945413192
+      },
+      "candidate_minus_native_pp": 0.0758150113722517,
+      "descriptive_normal_95ci_pp": [
+        -0.18162835882036296,
+        0.33325838156486637
+      ],
+      "regressed_ids": [
+        "gsm8k/0406"
+      ],
+      "improved_ids": [
+        "gsm8k/0304",
+        "gsm8k/1082"
+      ]
+    },
+    "humanevalplus": {
+      "metric": "plus_pass",
+      "n": 164,
+      "scores_percent": {
+        "target": 85.36585365853658,
+        "native": 84.7560975609756,
+        "candidate": 82.92682926829268
+      },
+      "candidate_minus_native_pp": -1.8292682926829267,
+      "descriptive_normal_95ci_pp": [
+        -3.886541577439913,
+        0.22800499207405978
+      ],
+      "regressed_ids": [
+        "HumanEval/1",
+        "HumanEval/19",
+        "HumanEval/130"
+      ],
+      "improved_ids": []
+    },
+    "mbppplus": {
+      "metric": "plus_pass",
+      "n": 378,
+      "scores_percent": {
+        "target": 71.16402116402116,
+        "native": 70.8994708994709,
+        "candidate": 71.16402116402116
+      },
+      "candidate_minus_native_pp": 0.26455026455026454,
+      "descriptive_normal_95ci_pp": [
+        -0.25396825396825395,
+        0.783068783068783
+      ],
+      "regressed_ids": [],
+      "improved_ids": [
+        "Mbpp/120"
+      ]
+    }
+  },
+  "native_candidate_500_token_divergence": {
+    "n": 500,
+    "exact": 278,
+    "diverged": 222,
+    "exact_percent": 55.6,
+    "median_first_divergence_one_based": 111.5
+  },
+  "long_64k": {
+    "cross_arm": {
+      "target_vs_native": {
+        "exact_token_matches": 4,
+        "n": 12
+      },
+      "target_vs_candidate": {
+        "exact_token_matches": 6,
+        "n": 12
+      },
+      "native_vs_candidate": {
+        "exact_token_matches": 5,
+        "n": 12
+      }
+    },
+    "repeatability": {
+      "target": {
+        "exact_token_matches": 4,
+        "n": 6
+      },
+      "native": {
+        "exact_token_matches": 2,
+        "n": 6
+      },
+      "candidate": {
+        "exact_token_matches": 4,
+        "n": 6
+      }
+    }
+  }
+}

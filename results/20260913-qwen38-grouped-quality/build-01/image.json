@@ -1,0 +1,70 @@
+[
+    {
+        "Id": "sha256:944f5135ae05325647f02dfe7469fa12c118f14fab5418c3636bc68ad49446a4",
+        "RepoTags": [
+            "qwen38-quality:20260913"
+        ],
+        "RepoDigests": [
+            "qwen38-quality@sha256:944f5135ae05325647f02dfe7469fa12c118f14fab5418c3636bc68ad49446a4"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-09-13T13:55:52.548398239-04:00",
+        "Config": {
+            "User": "65532:65532",
+            "Env": [
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=A035C8C19219BA821ECEA86B64E628F8D684696D",
+                "PYTHON_VERSION=3.11.11",
+                "PYTHON_SHA256=2a9920c7a0cd236de33644ed980a13cbbc21058bfdc528febb6081575ed73be3",
+                "PYTHONDONTWRITEBYTECODE=1",
+                "PYTHONUNBUFFERED=1",
+                "PIP_DISABLE_PIP_VERSION_CHECK=1",
+                "PIP_NO_CACHE_DIR=1",
+                "QUALITY_EVAL_SANDBOX=1",
+                "QUALITY_INPUT_ROOT=/input",
+                "HOME=/tmp",
+                "HF_DATASETS_OFFLINE=1",
+                "HF_HUB_OFFLINE=1",
+                "TRANSFORMERS_OFFLINE=1"
+            ],
+            "Entrypoint": [
+                "python",
+                "/opt/quality/quality.py"
+            ],
+            "WorkingDir": "/opt/quality"
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 543639865,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:ea680fbff095473bb8a6c867938d6d851e11ef0c177fce983ccc83440172bd72",
+                "sha256:f65ccd2650d020c55a770b55ff2a4fc959eaa77297b46c442ea957e2c8867e38",
+                "sha256:08f694c3ad40a16273bf1b4bd651e45a351c2acece2b660952a7e2d1ae141b79",
+                "sha256:fab19f6d5974bd2f41c10832eef92a78602d5f8069a78a7fdf45f0426e7a2828",
+                "sha256:7e0966a5fe76bee125f61b549886193a27996e70e7fb459d74351b215f8f547a",
+                "sha256:5b5b3b8b69483a83f500764a17a6e817b6e574f552712e889bc501a68ca792d1",
+                "sha256:0cd62814a31af4b0dfcca50a6a7531eca01d7cdbdd81f9c0964a54cb8c62ed83",
+                "sha256:72523ad4762fcb3e83477f9123ebb8ab4d5a67b8d49ceac2485c1f7115b97768"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-09-13T17:56:30.30564937Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:944f5135ae05325647f02dfe7469fa12c118f14fab5418c3636bc68ad49446a4",
+            "size": 856
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "nu33520h9m06okb3ilys0cnyp",
+                    "CreatedAt": "2026-09-13T13:56:41.805400857-04:00"
+                }
+            ]
+        }
+    }
+]

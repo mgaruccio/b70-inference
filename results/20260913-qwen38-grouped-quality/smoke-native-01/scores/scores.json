@@ -1,0 +1,172 @@
+{
+  "code_execution": true,
+  "created_at_utc": "2026-09-13T21:26:11.998048Z",
+  "data": "/input/prepared/prepared.jsonl",
+  "generation": "/input/generation/generation.jsonl",
+  "generation_meta": {
+    "arm": "native",
+    "base_url": "http://127.0.0.1:8000/v1",
+    "complete": true,
+    "created_at_utc": "2026-09-13T21:24:16.941260Z",
+    "data": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-grouped-quality/preparation-02/prepared/smoke.jsonl",
+    "data_manifest_sha256": null,
+    "endpoint": "http://127.0.0.1:8000/v1/chat/completions",
+    "explicit_limit": 4,
+    "failed": 0,
+    "failed_ids": [],
+    "full_run": false,
+    "input_ids": [
+      "ifeval/13",
+      "gsm8k/0000",
+      "HumanEval/0",
+      "Mbpp/2"
+    ],
+    "model": "qwen38",
+    "no_retry_or_repair": true,
+    "prepared_sha256": null,
+    "request_contract": {
+      "cache_salt": "C1",
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "eos": "normal",
+      "max_tokens": 4096,
+      "return_token_ids": true,
+      "seed": 42,
+      "stream": false,
+      "temperature": 0.0,
+      "top_k": -1,
+      "top_p": 1.0
+    },
+    "requested": 4,
+    "schema": "qwen38-grouped-quality/v1"
+  },
+  "no_fake_scores": true,
+  "schema": "qwen38-grouped-quality/v1",
+  "task_results": {
+    "gsm8k": {
+      "count": 1,
+      "items": [
+        {
+          "flexible_exact": true,
+          "flexible_prediction": "18",
+          "gold_normalized": "18",
+          "id": "gsm8k/0000",
+          "source_id": "gsm8k/0000",
+          "strict_exact": true,
+          "strict_prediction": "18"
+        }
+      ],
+      "metrics": {
+        "flexible_exact": 1.0,
+        "strict_exact": 1.0
+      },
+      "scoring": {
+        "flexible_regex": "(-?[$0-9.,]{2,})|(-?[0-9]+)",
+        "package": "lm-eval",
+        "source": "https://raw.githubusercontent.com/EleutherAI/lm-evaluation-harness/v0.4.13/lm_eval/tasks/gsm8k/gsm8k.yaml",
+        "strict_regex": "#### (\\-?[0-9\\.\\,]+)",
+        "version": "0.4.13"
+      },
+      "task": "gsm8k"
+    },
+    "humanevalplus": {
+      "count": 1,
+      "items": [
+        {
+          "base_pass": true,
+          "base_status": "pass",
+          "id": "HumanEval/0",
+          "plus_pass": true,
+          "plus_status": "pass",
+          "source_id": "HumanEval/0",
+          "task_id": "HumanEval/0"
+        }
+      ],
+      "metrics": {
+        "base_pass@1": 1.0,
+        "plus_pass@1": 1.0
+      },
+      "scoring": {
+        "base_extra": true,
+        "official_result": "/output/scores.humanevalplus.eval_results.json",
+        "official_result_sha256": "a026de5b7ff426578916ae82f6d6aae6fd24f8deead5356533f303ccd27a5fc7",
+        "package": "evalplus",
+        "source": [
+          "https://github.com/evalplus/evalplus/blob/v0.3.1/docs/cli.md",
+          "https://github.com/evalplus/evalplus/blob/v0.3.1/docs/execution.md"
+        ],
+        "stderr": "\r0it [00:00, ?it/s]\r1it [00:00, 138.19it/s]\n\r  0%|          | 0/1 [00:00<?, ?it/s]\r100%|##########| 1/1 [00:00<00:00, 30.03it/s]\n",
+        "stdout": "Computing expected output...\nExpected outputs computed in 0.01s\nReading samples...\nhumaneval (base tests)\npass@1:\t1.000\nhumaneval+ (base + extra tests)\npass@1:\t1.000\n",
+        "version": "0.3.1"
+      },
+      "task": "humanevalplus"
+    },
+    "ifeval": {
+      "count": 1,
+      "items": [
+        {
+          "id": "ifeval/13",
+          "inst_level_loose_acc": [
+            true
+          ],
+          "inst_level_loose_all": true,
+          "inst_level_loose_fraction": 1.0,
+          "inst_level_strict_acc": [
+            true
+          ],
+          "inst_level_strict_all": true,
+          "inst_level_strict_fraction": 1.0,
+          "prompt_level_loose_acc": true,
+          "prompt_level_strict_acc": true,
+          "source_id": "ifeval/13"
+        }
+      ],
+      "metrics": {
+        "inst_level_loose_acc": 1.0,
+        "inst_level_strict_acc": 1.0,
+        "prompt_level_loose_acc": 1.0,
+        "prompt_level_strict_acc": 1.0
+      },
+      "scoring": {
+        "package": "lm-eval",
+        "source": "https://raw.githubusercontent.com/EleutherAI/lm-evaluation-harness/v0.4.13/lm_eval/tasks/ifeval/utils.py",
+        "strict_loose": true,
+        "version": "0.4.13"
+      },
+      "task": "ifeval"
+    },
+    "mbppplus": {
+      "count": 1,
+      "items": [
+        {
+          "base_pass": true,
+          "base_status": "pass",
+          "id": "Mbpp/2",
+          "plus_pass": true,
+          "plus_status": "pass",
+          "source_id": "Mbpp/2",
+          "task_id": "Mbpp/2"
+        }
+      ],
+      "metrics": {
+        "base_pass@1": 1.0,
+        "plus_pass@1": 1.0
+      },
+      "scoring": {
+        "base_extra": true,
+        "official_result": "/output/scores.mbppplus.eval_results.json",
+        "official_result_sha256": "155c8fad51bf7d0aefbc93b488f8a0c4eba315d7037e0ec8ac973709273436dd",
+        "package": "evalplus",
+        "source": [
+          "https://github.com/evalplus/evalplus/blob/v0.3.1/docs/cli.md",
+          "https://github.com/evalplus/evalplus/blob/v0.3.1/docs/execution.md"
+        ],
+        "stderr": "\r0it [00:00, ?it/s]\r1it [00:00, 306.24it/s]\n\r  0%|          | 0/1 [00:00<?, ?it/s]\r100%|##########| 1/1 [00:00<00:00, 47.54it/s]\n",
+        "stdout": "Computing expected output...\nExpected outputs computed in 0.00s\nReading samples...\nmbpp (base tests)\npass@1:\t1.000\nmbpp+ (base + extra tests)\npass@1:\t1.000\n",
+        "version": "0.3.1"
+      },
+      "task": "mbppplus"
+    }
+  }
+}

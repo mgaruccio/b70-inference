@@ -1,0 +1,71 @@
+{
+  "benchmark": {
+    "candidate_execution": {
+      "eligible_dispatch_log": [
+        "Capturing CUDA graphs (decode, FULL):   0%|          | 0/1 [00:00<?, ?it/s](EngineCore pid=285) [B70_GROUPED_SERVING] {\"capture_state\":\"not-capturing\",\"event\":\"eligible-dispatch\",\"graph_capture_state\":\"not-capturing\",\"k_device\":\"xpu:0\",\"k_dtype\":\"torch.float8_e4m3fn\",\"k_shape\":[152,1664,4,256],\"k_stride\":[3407872,2048,512,1],\"library_sha256\":\"e0c6f2a78a1a50eef9dcc11b9c378c2e94799a3f5ffa0c8971849f03b3c1ddec\",\"q_device\":\"xpu:0\",\"q_dtype\":\"torch.float16\",\"q_shape\":[5,24,256],\"q_stride\":[6144,256,1],\"v_device\":\"xpu:0\",\"v_dtype\":\"torch.float8_e4m3fn\",\"v_shape\":[152,1664,4,256],\"v_stride\":[3407872,2048,512,1]}"
+      ],
+      "eligible_dispatch_log_count": 1,
+      "full_graph_capture_seen": true,
+      "full_graph_run_seen": true,
+      "required_public_boundary": "real HTTP benchmark completed before this check",
+      "server_log": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-grouped-quality/smoke-candidate-01/server.log",
+      "unsupported_q5_log": [],
+      "unsupported_q5_log_count": 0
+    },
+    "generation": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-grouped-quality/smoke-candidate-01/generation.jsonl",
+    "long_divergence": {
+      "path": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-grouped-quality/smoke-candidate-01/long-divergence",
+      "requests": 2
+    },
+    "returncode": 0
+  },
+  "campaign": "20260913-qwen38-grouped-quality",
+  "cell": "mtp4",
+  "finished_utc": "2026-09-13T21:31:19.339506+00:00",
+  "host_contract": {
+    "glimmer_stopped": true,
+    "no_running_containers": true,
+    "power_cap_microwatts": "275000000",
+    "production_launcher_sha256": "63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4"
+  },
+  "host_unchanged": true,
+  "mode": "benchmark",
+  "purpose": "Quality-sensitive three-arm evaluation; not a performance or equivalence claim",
+  "served_model": {
+    "created": 1789334948,
+    "id": "qwen38",
+    "max_model_len": 212992,
+    "object": "model",
+    "owned_by": "vllm",
+    "parent": null,
+    "permission": [
+      {
+        "allow_create_engine": false,
+        "allow_fine_tuning": false,
+        "allow_logprobs": true,
+        "allow_sampling": true,
+        "allow_search_indices": false,
+        "allow_view": true,
+        "created": 1789334948,
+        "group": null,
+        "id": "modelperm-95eeb71b63cf546b",
+        "is_blocking": false,
+        "object": "model_permission",
+        "organization": "*"
+      }
+    ],
+    "root": "/model"
+  },
+  "status": "passed",
+  "tier": "development",
+  "workload_contract": {
+    "arm": "candidate",
+    "ignore_eos": false,
+    "limit": 4,
+    "max_tokens": 4096,
+    "prefix_cache": false,
+    "prepared_data": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-grouped-quality/preparation-02/prepared/smoke.jsonl",
+    "seed": 42,
+    "temperature": 0
+  }
+}

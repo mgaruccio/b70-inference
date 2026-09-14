@@ -1,0 +1,138 @@
+{
+  "counts": {
+    "primary": {
+      "gsm8k": 1319,
+      "humanevalplus": 164,
+      "ifeval": 541,
+      "mbppplus": 378
+    },
+    "primary_total": 2402,
+    "repeat": 64,
+    "requests_total": 2466
+  },
+  "created_at_utc": "2026-09-13T19:36:39.664679Z",
+  "datasets": {
+    "gsm8k": {
+      "config": "main",
+      "dataset": "openai/gsm8k",
+      "fixed_five_shot": {
+        "count": 5,
+        "policy": "first five rows of the pinned main/train split",
+        "rows_sha256": "90cd72361eec1ea3da841baee83392a91b5df725eb5b60c817bf54b753a3c9f0",
+        "source_indices": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "revision": "740312add88f781978c0658806c59bc2815b9866",
+      "scoring_source": "https://raw.githubusercontent.com/EleutherAI/lm-evaluation-harness/v0.4.13/lm_eval/tasks/gsm8k/gsm8k.yaml",
+      "test_canonical_rows_sha256": "32c548f08195e19e33408b844dd7be6aa4bcae457d957bc05909ff4bd4a00595",
+      "test_count": 1319,
+      "test_source": {
+        "bytes": 419088,
+        "path": "/input/prepared/sources/gsm8k-main-test.parquet",
+        "sha256": "ee7b8da9e381df27b9e3f7758a159ab2bdaa4dbaa910546cbbc47e0cb44e4f59",
+        "url": "https://huggingface.co/datasets/openai/gsm8k/resolve/740312add88f781978c0658806c59bc2815b9866/main/test-00000-of-00001.parquet?download=true"
+      },
+      "test_split": "test",
+      "train_canonical_rows_sha256": "dca449882e67a1e7716b5da453650a7b16588a1f2d1a0d82394a43d75ea7e9ca",
+      "train_count": 7473,
+      "train_source": {
+        "bytes": 2306545,
+        "path": "/input/prepared/sources/gsm8k-main-train.parquet",
+        "sha256": "ea82612ea9582142387730c793eb67d3b12849002bc0b7fa6f8efafa7351419d",
+        "url": "https://huggingface.co/datasets/openai/gsm8k/resolve/740312add88f781978c0658806c59bc2815b9866/main/train-00000-of-00001.parquet?download=true"
+      },
+      "train_split": "train"
+    },
+    "humanevalplus": {
+      "count": 164,
+      "package": "evalplus",
+      "package_version": "0.3.1",
+      "release": "v0.1.10",
+      "release_url": "https://github.com/evalplus/humanevalplus_release/releases/download/v0.1.10/HumanEvalPlus.jsonl.gz",
+      "source": {
+        "bytes": 925932,
+        "path": "/input/prepared/sources/HumanEvalPlus.jsonl.gz",
+        "sha256": "272720b90ac375502c8ed23cd791c2a93dfb22a911641a494da74a426c09f101",
+        "url": "https://github.com/evalplus/humanevalplus_release/releases/download/v0.1.10/HumanEvalPlus.jsonl.gz"
+      },
+      "task_ids_sha256": "8c4a9413be6b6b793de94b702ab733ca734db2f5d6bca361605f1d7f71dd9ebe",
+      "uncompressed_sha256": "42526ec0e7d5f3ee0b06d6ced98f8c8bae3d76519151bfb3d36f79010645bd7f"
+    },
+    "ifeval": {
+      "canonical_rows_sha256": "4d49ac039cbebdfc4beb3f9f30435c4fa25320caffaae441c6b9d868126744eb",
+      "count": 541,
+      "dataset": "google/IFEval",
+      "revision": "966cd89545d6b6acfd7638bc708b98261ca58e84",
+      "scoring_source": "https://raw.githubusercontent.com/EleutherAI/lm-evaluation-harness/v0.4.13/lm_eval/tasks/ifeval/utils.py",
+      "source": {
+        "bytes": 207111,
+        "path": "/input/prepared/sources/ifeval_input_data.jsonl",
+        "sha256": "6a85310ca8ce15eff755aa08a3a4ff931c7e273e7515ebb3c492ea85fd8288f2",
+        "url": "https://huggingface.co/datasets/google/IFEval/resolve/966cd89545d6b6acfd7638bc708b98261ca58e84/ifeval_input_data.jsonl?download=true"
+      },
+      "split": "train"
+    },
+    "mbppplus": {
+      "count": 378,
+      "package": "evalplus",
+      "package_version": "0.3.1",
+      "release": "v0.2.0",
+      "release_url": "https://github.com/evalplus/mbppplus_release/releases/download/v0.2.0/MbppPlus.jsonl.gz",
+      "source": {
+        "bytes": 336032,
+        "path": "/input/prepared/sources/MbppPlus.jsonl.gz",
+        "sha256": "af43697e8791c4c149bdfd6b489d8b5412507551ac20e28a439f650b8225db63",
+        "url": "https://github.com/evalplus/mbppplus_release/releases/download/v0.2.0/MbppPlus.jsonl.gz"
+      },
+      "task_ids_sha256": "88dec5db7ce39c37e0fbc7224a2aaa7dbda11c322ce86b8056ff89bed9c72c2f",
+      "uncompressed_sha256": "b54e762755248ca411b523c917fa9f93c07b5ff2966bf60b3917b853926a3dad"
+    }
+  },
+  "divergence_sample": {
+    "count": 500,
+    "output_budget": 4096,
+    "selection": "first 500 numerically sorted IFEval IDs",
+    "task": "ifeval"
+  },
+  "model": "qwen38",
+  "pinned_evaluator": {
+    "evalplus": "0.3.1",
+    "lm_eval": "0.4.13",
+    "no_local_execution": true
+  },
+  "prepared_jsonl": {
+    "path": "/input/prepared/prepared.jsonl",
+    "rows": 2466,
+    "sha256": "d6d3b81b8f17e282f381535b5e3e6501d84ba982728e585a35a195cf68b40a4f"
+  },
+  "preservation": {
+    "original_data": "each row includes source and source_sha256; raw source files are under sources/",
+    "prompt_freeze": "each row includes prompt, messages, prompt_sha256, and messages_sha256"
+  },
+  "repeatability": {
+    "base_count": 32,
+    "base_task": "ifeval",
+    "repeat_ids": "<base-id>/repeat-1 and <base-id>/repeat-2",
+    "repeats_per_base": 2
+  },
+  "request_contract": {
+    "cache_salt": "C1",
+    "chat_template_kwargs": {
+      "enable_thinking": false
+    },
+    "eos": "normal (ignore_eos is deliberately absent)",
+    "max_tokens": 4096,
+    "return_token_ids": true,
+    "seed": 42,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": -1,
+    "top_p": 1.0
+  },
+  "schema": "qwen38-grouped-quality/v1"
+}

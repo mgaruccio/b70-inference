@@ -1,0 +1,136 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.62kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.11.11-slim-bookworm@sha256:081075da77b2b55c23c088251026fb69a7b2bf92471e491ff5fd75c192fd38e5
+#2 DONE 0.4s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 33B done
+#4 DONE 0.0s
+
+#5 [1/6] FROM docker.io/library/python:3.11.11-slim-bookworm@sha256:081075da77b2b55c23c088251026fb69a7b2bf92471e491ff5fd75c192fd38e5
+#5 resolve docker.io/library/python:3.11.11-slim-bookworm@sha256:081075da77b2b55c23c088251026fb69a7b2bf92471e491ff5fd75c192fd38e5 0.0s done
+#5 DONE 0.1s
+
+#6 [2/6] RUN python -m pip install --index-url https://download.pytorch.org/whl/cpu "torch==2.6.0+cpu"     && python -m pip install --no-cache-dir --disable-pip-version-check       "lm-eval==0.4.13"       "evalplus==0.3.1"     && python - <<'PY'
+#6 CACHED
+
+#7 [3/6] RUN python -m pip install "lm-eval[ifeval]==0.4.13"     && python - <<'PY'
+#7 0.968 Requirement already satisfied: lm-eval==0.4.13 in /usr/local/lib/python3.11/site-packages (from lm-eval[ifeval]==0.4.13) (0.4.13)
+#7 1.001 Requirement already satisfied: datasets>=2.16.0 in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (5.0.1)
+#7 1.001 Requirement already satisfied: numpy in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.4.6)
+#7 1.002 Requirement already satisfied: evaluate>=0.4.0 in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.4.6)
+#7 1.002 Requirement already satisfied: jinja2 in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.1.6)
+#7 1.004 Requirement already satisfied: pytablewriter in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.2.1)
+#7 1.004 Requirement already satisfied: rouge-score>=0.0.4 in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.1.2)
+#7 1.005 Requirement already satisfied: sacrebleu>=1.5.0 in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.6.0)
+#7 1.006 Requirement already satisfied: scikit-learn>=0.24.1 in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.9.1)
+#7 1.006 Requirement already satisfied: sqlitedict in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.1.0)
+#7 1.007 Requirement already satisfied: dill in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.4.1)
+#7 1.007 Requirement already satisfied: word2number in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.1)
+#7 1.008 Requirement already satisfied: more_itertools in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (11.1.0)
+#7 1.009 Requirement already satisfied: typing_extensions in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (4.16.0)
+#7 1.010 Requirement already satisfied: tqdm>=4.59.0 in /usr/local/lib/python3.11/site-packages (from lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (4.70.1)
+#7 1.151 Collecting langdetect (from lm-eval[ifeval]==0.4.13)
+#7 1.288   Downloading langdetect-1.0.9.tar.gz (981 kB)
+#7 1.477      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 981.5/981.5 kB 5.2 MB/s eta 0:00:00
+#7 1.502   Preparing metadata (setup.py): started
+#7 1.942   Preparing metadata (setup.py): finished with status 'done'
+#7 1.978 Collecting immutabledict (from lm-eval[ifeval]==0.4.13)
+#7 2.011   Downloading immutabledict-4.3.1-py3-none-any.whl.metadata (3.5 kB)
+#7 2.013 Requirement already satisfied: nltk>=3.9.1 in /usr/local/lib/python3.11/site-packages (from lm-eval[ifeval]==0.4.13) (3.10.3)
+#7 2.065 Requirement already satisfied: filelock in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.32.3)
+#7 2.066 Requirement already satisfied: pyarrow>=21.0.0 in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (25.0.1)
+#7 2.070 Requirement already satisfied: pandas in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.0.5)
+#7 2.071 Requirement already satisfied: requests>=2.32.2 in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.34.2)
+#7 2.072 Requirement already satisfied: httpx<1.0.0 in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.28.1)
+#7 2.073 Requirement already satisfied: xxhash in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (4.0.1)
+#7 2.073 Requirement already satisfied: multiprocess<0.70.20 in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.70.19)
+#7 2.075 Requirement already satisfied: fsspec<=2026.6.0,>=2023.1.0 in /usr/local/lib/python3.11/site-packages (from fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2026.6.0)
+#7 2.076 Requirement already satisfied: huggingface-hub<2.0,>=0.25.0 in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.31.0)
+#7 2.077 Requirement already satisfied: packaging in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (26.3)
+#7 2.077 Requirement already satisfied: pyyaml>=5.1 in /usr/local/lib/python3.11/site-packages (from datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (6.0.3)
+#7 2.120 Requirement already satisfied: defusedxml in /usr/local/lib/python3.11/site-packages (from nltk>=3.9.1->lm-eval[ifeval]==0.4.13) (0.7.1)
+#7 2.120 Requirement already satisfied: click in /usr/local/lib/python3.11/site-packages (from nltk>=3.9.1->lm-eval[ifeval]==0.4.13) (8.5.0)
+#7 2.121 Requirement already satisfied: joblib in /usr/local/lib/python3.11/site-packages (from nltk>=3.9.1->lm-eval[ifeval]==0.4.13) (1.6.0)
+#7 2.122 Requirement already satisfied: regex>=2021.8.3 in /usr/local/lib/python3.11/site-packages (from nltk>=3.9.1->lm-eval[ifeval]==0.4.13) (2026.9.10)
+#7 2.125 Requirement already satisfied: absl-py in /usr/local/lib/python3.11/site-packages (from rouge-score>=0.0.4->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.5.0)
+#7 2.126 Requirement already satisfied: six>=1.14.0 in /usr/local/lib/python3.11/site-packages (from rouge-score>=0.0.4->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.17.0)
+#7 2.133 Requirement already satisfied: portalocker in /usr/local/lib/python3.11/site-packages (from sacrebleu>=1.5.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (4.3.1)
+#7 2.134 Requirement already satisfied: tabulate>=0.8.9 in /usr/local/lib/python3.11/site-packages (from sacrebleu>=1.5.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.10.0)
+#7 2.135 Requirement already satisfied: colorama in /usr/local/lib/python3.11/site-packages (from sacrebleu>=1.5.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.4.6)
+#7 2.136 Requirement already satisfied: lxml in /usr/local/lib/python3.11/site-packages (from sacrebleu>=1.5.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (6.1.3)
+#7 2.142 Requirement already satisfied: scipy>=1.10.0 in /usr/local/lib/python3.11/site-packages (from scikit-learn>=0.24.1->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.17.1)
+#7 2.143 Requirement already satisfied: narwhals>=2.0.1 in /usr/local/lib/python3.11/site-packages (from scikit-learn>=0.24.1->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.26.0)
+#7 2.144 Requirement already satisfied: threadpoolctl>=3.5.0 in /usr/local/lib/python3.11/site-packages (from scikit-learn>=0.24.1->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.6.0)
+#7 2.153 Requirement already satisfied: MarkupSafe>=2.0 in /usr/local/lib/python3.11/site-packages (from jinja2->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.0.3)
+#7 2.183 Requirement already satisfied: setuptools>=38.3.0 in /usr/local/lib/python3.11/site-packages (from pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (65.5.1)
+#7 2.183 Requirement already satisfied: DataProperty<2,>=1.1.0 in /usr/local/lib/python3.11/site-packages (from pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.1.1)
+#7 2.184 Requirement already satisfied: mbstrdecoder<2,>=1.0.0 in /usr/local/lib/python3.11/site-packages (from pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.1.5)
+#7 2.185 Requirement already satisfied: pathvalidate<4,>=2.3.0 in /usr/local/lib/python3.11/site-packages (from pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.3.1)
+#7 2.185 Requirement already satisfied: tabledata<2,>=1.3.1 in /usr/local/lib/python3.11/site-packages (from pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.3.5)
+#7 2.186 Requirement already satisfied: tcolorpy<1,>=0.0.5 in /usr/local/lib/python3.11/site-packages (from pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.1.7)
+#7 2.187 Requirement already satisfied: typepy<2,>=1.3.2 in /usr/local/lib/python3.11/site-packages (from typepy[datetime]<2,>=1.3.2->pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.3.5)
+#7 2.263 Requirement already satisfied: aiohttp!=4.0.0a0,!=4.0.0a1 in /usr/local/lib/python3.11/site-packages (from fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.14.3)
+#7 2.269 Requirement already satisfied: anyio in /usr/local/lib/python3.11/site-packages (from httpx<1.0.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (4.15.1)
+#7 2.269 Requirement already satisfied: certifi in /usr/local/lib/python3.11/site-packages (from httpx<1.0.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2026.7.22)
+#7 2.270 Requirement already satisfied: httpcore==1.* in /usr/local/lib/python3.11/site-packages (from httpx<1.0.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.0.9)
+#7 2.271 Requirement already satisfied: idna in /usr/local/lib/python3.11/site-packages (from httpx<1.0.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.19)
+#7 2.275 Requirement already satisfied: h11>=0.16 in /usr/local/lib/python3.11/site-packages (from httpcore==1.*->httpx<1.0.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.16.0)
+#7 2.315 Requirement already satisfied: hf-xet<2.0.0,>=1.5.2 in /usr/local/lib/python3.11/site-packages (from huggingface-hub<2.0,>=0.25.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.6.0)
+#7 2.330 Requirement already satisfied: cloudpickle>=3.0 in /usr/local/lib/python3.11/site-packages (from joblib->nltk>=3.9.1->lm-eval[ifeval]==0.4.13) (3.1.2)
+#7 2.335 Requirement already satisfied: chardet<7,>=3.0.4 in /usr/local/lib/python3.11/site-packages (from mbstrdecoder<2,>=1.0.0->pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (6.0.0.post1)
+#7 2.366 Requirement already satisfied: charset_normalizer<4,>=2 in /usr/local/lib/python3.11/site-packages (from requests>=2.32.2->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (3.5.1)
+#7 2.367 Requirement already satisfied: urllib3<3,>=1.26 in /usr/local/lib/python3.11/site-packages (from requests>=2.32.2->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.7.0)
+#7 2.431 Requirement already satisfied: python-dateutil<3.0.0,>=2.8.0 in /usr/local/lib/python3.11/site-packages (from typepy[datetime]<2,>=1.3.2->pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.9.0.post0)
+#7 2.432 Requirement already satisfied: pytz>=2018.9 in /usr/local/lib/python3.11/site-packages (from typepy[datetime]<2,>=1.3.2->pytablewriter->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2026.3.post1)
+#7 2.501 Requirement already satisfied: aiohappyeyeballs>=2.5.0 in /usr/local/lib/python3.11/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (2.7.1)
+#7 2.501 Requirement already satisfied: aiosignal>=1.4.0 in /usr/local/lib/python3.11/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.4.0)
+#7 2.502 Requirement already satisfied: attrs>=17.3.0 in /usr/local/lib/python3.11/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (26.1.0)
+#7 2.503 Requirement already satisfied: frozenlist>=1.1.1 in /usr/local/lib/python3.11/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.8.0)
+#7 2.503 Requirement already satisfied: multidict<7.0,>=4.5 in /usr/local/lib/python3.11/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (6.8.0)
+#7 2.504 Requirement already satisfied: propcache>=0.2.0 in /usr/local/lib/python3.11/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (0.5.2)
+#7 2.507 Requirement already satisfied: yarl<2.0,>=1.17.0 in /usr/local/lib/python3.11/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2026.6.0,>=2023.1.0->datasets>=2.16.0->lm-eval==0.4.13->lm-eval[ifeval]==0.4.13) (1.24.5)
+#7 2.628 Downloading immutabledict-4.3.1-py3-none-any.whl (5.0 kB)
+#7 2.630 Building wheels for collected packages: langdetect
+#7 2.630   Building wheel for langdetect (setup.py): started
+#7 3.339   Building wheel for langdetect (setup.py): finished with status 'done'
+#7 3.340   Created wheel for langdetect: filename=langdetect-1.0.9-py3-none-any.whl size=993225 sha256=4bbeee3ea51c3beee651349867e76f5d7505a80fdc6c1b2c017716df7596141d
+#7 3.340   Stored in directory: /tmp/pip-ephem-wheel-cache-mzvl3w3a/wheels/0a/f2/b2/e5ca405801e05eb7c8ed5b3b4bcf1fcabcd6272c167640072e
+#7 3.342 Successfully built langdetect
+#7 3.940 Installing collected packages: langdetect, immutabledict
+#7 3.985 Successfully installed immutabledict-4.3.1 langdetect-1.0.9
+#7 3.985 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#7 6.516 [nltk_data] Downloading package punkt_tab to /opt/nltk_data...
+#7 6.870 [nltk_data]   Unzipping tokenizers/punkt_tab.zip.
+#7 DONE 7.9s
+
+#8 [4/6] RUN groupadd --system --gid 65532 quality     && useradd --system --uid 65532 --gid 65532 --home-dir /tmp --no-create-home quality
+#8 0.237 useradd warning: quality's uid 65532 is greater than SYS_UID_MAX 999
+#8 DONE 0.3s
+
+#9 [5/6] WORKDIR /opt/quality
+#9 DONE 0.1s
+
+#10 [6/6] COPY --chown=65532:65532 quality.py /opt/quality/quality.py
+#10 DONE 0.1s
+
+#11 exporting to image
+#11 exporting layers
+#11 exporting layers 0.9s done
+#11 exporting manifest sha256:5b203d4cecb3e51ba95c2b2596c24c1c98028ab8330a0eadda92bcbcdcee1ed9 0.0s done
+#11 exporting config sha256:791641ae890eecd0183c566e53edaf66d465958bf41882398f574549e9a8eaae 0.0s done
+#11 exporting attestation manifest sha256:68e681dcab952fbfa8cbf347a4542e82948df14091275bce801bf414b8b0c550 0.0s done
+#11 exporting manifest list sha256:4638874848e6aace7d1b5b8a1f1bdeb9993eb9edffdf8035dbef6057b23949c9
+#11 exporting manifest list sha256:4638874848e6aace7d1b5b8a1f1bdeb9993eb9edffdf8035dbef6057b23949c9 0.0s done
+#11 naming to docker.io/library/qwen38-quality:20260913 done
+#11 unpacking to docker.io/library/qwen38-quality:20260913
+#11 unpacking to docker.io/library/qwen38-quality:20260913 0.2s done
+#11 DONE 1.3s

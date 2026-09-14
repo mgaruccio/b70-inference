@@ -430,6 +430,12 @@ def _make_prompt_row(
     stop_sequences: list[str] | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # EvalPlus includes IEEE infinity in Mbpp/404 test inputs. Preserve the
+    # complete native JSON as a string; never coerce/drop those test values.
+    source_json = None
+    if task in {"humanevalplus", "mbppplus"}:
+        source_json = json.dumps(source, sort_keys=True, ensure_ascii=False, allow_nan=True)
+        source = {k: v for k, v in source.items() if k not in {"base_input", "plus_input"}}
     messages = [{"role": "user", "content": prompt}]
     row: dict[str, Any] = {
         "id": item_id,
@@ -449,6 +455,9 @@ def _make_prompt_row(
         "eos_mode": "normal",
         "chat_template_kwargs": {"enable_thinking": False},
     }
+    if source_json is not None:
+        row["source_json"] = source_json
+        row["source_sha256"] = _sha256_bytes(source_json.encode("utf-8"))
     if stop_sequences:
         row["stop_sequences"] = list(stop_sequences)
     if extra:
@@ -1356,7 +1365,7 @@ def _gsm_extract_flexible(value: str) -> str | None:
     matches = _GSM_FLEXIBLE_RE.findall(value)
     if not matches:
         return None
-    match = matches[0]
+    match = matches[-1]
     if isinstance(match, tuple):
         nonempty = [part for part in match if part]
         return nonempty[0].strip() if nonempty else None
@@ -1448,7 +1457,8 @@ def _score_evalplus(
     with tempfile.TemporaryDirectory(prefix="qwen38-evalplus-") as temporary:
         temporary_dir = Path(temporary)
         override = temporary_dir / f"{dataset_name}.jsonl"
-        _write_jsonl(override, [row["source"] for row in data], force=True)
+        # Restore the exact native JSON encoding consumed by EvalPlus's loader.
+        override.write_text("".join(row["source_json"] + "\n" for row in data), encoding="utf-8")
         samples = temporary_dir / f"{dataset_name}.samples.jsonl"
         sample_rows = [
             {"task_id": row["source"]["task_id"], "solution": record["content"]}

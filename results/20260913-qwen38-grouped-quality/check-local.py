@@ -85,7 +85,12 @@ def request_and_scoring_fixtures(q):
     assert q._gsm_extract_strict("work\n#### 1,200") == "1,200"
     assert q._gsm_extract_strict("answer: 1200") is None
     assert q._gsm_extract_flexible("answer: $1,200") == "$1,200"
+    assert q._gsm_extract_flexible("5 apples, then 7 more; #### 12") == "12"
     assert q._gsm_normalize("Reasoning #### $1,200.") == "1200"
+    raw = {"task_id": "Mbpp/404", "plus_input": [[float("inf")]], "prompt": "p"}
+    frozen = q._make_prompt_row(task="mbppplus", item_id="x", source_id="x", source_index=0, source=raw, prompt="p")
+    q._json_bytes(frozen)  # outer prepared JSON remains strict
+    assert json.loads(frozen["source_json"])["plus_input"][0][0] == float("inf")
 
 
 def http_generation_fixture(q):
