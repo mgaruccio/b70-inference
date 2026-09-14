@@ -1,8 +1,8 @@
 # Native grouped verification prototype
 
-**Development only. Not compiled/GPU-qualified by the worker; no speed or serving
-claim.** No production launcher, model weights, precision, acceptance policy,
-capacity (212992), batch budget (8192), or C1/MTP4K4 configuration changes.
+**Development only; experimental, not promoted.** The lead subsequently compiled and qualified build06 and ran serving/quality tests; the sections below retain the chronological prototype history. The latest [matched four-way speed campaign](../20260914-qwen38-four-way-speed/README.md) measured custom57.93 versus native55.12 tok/s at64K (+5.11%). The [completed quality evaluation](../20260913-qwen38-grouped-quality/README.md) found three fewer HumanEval+ passes versus native, so quality neutrality is not established. Earlier +8.85% confirmation figures below belong to a separate run, not the latest four-way table.
+
+No production launcher, model weights, precision, acceptance policy, capacity (212992), batch budget (8192), or C1/MTP4K4 configuration changes.
 
 ## Bounded implementation
 

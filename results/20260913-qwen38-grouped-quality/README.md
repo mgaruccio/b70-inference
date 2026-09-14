@@ -1,5 +1,7 @@
 # Qwen3.8 grouped quality harness
 
+> Completed quality results are in **Executed validation** below. For the latest speed table, use the [matched four-way campaign](../20260914-qwen38-four-way-speed/README.md), not the earlier separate ABBA numbers retained here as historical context. Custom remains experimental and unpromoted.
+
 **Experiment-only, bounded, and not a production launcher.** This directory is
 for the quality-sensitive comparison requested for the immutable
 `../20260913-qwen38-native-grouped-verify` custom `build-06` campaign. It does

@@ -1,5 +1,7 @@
 # Qwen3.8 B70 speed-improvement handoff
 
+> Historical August 2026 agent-workload investigation. For current production state, matched four-way speed numbers and completed quality results, use the [2026-09-14 handoff](qwen38-b70-next-session.md). The measurements and rejected configurations below remain historical evidence, not current next-session instructions.
+
 ## Goal
 
 Investigate why the Intel Arc Pro B70 Qwen agent-eval rate is materially below the Qwen3.8 model-card decode figures, without changing the evaluation contract or conflating synthetic serving throughput with agent performance.

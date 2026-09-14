@@ -1,5 +1,7 @@
 # Best MTP4 / DSpark / DFlash2 comparison
 
+> Historical three-way campaign. For the current comparable four-column table, use the [fresh matched four-way campaign](../20260914-qwen38-four-way-speed/README.md). Do not splice this table together with custom-kernel measurements from another run.
+
 Status: **completed successfully** (2026-09-13 02:22:43–03:05:29 UTC). Development tier only. No production promotion. All three cells exited0; no failed cells or excluded samples.
 
 ## Authorized scope and baseline

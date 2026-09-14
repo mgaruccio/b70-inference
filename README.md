@@ -12,9 +12,26 @@ Two models share the card. Only one is resident at a time.
 | Model | Engine | Spec | Current C1 decode | Notes |
 | --- | --- | --- | ---: | --- |
 | **Muse Glimmer 30B GPTQ** | vLLM XPU | DFlash n=20, GPTQ draft | **89.1 / 101.1 / 42.6** tok/s (GSM8K / HumanEval / MT-Bench, greedy, until stop) | Moved to [muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70) |
-| Qwen3.8-27B GPTQ-Int4 | vLLM XPU | MTP-4, FP8 KV | **35.686** tok/s at 212k active context; **95.432** short-context reference | Default: 212,992-token C1, no KV offload |
+| Qwen3.8-27B GPTQ-Int4 | vLLM XPU | Native MTP-4, FP8 KV | **55.12** tok/s at 64K in the matched 2026-09-14 run | Default: 212,992-token C1, no KV offload; historical near-limit evidence in the golden-config doc |
 
 Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM stack is a different path (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
+
+## Current Qwen results — 2026-09-14
+
+One fresh forward/reverse campaign, identical workloads, twelve measured samples per configuration/context:
+
+| Context | Native MTP4 | Custom MTP4 | DFlash2 INT4 | DSpark Split-K |
+|---|---:|---:|---:|---:|
+|512|70.77|69.48|76.29|52.55|
+|8K|63.97|63.45|60.76|42.95|
+|32K|61.36|63.27|50.28|37.47|
+|64K|55.12|57.93|45.13|31.14|
+
+Median post-first streaming decode tok/s, B70/275W/C1. These compare selected best bundles with disclosed runtime/capacity/batch differences, not normalized algorithms. [Full matched speed results, IQRs, TTFT and exact commands](results/20260914-qwen38-four-way-speed/README.md). DFlash has the lowest64K whole-request latency for128 output tokens despite custom MTP4's faster decode.
+
+**Custom is not promoted:** the [full quality evaluation](results/20260913-qwen38-grouped-quality/README.md) found HumanEval+82.93% versus native84.76% (three fewer passes); runtime nondeterminism also exists. Quality neutrality is not established. The matched custom/native64K speed gain is **+5.11%**, not the earlier separate-run+8.85%.
+
+[Current session handoff and optional follow-up](docs/qwen38-b70-next-session.md) · [Unchanged production defaults](docs/qwen38-b70-golden-config.md). All tests are development-tier; production remains native MTP4 and is stopped after experiment cleanup.
 
 ## New Glimmer concurrency profile — 2026-09-05
 

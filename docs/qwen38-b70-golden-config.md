@@ -1,6 +1,8 @@
 # Qwen3.8-27B B70 default configuration
 
-Last verified: 2026-08-31 on `inference-host` (Intel Arc Pro B70, `xe`).
+Last full public-API semantics verification: 2026-08-31. Launcher contents/hash and idle host state rechecked 2026-09-14 on `inference-host` (Intel Arc Pro B70, `xe`); the service is currently stopped after experiment cleanup.
+
+Latest [matched four-way speed results](../results/20260914-qwen38-four-way-speed/README.md) and [full quality evaluation](../results/20260913-qwen38-grouped-quality/README.md) do not change this default. The custom grouped kernel remains experimental: +5.11% matched64K decode, but three fewer HumanEval+ passes versus native; do not promote yet. See [current handoff](qwen38-b70-next-session.md).
 
 ## Active default — 212,992-token C1, no KV offload
 
@@ -12,7 +14,7 @@ The persistent host launcher is `~/inference/launchers/start-qwen38.sh`, sourced
 - Context and scheduling: `max-model-len=212992`, `gpu-memory-utilization=0.95`, `max-num-seqs=1`, `max-num-batched-tokens=8192`, FP8 KV cache, prefix caching, and `mamba-cache-mode=align`.
 - Performance implementation: MTP-4; XPU graph; Draft-INT4 S+M1; v5 mixed split; the five patches run in this order: `patch_mtp_nightly.py`, `patch_mtp_boundary.py`, `patch_gdn_mixed_split_v5.py`, `patch_draft_lmhead_int4.py`, `patch_draft_mtp_int4.py`.
 - Environment: `B70_MTP_BF16_DRAFT=1`, `B70_DRAFT_LMHEAD_INT4=1`, `B70_DRAFT_MTP_INT4=1`, `VLLM_XPU_ENABLE_XPU_GRAPH=1`, `VLLM_TARGET_DEVICE=xpu`, `ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE`, `ZE_AFFINITY_MASK=0`, and `PYTORCH_ALLOC_CONF=expandable_segments:True`.
-- Power: `power/control=on`, Xe `power1_cap=230000000`.
+- Power: observed Xe `power1_cap=275000000` at 2026-09-14 closeout (the 2026-08-31 verification used230W). The launcher itself does not set the power cap; no power setting was changed during these campaigns.
 - **No KV offload:** no offload mount, `KV_XFER_CONFIG`, or KV-offload CLI flag is present.
 
 ### Output semantics and request defaults
