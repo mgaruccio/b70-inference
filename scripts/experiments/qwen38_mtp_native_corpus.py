@@ -32,6 +32,8 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import math
+import time
 import os
 from pathlib import Path
 import shlex
@@ -151,7 +153,7 @@ def synthetic_records(max_tokens):
          "chat_template_kwargs": {"enable_thinking": False}, "max_tokens": 1, "split": "train"},
     ]
 
-def trace_request(record, split, seed):
+def trace_request(record, split, seed, temperature=0.6):
     """Convert already-filtered local traces; declare the restricted four-tool profile."""
     if (not isinstance(record, dict)
             or set(record) != {"id", "source_group", "messages", "tools", "thinking"}
@@ -176,7 +178,7 @@ def trace_request(record, split, seed):
     return {"messages": record["messages"], "tools": tools, "split": split,
             "prompt_id": record["id"], "source_group": record["source_group"],
             "chat_template_kwargs": {"enable_thinking": record["thinking"]},
-            "temperature": 0.6, "top_p": 0.95, "top_k": 20, "seed": seed}
+            "temperature": temperature, "top_p": 0.95, "top_k": 20, "seed": seed}
 
 
 def validate_record(record, default_max_tokens):
@@ -225,7 +227,7 @@ def input_records(args, rt):
                 raise ValueError("private record size bound exceeded")
             record = json.loads(line)
             if getattr(args, "trace_split", None):
-                record = trace_request(record, args.trace_split, args.trace_seed)
+                record = trace_request(record, args.trace_split, args.trace_seed, args.trace_temperature)
             yield record
         if handle.read(1):
             raise ValueError("private corpus request bound exceeded")
@@ -243,14 +245,35 @@ def post(base_url, path, body, timeout):
             or parsed.query or parsed.fragment):
         raise ValueError("private corpus requires a loopback HTTP API (use an SSH tunnel if remote)")
     request = urllib.request.Request(base_url.rstrip("/") + path,
-                                     json.dumps(body).encode(), {"Content-Type": "application/json"})
+                                     None if body is None else json.dumps(body).encode(), {"Content-Type": "application/json"})
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
     with opener.open(request, timeout=timeout) as response:
         data = response.read(64 * 1024 * 1024 + 1)
     if len(data) > 64 * 1024 * 1024:
         raise ValueError("corpus API response bound exceeded")
-    return json.loads(data)
+    return data.decode() if body is None else json.loads(data)
 
+
+def metric_snapshot(base_url, timeout):
+    wanted = ("spec_decode_num_drafts_total", "spec_decode_num_draft_tokens_total",
+              "spec_decode_num_accepted_tokens_total", "spec_decode_num_accepted_tokens_per_pos_total",
+              "request_generation_tokens_sum", "request_decode_time_seconds_sum",
+              "request_prefill_time_seconds_sum", "time_to_first_token_seconds_sum",
+              "prefix_cache_hits_total", "prefix_cache_queries_total")
+    values = {}
+    for line in post(base_url, "/metrics", None, timeout).splitlines():
+        if not line.startswith("vllm:") or line.split("{", 1)[0][5:] not in wanted:
+            continue
+        key, value = line.rsplit(" ", 1)
+        value = float(value)
+        if not math.isfinite(value):
+            raise ValueError("nonfinite benchmark counter")
+        values[key] = value
+    return values
+
+
+def metric_total(values, name):
+    return sum(value for key, value in values.items() if key.split("{", 1)[0] == "vllm:" + name)
 
 def generate(args, rt):
     config = rt.load_json(args.server_config)
@@ -299,7 +322,11 @@ def generate(args, rt):
             if args.capture_dir:
                 directory = rt.private_directory(capture / key, create=True)
                 rt.save_json(directory / "control.json", control)
+            measured = getattr(args, "measure", False)
+            before = metric_snapshot(args.base_url, args.timeout) if measured else None
+            started = time.perf_counter()
             response = post(args.base_url, "/v1/chat/completions", body, args.timeout)
+            wall_seconds = time.perf_counter() - started
             rt.save_json(request_dir / "response.json", response)
             if (response.get("id") != "chatcmpl-" + key or len(response["choices"]) != 1
                     or response.get("prompt_token_ids") != prompt):
@@ -323,6 +350,23 @@ def generate(args, rt):
                 for name, value in metadata["acceptance_blocks"].items():
                     counts["acceptance_blocks"][name] += value
             counts["requests"] += 1
+            if measured:
+                deadline = time.monotonic() + 10
+                while True:
+                    after = metric_snapshot(args.base_url, args.timeout)
+                    delta = {key: after.get(key, 0.0) - before.get(key, 0.0) for key in after.keys() | before.keys()}
+                    accounted = metric_total(delta, "request_generation_tokens_sum")
+                    if accounted == len(generated):
+                        break
+                    if accounted > len(generated) or time.monotonic() >= deadline:
+                        raise ValueError("benchmark counters do not cover exactly this request")
+                    time.sleep(0.1)
+                if any(value < -1e-9 for value in delta.values()):
+                    raise ValueError("benchmark counters reset during request")
+                rt.save_json(request_dir / "measurement.json", dict(
+                    prompt_id=record.get("prompt_id", f"native-{index:06d}"),
+                    wall_seconds=wall_seconds, generated_tokens=len(generated),
+                    prompt_tokens=len(prompt), counters_before=before, counters_after=after, delta=delta))
             counts["prompt_tokens"] += len(prompt)
             counts["generated_tokens"] += len(generated)
             reason = choice["finish_reason"]
@@ -357,6 +401,8 @@ def main(argv=None):
     gen.add_argument("--min-response-tokens", type=int, default=1)
     gen.add_argument("--trace-split", choices=("train", "heldout"), help="Input is secret-filtered Pi trace JSONL; test split is never auto-selected")
     gen.add_argument("--trace-seed", type=int, default=42)
+    gen.add_argument("--trace-temperature", type=float, default=0.6)
+    gen.add_argument("--measure", action="store_true", help="Capture-off per-request latency and native counters")
     inputs = gen.add_mutually_exclusive_group(required=True)
     inputs.add_argument("--synthetic", action="store_true")
     inputs.add_argument("--records", type=Path)
@@ -368,6 +414,9 @@ def main(argv=None):
         command.add_argument("--max-total-tokens", type=int, default=131072)
         command.add_argument("--max-requests", type=int, default=1024)
     args = parser.parse_args(argv)
+    if args.command == "generate" and (not math.isfinite(args.trace_temperature)
+            or args.trace_temperature < 0 or (args.measure and args.capture_dir)):
+        parser.error("measure only with capture off; temperature must be finite and nonnegative")
     if args.command == "generate" and (not 3 <= args.sequence_limit <= 32768
             or not 1 <= args.min_response_tokens <= args.sequence_limit
             or (args.trace_split and not args.records)):

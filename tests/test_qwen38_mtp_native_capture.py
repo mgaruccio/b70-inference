@@ -359,11 +359,14 @@ def test_filtered_trace_profile_and_sequence_budget(rt, client, tmp_path, monkey
     args = NS(server_config=config, capture_dir=None, output=tmp_path / "out",
               base_url="http://127.0.0.1:8000", model="qwen38", synthetic=True, records=None,
               max_requests=16, max_total_tokens=100, max_tokens=20, timeout=1,
-              sequence_limit=8, min_response_tokens=2)
+              sequence_limit=8, min_response_tokens=2, measure=True)
     long = {**request, "messages": [{"role": "user", "content": "long"}]}
     monkeypatch.setattr(client, "input_records", lambda *a: iter([long, request]))
     chats = []
     def fake_post(base, path, body, timeout):
+        if path == "/metrics":
+            assert body is None
+            return f'vllm:request_generation_tokens_sum{{engine="0"}} {len(chats)}\n'
         if path == "/tokenize":
             return {"tokens": [11] * (7 if body["messages"][0]["content"] == "long" else 3)}
         chats.append(body)
@@ -375,6 +378,10 @@ def test_filtered_trace_profile_and_sequence_budget(rt, client, tmp_path, monkey
     assert counts["requests"] == 1 and counts["skipped_long"] == 1
     assert len(chats) == 1 and chats[0]["max_tokens"] == 5
     assert chats[0]["messages"] == trace["messages"]
+    measurement = rt.load_json(tmp_path / "out/request-000001/measurement.json")
+    assert measurement["wall_seconds"] >= 0
+    assert client.metric_total(measurement["delta"], "request_generation_tokens_sum") == 1
+    assert client.trace_request(trace, "heldout", 42, 0)["temperature"] == 0
 
 
 @pytest.mark.parametrize("capture", [False, True])
