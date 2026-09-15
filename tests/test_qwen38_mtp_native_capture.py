@@ -98,6 +98,19 @@ def read_step(rt, directory, i):
     return rt.torch.load(directory / f"step-{i:06d}.pt", weights_only=True)
 
 
+def test_async_round_after_output_cap_is_ignored(rt, tmp_path):
+    runner, directory = request_fixture(rt, tmp_path, maximum=1)
+    capture = rt.NativeCapture(tmp_path)
+    step(rt, capture, runner, 0, [11, 12, 13], [20], spec=False)
+    step(rt, capture, runner, 3, [20, 21, 22, 23, 24], [21], drafts=4)
+    # Another full async block exceeds the old prompt+max+4 bound.
+    step(rt, capture, runner, 4, [21, 22, 23, 24, 25], [22], drafts=4)
+    assert len(list(directory.glob("step-*.pt"))) == 2
+    result = rt.finalize_request(directory, [11, 12, 13], [20])
+    assert result["input_ids"].tolist() == [11, 12, 13, 20]
+    assert result["positions"].tolist() == [0, 1, 2]
+
+
 @pytest.mark.parametrize("m", [1, 3, 5])
 def test_exact_zero_partial_full_and_missing_terminal_hidden(rt, tmp_path, m):
     runner, directory = request_fixture(rt, tmp_path)
@@ -194,9 +207,8 @@ def test_capture_fail_closed(rt, tmp_path, bad):
     elif bad in ("mm", "lora"):
         setattr(runner.requests[runner.input_batch.req_ids[0]], "mm_features" if bad == "mm" else "lora_request", [1])
     elif bad == "bounds":
-        # A second full-accept block cannot fit the bounded candidate trajectory.
-        capture.step(runner, *vals)
-        vals = block(rt, runner, 8, [31, 32, 33, 34, 35], [32], 4)
+        # Before the output cap, reject a block exceeding the four-draft budget.
+        vals = block(rt, runner, 3, list(range(20, 30)), [21])
     elif bad == "sample-gap":
         vals[3].sampled_token_ids[0, 1] = -1
     elif bad == "draft-mismatch":

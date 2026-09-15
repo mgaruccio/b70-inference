@@ -199,6 +199,11 @@ class NativeCapture:
         active = self.active
         if active["control"] != control:
             raise ValueError("native capture control changed mid-request")
+        # Async scheduling can execute another round after the API output cap.
+        # Once every possible committed input row is observed, ignore that tail;
+        # it cannot add training positions and must not fail the next request.
+        if active["rows"] >= len(control["prompt_token_ids"]) + control["max_tokens"]:
+            return
         n = scheduler.num_scheduled_tokens.get(req_id, 0)
         if n < 1 or scheduler.num_scheduled_tokens != {req_id: n} or scheduler.total_num_scheduled_tokens != n:
             raise ValueError("invalid native capture scheduled rows")
