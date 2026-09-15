@@ -71,6 +71,33 @@ def _load_candidates(extract: Path) -> list[dict]:
     return [json.loads(path.read_text(encoding="utf-8")) for path in _candidate_files(extract)]
 
 
+def test_real_fork_paths_keep_cross_day_family_together_and_exclude_future_tools(tmp_path):
+    sessions = tmp_path / "sessions"
+    first, second, excluded = [sessions / name for name in ("first", "second", "excluded")]
+    for directory in (first, second, excluded):
+        directory.mkdir(parents=True)
+    parent = _write_session(first, "parent.jsonl", [
+        _header("parent"),
+        _message("u", "parent", "user", LONG_USER),
+        _message("a", "u", "assistant", [{"type": "toolCall", "id": "future",
+                                         "name": "unsupported_future_tool", "arguments": {}}]),
+    ])
+    child_header = _header("child", parent=str(parent), cwd="/synthetic/another-project")
+    child_header["timestamp"] = (OLD + timedelta(days=1)).isoformat()
+    _write_session(second, "child.jsonl", [child_header,
+        _message("cu", "child", "user", LONG_USER + " second"),
+        _message("ca", "cu", "assistant", "Excluded future answer"),
+    ])
+    (excluded / "do-not-read.jsonl").write_text("invalid unapproved source")
+    output = tmp_path / "extract"
+    result = corpus.extract(sessions, [first, second], output, now=NOW)
+    rows = _load_candidates(output)
+    assert result["sessions"] == 2 and result["skipped_invalid"] == 0
+    assert len(rows) == 2
+    assert len({row["source_group"] for row in rows}) == 1
+    assert all(len(row["messages"]) == 1 and row["tools"] == [] for row in rows)
+
+
 def test_extract_cli_uses_branch_ancestry_drops_thinking_and_pairs_tools(tmp_path: Path) -> None:
     sessions = tmp_path / "sessions"
     sessions.mkdir()

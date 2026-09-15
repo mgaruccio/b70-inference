@@ -60,21 +60,25 @@ def replace_once(text, old, new):
     return text.replace(old, new, 1)
 
 
-def launcher_text(original, out, capture, max_tokens, max_requests):
+def launcher_text(original, out, capture, max_tokens, max_requests, weights=None):
     import qwen38_mtp_reference as reference
 
     text = reference.launcher_text(original, out)  # Includes the persistent SHA guard.
     text = replace_once(text, "--no-enable-prefix-caching", "--enable-prefix-caching")
     text = replace_once(text, r'enable_thinking\":false', r'enable_thinking\":true')
     mounts = " -v " + shlex.quote(str(out / "native-patches") + ":/mtp-native:ro")
+    if weights is not None:
+        mounts += " -v " + shlex.quote(str(weights) + ":/mtp.safetensors:ro")
+        mounts += " -e B70_MTP_WEIGHTS=/mtp.safetensors"
     if capture:
         mounts += (" -e B70_MTP_NATIVE_CAPTURE_DIR=/profile/features"
                    f" -e B70_MTP_NATIVE_MAX_TOKENS={max_tokens}"
                    f" -e B70_MTP_NATIVE_MAX_REQUESTS={max_requests}")
     marker = "exec docker run --rm --name qwen38 --ipc=host"
     text = replace_once(text, marker, marker + mounts)
+    overlay = "python /mtp-native/patch_mtp_training.py; " if weights is not None else ""
     text = replace_once(text, "exec vllm serve /model ",
-                        "python /mtp-native/patch_mtp_native_capture.py; exec vllm serve /model ")
+                        overlay + "python /mtp-native/patch_mtp_native_capture.py; exec vllm serve /model ")
     # A temporary launcher and any shell redirections remain private.
     return text.replace("\n", "\numask 077\n", 1)
 
@@ -86,8 +90,14 @@ def prepare(args, rt):
     guard = args.guard.read_bytes()
     if hashlib.sha256(guard).hexdigest() != reference.dflash.probe.GUARD_SHA:
         raise ValueError("prefill guard mismatch")
+    weights = getattr(args, "weights", None)
+    weight_hash = None
+    if weights is not None:
+        weights = weights.absolute()
+        with rt._private_open(weights, "rb") as handle:
+            weight_hash = hashlib.file_digest(handle, "sha256").hexdigest()
     out = rt.private_directory(args.output, create=True)
-    text = launcher_text(original, out, args.capture, args.max_total_tokens, args.max_requests)
+    text = launcher_text(original, out, args.capture, args.max_total_tokens, args.max_requests, weights)
     source = rt.private_directory(out / "reference-source", create=True)
     source = rt.private_directory(source / "patches", create=True)
     native = rt.private_directory(out / "native-patches", create=True)
@@ -97,7 +107,7 @@ def prepare(args, rt):
         with rt._private_open(source / name, "wb") as handle:
             handle.write(data)
         hashes[name] = hashlib.sha256(data).hexdigest()
-    for name in ("patch_mtp_native_capture.py", "b70_mtp_native_capture.py"):
+    for name in ("patch_mtp_native_capture.py", "b70_mtp_native_capture.py", "patch_mtp_training.py", "b70_mtp_training.py"):
         data = (PATCHES / name).read_bytes()
         with rt._private_open(native / name, "wb") as handle:
             handle.write(data)
@@ -112,6 +122,7 @@ def prepare(args, rt):
         tier="development", image=reference.IMAGE, capture=args.capture,
         speculative_tokens=4, prefix_caching=True, thinking=True,
         context=212992, draft_quantization="existing S+M1 RTN INT4",
+        weights=str(weights) if weights is not None else "stock", weights_sha256=weight_hash,
         persistent_launcher_sha256=hashlib.sha256(original).hexdigest(),
         temporary_launcher_sha256=hashlib.sha256(text.encode()).hexdigest(),
         prefill_guard_sha256=hashlib.sha256(guard).hexdigest(), patch_sha256=hashes,
@@ -294,6 +305,7 @@ def main(argv=None):
     prep.add_argument("--launcher", type=Path, required=True)
     prep.add_argument("--guard", type=Path, required=True)
     prep.add_argument("--reference-patches", type=Path, required=True)
+    prep.add_argument("--weights", type=Path, help="Private native mtp-only BF16 overlay; stock target is never changed")
     capture = prep.add_mutually_exclusive_group(required=True)
     capture.add_argument("--capture", dest="capture", action="store_true")
     capture.add_argument("--no-capture", dest="capture", action="store_false")

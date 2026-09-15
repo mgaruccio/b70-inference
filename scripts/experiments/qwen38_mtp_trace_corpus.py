@@ -373,6 +373,9 @@ def _assign_session_groups(sessions: Sequence[_Session]) -> None:
         for session in sessions
         if counts[session.session_id] == 1
     }
+    # Pi stores fork parents as session-file paths, not only session IDs.
+    # Resolve exclusively against files already loaded from the allowlist.
+    by_path = {str(session.path.absolute()): session.session_id for session in by_id.values()}
 
     visiting: set[str] = set()
     finished: dict[str, str] = {}
@@ -387,7 +390,8 @@ def _assign_session_groups(sessions: Sequence[_Session]) -> None:
         session = by_id[session_id]
         visiting.add(session_id)
         if session.parent_session:
-            root = root_for(session.parent_session) if session.parent_session in by_id else ""
+            parent = by_path.get(session.parent_session, session.parent_session)
+            root = root_for(parent) if parent in by_id else ""
         else:
             root = session_id
         visiting.remove(session_id)
@@ -404,9 +408,10 @@ def _assign_session_groups(sessions: Sequence[_Session]) -> None:
             session.lineage_root = ""
             continue
         session.lineage_root = root
-        day = session.timestamp.date().isoformat()
-        # Hash all source identity; no source path or cwd is emitted.
-        source_key = f"{root}\0{session.header['cwd']}\0{day}".encode("utf-8")
+        # Forks on another day/project remain in the root family's split.
+        origin = by_id[root]
+        day = origin.timestamp.date().isoformat()
+        source_key = f"{root}\0{origin.header['cwd']}\0{day}".encode("utf-8")
         session.group = hashlib.sha256(source_key).hexdigest()[:32]
 
 
@@ -733,14 +738,8 @@ def _candidate_id(messages: Sequence[Mapping[str, Any]]) -> str:
 
 def _candidate_for_target(session: _Session, target: Mapping[str, Any], chain: Sequence[dict[str, Any]]) -> dict[str, Any] | None:
     try:
-        target_message = _message(target)
-        target_text, target_embedded = _extract_text(target_message.get("content"), allow_tool_calls=True)
-        target_calls = _raw_calls(target_message, target_embedded)
-        # Validate target output shape even though it is intentionally excluded.
-        for raw_call in target_calls:
-            _parse_tool_call(raw_call)
-        if not target_text and not target_calls:
-            return None
+        # The target response is not part of this prompt. Its future tool choice
+        # must not filter an otherwise valid context or leak into the dataset.
         user_index = -1
         for index in range(len(chain) - 1, -1, -1):
             entry = chain[index]
@@ -806,8 +805,9 @@ def extract(
     if not allow_roots:
         raise CorpusError("at least one allow root is required")
     allows = [_existing_dir(item) for item in allow_roots]
-    if not any(_is_within(root, allow) for allow in allows):
-        raise CorpusError("session root is outside the allowlist")
+    scopes = [root] if any(_is_within(root, allow) for allow in allows) else allows
+    if any(not _is_within(scope, root) for scope in scopes):
+        raise CorpusError("allow root is outside the session root")
 
     now = now or _dt.datetime.now(tz=_dt.timezone.utc)
     if now.tzinfo is None:
@@ -816,7 +816,7 @@ def extract(
     sessions: list[_Session] = []
     skipped_recent = 0
     skipped_invalid = 0
-    for path in _walk_jsonl(root):
+    for path in sorted({path for scope in scopes for path in _walk_jsonl(scope)}):
         try:
             session = _load_session(path)
         except SessionRejected:

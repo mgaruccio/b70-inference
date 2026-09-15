@@ -316,7 +316,8 @@ def test_actual_pinned_source_seam_and_api_contract():
 
 
 @pytest.mark.parametrize("capture", [False, True])
-def test_temporary_launcher_restores_production_flags_only(client, tmp_path, monkeypatch, capture):
+@pytest.mark.parametrize("overlay", [False, True])
+def test_temporary_launcher_restores_production_flags_only(client, tmp_path, monkeypatch, capture, overlay):
     monkeypatch.syspath_prepend(str(CLI.parent))
     import qwen38_mtp_reference as reference
     original = b'''#!/bin/bash
@@ -326,13 +327,17 @@ exec vllm serve /model --enable-prefix-caching --default-chat-template-kwargs "{
 '
 '''
     monkeypatch.setattr(reference.dflash.probe, "LAUNCHER_SHA", hashlib.sha256(original).hexdigest())
-    result = client.launcher_text(original, tmp_path, capture, 1234, 12)
+    result = client.launcher_text(original, tmp_path, capture, 1234, 12, tmp_path / "head.safetensors" if overlay else None)
     assert "--no-enable-prefix-caching" not in result
     assert "--enable-prefix-caching" in result
     assert r'enable_thinking\":true' in result
     assert "--no-async-scheduling" not in result
     assert "patch_mtp_native_capture.py" in result
     assert ("B70_MTP_NATIVE_CAPTURE_DIR" in result) is capture
+    assert ("B70_MTP_WEIGHTS=/mtp.safetensors" in result) is overlay
+    assert ("patch_mtp_training.py" in result) is overlay
+    if overlay:
+        assert result.index("patch_mtp_training.py") < result.index("patch_mtp_native_capture.py")
     subprocess.run(["bash", "-n"], input=result, text=True, check=True)
     with pytest.raises(RuntimeError, match="persistent"):
         client.launcher_text(original + b"# altered", tmp_path, capture, 1234, 12)
