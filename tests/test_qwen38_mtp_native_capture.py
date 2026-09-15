@@ -343,6 +343,40 @@ exec vllm serve /model --enable-prefix-caching --default-chat-template-kwargs "{
         client.launcher_text(original + b"# altered", tmp_path, capture, 1234, 12)
 
 
+def test_filtered_trace_profile_and_sequence_budget(rt, client, tmp_path, monkeypatch):
+    trace = {"id": "opaque", "source_group": "family", "messages": [{"role": "user", "content": "synthetic"}],
+             "tools": ["read"], "thinking": True}
+    request = client.trace_request(trace, "train", 17)
+    assert len(request["tools"]) == 4 and request["seed"] == 17
+    assert request["messages"] == trace["messages"]
+    assert request["chat_template_kwargs"] == {"enable_thinking": True}
+    client.validate_record(request, 20)
+    with pytest.raises(ValueError):
+        client.trace_request({**trace, "tools": ["unapproved"]}, "train", 17)
+    config = tmp_path / "config.json"
+    rt.save_json(config, dict(capture=False, speculative_tokens=4, prefix_caching=True,
+                             max_requests=16, max_total_tokens=100))
+    args = NS(server_config=config, capture_dir=None, output=tmp_path / "out",
+              base_url="http://127.0.0.1:8000", model="qwen38", synthetic=True, records=None,
+              max_requests=16, max_total_tokens=100, max_tokens=20, timeout=1,
+              sequence_limit=8, min_response_tokens=2)
+    long = {**request, "messages": [{"role": "user", "content": "long"}]}
+    monkeypatch.setattr(client, "input_records", lambda *a: iter([long, request]))
+    chats = []
+    def fake_post(base, path, body, timeout):
+        if path == "/tokenize":
+            return {"tokens": [11] * (7 if body["messages"][0]["content"] == "long" else 3)}
+        chats.append(body)
+        return {"id": "chatcmpl-" + body["request_id"], "prompt_token_ids": [11] * 3,
+                "choices": [{"token_ids": [20], "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 3, "completion_tokens": 1}}
+    monkeypatch.setattr(client, "post", fake_post)
+    counts = client.generate(args, rt)
+    assert counts["requests"] == 1 and counts["skipped_long"] == 1
+    assert len(chats) == 1 and chats[0]["max_tokens"] == 5
+    assert chats[0]["messages"] == trace["messages"]
+
+
 @pytest.mark.parametrize("capture", [False, True])
 def test_cli_synthetic_http_protocol(rt, tmp_path, capture):
     # Use the REAL CLI subprocess and HTTP transport; only the inference service

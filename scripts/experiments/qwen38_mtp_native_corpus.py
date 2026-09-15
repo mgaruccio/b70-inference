@@ -151,9 +151,36 @@ def synthetic_records(max_tokens):
          "chat_template_kwargs": {"enable_thinking": False}, "max_tokens": 1, "split": "train"},
     ]
 
+def trace_request(record, split, seed):
+    """Convert already-filtered local traces; declare the restricted four-tool profile."""
+    if (not isinstance(record, dict)
+            or set(record) != {"id", "source_group", "messages", "tools", "thinking"}
+            or type(record["thinking"]) is not bool or not isinstance(record["tools"], list)
+            or any(name not in ("bash", "read", "write", "replace") for name in record["tools"])):
+        raise ValueError("invalid filtered trace record")
+    string = {"type": "string"}
+    positive = {"type": "integer", "minimum": 1}
+    specs = [
+        ("bash", "Execute a bash command.", {"command": string, "timeout": {"type": "number"}}, ["command"]),
+        ("read", "Read a text file with edit anchors.", {"path": string, "offset": positive, "limit": positive}, ["path"]),
+        ("write", "Create or overwrite a text file.", {"path": string, "content": string}, ["path", "content"]),
+        ("replace", "Replace an inclusive range of text-file anchors.",
+         {"path": string, "remove_from": string, "remove_to": string,
+          "replacement_lines": {"type": "array", "items": string}},
+         ["path", "remove_from", "remove_to", "replacement_lines"]),
+    ]
+    tools = [{"type": "function", "function": {"name": name, "description": description,
+              "parameters": {"type": "object", "properties": properties,
+                             "required": required, "additionalProperties": False}}}
+             for name, description, properties, required in specs]
+    return {"messages": record["messages"], "tools": tools, "split": split,
+            "prompt_id": record["id"], "source_group": record["source_group"],
+            "chat_template_kwargs": {"enable_thinking": record["thinking"]},
+            "temperature": 0.6, "top_p": 0.95, "top_k": 20, "seed": seed}
+
 
 def validate_record(record, default_max_tokens):
-    if not isinstance(record, dict) or set(record) - CHAT - SAMPLING - {"tool_choice", "max_tokens", "split"}:
+    if not isinstance(record, dict) or set(record) - CHAT - SAMPLING - {"tool_choice", "max_tokens", "split", "prompt_id", "source_group"}:
         raise ValueError("unsupported corpus record fields")
     messages = record.get("messages")
     if not isinstance(messages, list) or not messages:
@@ -196,7 +223,10 @@ def input_records(args, rt):
                 return
             if len(line) > 8 * 1024 * 1024:
                 raise ValueError("private record size bound exceeded")
-            yield json.loads(line)
+            record = json.loads(line)
+            if getattr(args, "trace_split", None):
+                record = trace_request(record, args.trace_split, args.trace_seed)
+            yield record
         if handle.read(1):
             raise ValueError("private corpus request bound exceeded")
 
@@ -240,7 +270,7 @@ def generate(args, rt):
     ))
     for split in ("train", "heldout"):
         rt.private_directory(out / split, create=True)
-    counts = dict(requests=0, prompt_tokens=0, generated_tokens=0, observed_hidden_rows=0,
+    counts = dict(requests=0, skipped_long=0, prompt_tokens=0, generated_tokens=0, observed_hidden_rows=0,
                   useful_positions=0, acceptance_blocks=dict(zero=0, partial=0, full=0), finish_reasons={})
     reserved = 0
     try:
@@ -252,10 +282,16 @@ def generate(args, rt):
             body.update(model=args.model, stream=False, n=1, request_id=key,
                         cache_salt=uuid.uuid4().hex, return_token_ids=True)
             request_dir = rt.private_directory(out / f"request-{index:06d}", create=True)
-            rt.save_json(request_dir / "request.json", body)
             rendered = post(args.base_url, "/tokenize", {k: v for k, v in body.items() if k in CHAT | {"model"}}, args.timeout)
             rt.save_json(request_dir / "tokenize.json", rendered)
             prompt = rt.token_ids(rendered["tokens"])
+            remaining = getattr(args, "sequence_limit", rt.MAX_SEQUENCE_TOKENS) - len(prompt)
+            if remaining < getattr(args, "min_response_tokens", 1):
+                counts["skipped_long"] += 1
+                rt.save_json(request_dir / "skipped.json", {"reason": "complete_prompt_exceeds_training_budget"})
+                continue  # Never truncate a prompt or fabricate its missing prefix.
+            body["max_tokens"] = min(body["max_tokens"], remaining)
+            rt.save_json(request_dir / "request.json", body)
             control = rt.validate_control(dict(request_id=key, prompt_token_ids=prompt, max_tokens=body["max_tokens"]))
             reserved += len(prompt) + body["max_tokens"] + 4
             if reserved > min(args.max_total_tokens, config["max_total_tokens"]):
@@ -277,7 +313,9 @@ def generate(args, rt):
                 raise ValueError("API generation completion/usage mismatch")
             if args.capture_dir:
                 payload = rt.finalize_request(directory, prompt, generated)
-                payload["prompt_id"] = f"native-{index:06d}"
+                payload["prompt_id"] = record.get("prompt_id", f"native-{index:06d}")
+                if "source_group" in record:
+                    payload["metadata"]["source_group"] = record["source_group"]
                 rt.save_tensor(out / split / f"native-{index:06d}.pt", payload)
                 metadata = payload["metadata"]
                 counts["observed_hidden_rows"] += metadata["observed_hidden_length"]
@@ -315,6 +353,10 @@ def main(argv=None):
     gen.add_argument("--model", default="qwen38")
     gen.add_argument("--timeout", type=float, default=1800)
     gen.add_argument("--max-tokens", type=int, default=128)
+    gen.add_argument("--sequence-limit", type=int, default=32768)
+    gen.add_argument("--min-response-tokens", type=int, default=1)
+    gen.add_argument("--trace-split", choices=("train", "heldout"), help="Input is secret-filtered Pi trace JSONL; test split is never auto-selected")
+    gen.add_argument("--trace-seed", type=int, default=42)
     inputs = gen.add_mutually_exclusive_group(required=True)
     inputs.add_argument("--synthetic", action="store_true")
     inputs.add_argument("--records", type=Path)
@@ -326,6 +368,10 @@ def main(argv=None):
         command.add_argument("--max-total-tokens", type=int, default=131072)
         command.add_argument("--max-requests", type=int, default=1024)
     args = parser.parse_args(argv)
+    if args.command == "generate" and (not 3 <= args.sequence_limit <= 32768
+            or not 1 <= args.min_response_tokens <= args.sequence_limit
+            or (args.trace_split and not args.records)):
+        parser.error("invalid bounded trace generation options")
     try:
         rt = runtime()
         if not 1 <= args.max_total_tokens <= rt.MAX_TOTAL_TOKENS or not 1 <= args.max_requests <= rt.MAX_REQUESTS:
