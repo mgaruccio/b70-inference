@@ -2,6 +2,8 @@
 
 Updated 2026-09-14. Session work is complete; no benchmark or evaluator is left running. Production was not promoted or modified.
 
+> **Newer MTP-tuning follow-up:** [Acceptance-aligned validation plan](qwen38-mtp-acceptance-next-session.md) covers the completed million-position experiment, cached checkpoints, and the bounded dev-only diagnostic for the next session. The older speed/kernel results below remain historical context.
+
 ## Authoritative current results
 
 - **Matched four-way speed:** [results and protocol](../results/20260914-qwen38-four-way-speed/README.md), implementation/results commit `058f4ad9`. All four columns come from one forward/reverse eight-cell campaign, twelve samples per configuration/context. Do not substitute earlier three-way or custom-only measurements.
