@@ -2,6 +2,8 @@
 
 Prepared after the million-position experiment, results commit `129498f7`; cache-merger implementation `c3212a54`. **Executed 2026-09-18:** see the [acceptance-aligned dev result](../results/20260918-qwen38-mtp-acceptance-dev/README.md). LR 1e-6/final step 652 won the new greedy diagnostic; native acceptance trended +3.51% and decode +2.35%, but both confidence intervals include zero. Retain stock; no retraining or promotion. The original bounded plan is preserved below.
 
+**Fresh holdout follow-up:** the frozen step-652 head subsequently achieved acceptance **+5.17%** and decode **+4.08%**, with positive family-bootstrap intervals on **19 contexts / eight unused families** ([report](../results/20260918-qwen38-mtp-fresh-confirmation/README.md)). The user explicitly approved this smaller exploratory sample. All eight families are now consumed, including unselected contexts. Structural tool-call checks passed; functional quality remains unmeasured. No promotion or new training; stock remains configured.
+
 ## Original goal and next question
 
 > Improve speculative acceptance rate and resulting tokens/sec for the exact Qwen 27B quant + inference backend used locally.
