@@ -1,6 +1,6 @@
 # Next session: acceptance-aligned Qwen MTP validation
 
-Prepared after the million-position experiment, results commit `129498f7`; cache-merger implementation `c3212a54`. **Plan only: the diagnostics below have not been implemented or run.**
+Prepared after the million-position experiment, results commit `129498f7`; cache-merger implementation `c3212a54`. **Executed 2026-09-18:** see the [acceptance-aligned dev result](../results/20260918-qwen38-mtp-acceptance-dev/README.md). LR 1e-6/final step 652 won the new greedy diagnostic; native acceptance trended +3.51% and decode +2.35%, but both confidence intervals include zero. Retain stock; no retraining or promotion. The original bounded plan is preserved below.
 
 ## Original goal and next question
 
