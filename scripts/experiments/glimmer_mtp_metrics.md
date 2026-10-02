@@ -60,6 +60,17 @@ Grafana 12.1 / Prometheus, Tailscale. Real input: live capture/training logs.
 6. After training ends, stop only the temporary bridge. Preserve existing Needle
    metrics, dashboards and Prometheus storage. No experimental weights deleted.
 
+Observed 2026-10-02: the four targeted test files passed **165 tests** in the
+isolated CPU Docker runtime. `promtool check config` passed. Actual `/metrics`
+and Hermes reported `up=1`, source reachable 1 and phase 1 (teacher capture).
+Every dashboard PromQL expression returned success. Browser verification showed
+real Stage-0 losses/updates, selected-head validation acceptance, advancing main
+capture counters, working stage filtering and the 20-second refresh control.
+Artifacts: `monitoring/live-metrics.prom`, `panel-query-verification.json`,
+`grafana-live.png`, and `grafana-live-final.png` under the path above. The desktop
+Prometheus needed recreation (same storage/config) because its single-file bind
+mount retained the old inode after the configuration edit; SIGHUP alone did not
+load the new job. Existing Grafana/Needle services were not restarted.
 Official research: Grafana file provisioning loads version-controlled dashboards
 into the existing service, avoiding a parallel UI/store:
 https://grafana.com/tutorials/provision-dashboards-and-data-sources/
