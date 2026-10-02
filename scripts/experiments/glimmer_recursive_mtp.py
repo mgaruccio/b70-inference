@@ -22,6 +22,7 @@ import unicodedata
 MODEL = "meta-models/Muse-Glimmer-30B"
 REVISION = "a4e59da52a7bc87ae7251dd5545c0dd437c44b68"
 TRANSFORMERS_COMMIT = "35dff0957a99d50eaf85d7852a96fd29e59052d6"
+STATE_TRANSITION = "postnorm-gated-residual-v1"
 WEIGHTS = (1.0, 1.0, .8, .8, .5, .5, .5, .5)
 DEPTHS = (1, 2, 4, 8)
 VARIANTS = ("fixed-ce", "shared-ce", "shared-state")
@@ -34,6 +35,11 @@ FIXTURES = Path(__file__).with_name("glimmer_recursive_mtp.jsonl")
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def check_head_transition(checkpoint):
+    require(checkpoint.get("state_transition") == STATE_TRANSITION,
+            "head state-transition mismatch; repeated-norm pilot checkpoints must be retrained")
 
 
 def canonical(text):
@@ -104,8 +110,9 @@ def make_head(hidden_size, rank, shared, max_depth=8):
         def forward(self, state, embedding, norm):
             z = torch.cat((state.float(), embedding.float()), dim=-1)
             delta = self.up(torch.nn.functional.silu(self.down(z)))
-            # Use the actual frozen target final RMSNorm, including its learned scale.
-            return norm(state.float() + self.gate.sigmoid() * delta).to(state.dtype)
+            # Input/output live in the target's already-final-normalized space.
+            # Reapplying its signed learned norm breaks the zero-update identity.
+            return (state.float() + self.gate.sigmoid() * delta).to(state.dtype)
 
     class Head(nn.Module):
         def __init__(self):
@@ -514,6 +521,7 @@ def train_command(args):
         target.sync()
         target.assert_frozen()
         metadata = {**command_metadata(args), "environment": target.environment, "variant": variant,
+                    "state_transition": STATE_TRANSITION,
                     "rank": args.rank, "max_depth": 8, "depth_weights": WEIGHTS,
                     "state_weight": args.state_weight if variant == "shared-state" else 0.,
                     "kl_weight": args.kl_weight, "head_parameters": sum(p.numel() for p in head.parameters()),
@@ -523,6 +531,30 @@ def train_command(args):
         torch.save({**metadata, "head": {k: v.detach().cpu() for k, v in head.state_dict().items()}}, path)
         json_write(output / f"{variant}.json", {**metadata, "checkpoint_bytes": path.stat().st_size, "updates": log})
         del optimizer, head, states, tokens, loss
+
+
+def token_fidelity(reference, candidate):
+    first = next((i for i, (a, b) in enumerate(zip(reference, candidate)) if a != b),
+                 min(len(reference), len(candidate)) if len(reference) != len(candidate) else None)
+    return {"exact_token_identity": reference == candidate,
+            "first_divergence_position": first, "divergence_position_base": 0,
+            "baseline_generated_tokens": len(reference), "candidate_generated_tokens": len(candidate),
+            "generated_length_difference": len(candidate) - len(reference)}
+
+
+def check_pair_fidelity(pair, record_divergence=False):
+    pair.update(token_fidelity(pair["baseline"]["token_ids"], pair["candidate"]["token_ids"]))
+    require(pair["exact_token_identity"] or record_divergence,
+            "greedy identity failed; no retry or fallback permitted")
+
+
+def fidelity_summary(pairs):
+    divergent = [p for p in pairs if not p["exact_token_identity"]]
+    return {"exact_token_identity": not divergent,
+            "exact_match_rate": 1 - len(divergent) / len(pairs), "diverged_pairs": len(divergent),
+            "median_first_divergence_position": statistics.median(p["first_divergence_position"] for p in divergent)
+                if divergent else None,
+            "max_absolute_generated_length_difference": max(abs(p["generated_length_difference"]) for p in pairs)}
 
 
 def evaluate_command(args):
@@ -540,11 +572,13 @@ def evaluate_command(args):
         ckpt = torch.load(path, map_location="cpu", weights_only=True)
         require(ckpt.get("model") == MODEL and ckpt.get("revision") == REVISION and ckpt.get("max_depth") == 8,
                 "head model/revision/depth mismatch")
+        check_head_transition(ckpt)
         require(ckpt.get("variant") in VARIANTS, "unsupported head variant")
         check_heldout(ckpt["train_manifest"], evaluation)
         checkpoints.append((path, ckpt))
     target = GlimmerTarget(args.attention)
     report = {**command_metadata(args), "environment": target.environment, "status": "running",
+              "fidelity_policy": "record_divergence_diagnostic" if args.record_divergence else "strict_identity",
               "baseline": "same HF target, no speculation, same BF16/backend/prompt/output/EOS policy",
               "intentional_differences": "shared/unshared blocks, state loss, draft depth; equal data/updates NOT parameters",
               "performance_scope": "standalone synchronized HF development pilot; not production serving or DFlash comparison",
@@ -576,14 +610,13 @@ def evaluate_command(args):
                                 pair[mode] = decode(target, row["token_ids"], args.max_new_tokens,
                                     0 if mode == "baseline" else depth, None if mode == "baseline" else Drafter(head, target))
                                 pair[mode]["text"] = target.tokenizer.decode(pair[mode]["token_ids"])
-                            pair["exact_token_identity"] = pair["baseline"]["token_ids"] == pair["candidate"]["token_ids"]
-                            require(pair["exact_token_identity"], "greedy identity failed; no retry or fallback permitted")
+                            check_pair_fidelity(pair, args.record_divergence)
                             pair["decode_speedup"] = pair["baseline"]["decode_s"] / pair["candidate"]["decode_s"]
                             if repeat == 0:
                                 head.to(target.device)
                                 diagnostic = decode(target, row["token_ids"], args.max_new_tokens,
                                                     depth, Drafter(head, target), diagnostics=True)
-                                require(diagnostic["token_ids"] == pair["baseline"]["token_ids"], "diagnostic replay identity failed")
+                                require(diagnostic["token_ids"] == pair["candidate"]["token_ids"], "diagnostic replay identity failed")
                                 pair["drift_separate_untimed_replay"] = summarize_drift(diagnostic["drift"])
                                 pair["drift_raw"] = diagnostic["drift"]
                                 roots = [p["cache_before"] - len(row["token_ids"])
@@ -593,7 +626,8 @@ def evaluate_command(args):
                                 pair["chosen_path_drift_separate_diagnostic"] = summarize_drift(chosen_drift)
                                 pair["chosen_path_drift_raw"] = chosen_drift
                             json_write(args.output, report)
-                            print(f"{ckpt['variant']} d={depth} {row['id']} identity=OK accepted/pass="
+                            identity = "OK" if pair["exact_token_identity"] else "DIVERGED"
+                            print(f"{ckpt['variant']} d={depth} {row['id']} identity={identity} accepted/pass="
                                   f"{pair['candidate']['mean_accepted_drafts_per_pass']:.3f} "
                                   f"decode_ratio={pair['decode_speedup']:.3f}", flush=True)
                 del head
@@ -605,7 +639,8 @@ def evaluate_command(args):
                 passes = sum(p["candidate"]["verification_passes"] for p in group)
                 report["summary"].append({"variant": variant, "depth": depth, "pairs": len(group),
                     "median_paired_decode_speedup": statistics.median(p["decode_speedup"] for p in group),
-                    "accepted_drafts_per_pass": accepted / passes if passes else 0., "exact_token_identity": True})
+                    "accepted_drafts_per_pass": accepted / passes if passes else 0., **fidelity_summary(group)})
+        report["fidelity"] = fidelity_summary(report["pairs"])
         report["status"] = "complete"
     except Exception as exc:
         report["status"] = "failed"
@@ -641,6 +676,8 @@ def parser():
     evaluate.add_argument("--output", required=True)
     evaluate.add_argument("--max-new-tokens", type=int, choices=(64, 128), default=64)
     evaluate.add_argument("--repeats", type=int, default=1)
+    evaluate.add_argument("--record-divergence", action="store_true",
+                          help="diagnostic only: record output differences instead of aborting; verifier unchanged")
     for command in (capture, train, evaluate):
         command.add_argument("--attention", choices=("sdpa", "eager"), default="sdpa")
     return p

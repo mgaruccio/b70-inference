@@ -20,16 +20,20 @@ normalization), computes
 
 ```
 z = SiLU(D_d concat(hhat[t+d-1], embedding(x[t+d])))
-hhat[t+d] = frozen_target_final_norm(hhat[t+d-1] + sigmoid(g_d) * U_d z)
+hhat[t+d] = hhat[t+d-1] + sigmoid(g_d) * U_d z
 p(x[t+d+1]) = frozen_output_head(hhat[t+d]) with Glimmer multiplier and softcap
 ```
 
-The root is `hhat[t] = h[t]`; thereafter only predicted normalized hidden states
-are fed back. The residual is normalized with the actual frozen target final RMSNorm,
-including its learned channel scale. It is not an unnormalized residual and is not
-a second teacher hidden input. Blocks use FP32 parameters/computation, and feedback
-and LM-head input are cast to target BF16. The baseline has **eight different**
-blocks; both recursive variants reuse **one physical block**.
+The root is `hhat[t] = h[t]`; thereafter only predicted states in the target's
+**post-final-norm representation space** are fed back. The trunk's learned final
+RMSNorm is **not applied again**: its signed channel scale breaks residual identity
+and produced odd/even state flips in the first prototype. A zero residual update
+must preserve the state exactly. Blocks use FP32 parameters/computation; feedback
+and LM-head input are cast to target BF16. The baseline has eight different blocks;
+both recursive variants reuse one physical block. Checkpoints carry the
+`postnorm-gated-residual-v1` contract; old repeated-norm heads are refused and must
+be retrained. Saved teacher captures remain reusable because they contain genuine
+post-normalized target states.
 
 Three variants: `fixed-ce`, `shared-ce`, `shared-state`. Rank defaults to 64 (128
 also supported). All train depth 8; evaluate prefixes 1/2/4/8. The ordered windows,
@@ -78,10 +82,16 @@ below the target's SWA 2048. Saturated, truncated, static or unknown caches are
 refused. There is no cache-error retry or full-prefix generation fallback.
 
 The no-spec reference uses the same target and cache loop at depth zero. Each
-candidate is paired/interleaved with that baseline, with exact token-list equality
-required. A BF16 backend can produce batch-shape-dependent argmax differences:
-any observed difference fails the run rather than being called lossless. EOS is
-honored equally, so generated lengths can be below 64/128. No sampling claims.
+candidate is paired/interleaved with that baseline. **Strict identity is the default:**
+any observed token-list difference fails the run. BF16 batch-shape-dependent argmax
+differences were reproduced on the real A100 pilot, including with an identical
+cloned prior cache. The explicitly opt-in `--record-divergence` mode reports all
+pairs without asserting bitwise fidelity; it does not change drafting, target
+verification, rejection, or rollback. It records exact-match rate, zero-based first
+divergence position and generated-length differences. Diagnostic replay must still
+reproduce the measured **candidate** tokens; genuine chosen-path teacher states
+follow that candidate, not a divergent baseline. EOS is honored equally. No sampling
+or production/lossless claims are made for diagnostic results.
 
 ## Predefined real end-to-end process (lead execution)
 
@@ -99,7 +109,7 @@ In the dedicated GPU runtime's Bash shell, retain the exact environment and comm
 
 ```bash
 # Install only in the isolated GPU environment, retaining its CUDA PyTorch build.
-python -m pip install 'transformers @ git+https://github.com/huggingface/transformers@35dff0957a99d50eaf85d7852a96fd29e59052d6' accelerate safetensors sentencepiece
+python -m pip install 'transformers==5.15.1' accelerate safetensors sentencepiece
 RUN=/workspace/glimmer-pilot-20261002
 mkdir -p "$RUN"
 python -m pip freeze > "$RUN/pip-freeze.txt"
@@ -128,9 +138,11 @@ JSON records completed/partial pairs and a failure reason if execution fails aft
 setup. Setup/training errors remain in the shell logs. No automatic retries.
 
 Expected public-boundary results: successful capture and three final checkpoints;
-12 prompts x 4 depths x 3 variants = 144 measured A/B pairs; `status: complete`;
-all `exact_token_identity: true`. Acceptance may be zero and speedup may be below
-one—both are valid pilot findings, not reasons to choose a different checkpoint.
+12 prompts x 4 depths x 3 variants = 144 measured A/B pairs; `status: complete`.
+Strict mode additionally requires all `exact_token_identity: true`. For the separately
+approved numerical diagnostic, add `--record-divergence` and use a new output path;
+completion means the matrix ran, **not** that fidelity passed. Acceptance may be zero
+and speedup below one—both are valid pilot findings, not checkpoint-selection grounds.
 Clean up by downloading artifacts and terminating the GPU instance; do not keep
 inference servers or change production launchers. The lead reports the actual
 commands, instance/environment, artifact location, elapsed time, cost and failures.
@@ -174,6 +186,7 @@ Fresh primary-source research before implementation:
 * [Official pinned Glimmer config](https://huggingface.co/meta-models/Muse-Glimmer-30B/resolve/a4e59da52a7bc87ae7251dd5545c0dd437c44b68/config.json) and [architecture](https://huggingface.co/blog/muse-glimmer): 52 layers, width 6656, vocabulary 202048, hybrid SWA 2048.
 * [Inspected official model implementation](https://github.com/huggingface/transformers/blob/35dff0957a99d50eaf85d7852a96fd29e59052d6/src/transformers/models/muse_glimmer/modeling_muse_glimmer.py): text-only public forward, actual embedding normalization, final hidden norm, output multiplier and tanh softcap. Runtime projection check refuses incompatible hidden-state semantics.
 * [Cache docs](https://huggingface.co/docs/transformers/main/en/internal/generation_utils) and [inspected cache implementation](https://github.com/huggingface/transformers/blob/35dff0957a99d50eaf85d7852a96fd29e59052d6/src/transformers/cache_utils.py): rollback below sliding-window saturation; negative crop count avoids the deprecated positive absolute-length API.
+* [PyTorch 2.14 numerical accuracy](https://docs.pytorch.org/docs/2.14/notes/numerical_accuracy.html), freshly checked for the diagnostic continuation: batched and slice computations are not guaranteed bitwise-identical despite mathematical equivalence. This supports recording fidelity separately, not assuming every observed mismatch is harmless or changing target acceptance.
 
 Targeted CPU tests use an existing isolated Docker image, with the checkout read-only,
 no GPU or network, and no packages added to Pi:

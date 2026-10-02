@@ -367,3 +367,62 @@ def test_rejected_eos_draft_does_not_end_generation():
     assert run["token_ids"] == reference(prompt, 17)
     assert run["accepted_drafts"] == 0
     assert run["proposed_drafts"] == 16
+
+
+@pytest.mark.parametrize("reference,candidate,first", [
+    ([1, 2], [1, 2], None), ([1, 2], [1, 3], 1), ([1, 2], [1], 1),
+    ([1], [1, 2], 1), ([], [1], 0), ([1], [], 0), ([], [], None),
+])
+def test_token_fidelity_includes_length_only_divergence(reference, candidate, first):
+    result = pilot.token_fidelity(reference, candidate)
+    assert result["exact_token_identity"] == (reference == candidate)
+    assert result["first_divergence_position"] == first
+    assert result["divergence_position_base"] == 0
+    assert result["generated_length_difference"] == len(candidate) - len(reference)
+
+
+def test_divergence_recording_is_explicit_and_summary_never_claims_identity():
+    pair = {"baseline": {"token_ids": [1, 2]}, "candidate": {"token_ids": [1, 3, 4]}}
+    with pytest.raises(ValueError, match="greedy identity failed"):
+        pilot.check_pair_fidelity(pair)
+    pilot.check_pair_fidelity(pair, record_divergence=True)
+    assert pair["exact_token_identity"] is False
+    same = {"baseline": {"token_ids": [1, 2]}, "candidate": {"token_ids": [1, 2]}}
+    pilot.check_pair_fidelity(same)
+    summary = pilot.fidelity_summary([pair, same])
+    assert summary == {"exact_token_identity": False, "exact_match_rate": .5,
+                       "diverged_pairs": 1, "median_first_divergence_position": 1,
+                       "max_absolute_generated_length_difference": 1}
+
+
+def test_evaluate_parser_keeps_strict_default_and_opt_in_recording():
+    argv = ["evaluate", "--capture", "capture.pt", "--heads", "head.pt", "--output", "out.json"]
+    assert pilot.parser().parse_args(argv).record_divergence is False
+    assert pilot.parser().parse_args([*argv, "--record-divergence"]).record_divergence is True
+
+
+@pytest.mark.parametrize("shared", [False, True])
+@pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
+def test_zero_update_preserves_post_normalized_state_with_signed_norm(shared, dtype):
+    head = pilot.make_head(12, 4, shared)
+    signed_scale = torch.tensor([1., -1., 2., -2.] * 3)
+    raw = torch.randn(2, 12)
+    state = (raw * (raw.square().mean(-1, keepdim=True) + 1e-5).rsqrt() * signed_scale).to(dtype)
+    embedding = torch.randn_like(state)
+    with torch.no_grad():
+        for block in head.blocks:
+            block.up.weight.zero_()
+        def forbidden_norm(value):
+            raise AssertionError("the trunk final norm must not be reapplied")
+        for depth in range(1, 9):
+            state_after = head.step(state, embedding, depth, forbidden_norm)
+            assert torch.equal(state_after, state)
+            assert state_after.dtype == dtype
+            state = state_after
+
+
+@pytest.mark.parametrize("tag", [None, "repeated-target-norm", "unknown"])
+def test_old_or_unknown_state_transition_checkpoint_is_refused(tag):
+    with pytest.raises(ValueError, match="state-transition mismatch"):
+        pilot.check_head_transition({"state_transition": tag})
+    pilot.check_head_transition({"state_transition": pilot.STATE_TRANSITION})
