@@ -24,9 +24,9 @@ class TinyTokenizer:
     def encode(self, text, add_special_tokens=True):
         return ([0] if add_special_tokens else []) + [ord(c) % 29 + 1 for c in text[:12]]
 
-    def apply_chat_template(self, messages, tokenize, add_generation_prompt):
-        assert tokenize and add_generation_prompt
-        return [0, 2] + self.encode(messages[0]["content"], False) + [3]
+    def apply_chat_template(self, messages, tokenize, add_generation_prompt, return_dict):
+        assert tokenize and add_generation_prompt and return_dict
+        return {"input_ids": [0, 2] + self.encode(messages[0]["content"], False) + [3]}
 
     def decode(self, tokens):
         return " ".join(map(str, tokens))
@@ -231,11 +231,12 @@ def test_fixed_prompt_splits_categories_and_independence():
 def test_chat_tokenizes_template_once_without_duplicate_bos():
     calls = []
     tokenizer = SimpleNamespace(
-        apply_chat_template=lambda messages, **kwargs: calls.append((messages, kwargs)) or [1, 2, 3],
+        apply_chat_template=lambda messages, **kwargs: calls.append((messages, kwargs)) or {"input_ids": [1, 2, 3]},
         encode=lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("chat must not be re-encoded")))
     rows = [{"text": "user instruction", "prompt_format": "chat"}]
     assert pilot.tokenize_prompts(SimpleNamespace(tokenizer=tokenizer), rows)[0]["token_ids"] == [1, 2, 3]
-    assert calls == [([{"role": "user", "content": "user instruction"}], {"tokenize": True, "add_generation_prompt": True})]
+    assert calls == [([{"role": "user", "content": "user instruction"}],
+                      {"tokenize": True, "add_generation_prompt": True, "return_dict": True})]
 
 
 @pytest.mark.parametrize("update,depth", [(1, 2), (10000, 2), (10001, 4), (20000, 4), (20001, 8), (60000, 8)])

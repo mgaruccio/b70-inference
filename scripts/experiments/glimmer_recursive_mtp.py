@@ -605,8 +605,10 @@ def tokenize_prompts(target, rows):
     result = []
     for row in rows:
         if row["prompt_format"] == "chat":
-            ids = target.tokenizer.apply_chat_template(
-                [{"role": "user", "content": row["text"]}], tokenize=True, add_generation_prompt=True)
+            rendered = target.tokenizer.apply_chat_template(
+                [{"role": "user", "content": row["text"]}], tokenize=True,
+                add_generation_prompt=True, return_dict=True)
+            ids = rendered["input_ids"]
         else:
             ids = target.tokenizer.encode(row["text"], add_special_tokens=True)
         require(isinstance(ids, list) and ids and all(isinstance(t, int) for t in ids),
