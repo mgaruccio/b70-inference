@@ -1,0 +1,12 @@
+name: glimmer-mtp-download
+resources:
+  infra: shadeform
+  instance_type: massedcompute_A100-sxm4-80GB
+setup: |
+  set -euo pipefail
+  python3 -m venv "$HOME/mtp-env"
+  "$HOME/mtp-env/bin/pip" install 'huggingface-hub>=1,<2' safetensors
+run: |
+  set -euo pipefail
+  nvidia-smi
+  timeout 2400 "$HOME/mtp-env/bin/hf" download meta-models/Muse-Glimmer-30B --revision a4e59da52a7bc87ae7251dd5545c0dd437c44b68 --local-dir "$HOME/glimmer-model"

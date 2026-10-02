@@ -1,0 +1,13 @@
+name: glimmer-mtp-r1-download
+resources:
+  infra: shadeform
+  instance_type: massedcompute_A100-sxm4-80GB
+setup: |
+  set -euo pipefail
+  python3 -m venv "$HOME/mtp-env"
+  "$HOME/mtp-env/bin/pip" install 'torch==2.14.1+cu130' --index-url https://download.pytorch.org/whl/cu130
+  "$HOME/mtp-env/bin/pip" install 'transformers==5.15.1' 'accelerate==1.15.0' 'safetensors==0.8.0' 'pytest==9.1.1'
+run: |
+  set -euo pipefail
+  nvidia-smi
+  timeout 2400 "$HOME/mtp-env/bin/hf" download meta-models/Muse-Glimmer-30B --revision a4e59da52a7bc87ae7251dd5545c0dd437c44b68
