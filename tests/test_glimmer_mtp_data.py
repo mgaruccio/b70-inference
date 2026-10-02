@@ -255,3 +255,27 @@ def test_legacy_pt_path_is_rejected(tmp_path):
     path.write_bytes(b"not a capture")
     with pytest.raises(data.CaptureFormatError, match="index.json"):
         data.CapturedDataset(path)
+
+
+@pytest.mark.parametrize("output", [[[10, 11]], [[0, 2, 3, 10]]])
+def test_generation_refuses_missing_or_corrupted_input_prefix(output):
+    target = FakeTarget()
+    target.model.generate = lambda **kwargs: torch.tensor(output)
+    with pytest.raises(ValueError, match="padded input prefix"):
+        data._generate_batch(target, [[1, 2, 3]], 10, 0, {99}, torch)
+
+
+def test_generation_type_error_is_not_retried_with_changed_options():
+    target = FakeTarget()
+    calls = []
+
+    def fail(**kwargs):
+        calls.append(kwargs)
+        raise TypeError("generation failed")
+
+    target.model.generate = fail
+    with pytest.raises(TypeError, match="generation failed"):
+        data._generate_batch(target, [[1, 2, 3]], 10, 0, {99}, torch)
+    assert len(calls) == 1
+    assert calls[0]["use_cache"] is True
+    assert calls[0]["num_beams"] == 1

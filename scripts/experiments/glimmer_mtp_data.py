@@ -503,20 +503,7 @@ def _generate_batch(target, token_rows, max_new_tokens, pad_id, eos, torch):
     if eos:
         kwargs["eos_token_id"] = sorted(eos) if len(eos) > 1 else next(iter(eos))
     with torch.inference_mode():
-        try:
-            generated = model.generate(**kwargs)
-        except TypeError as exc:
-            # Keep the required true-position and attention arguments.  Only
-            # optional generation conveniences are removed for small fakes or
-            # older Transformers builds.
-            optional = ("return_dict_in_generate", "use_cache", "num_beams")
-            reduced = dict(kwargs)
-            for key in optional:
-                reduced.pop(key, None)
-            try:
-                generated = model.generate(**reduced)
-            except TypeError:
-                raise exc
+        generated = model.generate(**kwargs)
     if hasattr(generated, "sequences"):
         generated = generated.sequences
     elif isinstance(generated, Mapping) and "sequences" in generated:
@@ -532,13 +519,9 @@ def _generate_batch(target, token_rows, max_new_tokens, pad_id, eos, torch):
     for row, prompt in zip(rows, token_rows):
         row = [int(token) for token in row]
         padded = [int(pad_id)] * (width - len(prompt)) + prompt
-        if len(row) >= width and row[:width] == padded:
-            response = row[width:]
-        elif len(row) >= len(prompt) and row[:len(prompt)] == prompt:
-            response = row[len(prompt):]
-        else:
-            # Some small test doubles return only newly generated IDs.
-            response = row
+        _require(len(row) >= width and row[:width] == padded,
+                 "model.generate output does not retain the padded input prefix")
+        response = row[width:]
         result.append(response)
         padded_rows.append(padded)
     del input_ids, attention, position_ids, padded_rows
