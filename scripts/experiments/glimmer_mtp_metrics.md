@@ -32,8 +32,9 @@ removes live training/GPU gauges; it never replays cached values. Exporter failu
 is distinguished by Prometheus `up`. Observation age and log age are separate:
 a fresh observation does not imply an optimizer update.
 
-Capture token/root counts appear only after the real capture index is written.
-Sequence tokens include prompts; eligible response roots do not. Loss/updates
+Live split counts come from actual capture-progress log events; complete totals
+require the written index. Sequence tokens include prompts; eligible response
+roots do not. Loss/updates
 come from complete JSONL records; partial trailing writes are ignored. Tiny-fit
 teacher agreement is explicitly training-set diagnostic, not heldout acceptance.
 Stage-0 complete is not substantive experiment completion. Historical training

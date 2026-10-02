@@ -880,6 +880,9 @@ def capture_generated(args, target):
                     if summary["sequence_token_count"] >= budget:
                         summary["budget_overshoot"] = summary["sequence_token_count"] - budget
                     del states, root_positions
+                print(json.dumps({"event": "capture_progress", "capture_dir": str(output_dir.resolve()),
+                    "split": split, "sequence_token_count": summary["sequence_token_count"],
+                    "root_count": summary["root_count"], "budget": budget}), flush=True)
             if cursor >= len(split_rows) and summary["sequence_token_count"] < budget:
                 summary["status"] = "budget_insufficient_prompts_exhausted"
             elif summary["sequence_token_count"] >= budget:

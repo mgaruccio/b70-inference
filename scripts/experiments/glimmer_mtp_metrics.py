@@ -74,6 +74,26 @@ def snapshot(root):
         result['captures'].append({'stage': str(path.parent.relative_to(root)), 'mtime': path.stat().st_mtime,
                                    'status': data['status'], 'token_count': data.get('token_count'),
                                    'root_count': data.get('root_count'), 'splits': data.get('split_summaries', {})})
+    indexed = {c['stage'] for c in result['captures']}
+    progress = {}
+    for path in sorted(root.glob('**/capture.log')):
+        for line in tail(path).splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict) or event.get('event') != 'capture_progress':
+                continue
+            stage = str(Path(event['capture_dir']).relative_to(root))
+            if stage not in indexed:
+                progress.setdefault(stage, {})[event['split']] = event
+    for stage, splits in progress.items():
+        # Full totals require the committed index; split counters are actual live events.
+        result['captures'].append({'stage': stage, 'status': 'capturing',
+                                   'token_count': None, 'root_count': None, 'splits': splits})
+    if any(not c['stage'].startswith('stage0/') for c in result['captures']) or any(
+            not t['stage'].startswith('stage0/') for t in result['training']):
+        result['complete'] = False
     result['validation_reports'] = []
     for path in sorted(root.glob('**/validation.json')):
         data = read_json(path)

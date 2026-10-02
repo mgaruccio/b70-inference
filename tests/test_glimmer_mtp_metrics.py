@@ -56,6 +56,21 @@ class MetricsTests(unittest.TestCase):
         text = metrics.render(data)
         self.assertIn('mtp_validation_draft_acceptance{stage="stage0/selected-head",variant="selected-head"} 0.25', text)
         self.assertNotIn('mtp_train_loss', text)
+
+    def test_live_capture_counts_are_observed_not_completed_totals(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / 'stage0').mkdir()
+            (root / 'stage0/stage0-complete.json').write_text('{}')
+            event = {'event': 'capture_progress', 'capture_dir': str(root / 'capture'),
+                     'split': 'train', 'sequence_token_count': 100, 'root_count': 50, 'budget': 3000000}
+            (root / 'capture.log').write_text(json.dumps(event) + '\n')
+            with patch.object(metrics, 'active_commands', return_value=[]), patch.object(metrics.subprocess, 'run', side_effect=OSError):
+                data = metrics.snapshot(root)
+            text = metrics.render(data)
+            self.assertIn('mtp_capture_split_tokens{split="train",stage="capture"} 100', text)
+            self.assertNotIn('mtp_capture_sequence_tokens', text)
+            self.assertFalse(data['complete'])
     def test_nonfinite_and_missing_values_are_omitted(self):
         data = self.data(training=[{'stage': 'x', 'mtime': 1,
             'latest': {'variant': 'shared-ce', 'update': 1, 'loss': float('nan')}}])
