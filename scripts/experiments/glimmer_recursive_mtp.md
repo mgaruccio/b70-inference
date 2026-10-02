@@ -1,5 +1,140 @@
 # First frozen-Glimmer recursive MTP pilot
 
+## Additive substantive-training CLI (2026-10-02)
+
+The approved staged continuation is specified in
+[the training plan](../../.pi/plans/glimmer-mtp-training/plan.md). Its **$75 total**
+budget supersedes the historical $25 pilot budget below. GPU provisioning, Stage-0
+real-model checks, stage gates and final integration verification belong to the
+lead; the CLI does not provision hardware, train the trunk, or advance stages
+automatically. All measurements remain **development tier**.
+
+The original `validate`, `capture`, legacy `.pt` training, and evaluation paths
+remain available. Without new training options the legacy defaults are rank 64,
+depth 8, CE weight 1, KL weight 0, constant LR, and no validation/probes. The
+approved substantive commands explicitly select rank 128, depth 1, CE .25 +
+forward teacher KL 1 at temperature 1, and the 50,000-update LR horizon. Rank
+256 is supported for the manually authorized capacity check, not an automatic
+fallback. `prepare-prompts` and `capture-generated` lazily delegate to the sibling
+`glimmer_mtp_data.py`; only `index.json` and the historical `.pt` layout are accepted.
+
+### Training, resume and warm start
+
+- `--schedule-updates` is the cosine horizon, independent of `--updates`, the
+  requested stopping point. `--warmup-updates` linearly reaches the peak LR at
+  that update. Stopping at 20,000 against horizon 50,000 does not decay to zero
+  or restart the schedule when continuing to 50,000.
+- `--curriculum 2:10000,4:10000,8:40000` uses depth 2 for updates 1–10,000,
+  depth 4 for 10,001–20,000, then depth 8. Depth weights renormalize over active
+  steps. Token inputs remain teacher-forced; hidden feedback is always predicted
+  after the root. Teacher states and every target parameter are detached/frozen.
+- Single-arm runs save `checkpoint-last.pt` and validation-selected
+  `checkpoint-best.pt`; multi-arm runs use `<variant>-last.pt` and
+  `<variant>-best.pt`. Historical `<variant>.pt` and `<variant>.json` final names
+  remain available; the JSON summary links the ordinary JSONL progress log.
+  Best exists only after validation, never from training loss or test metrics.
+- Resume with `--capture ... --output-dir ... --resume ...-last.pt --updates N`.
+  Saved options reconstruct the run. Explicit conflicting overrides, changed
+  capture/prompts, unknown representations, an old non-resumable head, a best
+  checkpoint instead of last, or an extension beyond the fixed horizon fail.
+  Head, AdamW state, schedule cursor, Python/Torch/CUDA RNG and sampler cursor
+  are restored. Same-runtime CPU trajectories are tested bit-exact; CUDA behavior
+  must still be measured and any nondeterminism reported.
+- Sequential comparison recovery recognizes completed arm checkpoints and resumes
+  incomplete ones, starting only missing later arms. Every arm receives the same
+  seed, sampler order and common hyperparameters. `--init-head` requires a
+  one-step checkpoint of the same rank, representation and training corpus:
+  copy its block once for shared heads or independently into all eight blocks.
+  New arms get a fresh optimizer; resumed arms never do. Retain the unchanged
+  common initializer if any later arm has not started yet.
+- Keep the capture, the small `train-manifest.json`, checkpoint files and their
+  original run directory together. Manifests and sampled schedules are not copied
+  into every checkpoint. The sampler persists only its required resume state.
+  `<variant>-training.jsonl` and stdout contain losses, LR, root/loss-position
+  exposures, elapsed time, ETA and periodic validation/probe results. Exposures
+  are not reported as unique data. Checkpoints report actual parameter counts.
+
+### Validation and final test separation
+
+Checkpoint selection is fixed **before test**: minimize the arithmetic mean of
+teacher-to-head KL at temperature 1 over validation depths 1/2/4/8 up to the
+planned maximum training depth; keep the earliest tie. This same set of depths
+is evaluated throughout a curriculum. The default sample is 1,024 unique
+validation roots, capped at the actual available count, with independent seed
+314159 (`--validation-roots`, `--validation-seed`, and
+`--validation-batch-size` are explicit controls). Validation does not advance
+the optimization sampler or global RNG. Report sequence-token CE, teacher argmax
+agreement, teacher argmax recall in the head's top five, forward KL, RMS-normalized
+MSE/cosine distance, unnormalized MSE and predicted/teacher RMS at each depth.
+These teacher-forced metrics are **not** speculative acceptance.
+
+`--validation-every 1000` runs those metrics; `--probe-every 5000` with
+`--validation-prompts glimmer_mtp_validation.jsonl` runs the existing cached
+decoder at depth 1 on twelve fixed prompts, two per category. Accepted drafts
+exclude anchors, corrections and bonuses. Per-category counts and baseline
+fidelity are retained. `validate-head --split validation` runs both offline
+metrics and the cached probe; train/test root splits are refused. The lead
+applies the validation-acceptance continuation gate manually. Strict fidelity
+is the default for training probes, validation and evaluation; the approved
+`--record-divergence` flag only records differences and never changes acceptance.
+
+The new fixtures declare `split` (`validation` or `test`) and `prompt_format`:
+`chat` applies the official user-message template directly with `tokenize=True`
+and an assistant generation prompt, without re-encoding or adding another BOS;
+`raw` uses one ordinary tokenizer encoding with special tokens. The baseline
+and candidate use the identical resulting token IDs. These fixtures are distinct
+from each other and the old 36-sequence fixture, which is unchanged. Their
+family labels and exact-text checks do not claim semantic near-duplicate detection.
+
+`evaluate --eval-data glimmer_mtp_test.jsonl --diagnostic-prompts 6 --repeats 2
+--max-new-tokens 128` uses the sixty external test prompts (ten per category).
+With all three depth-8 heads it retains all 1,440 timed baseline/candidate pairs.
+The external path randomizes/interleaves heads, depths, prompts, repeats and A/B
+order using the recorded seed (`--eval-seed`, default 20261002). Six stratified
+prompts receive untimed state/distribution replay once per head/depth, not once
+per timing pair. Chosen-path top-1/top-5/KL and state norms are labelled separately
+from live rejected-prefix drift. Conditional acceptance is computed from actual
+verified accepted prefixes. Summaries include pooled/per-category fidelity and
+both all-pair and exact-output-only median speedups. Legacy evaluation without
+the new flags keeps its alternating order and all-prompt diagnostic replay.
+
+### Required lead-run Stage 0 (not performed by the CPU tests)
+
+Use the plan's dedicated official BF16 Glimmer runtime and small generated
+capture. Exercise `prepare-prompts`, `capture-generated`, `train`, minimal-flag
+`train --resume`, `validate-head`, and `evaluate` at their real CLI boundary.
+The tiny learning-path diagnostic can be requested with:
+
+```bash
+python "$P" train --capture "$RUN/capture/index.json" --output-dir "$RUN/overfit" \
+  --variants shared-ce --rank 128 --train-depth 1 --overfit-roots 64 \
+  --teacher-argmax-diagnostic --ce-weight 1 --kl-weight 0 --batch-size 64 \
+  --updates 1000 --checkpoint-every 100
+```
+
+This explicitly uses hard teacher-argmax labels only for the bounded diagnostic,
+not the substantive sequence-CE objective. Inspect the logged
+`training_set_diagnostic_NOT_validation`: require at least .95 first-step
+teacher-argmax agreement on all 64 unique roots within 1,000 updates, verify only
+head weights changed, then profile and apply the remaining manual gates. A low
+loss alone is not a pass. Retain generated capture/index, checkpoints, ordinary
+logs, environment and real validation/evaluation JSON as specified in the plan.
+No real-model result, training success or speedup is inferred from unit tests.
+
+Supplemental isolated CPU checks (no model download, network, GPU or Pi packages):
+
+```bash
+docker run --rm --network none --read-only --tmpfs /tmp \
+  -e PYTHONDONTWRITEBYTECODE=1 -e OMP_NUM_THREADS=1 \
+  -v "$PWD:/work:ro" -w /work --entrypoint python \
+  nvcr.io/nim/nvidia/kumo-relational:1.0.1 -m pytest -q -p no:cacheprovider \
+  tests/test_glimmer_recursive_mtp.py tests/test_glimmer_mtp_training.py
+python3 -S scripts/experiments/glimmer_recursive_mtp.py validate
+```
+
+The sections below describe the **historical commissioning pilot**, not its
+substantive training budget or the new validation-selected checkpoint protocol.
+
 **Development tier only.** This is the approved standalone pilot, not a serving-stack
 change, production speedup, DFlash comparison, sampled-decoding claim, or a
 standard-compliant benchmark under `BENCHMARKING_STANDARDS.md`. No persistent
