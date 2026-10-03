@@ -68,6 +68,28 @@ class MetricsTests(unittest.TestCase):
             with patch.object(metrics.Path, 'glob', return_value=processes):
                 self.assertEqual(metrics.active_commands(root), [['rsync', '--server', str(root) + '/capture/']])
 
+    def test_r2_restore_is_run_scoped_and_not_training(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / 'run'
+            restore = ['python3', '/code/glimmer_r2_restore.py', '--run-dir', str(root),
+                       '--manifest', str(root) + '/r2-private-manifest.json']
+            unrelated = ['python3', '/code/glimmer_r2_restore.py', '--run-dir', str(root) + '-other',
+                         '--manifest', str(root) + '-other/r2-private-manifest.json']
+            processes = []
+            for i, args in enumerate((restore, unrelated, ['ssh', 'host', *restore])):
+                proc = Path(d) / str(i); proc.mkdir()
+                (proc / 'cmdline').write_bytes(('\0'.join(args) + '\0').encode())
+                processes.append(proc)
+            with patch.object(metrics.Path, 'glob', return_value=processes):
+                self.assertEqual(metrics.active_commands(root), [restore])
+            text = metrics.render(self.data(active=True, commands=[restore], capture_file_bytes=42))
+            self.assertIn('mtp_phase 8\n', text)
+            self.assertIn('mtp_capture_file_bytes 42\n', text)
+            self.assertNotIn('mtp_train_update', text)
+            trainer = ['python3', '/code/glimmer_recursive_mtp.py', 'train', str(root) + '/stage1']
+            for commands in ([restore, trainer], [trainer, restore]):
+                self.assertIn('mtp_phase 2\n', metrics.render(self.data(active=True, commands=commands)))
+
     def test_diagnostic_is_not_validation_acceptance(self):
         data = self.data(training=[{'stage': 'stage0/overfit', 'mtime': 100,
              'latest': {'variant': 'shared-ce', 'update': 500, 'loss': 0.1,

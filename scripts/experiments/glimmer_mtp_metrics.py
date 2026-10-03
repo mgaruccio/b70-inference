@@ -37,7 +37,9 @@ def active_commands(root):
             args = proc.joinpath('cmdline').read_bytes().decode().strip('\0').split('\0')
             trainer = (args and 'python' in Path(args[0]).name
                        and any(a.endswith('/glimmer_recursive_mtp.py') for a in args))
-            transfer = args and Path(args[0]).name == 'rsync'
+            transfer = args and (Path(args[0]).name == 'rsync' or
+                                 ('python' in Path(args[0]).name
+                                  and any(a.endswith('/glimmer_r2_restore.py') for a in args)))
             if ((trainer or transfer)
                     and any(a.startswith(str(root) + '/') for a in args)):
                 commands.append(args)
@@ -156,7 +158,7 @@ def render(data, reachable=True):
     # 4=Stage-0 complete ONLY, 5=observed error, 8=restoring/transferring data.
     phase = 0
     for args in data['commands']:
-        if Path(args[0]).name == 'rsync':
+        if Path(args[0]).name == 'rsync' or any(a.endswith('/glimmer_r2_restore.py') for a in args):
             phase = max(phase, 8) if phase in (0, 8) else phase
         else:
             phase = 1 if 'capture-generated' in args else 2 if 'train' in args else 3
