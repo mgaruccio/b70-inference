@@ -713,6 +713,27 @@ def training_config(args, checkpoint=None):
     return config, updates
 
 
+def resume_environment_matches(saved, current):
+    """Same recorded stack/hardware; a replacement GPU may have a new UUID.
+
+    This is checkpoint portability, not a cross-host bitwise-identity guarantee.
+    Preserve the full unmodified environment in every checkpoint.
+    """
+    import csv
+
+    def comparable(environment):
+        result = dict(environment)
+        smi = result.get("nvidia_smi")
+        if isinstance(smi, str) and smi.strip():
+            rows = list(csv.reader(smi.strip().splitlines(), skipinitialspace=True))
+            require(rows and len(rows[0]) == 5 and rows[0][1].strip() == "uuid"
+                    and all(len(row) == 5 for row in rows), "unexpected recorded nvidia-smi schema")
+            result["nvidia_smi"] = [[value.strip() for i, value in enumerate(row) if i != 1]
+                                     for row in rows]
+        return result
+
+    return comparable(saved) == comparable(current)
+
 def rng_state():
     import torch
     return {"python": random.getstate(), "torch": torch.get_rng_state(),
@@ -1015,7 +1036,8 @@ def train_command(args):
         completed, root_exposures, loss_exposures, elapsed_before = 0, 0, 0, 0.
         best_score, best_update, last_validation, last_probe = None, None, None, None
         if previous:
-            require(previous["environment"] == target.environment, "resume requires the same recorded runtime/environment")
+            require(resume_environment_matches(previous["environment"], target.environment),
+                    "resume requires the same recorded runtime/environment (GPU UUID may differ)")
             head.load_state_dict(previous["head"], strict=True)
             optimizer.load_state_dict(previous["optimizer"])
             sampler.load_state_dict(previous["sampler"])
