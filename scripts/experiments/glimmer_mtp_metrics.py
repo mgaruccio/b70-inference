@@ -35,8 +35,10 @@ def active_commands(root):
     for proc in Path('/proc').glob('[0-9]*'):
         try:
             args = proc.joinpath('cmdline').read_bytes().decode().strip('\0').split('\0')
-            if (args and 'python' in Path(args[0]).name
-                    and any(a.endswith('/glimmer_recursive_mtp.py') for a in args)
+            trainer = (args and 'python' in Path(args[0]).name
+                       and any(a.endswith('/glimmer_recursive_mtp.py') for a in args))
+            transfer = args and Path(args[0]).name == 'rsync'
+            if ((trainer or transfer)
                     and any(a.startswith(str(root) + '/') for a in args)):
                 commands.append(args)
         except (OSError, UnicodeError):
@@ -51,6 +53,18 @@ def snapshot(root):
     commands = active_commands(root)
     result = {'observed_at': time.time(), 'active': bool(commands), 'commands': commands,
               'training': [], 'captures': [], 'complete': (root / 'stage0/stage0-complete.json').exists()}
+    # Physical bytes at the destination, not the copied index's completion flag.
+    capture_files = set(root.glob('capture/*.pt')) | set(root.glob('capture/.*.pt.*'))
+    shard_sizes = {}
+    for path in capture_files:
+        try:
+            name = path.name
+            if name.startswith('.'):
+                name = name[1:].split('.pt.', 1)[0] + '.pt'
+            shard_sizes[name] = max(shard_sizes.get(name, 0), path.stat().st_size)
+        except FileNotFoundError:
+            pass  # rsync can rename its partial file between glob and stat.
+    result['capture_file_bytes'] = sum(shard_sizes.values())
     # Bounded log reads; never load checkpoint tensors into the monitoring process.
     for path in sorted(root.glob('**/*-training.jsonl')):
         rows = []
@@ -139,16 +153,20 @@ def render(data, reachable=True):
     metric('observed_timestamp_seconds', data['observed_at'])
     metric('process_active', data['active'])
     # 0=stopped/idle (not proof of failure), 1=capture, 2=train, 3=validation/eval,
-    # 4=Stage-0 complete ONLY, 5=observed error with no active process.
+    # 4=Stage-0 complete ONLY, 5=observed error, 8=restoring/transferring data.
     phase = 0
     for args in data['commands']:
-        phase = 1 if 'capture-generated' in args else 2 if 'train' in args else 3
+        if Path(args[0]).name == 'rsync':
+            phase = max(phase, 8) if phase in (0, 8) else phase
+        else:
+            phase = 1 if 'capture-generated' in args else 2 if 'train' in args else 3
     if not data['active']:
         if data.get('latest_log_error'):
             phase = 5
         elif data['complete']:
             phase = 4
     metric('phase', phase)
+    metric('capture_file_bytes', data.get('capture_file_bytes'))
     metric('latest_log_timestamp_seconds', data.get('latest_log_at'))
     metric('latest_log_error', data.get('latest_log_error', False))
     for capture in data['captures']:

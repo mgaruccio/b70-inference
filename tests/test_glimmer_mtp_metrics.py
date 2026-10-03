@@ -29,6 +29,45 @@ class MetricsTests(unittest.TestCase):
         self.assertIn('mtp_phase 5\n', metrics.render(self.data(latest_log_error=True)))
         self.assertIn('mtp_phase 4\n', metrics.render(self.data(complete=True)))
 
+    def test_transfer_is_not_training_and_trainer_takes_priority(self):
+        transfer = ['rsync', '--server', '/run/capture/']
+        text = metrics.render(self.data(active=True, commands=[transfer], capture_file_bytes=42))
+        self.assertIn('mtp_phase 8\n', text)
+        self.assertIn('mtp_capture_file_bytes 42\n', text)
+        self.assertNotIn('mtp_train_update', text)
+        trainer = ['python', '/code/glimmer_recursive_mtp.py', 'train', '/run/stage1']
+        for commands in ([transfer, trainer], [trainer, transfer]):
+            self.assertIn('mtp_phase 2\n', metrics.render(self.data(active=True, commands=commands)))
+
+    def test_partial_restore_bytes_are_observed_without_loading_weights(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); capture = root / 'capture'; capture.mkdir()
+            (capture / 'shard.pt').write_bytes(b'123')
+            (capture / '.next.pt.partial').write_bytes(b'12345')
+            (capture / 'unrelated.txt').write_bytes(b'not counted')
+            with patch.object(metrics, 'active_commands', return_value=[]), patch.object(metrics.subprocess, 'run', side_effect=OSError):
+                self.assertEqual(metrics.snapshot(root)['capture_file_bytes'], 8)
+            (capture / '.shard.pt.retry').write_bytes(b'12')
+            with patch.object(metrics, 'active_commands', return_value=[]), patch.object(metrics.subprocess, 'run', side_effect=OSError):
+                self.assertEqual(metrics.snapshot(root)['capture_file_bytes'], 8)
+            (capture / '.shard.pt.retry').unlink()
+            (capture / '.next.pt.partial').unlink()
+            with patch.object(metrics, 'active_commands', return_value=[]), patch.object(metrics.subprocess, 'run', side_effect=OSError):
+                self.assertEqual(metrics.snapshot(root)['capture_file_bytes'], 3)
+
+    def test_only_run_scoped_rsync_is_active(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / 'run'
+            processes = []
+            for i, args in enumerate((['rsync', '--server', str(root) + '/capture/'],
+                                      ['rsync', '--server', str(root) + '-other/capture/'],
+                                      ['ssh', 'other-host', str(root) + '/capture/'])):
+                proc = Path(d) / str(i); proc.mkdir()
+                (proc / 'cmdline').write_bytes(('\0'.join(args) + '\0').encode())
+                processes.append(proc)
+            with patch.object(metrics.Path, 'glob', return_value=processes):
+                self.assertEqual(metrics.active_commands(root), [['rsync', '--server', str(root) + '/capture/']])
+
     def test_diagnostic_is_not_validation_acceptance(self):
         data = self.data(training=[{'stage': 'stage0/overfit', 'mtime': 100,
              'latest': {'variant': 'shared-ce', 'update': 500, 'loss': 0.1,
