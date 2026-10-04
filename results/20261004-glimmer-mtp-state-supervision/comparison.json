@@ -1,0 +1,181 @@
+{
+  "tier": "development",
+  "scope": "Matched one-step state-supervision ablation; not recursive success or a lossless serving claim",
+  "initialization": "same previously selected 48k checkpoint; both optimizers reset",
+  "selection": "minimum fixed-validation teacher KL; held-out test remains sealed",
+  "arms": {
+    "shared-ce": {
+      "updates": 10000,
+      "best_update": 10000,
+      "state_weight": 0.0,
+      "offline": {
+        "root_count": 1024,
+        "available_unique_roots": 107856,
+        "seed": 314159,
+        "token_policy": "teacher-forced; predicted hidden feedback after root",
+        "top5_definition": "teacher argmax in head top-5",
+        "per_depth": [
+          {
+            "depth": 1,
+            "sequence_ce": 1.806954079773277,
+            "teacher_argmax_agreement": 0.5830078125,
+            "teacher_top5_recall": 0.8349609375,
+            "teacher_kl": 1.5392657050397247,
+            "normalized_mse": 1.1095485780388117,
+            "cosine_distance": 0.5547742838971317,
+            "state_mse": 12.396776132285595,
+            "predicted_rms": 3.6583100613206625,
+            "teacher_rms": 2.8229890186339617
+          }
+        ],
+        "selection_definition": "minimum mean validation teacher KL (T=1), equal weight at fixed planned depths; earliest tie",
+        "selection_score": 1.5392657050397247,
+        "elapsed_s": 0.90575544599983,
+        "roots_per_s": 1130.5479912071014
+      },
+      "acceptance": 0.48828125,
+      "accepted_drafts": 250,
+      "proposed_drafts": 512,
+      "categories": [
+        {
+          "category": "code",
+          "prompts": 2,
+          "accepted_drafts": 43,
+          "proposed_drafts": 84,
+          "draft_acceptance_rate": 0.5119047619047619
+        },
+        {
+          "category": "high-entropy",
+          "prompts": 2,
+          "accepted_drafts": 35,
+          "proposed_drafts": 92,
+          "draft_acceptance_rate": 0.3804347826086957
+        },
+        {
+          "category": "prose",
+          "prompts": 2,
+          "accepted_drafts": 43,
+          "proposed_drafts": 85,
+          "draft_acceptance_rate": 0.5058823529411764
+        },
+        {
+          "category": "reasoning",
+          "prompts": 2,
+          "accepted_drafts": 45,
+          "proposed_drafts": 81,
+          "draft_acceptance_rate": 0.5555555555555556
+        },
+        {
+          "category": "repetitive",
+          "prompts": 2,
+          "accepted_drafts": 41,
+          "proposed_drafts": 86,
+          "draft_acceptance_rate": 0.47674418604651164
+        },
+        {
+          "category": "structured",
+          "prompts": 2,
+          "accepted_drafts": 43,
+          "proposed_drafts": 84,
+          "draft_acceptance_rate": 0.5119047619047619
+        }
+      ],
+      "fidelity": {
+        "exact_token_identity": true,
+        "exact_match_rate": 1.0,
+        "diverged_pairs": 0,
+        "median_first_divergence_position": null,
+        "max_absolute_generated_length_difference": 0
+      },
+      "exact_pairs": 12,
+      "median_decode_speedup_exact_pairs_only": 1.353290583989053
+    },
+    "shared-state": {
+      "updates": 10000,
+      "best_update": 10000,
+      "state_weight": 0.2,
+      "offline": {
+        "root_count": 1024,
+        "available_unique_roots": 107856,
+        "seed": 314159,
+        "token_policy": "teacher-forced; predicted hidden feedback after root",
+        "top5_definition": "teacher argmax in head top-5",
+        "per_depth": [
+          {
+            "depth": 1,
+            "sequence_ce": 1.804817431140691,
+            "teacher_argmax_agreement": 0.5859375,
+            "teacher_top5_recall": 0.8359375,
+            "teacher_kl": 1.5367511578369886,
+            "normalized_mse": 0.8553571556694806,
+            "cosine_distance": 0.42767857410945,
+            "state_mse": 13.185712814331055,
+            "predicted_rms": 4.34422604739666,
+            "teacher_rms": 2.8229890186339617
+          }
+        ],
+        "selection_definition": "minimum mean validation teacher KL (T=1), equal weight at fixed planned depths; earliest tie",
+        "selection_score": 1.5367511578369886,
+        "elapsed_s": 0.8947104180001588,
+        "roots_per_s": 1144.5043886812305
+      },
+      "acceptance": 0.4834307992202729,
+      "accepted_drafts": 248,
+      "proposed_drafts": 513,
+      "categories": [
+        {
+          "category": "code",
+          "prompts": 2,
+          "accepted_drafts": 43,
+          "proposed_drafts": 84,
+          "draft_acceptance_rate": 0.5119047619047619
+        },
+        {
+          "category": "high-entropy",
+          "prompts": 2,
+          "accepted_drafts": 34,
+          "proposed_drafts": 92,
+          "draft_acceptance_rate": 0.3695652173913043
+        },
+        {
+          "category": "prose",
+          "prompts": 2,
+          "accepted_drafts": 43,
+          "proposed_drafts": 85,
+          "draft_acceptance_rate": 0.5058823529411764
+        },
+        {
+          "category": "reasoning",
+          "prompts": 2,
+          "accepted_drafts": 44,
+          "proposed_drafts": 82,
+          "draft_acceptance_rate": 0.5365853658536586
+        },
+        {
+          "category": "repetitive",
+          "prompts": 2,
+          "accepted_drafts": 41,
+          "proposed_drafts": 86,
+          "draft_acceptance_rate": 0.47674418604651164
+        },
+        {
+          "category": "structured",
+          "prompts": 2,
+          "accepted_drafts": 43,
+          "proposed_drafts": 84,
+          "draft_acceptance_rate": 0.5119047619047619
+        }
+      ],
+      "fidelity": {
+        "exact_token_identity": true,
+        "exact_match_rate": 1.0,
+        "diverged_pairs": 0,
+        "median_first_divergence_position": null,
+        "max_absolute_generated_length_difference": 0
+      },
+      "exact_pairs": 12,
+      "median_decode_speedup_exact_pairs_only": 1.3541164964424688
+    }
+  },
+  "acceptance_delta": -0.004850450779727122
+}

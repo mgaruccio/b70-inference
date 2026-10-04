@@ -1,0 +1,103 @@
+{
+  "passed": true,
+  "initial_update": 48000,
+  "batch_size": 64,
+  "contract": "h[t] + embedding(token[t+1]) -> predicted h[t+1], predicts token[t+2]; teacher final-normalized states are detached",
+  "loss": 1.7282634973526,
+  "per_depth": [
+    {
+      "depth": 1,
+      "ce": 1.2556222677230835,
+      "normalized_mse": 1.0920804738998413,
+      "cosine_distance": 0.5460402369499207,
+      "teacher_kl": 1.0867338180541992
+    }
+  ],
+  "auxiliary_loss": 0.3276241421699524,
+  "frozen_teacher": true,
+  "finite_head_gradients": true,
+  "environment": {
+    "model": "meta-models/Muse-Glimmer-30B",
+    "revision": "a4e59da52a7bc87ae7251dd5545c0dd437c44b68",
+    "torch": "2.14.1+cu130",
+    "transformers": "5.15.1",
+    "cuda": "13.0",
+    "recommended_transformers_commit": "35dff0957a99d50eaf85d7852a96fd29e59052d6",
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "dtype": "bfloat16",
+    "attention": "sdpa",
+    "python": "3.10.13 (main, Sep 11 2023, 13:44:35) [GCC 11.2.0]",
+    "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.35",
+    "nvidia_smi": "name, uuid, driver_version, memory.total [MiB], power.limit [W]\nNVIDIA A100-SXM4-80GB, GPU-31cd254a-f2d3-369b-889d-afe2b59b0170, 580.126.09, 81920 MiB, 500.00 W\n"
+  },
+  "changed_environment_fields": [
+    "nvidia_smi"
+  ],
+  "prior_divergence_diagnostic": {
+    "exact": false,
+    "first_divergence": 57,
+    "prior_first_divergence": 57,
+    "lossless_claimed": false,
+    "baseline_verification": [
+      {
+        "next_position": 56,
+        "top2": [
+          1574,
+          368
+        ],
+        "margin": 21.09375
+      },
+      {
+        "next_position": 57,
+        "top2": [
+          6893,
+          1916
+        ],
+        "margin": 0.0625
+      },
+      {
+        "next_position": 58,
+        "top2": [
+          16877,
+          220
+        ],
+        "margin": 18.125
+      }
+    ],
+    "candidate_verification": [
+      {
+        "next_position": 56,
+        "top2": [
+          1574,
+          368
+        ],
+        "margin": 21.03125
+      },
+      {
+        "next_position": 57,
+        "top2": [
+          1916,
+          6893
+        ],
+        "margin": 0.0625
+      },
+      {
+        "next_position": 58,
+        "top2": [
+          1657,
+          847
+        ],
+        "margin": 0.1875
+      },
+      {
+        "next_position": 58,
+        "top2": [
+          8728,
+          7740
+        ],
+        "margin": 19.5625
+      }
+    ],
+    "same_prefix_before_divergence": true
+  }
+}
