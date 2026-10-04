@@ -1,0 +1,403 @@
+{
+  "tier": "development",
+  "scope": "Matched 2k-update control versus genuinely depth2-unrolled shared-block training; no production promotion",
+  "initialization": "same prior shared-state-norm 2k best checkpoint; fresh optimizers/schedules",
+  "comparison": "same updates and roots, intentionally twice the supervised loss positions at depth2; evaluate final update2000 for both",
+  "arms": {
+    "control-one-step": {
+      "updates": 2000,
+      "root_exposures": 128000,
+      "loss_position_exposures": 128000,
+      "trained_depth": 1,
+      "evaluated_update": 2000,
+      "state_weight": 0.2,
+      "state_norm_weight": 0.2,
+      "depths": [
+        {
+          "depth": 1,
+          "offline": [
+            {
+              "depth": 1,
+              "sequence_ce": 1.9107841741060838,
+              "teacher_argmax_agreement": 0.58203125,
+              "teacher_top5_recall": 0.8251953125,
+              "teacher_kl": 1.6401738657150418,
+              "normalized_mse": 0.874731405172497,
+              "cosine_distance": 0.4373657002579421,
+              "state_mse": 10.676871590316296,
+              "rms_ratio_error": 0.17190998641308397,
+              "predicted_rms": 3.820179892703891,
+              "teacher_rms": 2.8229890186339617
+            }
+          ],
+          "accepted_drafts": 252,
+          "proposed_drafts": 509,
+          "verification_passes": 509,
+          "mean_accepted_drafts_per_pass": 0.4950884086444008,
+          "conditional_acceptance": [
+            {
+              "depth": 1,
+              "eligible_accepted_prefixes": 509,
+              "accepted_drafts": 252,
+              "conditional_acceptance_rate": 0.4950884086444008
+            }
+          ],
+          "acceptance": 0.4950884086444008,
+          "fidelity": {
+            "exact_token_identity": true,
+            "exact_match_rate": 1.0,
+            "diverged_pairs": 0,
+            "median_first_divergence_position": null,
+            "max_absolute_generated_length_difference": 0
+          },
+          "diagnostic_median_decode_ratio_exact_pairs_only": 1.3206039406469654
+        },
+        {
+          "depth": 2,
+          "offline": [
+            {
+              "depth": 1,
+              "sequence_ce": 1.9107841741060838,
+              "teacher_argmax_agreement": 0.58203125,
+              "teacher_top5_recall": 0.8251953125,
+              "teacher_kl": 1.6401738657150418,
+              "normalized_mse": 0.874731405172497,
+              "cosine_distance": 0.4373657002579421,
+              "state_mse": 10.676871590316296,
+              "rms_ratio_error": 0.17190998641308397,
+              "predicted_rms": 3.820179892703891,
+              "teacher_rms": 2.8229890186339617
+            },
+            {
+              "depth": 2,
+              "sequence_ce": 6.612698148004711,
+              "teacher_argmax_agreement": 0.20703125,
+              "teacher_top5_recall": 0.4140625,
+              "teacher_kl": 6.302841724827886,
+              "normalized_mse": 1.0426769251935184,
+              "cosine_distance": 0.5213384586386383,
+              "state_mse": 19.13621674478054,
+              "rms_ratio_error": 0.6366501385346055,
+              "predicted_rms": 4.892550580203533,
+              "teacher_rms": 2.8236874658614397
+            }
+          ],
+          "accepted_drafts": 271,
+          "proposed_drafts": 968,
+          "verification_passes": 489,
+          "mean_accepted_drafts_per_pass": 0.5541922290388548,
+          "conditional_acceptance": [
+            {
+              "depth": 1,
+              "eligible_accepted_prefixes": 489,
+              "accepted_drafts": 238,
+              "conditional_acceptance_rate": 0.4867075664621677
+            },
+            {
+              "depth": 2,
+              "eligible_accepted_prefixes": 234,
+              "accepted_drafts": 33,
+              "conditional_acceptance_rate": 0.14102564102564102
+            }
+          ],
+          "acceptance": 0.2799586776859504,
+          "fidelity": {
+            "exact_token_identity": true,
+            "exact_match_rate": 1.0,
+            "diverged_pairs": 0,
+            "median_first_divergence_position": null,
+            "max_absolute_generated_length_difference": 0
+          },
+          "diagnostic_median_decode_ratio_exact_pairs_only": 1.3337438033591436
+        },
+        {
+          "depth": 4,
+          "offline": [
+            {
+              "depth": 1,
+              "sequence_ce": 1.9107841741060838,
+              "teacher_argmax_agreement": 0.58203125,
+              "teacher_top5_recall": 0.8251953125,
+              "teacher_kl": 1.6401738657150418,
+              "normalized_mse": 0.874731405172497,
+              "cosine_distance": 0.4373657002579421,
+              "state_mse": 10.676871590316296,
+              "rms_ratio_error": 0.17190998641308397,
+              "predicted_rms": 3.820179892703891,
+              "teacher_rms": 2.8229890186339617
+            },
+            {
+              "depth": 2,
+              "sequence_ce": 6.612698148004711,
+              "teacher_argmax_agreement": 0.20703125,
+              "teacher_top5_recall": 0.4140625,
+              "teacher_kl": 6.302841724827886,
+              "normalized_mse": 1.0426769251935184,
+              "cosine_distance": 0.5213384586386383,
+              "state_mse": 19.13621674478054,
+              "rms_ratio_error": 0.6366501385346055,
+              "predicted_rms": 4.892550580203533,
+              "teacher_rms": 2.8236874658614397
+            },
+            {
+              "depth": 4,
+              "sequence_ce": 14.847029130905867,
+              "teacher_argmax_agreement": 0.0703125,
+              "teacher_top5_recall": 0.1591796875,
+              "teacher_kl": 14.557489212602377,
+              "normalized_mse": 1.227566810324788,
+              "cosine_distance": 0.6137833972461522,
+              "state_mse": 68.5398630797863,
+              "rms_ratio_error": 5.03228691406548,
+              "predicted_rms": 8.755505871027708,
+              "teacher_rms": 2.820718267932534
+            }
+          ],
+          "accepted_drafts": 266,
+          "proposed_drafts": 1926,
+          "verification_passes": 494,
+          "mean_accepted_drafts_per_pass": 0.5384615384615384,
+          "conditional_acceptance": [
+            {
+              "depth": 1,
+              "eligible_accepted_prefixes": 494,
+              "accepted_drafts": 232,
+              "conditional_acceptance_rate": 0.46963562753036436
+            },
+            {
+              "depth": 2,
+              "eligible_accepted_prefixes": 228,
+              "accepted_drafts": 33,
+              "conditional_acceptance_rate": 0.14473684210526316
+            },
+            {
+              "depth": 3,
+              "eligible_accepted_prefixes": 33,
+              "accepted_drafts": 1,
+              "conditional_acceptance_rate": 0.030303030303030304
+            },
+            {
+              "depth": 4,
+              "eligible_accepted_prefixes": 1,
+              "accepted_drafts": 0,
+              "conditional_acceptance_rate": 0.0
+            }
+          ],
+          "acceptance": 0.13811007268951195,
+          "fidelity": {
+            "exact_token_identity": false,
+            "exact_match_rate": 0.8333333333333334,
+            "diverged_pairs": 2,
+            "median_first_divergence_position": 54.0,
+            "max_absolute_generated_length_difference": 0
+          },
+          "diagnostic_median_decode_ratio_exact_pairs_only": 1.2417490603996288
+        }
+      ]
+    },
+    "recurrent-two-step": {
+      "updates": 2000,
+      "root_exposures": 128000,
+      "loss_position_exposures": 256000,
+      "trained_depth": 2,
+      "evaluated_update": 2000,
+      "state_weight": 0.2,
+      "state_norm_weight": 0.2,
+      "depths": [
+        {
+          "depth": 1,
+          "offline": [
+            {
+              "depth": 1,
+              "sequence_ce": 1.9016335430787876,
+              "teacher_argmax_agreement": 0.568359375,
+              "teacher_top5_recall": 0.8193359375,
+              "teacher_kl": 1.6256494926055893,
+              "normalized_mse": 0.8883346877992153,
+              "cosine_distance": 0.4441673452965915,
+              "state_mse": 9.490262400358915,
+              "rms_ratio_error": 0.09551140235271305,
+              "predicted_rms": 3.5206493381410837,
+              "teacher_rms": 2.8229890186339617
+            },
+            {
+              "depth": 2,
+              "sequence_ce": 3.432812264189124,
+              "teacher_argmax_agreement": 0.3408203125,
+              "teacher_top5_recall": 0.6123046875,
+              "teacher_kl": 3.1154254507273436,
+              "normalized_mse": 1.0681435223668814,
+              "cosine_distance": 0.5340717595536262,
+              "state_mse": 15.002477146685123,
+              "rms_ratio_error": 0.30785158195067197,
+              "predicted_rms": 4.23903519846499,
+              "teacher_rms": 2.8236874658614397
+            }
+          ],
+          "accepted_drafts": 242,
+          "proposed_drafts": 519,
+          "verification_passes": 519,
+          "mean_accepted_drafts_per_pass": 0.4662813102119461,
+          "conditional_acceptance": [
+            {
+              "depth": 1,
+              "eligible_accepted_prefixes": 519,
+              "accepted_drafts": 242,
+              "conditional_acceptance_rate": 0.4662813102119461
+            }
+          ],
+          "acceptance": 0.4662813102119461,
+          "fidelity": {
+            "exact_token_identity": true,
+            "exact_match_rate": 1.0,
+            "diverged_pairs": 0,
+            "median_first_divergence_position": null,
+            "max_absolute_generated_length_difference": 0
+          },
+          "diagnostic_median_decode_ratio_exact_pairs_only": 1.3025760834649853
+        },
+        {
+          "depth": 2,
+          "offline": [
+            {
+              "depth": 1,
+              "sequence_ce": 1.9016335430787876,
+              "teacher_argmax_agreement": 0.568359375,
+              "teacher_top5_recall": 0.8193359375,
+              "teacher_kl": 1.6256494926055893,
+              "normalized_mse": 0.8883346877992153,
+              "cosine_distance": 0.4441673452965915,
+              "state_mse": 9.490262400358915,
+              "rms_ratio_error": 0.09551140235271305,
+              "predicted_rms": 3.5206493381410837,
+              "teacher_rms": 2.8229890186339617
+            },
+            {
+              "depth": 2,
+              "sequence_ce": 3.432812264189124,
+              "teacher_argmax_agreement": 0.3408203125,
+              "teacher_top5_recall": 0.6123046875,
+              "teacher_kl": 3.1154254507273436,
+              "normalized_mse": 1.0681435223668814,
+              "cosine_distance": 0.5340717595536262,
+              "state_mse": 15.002477146685123,
+              "rms_ratio_error": 0.30785158195067197,
+              "predicted_rms": 4.23903519846499,
+              "teacher_rms": 2.8236874658614397
+            }
+          ],
+          "accepted_drafts": 266,
+          "proposed_drafts": 978,
+          "verification_passes": 494,
+          "mean_accepted_drafts_per_pass": 0.5384615384615384,
+          "conditional_acceptance": [
+            {
+              "depth": 1,
+              "eligible_accepted_prefixes": 494,
+              "accepted_drafts": 216,
+              "conditional_acceptance_rate": 0.43724696356275305
+            },
+            {
+              "depth": 2,
+              "eligible_accepted_prefixes": 212,
+              "accepted_drafts": 50,
+              "conditional_acceptance_rate": 0.2358490566037736
+            }
+          ],
+          "acceptance": 0.2719836400817996,
+          "fidelity": {
+            "exact_token_identity": true,
+            "exact_match_rate": 1.0,
+            "diverged_pairs": 0,
+            "median_first_divergence_position": null,
+            "max_absolute_generated_length_difference": 0
+          },
+          "diagnostic_median_decode_ratio_exact_pairs_only": 1.3295703614418213
+        },
+        {
+          "depth": 4,
+          "offline": [
+            {
+              "depth": 1,
+              "sequence_ce": 1.9016335430787876,
+              "teacher_argmax_agreement": 0.568359375,
+              "teacher_top5_recall": 0.8193359375,
+              "teacher_kl": 1.6256494926055893,
+              "normalized_mse": 0.8883346877992153,
+              "cosine_distance": 0.4441673452965915,
+              "state_mse": 9.490262400358915,
+              "rms_ratio_error": 0.09551140235271305,
+              "predicted_rms": 3.5206493381410837,
+              "teacher_rms": 2.8229890186339617
+            },
+            {
+              "depth": 2,
+              "sequence_ce": 3.432812264189124,
+              "teacher_argmax_agreement": 0.3408203125,
+              "teacher_top5_recall": 0.6123046875,
+              "teacher_kl": 3.1154254507273436,
+              "normalized_mse": 1.0681435223668814,
+              "cosine_distance": 0.5340717595536262,
+              "state_mse": 15.002477146685123,
+              "rms_ratio_error": 0.30785158195067197,
+              "predicted_rms": 4.23903519846499,
+              "teacher_rms": 2.8236874658614397
+            },
+            {
+              "depth": 4,
+              "sequence_ce": 5.5924237463623285,
+              "teacher_argmax_agreement": 0.1435546875,
+              "teacher_top5_recall": 0.36328125,
+              "teacher_kl": 5.2177217192947865,
+              "normalized_mse": 1.246573164127767,
+              "cosine_distance": 0.6232865802012384,
+              "state_mse": 35.991685792803764,
+              "rms_ratio_error": 1.7912192456424236,
+              "predicted_rms": 6.380347523838282,
+              "teacher_rms": 2.820718267932534
+            }
+          ],
+          "accepted_drafts": 267,
+          "proposed_drafts": 1919,
+          "verification_passes": 493,
+          "mean_accepted_drafts_per_pass": 0.5415821501014199,
+          "conditional_acceptance": [
+            {
+              "depth": 1,
+              "eligible_accepted_prefixes": 493,
+              "accepted_drafts": 213,
+              "conditional_acceptance_rate": 0.43204868154158216
+            },
+            {
+              "depth": 2,
+              "eligible_accepted_prefixes": 209,
+              "accepted_drafts": 49,
+              "conditional_acceptance_rate": 0.23444976076555024
+            },
+            {
+              "depth": 3,
+              "eligible_accepted_prefixes": 49,
+              "accepted_drafts": 5,
+              "conditional_acceptance_rate": 0.10204081632653061
+            },
+            {
+              "depth": 4,
+              "eligible_accepted_prefixes": 5,
+              "accepted_drafts": 0,
+              "conditional_acceptance_rate": 0.0
+            }
+          ],
+          "acceptance": 0.13913496612819176,
+          "fidelity": {
+            "exact_token_identity": false,
+            "exact_match_rate": 0.8333333333333334,
+            "diverged_pairs": 2,
+            "median_first_divergence_position": 54.0,
+            "max_absolute_generated_length_difference": 0
+          },
+          "diagnostic_median_decode_ratio_exact_pairs_only": 1.2544818501818233
+        }
+      ]
+    }
+  }
+}
