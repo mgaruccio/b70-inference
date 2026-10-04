@@ -435,7 +435,7 @@ def test_sequential_three_arm_recovery_preserves_completed_and_missing_arms(runt
     monkeypatch.setattr(pilot, "save_checkpoint", save)
     pilot.train_command(train_args(index, resumed, "--resume", resumed / "shared-ce-last.pt", "--updates", 2))
     assert before == (resumed / "fixed-ce-last.pt").read_bytes()
-    for variant in pilot.VARIANTS:
+    for variant in pilot.TRAIN_DEFAULTS["variants"]:
         actual, expected = load(resumed / f"{variant}-last.pt"), load(full / f"{variant}-last.pt")
         for key in ("head", "optimizer", "sampler", "rng"):
             assert_nested_equal(actual[key], expected[key])
@@ -514,13 +514,13 @@ def test_external_evaluation_matrix_randomized_with_only_six_untimed_replays(run
         "--max-new-tokens", "128", "--repeats", "2", "--eval-seed", "90"])
     pilot.evaluate_command(args)
     report = reports[-1]
-    assert report["status"] == "complete" and len(report["pairs"]) == 3 * 4 * 60 * 2
-    assert len(replays) == sum(diagnostic for _, diagnostic in calls) == 3 * 4 * 6
+    assert report["status"] == "complete" and len(report["pairs"]) == len(heads) * 4 * 60 * 2
+    assert len(replays) == sum(diagnostic for _, diagnostic in calls) == len(heads) * 4 * 6
     assert report["randomized_interleaved"] and report["order_seed"] == 90
     assert len(report["diagnostic_prompt_ids"]) == 6
     assert len({p["variant"] for p in report["pairs"][:20]}) > 1
     assert {tuple(p["order"]) for p in report["pairs"]} == {("baseline", "candidate"), ("candidate", "baseline")}
-    assert len(report["summary"]) == 3 * 4 * 7
+    assert len(report["summary"]) == len(heads) * 4 * 7
     assert all(s["exact_output_pairs"] == s["pairs"] for s in report["summary"])
     first_order = [(p["variant"], p["depth"], p["repeat"], p["id"], p["order"]) for p in report["pairs"]]
     pilot.evaluate_command(args)

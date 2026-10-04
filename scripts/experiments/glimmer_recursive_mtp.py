@@ -27,7 +27,7 @@ TRANSFORMERS_COMMIT = "35dff0957a99d50eaf85d7852a96fd29e59052d6"
 STATE_TRANSITION = "postnorm-gated-residual-v1"
 WEIGHTS = (1.0, 1.0, .8, .8, .5, .5, .5, .5)
 DEPTHS = (1, 2, 4, 8)
-VARIANTS = ("fixed-ce", "shared-ce", "shared-state")
+VARIANTS = ("fixed-ce", "shared-ce", "shared-state", "shared-state-norm")
 CATEGORIES = {"code", "prose", "reasoning", "structured", "repetitive", "high-entropy"}
 # This bound includes prompt, generated output AND every uncommitted proposal.
 MAX_CONTEXT = 1792
@@ -148,12 +148,20 @@ def state_errors(predicted, teacher):
     return (p - t).square().mean(), (1 - F.cosine_similarity(p, t, dim=-1)).mean()
 
 
+def state_rms_error(predicted, teacher):
+    """Relative RMS error: scale-sensitive, FP32, with detached teacher targets."""
+    p, t = predicted.float(), teacher.detach().float()
+    ratio = ((p.square().mean(-1) + 1e-8) / (t.square().mean(-1) + 1e-8)).sqrt()
+    return (ratio - 1).square().mean()
+
 def training_loss(head, states, tokens, target, state_weight=0., kl_weight=0.,
-                  ce_weight=1., temperature=1., depth=8, teacher_argmax_diagnostic=False):
+                  ce_weight=1., temperature=1., depth=8, teacher_argmax_diagnostic=False,
+                  state_norm_weight=0.):
     """Teacher-forced tokens, predicted hidden feedback; sequence CE + forward KL."""
     import torch
     import torch.nn.functional as F
     require(depth in DEPTHS and temperature > 0, "invalid loss depth/temperature")
+    require(math.isfinite(state_norm_weight) and state_norm_weight >= 0, "invalid state norm weight")
     states = states.detach()
     state = states[:, 0]  # No teacher hidden state is fed after this root.
     loss, metrics = 0., []
@@ -169,14 +177,17 @@ def training_loss(head, states, tokens, target, state_weight=0., kl_weight=0.,
         labels = teacher_logits.argmax(-1) if teacher_argmax_diagnostic else tokens[:, d + 1]
         ce = F.cross_entropy(logits, labels)
         mse, cosine = state_errors(state, states[:, d])
+        norm_error = state_rms_error(state, states[:, d])
         kl = logits.new_zeros(())
         if kl_weight:
             kl = F.kl_div(F.log_softmax(logits / temperature, dim=-1),
                           F.softmax(teacher_logits / temperature, dim=-1),
                           reduction="batchmean") * temperature ** 2
-        loss = loss + weight * (ce_weight * ce + state_weight * (mse + cosine) + kl_weight * kl)
+        loss = loss + weight * (ce_weight * ce + state_weight * (mse + cosine)
+                                + kl_weight * kl + state_norm_weight * norm_error)
         metrics.append({"depth": d, "ce": float(ce.detach()), "normalized_mse": float(mse.detach()),
-                        "cosine_distance": float(cosine.detach()), "teacher_kl": float(kl.detach())})
+                        "cosine_distance": float(cosine.detach()), "teacher_kl": float(kl.detach()),
+                        "rms_ratio_error": float(norm_error.detach())})
     return loss / sum(WEIGHTS[:depth]), metrics
 
 
@@ -417,7 +428,8 @@ def summarize_drift(rows):
                 result[scope].append({"depth": d, "count": len(group),
                     **{key: statistics.mean(r[key] for r in group)
                        for key in ("normalized_mse", "cosine_distance", "teacher_argmax_agreement",
-                                   "teacher_top5_recall", "teacher_kl", "predicted_rms", "teacher_rms", "state_mse")
+                                   "teacher_top5_recall", "teacher_kl", "predicted_rms", "teacher_rms", "state_mse",
+                                   "rms_ratio_error")
                        if all(key in r for r in group)}})
     return result
 
@@ -455,6 +467,7 @@ def chosen_path_drift(target, head, prompt, generated, depth, root_offsets, dist
                     "predicted_rms": float(state.float().square().mean().sqrt()),
                     "teacher_rms": float(actual.float().square().mean().sqrt()),
                     "state_mse": float((state.float() - actual.float()).square().mean()),
+                    "rms_ratio_error": float(state_rms_error(state, actual)),
                 })
     return rows
 
@@ -657,7 +670,7 @@ def learning_rate(config, update):
 
 
 TRAIN_DEFAULTS = {
-    "variants": list(VARIANTS), "rank": 64, "batch_size": 4, "lr": 3e-4,
+    "variants": list(VARIANTS[:3]), "rank": 64, "batch_size": 4, "lr": 3e-4,
     "weight_decay": .01, "grad_clip": 1., "state_weight": .2, "ce_weight": 1.,
     "kl_weight": 0., "temperature": 1., "seed": 20261002, "train_depth": 8,
     "curriculum": None, "schedule_updates": 0, "warmup_updates": 0,
@@ -771,10 +784,15 @@ def load_head_checkpoint(path):
     return checkpoint
 
 
-def head_from_checkpoint(checkpoint, target):
+def head_from_checkpoint(checkpoint, target, evaluation_depth=None):
     width = getattr(target.config, "hidden_size", target.lm_head.weight.shape[1])
     require(checkpoint.get("hidden_size", 6656) == width, "head representation width mismatch")
-    head = make_head(width, checkpoint["rank"], checkpoint["variant"] != "fixed-ce", checkpoint["max_depth"])
+    depth = checkpoint["max_depth"] if evaluation_depth is None else evaluation_depth
+    require(depth in DEPTHS, "invalid evaluation depth")
+    shared = checkpoint["variant"] != "fixed-ce"
+    require(shared or depth <= checkpoint["max_depth"], "cannot extend untrained fixed-depth blocks")
+    # Extending a shared head changes only its call bound, never weights/training metadata.
+    head = make_head(width, checkpoint["rank"], shared, max(depth, checkpoint["max_depth"]))
     head.load_state_dict(checkpoint["head"], strict=True)
     return head
 
@@ -857,6 +875,7 @@ def offline_validation(target, head, dataset, depths, limit_roots=1024, batch_si
                         "teacher_kl": F.kl_div(F.log_softmax(logits, -1), F.softmax(teacher, -1), reduction="batchmean"),
                         "normalized_mse": mse, "cosine_distance": cosine,
                         "state_mse": (state.float() - states[:, d].float()).square().mean(),
+                        "rms_ratio_error": state_rms_error(state, states[:, d]),
                         "predicted_rms": state.float().square().mean(-1).sqrt().mean(),
                         "teacher_rms": states[:, d].float().square().mean(-1).sqrt().mean(),
                     }
@@ -877,20 +896,31 @@ def offline_validation(target, head, dataset, depths, limit_roots=1024, batch_si
             "elapsed_s": elapsed, "roots_per_s": count / elapsed}
 
 
-def validation_probe(target, head, rows, max_new_tokens=64, record_divergence=False):
+def validation_probe(target, head, rows, max_new_tokens=64, record_divergence=False, depth=1):
     import torch
     require(all(any(r["category"] == c for r in rows) for c in CATEGORIES), "empty probe category")
+    require(depth in DEPTHS, "invalid validation probe depth")
+    diagnostic_categories = set()
     results = []
     was_training = head.training
     try:
         with isolated_rng(), torch.inference_mode():
             head.eval()
             for row in rows:
-                context_guard(len(row["token_ids"]), max_new_tokens, 1)
+                context_guard(len(row["token_ids"]), max_new_tokens, depth)
                 pair = {"id": row["id"], "category": row["category"], "prompt_token_ids": row["token_ids"]}
                 pair["baseline"] = decode(target, row["token_ids"], max_new_tokens)
-                pair["candidate"] = decode(target, row["token_ids"], max_new_tokens, 1, Drafter(head, target))
+                pair["candidate"] = decode(target, row["token_ids"], max_new_tokens, depth, Drafter(head, target))
                 check_pair_fidelity(pair, record_divergence)
+                if depth > 1 and row["category"] not in diagnostic_categories:
+                    # One prompt/category, outside decode timing; final test stays sealed.
+                    roots = [p["cache_before"] - len(row["token_ids"])
+                             for p in pair["candidate"]["passes"]] or [0]
+                    drift = chosen_path_drift(target, head, row["token_ids"],
+                        pair["candidate"]["token_ids"], depth, roots, distribution_metrics=True)
+                    pair["chosen_path_drift_separate_diagnostic"] = summarize_drift(drift)
+                    pair["chosen_path_drift_raw"] = drift
+                    diagnostic_categories.add(row["category"])
                 results.append(pair)
     finally:
         head.train(was_training)
@@ -902,7 +932,10 @@ def validation_probe(target, head, rows, max_new_tokens=64, record_divergence=Fa
                            "proposed_drafts": proposed, "draft_acceptance_rate": accepted / proposed if proposed else 0.})
     accepted = sum(r["accepted_drafts"] for r in categories)
     proposed = sum(r["proposed_drafts"] for r in categories)
-    return {"depth": 1, "scope": "real cached validation decode; excludes anchor/correction/bonus",
+    passes = sum(r["candidate"]["verification_passes"] for r in results)
+    return {"depth": depth, "scope": "real cached validation decode; excludes anchor/correction/bonus",
+            "verification_passes": passes, "mean_accepted_drafts_per_pass": accepted / passes if passes else 0.,
+            "conditional_acceptance": conditional_acceptance(results, depth), "diagnostics_timed": False,
             "accepted_drafts": accepted, "proposed_drafts": proposed,
             "draft_acceptance_rate": accepted / proposed if proposed else 0.,
             "categories": categories, "pairs": results, "fidelity": fidelity_summary(results)}
@@ -1067,8 +1100,10 @@ def train_command(args):
                 require(len(states) == config["batch_size"], "sampler returned an incomplete training batch")
                 optimizer.zero_grad(set_to_none=True)
                 loss, per_depth = training_loss(head, states, tokens, target,
-                    config["state_weight"] if variant == "shared-state" else 0., config["kl_weight"],
-                    config["ce_weight"], config["temperature"], depth, config["teacher_argmax_diagnostic"])
+                    config["state_weight"] if variant in ("shared-state", "shared-state-norm") else 0.,
+                    config["kl_weight"], config["ce_weight"], config["temperature"], depth,
+                    config["teacher_argmax_diagnostic"],
+                    state_norm_weight=config["state_weight"] if variant == "shared-state-norm" else 0.)
                 require(torch.isfinite(loss).item(), "nonfinite training loss")
                 loss.backward()
                 grad_norm = torch.nn.utils.clip_grad_norm_(head.parameters(), config["grad_clip"], error_if_nonfinite=True)
@@ -1108,7 +1143,8 @@ def train_command(args):
                         "environment": target.environment, "training_config": config, "planned_updates": updates,
                         "variant": variant, "state_transition": STATE_TRANSITION, "rank": config["rank"],
                         "hidden_size": width, "max_depth": max_depth, "depth_weights": WEIGHTS,
-                        "state_weight": config["state_weight"] if variant == "shared-state" else 0.,
+                        "state_weight": config["state_weight"] if variant in ("shared-state", "shared-state-norm") else 0.,
+                        "state_norm_weight": config["state_weight"] if variant == "shared-state-norm" else 0.,
                         "ce_weight": config["ce_weight"], "kl_weight": config["kl_weight"],
                         "temperature": config["temperature"],
                         "objective": "teacher-argmax diagnostic" if config["teacher_argmax_diagnostic"] else
@@ -1150,14 +1186,21 @@ def validate_head_command(args):
     rows = read_prompt_records(args.validation_prompts, "validation")
     check_heldout(training, rows)
     check_heldout(split_manifest(captured_dataset(args.capture, "test"), "test"), rows)
+    probe_depth = getattr(args, "probe_depth", 1)
+    require(probe_depth in DEPTHS, "invalid validation probe depth")
+    require(checkpoint["variant"] != "fixed-ce" or probe_depth <= checkpoint["max_depth"],
+            "cannot extend untrained fixed-depth blocks")
     target = GlimmerTarget(args.attention)
-    head = head_from_checkpoint(checkpoint, target).to(target.device)
+    head = head_from_checkpoint(checkpoint, target, evaluation_depth=probe_depth).to(target.device)
+    evaluation_depths = [d for d in DEPTHS if d <= max(checkpoint["max_depth"], probe_depth)]
     report = {**command_metadata(args), "environment": target.environment, "head": args.head,
-              "selection_definition": SELECTION, "split": "validation"}
+              "selection_definition": SELECTION, "split": "validation",
+              "trained_depth": checkpoint["max_depth"], "evaluation_depths": evaluation_depths,
+              "checkpoint_selection_depths": [d for d in DEPTHS if d <= checkpoint["max_depth"]]}
     report["offline"] = offline_validation(target, head, dataset,
-        [d for d in DEPTHS if d <= checkpoint["max_depth"]], args.validation_roots, args.batch_size, args.seed)
+        evaluation_depths, args.validation_roots, args.batch_size, args.seed)
     report["probe"] = validation_probe(target, head, tokenize_prompts(target, rows),
-        args.max_new_tokens, args.record_divergence)
+        args.max_new_tokens, args.record_divergence, depth=probe_depth)
     target.assert_frozen()
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     json_write(args.output, report)
@@ -1387,6 +1430,8 @@ def parser():
     validation = sub.add_parser("validate-head", help="fixed validation roots plus real cached depth-1 probe")
     validation.add_argument("--capture", required=True)
     validation.add_argument("--head", required=True)
+    validation.add_argument("--probe-depth", type=int, choices=DEPTHS, default=1,
+                            help="validation recursion depth; shared heads can be probed beyond trained depth")
     validation.add_argument("--split", choices=("validation",), default="validation")
     validation.add_argument("--output", required=True)
     validation.add_argument("--validation-prompts", default=str(Path(__file__).with_name("glimmer_mtp_validation.jsonl")))
