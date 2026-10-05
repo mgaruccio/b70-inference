@@ -377,10 +377,11 @@ def test_resume_refuses_override_capture_and_old_checkpoint(runtime, tmp_path):
 @pytest.mark.parametrize("variant", pilot.VARIANTS)
 def test_warm_start_copies_one_block_without_sharing_independent_storage(variant):
     source = pilot.make_head(12, 128, True, 1)
-    destination = pilot.make_head(12, 128, variant != "fixed-ce", 8)
+    destination = pilot.make_head(12, 128, variant != "fixed-ce", 8,
+                                  alternating=variant == "alternating-state-norm")
     ckpt = checkpoint(source, rank=128)
     pilot.initialize_head(destination, ckpt, 128, 12)
-    assert len(destination.blocks) == (8 if variant == "fixed-ce" else 1)
+    assert len(destination.blocks) == (8 if variant == "fixed-ce" else (2 if variant == "alternating-state-norm" else 1))
     for block in destination.blocks:
         assert_nested_equal(source.blocks[0].state_dict(), block.state_dict())
         assert block.up.weight.data_ptr() != source.blocks[0].up.weight.data_ptr()
@@ -527,7 +528,8 @@ def test_external_evaluation_matrix_randomized_with_only_six_untimed_replays(run
     heads = []
     for variant in pilot.VARIANTS:
         path = tmp_path / f"{variant}.pt"
-        torch.save(checkpoint(pilot.make_head(12, 64, variant != "fixed-ce"), variant, 8), path)
+        torch.save(checkpoint(pilot.make_head(12, 64, variant != "fixed-ce",
+            alternating=variant == "alternating-state-norm"), variant, 8), path)
         heads.append(str(path))
     calls, replays, reports = [], [], []
 

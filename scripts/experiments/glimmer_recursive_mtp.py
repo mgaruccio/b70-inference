@@ -27,7 +27,7 @@ TRANSFORMERS_COMMIT = "35dff0957a99d50eaf85d7852a96fd29e59052d6"
 STATE_TRANSITION = "postnorm-gated-residual-v1"
 WEIGHTS = (1.0, 1.0, .8, .8, .5, .5, .5, .5)
 DEPTHS = (1, 2, 4, 8)
-VARIANTS = ("fixed-ce", "shared-ce", "shared-state", "shared-state-norm")
+VARIANTS = ("fixed-ce", "shared-ce", "shared-state", "shared-state-norm", "alternating-state-norm")
 CATEGORIES = {"code", "prose", "reasoning", "structured", "repetitive", "high-entropy"}
 # This bound includes prompt, generated output AND every uncommitted proposal.
 MAX_CONTEXT = 1792
@@ -98,10 +98,11 @@ def context_guard(prompt_length, max_new_tokens, depth, limit=MAX_CONTEXT):
             "prompt + output + speculative margin must fit below SWA 2048 (pilot limit 1792)")
 
 
-def make_head(hidden_size, rank, shared, max_depth=8):
+def make_head(hidden_size, rank, shared, max_depth=8, *, alternating=False):
     """Only the small blocks are registered: no target weights in the checkpoint."""
     import torch
     from torch import nn
+    require(not alternating or shared, "alternating head must use recurrent blocks")
 
     class Block(nn.Module):
         def __init__(self):
@@ -121,11 +122,14 @@ def make_head(hidden_size, rank, shared, max_depth=8):
     class Head(nn.Module):
         def __init__(self):
             super().__init__()
-            self.blocks = nn.ModuleList([Block() for _ in range(1 if shared else max_depth)])
+            self.alternating = alternating
+            count = 2 if alternating else (1 if shared else max_depth)
+            self.blocks = nn.ModuleList([Block() for _ in range(count)])
 
         def step(self, state, embedding, depth, norm):
             require(1 <= depth <= max_depth, "head depth out of range")
-            return self.blocks[0 if shared else depth - 1](state, embedding, norm)
+            index = (depth - 1) % 2 if alternating else (0 if shared else depth - 1)
+            return self.blocks[index](state, embedding, norm)
 
     return Head()
 
@@ -792,7 +796,8 @@ def head_from_checkpoint(checkpoint, target, evaluation_depth=None):
     shared = checkpoint["variant"] != "fixed-ce"
     require(shared or depth <= checkpoint["max_depth"], "cannot extend untrained fixed-depth blocks")
     # Extending a shared head changes only its call bound, never weights/training metadata.
-    head = make_head(width, checkpoint["rank"], shared, max(depth, checkpoint["max_depth"]))
+    head = make_head(width, checkpoint["rank"], shared, max(depth, checkpoint["max_depth"]),
+                     alternating=checkpoint["variant"] == "alternating-state-norm")
     head.load_state_dict(checkpoint["head"], strict=True)
     return head
 
@@ -801,8 +806,14 @@ def initialize_head(head, checkpoint, rank, width):
     check_head_transition(checkpoint)
     require(checkpoint["rank"] == rank, "init-head rank mismatch")
     require(checkpoint.get("hidden_size", 6656) == width, "init-head representation width mismatch")
-    require(checkpoint["max_depth"] == 1 or (checkpoint["variant"] != "fixed-ce" and len(head.blocks) == 1),
-            "init-head must be a one-step checkpoint or a shared recursive checkpoint for a single-block head")
+    alternating = getattr(head, "alternating", False)
+    if checkpoint["variant"] == "alternating-state-norm":
+        require(alternating, "alternating checkpoint requires an alternating head")
+        head.load_state_dict(checkpoint["head"], strict=True)
+        return
+    require(checkpoint["max_depth"] == 1 or (checkpoint["variant"] != "fixed-ce"
+            and (len(head.blocks) == 1 or alternating)),
+            "init-head must be a one-step checkpoint or a shared recursive checkpoint for a single-block or alternating head")
     block = {k[len("blocks.0."):]: v for k, v in checkpoint["head"].items() if k.startswith("blocks.0.")}
     require(len(block) == len(checkpoint["head"]), "init-head must contain exactly one block")
     for destination in head.blocks:
@@ -1062,7 +1073,8 @@ def train_command(args):
                 continue
         random.seed(config["seed"])
         torch.manual_seed(config["seed"])
-        head = make_head(width, config["rank"], variant != "fixed-ce", max_depth).to(target.device)
+        head = make_head(width, config["rank"], variant != "fixed-ce", max_depth,
+                         alternating=variant == "alternating-state-norm").to(target.device)
         if init:
             initialize_head(head, init, config["rank"], width)
         optimizer = torch.optim.AdamW(head.parameters(), lr=config["lr"], weight_decay=config["weight_decay"])
@@ -1101,10 +1113,10 @@ def train_command(args):
                 require(len(states) == config["batch_size"], "sampler returned an incomplete training batch")
                 optimizer.zero_grad(set_to_none=True)
                 loss, per_depth = training_loss(head, states, tokens, target,
-                    config["state_weight"] if variant in ("shared-state", "shared-state-norm") else 0.,
+                    config["state_weight"] if variant in ("shared-state", "shared-state-norm", "alternating-state-norm") else 0.,
                     config["kl_weight"], config["ce_weight"], config["temperature"], depth,
                     config["teacher_argmax_diagnostic"],
-                    state_norm_weight=config["state_weight"] if variant == "shared-state-norm" else 0.)
+                    state_norm_weight=config["state_weight"] if variant in ("shared-state-norm", "alternating-state-norm") else 0.)
                 require(torch.isfinite(loss).item(), "nonfinite training loss")
                 loss.backward()
                 grad_norm = torch.nn.utils.clip_grad_norm_(head.parameters(), config["grad_clip"], error_if_nonfinite=True)
@@ -1144,8 +1156,8 @@ def train_command(args):
                         "environment": target.environment, "training_config": config, "planned_updates": updates,
                         "variant": variant, "state_transition": STATE_TRANSITION, "rank": config["rank"],
                         "hidden_size": width, "max_depth": max_depth, "depth_weights": WEIGHTS,
-                        "state_weight": config["state_weight"] if variant in ("shared-state", "shared-state-norm") else 0.,
-                        "state_norm_weight": config["state_weight"] if variant == "shared-state-norm" else 0.,
+                        "state_weight": config["state_weight"] if variant in ("shared-state", "shared-state-norm", "alternating-state-norm") else 0.,
+                        "state_norm_weight": config["state_weight"] if variant in ("shared-state-norm", "alternating-state-norm") else 0.,
                         "ce_weight": config["ce_weight"], "kl_weight": config["kl_weight"],
                         "temperature": config["temperature"],
                         "objective": "teacher-argmax diagnostic" if config["teacher_argmax_diagnostic"] else
