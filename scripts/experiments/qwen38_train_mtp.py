@@ -765,6 +765,8 @@ def run(args):
         else:
             scaler.step(optimizer)
             scaler.update()
+        # Export validation builds another core; do not retain obsolete gradients.
+        optimizer.zero_grad(set_to_none=True)
         result = {"step": step + 1, **loss_metrics(totals, args.depth_weights),
                   "sequences": len(records), "grad_norm": grad_norm.item()}
         report["train_steps"].append(result)

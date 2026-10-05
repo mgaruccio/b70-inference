@@ -188,6 +188,54 @@ def test_public_cli_native_bf16_cpu_train_report(trainer, native_checkpoint, rec
     with trainer.runtime().safe_open(output, framework="pt") as handle:
         assert all(handle.get_tensor(key).dtype == torch.bfloat16 for key in handle.keys())
 
+
+@pytest.mark.parametrize("checkpoint_fixture", ["native_checkpoint", "checkpoint"])
+def test_checkpoint_validation_releases_training_gradients(
+    trainer, record, tmp_path, monkeypatch, request, checkpoint_fixture
+):
+    checkpoint = request.getfixturevalue(checkpoint_fixture)
+    torch = trainer.runtime().torch
+    train, heldout = tmp_path / "train", tmp_path / "heldout"
+    train.mkdir()
+    heldout.mkdir()
+    torch.save(record, train / "train.pt")
+    torch.save(dict(record, prompt_id="gradient-heldout"), heldout / "heldout.pt")
+    models, updates, evaluations = [], [], []
+    original_build = trainer.build_native_mtp
+    original_step = torch.optim.AdamW.step
+    original_evaluate = trainer.evaluate_export
+
+    def build(*args, **kwargs):
+        model = original_build(*args, **kwargs)
+        models.append(model)
+        return model
+
+    def step(optimizer, *args, **kwargs):
+        assert any(p.grad is not None for p in models[0].parameters())
+        updates.append(True)
+        return original_step(optimizer, *args, **kwargs)
+
+    def evaluate(*args, **kwargs):
+        assert all(p.grad is None for p in models[0].parameters()), (
+            "Training gradients must be released before allocating the export-validation copy"
+        )
+        evaluations.append(True)
+        return original_evaluate(*args, **kwargs)
+
+    monkeypatch.setattr(trainer, "build_native_mtp", build)
+    monkeypatch.setattr(torch.optim.AdamW, "step", step)
+    monkeypatch.setattr(trainer, "evaluate_export", evaluate)
+    args = trainer.parser().parse_args([
+        "--model", str(checkpoint.path), "--train-dir", str(train),
+        "--eval-dir", str(heldout), "--output", str(tmp_path / "released.safetensors"),
+        "--steps", "3", "--checkpoint-every", "1", "--max-length", "16",
+        "--recursive-depth", "4", "--roots", "1", "--logits-chunk", "2",
+        "--device", "cpu",
+    ])
+    report = trainer.run(args)
+    assert report["optimizer_steps"] == len(updates) == 3
+    assert len(evaluations) == len(report["checkpoints"]) == 4
+
 @pytest.mark.parametrize("available,bf16,message", [
     (False, True, "not available"),
     (True, False, "BF16 CUDA support required"),
