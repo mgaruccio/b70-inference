@@ -1,0 +1,734 @@
+{
+  "mode": "recursive_teacher_forcing",
+  "config": {
+    "model": "/home/shadeform/qwen-model",
+    "train_dir": "/home/shadeform/qwen-mtp-run/capture-train/train",
+    "eval_dir": "/home/shadeform/qwen-mtp-run/capture-dev/heldout",
+    "output": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.safetensors",
+    "export_stock": false,
+    "steps": 10,
+    "epochs": 10,
+    "recursive_depth": 4,
+    "roots": 8,
+    "depth_weights": [
+      1.0,
+      1.0,
+      0.8,
+      0.8
+    ],
+    "checkpoint_every": 374,
+    "lr": 1e-06,
+    "device": "cuda",
+    "seed": 42,
+    "max_length": 2048,
+    "grad_accum": 1,
+    "logits_chunk": 64
+  },
+  "torch": "2.14.1+cu130",
+  "transformers": "5.15.1",
+  "python": "3.12.3",
+  "optimizer_steps": 3740,
+  "eval_before": {
+    "ce": 0.12506484866424528,
+    "tokens": 7355,
+    "argmax_agreement": 0.9594833446634943,
+    "depths": [
+      {
+        "loss_sum": 919.8519619255239,
+        "tokens": 7355,
+        "correct": 7057,
+        "depth": 1,
+        "weight": 1.0,
+        "ce": 0.12506484866424528,
+        "argmax_agreement": 0.9594833446634943
+      },
+      {
+        "loss_sum": 96.12019089507521,
+        "tokens": 512,
+        "correct": 482,
+        "depth": 2,
+        "weight": 1.0,
+        "ce": 0.18773474784194377,
+        "argmax_agreement": 0.94140625
+      },
+      {
+        "loss_sum": 185.54386946112209,
+        "tokens": 512,
+        "correct": 461,
+        "depth": 3,
+        "weight": 0.8,
+        "ce": 0.3623903700412541,
+        "argmax_agreement": 0.900390625
+      },
+      {
+        "loss_sum": 310.65770473575685,
+        "tokens": 512,
+        "correct": 446,
+        "depth": 4,
+        "weight": 0.8,
+        "ce": 0.6067533295620251,
+        "argmax_agreement": 0.87109375
+      }
+    ],
+    "objective": 1.0881145561888124,
+    "sequences": 64
+  },
+  "eval_after": {
+    "ce": 0.1222182170147518,
+    "tokens": 7355,
+    "argmax_agreement": 0.9575798776342624,
+    "depths": [
+      {
+        "loss_sum": 898.9149861434995,
+        "tokens": 7355,
+        "correct": 7043,
+        "depth": 1,
+        "weight": 1.0,
+        "ce": 0.1222182170147518,
+        "argmax_agreement": 0.9575798776342624
+      },
+      {
+        "loss_sum": 83.27431769189388,
+        "tokens": 512,
+        "correct": 492,
+        "depth": 2,
+        "weight": 1.0,
+        "ce": 0.16264515174198024,
+        "argmax_agreement": 0.9609375
+      },
+      {
+        "loss_sum": 169.45303108490407,
+        "tokens": 512,
+        "correct": 472,
+        "depth": 3,
+        "weight": 0.8,
+        "ce": 0.33096295133770326,
+        "argmax_agreement": 0.921875
+      },
+      {
+        "loss_sum": 297.797040239735,
+        "tokens": 512,
+        "correct": 455,
+        "depth": 4,
+        "weight": 0.8,
+        "ce": 0.5816348442182324,
+        "argmax_agreement": 0.888671875
+      }
+    ],
+    "objective": 1.0149416052014806,
+    "sequences": 64
+  },
+  "checkpoints": [
+    {
+      "step": 0,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step0000.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12506484866424528,
+          "tokens": 7355,
+          "argmax_agreement": 0.9594833446634943,
+          "depths": [
+            {
+              "loss_sum": 919.8519619255239,
+              "tokens": 7355,
+              "correct": 7057,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12506484866424528,
+              "argmax_agreement": 0.9594833446634943
+            },
+            {
+              "loss_sum": 96.12019089507521,
+              "tokens": 512,
+              "correct": 482,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.18773474784194377,
+              "argmax_agreement": 0.94140625
+            },
+            {
+              "loss_sum": 185.54386946112209,
+              "tokens": 512,
+              "correct": 461,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.3623903700412541,
+              "argmax_agreement": 0.900390625
+            },
+            {
+              "loss_sum": 310.65770473575685,
+              "tokens": 512,
+              "correct": 446,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.6067533295620251,
+              "argmax_agreement": 0.87109375
+            }
+          ],
+          "objective": 1.0881145561888124,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 374,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step0374.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12351179244011974,
+          "tokens": 7355,
+          "argmax_agreement": 0.9586675730795378,
+          "depths": [
+            {
+              "loss_sum": 908.4292333970807,
+              "tokens": 7355,
+              "correct": 7051,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12351179244011974,
+              "argmax_agreement": 0.9586675730795378
+            },
+            {
+              "loss_sum": 72.80348743400828,
+              "tokens": 512,
+              "correct": 489,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.1421943113945474,
+              "argmax_agreement": 0.955078125
+            },
+            {
+              "loss_sum": 168.99184577923734,
+              "tokens": 512,
+              "correct": 464,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.3300621987875729,
+              "argmax_agreement": 0.90625
+            },
+            {
+              "loss_sum": 250.3177632080624,
+              "tokens": 512,
+              "correct": 453,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.48890188126574685,
+              "argmax_agreement": 0.884765625
+            }
+          ],
+          "objective": 0.920877367877323,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 748,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step0748.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12381937569074052,
+          "tokens": 7355,
+          "argmax_agreement": 0.9575798776342624,
+          "depths": [
+            {
+              "loss_sum": 910.6915082053965,
+              "tokens": 7355,
+              "correct": 7043,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12381937569074052,
+              "argmax_agreement": 0.9575798776342624
+            },
+            {
+              "loss_sum": 82.5904878811707,
+              "tokens": 512,
+              "correct": 487,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.16130954664291153,
+              "argmax_agreement": 0.951171875
+            },
+            {
+              "loss_sum": 167.45444827634492,
+              "tokens": 512,
+              "correct": 464,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.32705946928973617,
+              "argmax_agreement": 0.90625
+            },
+            {
+              "loss_sum": 244.384132013598,
+              "tokens": 512,
+              "correct": 455,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.4773127578390586,
+              "argmax_agreement": 0.888671875
+            }
+          ],
+          "objective": 0.9286267040366879,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 1122,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step1122.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12266160723185877,
+          "tokens": 7355,
+          "argmax_agreement": 0.9586675730795378,
+          "depths": [
+            {
+              "loss_sum": 902.1761211903213,
+              "tokens": 7355,
+              "correct": 7051,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12266160723185877,
+              "argmax_agreement": 0.9586675730795378
+            },
+            {
+              "loss_sum": 73.22819646010612,
+              "tokens": 512,
+              "correct": 491,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.14302382121114476,
+              "argmax_agreement": 0.958984375
+            },
+            {
+              "loss_sum": 156.36324823496398,
+              "tokens": 512,
+              "correct": 471,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.305396969208914,
+              "argmax_agreement": 0.919921875
+            },
+            {
+              "loss_sum": 271.1815303219337,
+              "tokens": 512,
+              "correct": 448,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.5296514264100267,
+              "argmax_agreement": 0.875
+            }
+          ],
+          "objective": 0.9337241449381561,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 1496,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step1496.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.1239382323091841,
+          "tokens": 7355,
+          "argmax_agreement": 0.9577158395649218,
+          "depths": [
+            {
+              "loss_sum": 911.5656986340491,
+              "tokens": 7355,
+              "correct": 7044,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.1239382323091841,
+              "argmax_agreement": 0.9577158395649218
+            },
+            {
+              "loss_sum": 74.17878239478159,
+              "tokens": 512,
+              "correct": 490,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.1448804343648078,
+              "argmax_agreement": 0.95703125
+            },
+            {
+              "loss_sum": 154.93558276976546,
+              "tokens": 512,
+              "correct": 473,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.30260856009719816,
+              "argmax_agreement": 0.923828125
+            },
+            {
+              "loss_sum": 236.8416738008018,
+              "tokens": 512,
+              "correct": 457,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.462581394142191,
+              "argmax_agreement": 0.892578125
+            }
+          ],
+          "objective": 0.8809706300655034,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 1870,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step1870.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12356195143254575,
+          "tokens": 7355,
+          "argmax_agreement": 0.9583956492182188,
+          "depths": [
+            {
+              "loss_sum": 908.798152786374,
+              "tokens": 7355,
+              "correct": 7049,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12356195143254575,
+              "argmax_agreement": 0.9583956492182188
+            },
+            {
+              "loss_sum": 68.6929558397751,
+              "tokens": 512,
+              "correct": 492,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.13416592937456073,
+              "argmax_agreement": 0.9609375
+            },
+            {
+              "loss_sum": 167.64205087942537,
+              "tokens": 512,
+              "correct": 472,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.3274258806238777,
+              "argmax_agreement": 0.921875
+            },
+            {
+              "loss_sum": 261.55751561500074,
+              "tokens": 512,
+              "correct": 452,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.5108545226855483,
+              "argmax_agreement": 0.8828125
+            }
+          ],
+          "objective": 0.9283522034546473,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 2244,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step2244.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12186553769811576,
+          "tokens": 7355,
+          "argmax_agreement": 0.9585316111488783,
+          "depths": [
+            {
+              "loss_sum": 896.3210297696414,
+              "tokens": 7355,
+              "correct": 7050,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12186553769811576,
+              "argmax_agreement": 0.9585316111488783
+            },
+            {
+              "loss_sum": 75.3620111378259,
+              "tokens": 512,
+              "correct": 489,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.14719142800356622,
+              "argmax_agreement": 0.955078125
+            },
+            {
+              "loss_sum": 163.71142444490215,
+              "tokens": 512,
+              "correct": 471,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.3197488758689495,
+              "argmax_agreement": 0.919921875
+            },
+            {
+              "loss_sum": 276.0682064683642,
+              "tokens": 512,
+              "correct": 446,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.5391957157585239,
+              "argmax_agreement": 0.87109375
+            }
+          ],
+          "objective": 0.9562126390036607,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 2618,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step2618.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12294594279050634,
+          "tokens": 7355,
+          "argmax_agreement": 0.9564921821889871,
+          "depths": [
+            {
+              "loss_sum": 904.2674092241741,
+              "tokens": 7355,
+              "correct": 7035,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12294594279050634,
+              "argmax_agreement": 0.9564921821889871
+            },
+            {
+              "loss_sum": 74.8916305063176,
+              "tokens": 512,
+              "correct": 490,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.14627271583265156,
+              "argmax_agreement": 0.95703125
+            },
+            {
+              "loss_sum": 157.76370095143648,
+              "tokens": 512,
+              "correct": 466,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.30813222842077437,
+              "argmax_agreement": 0.91015625
+            },
+            {
+              "loss_sum": 276.8277101644926,
+              "tokens": 512,
+              "correct": 453,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.5406791214150246,
+              "argmax_agreement": 0.884765625
+            }
+          ],
+          "objective": 0.9482677384917971,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 2992,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step2992.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12334778257894588,
+          "tokens": 7355,
+          "argmax_agreement": 0.9549966009517336,
+          "depths": [
+            {
+              "loss_sum": 907.2229408681469,
+              "tokens": 7355,
+              "correct": 7024,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12334778257894588,
+              "argmax_agreement": 0.9549966009517336
+            },
+            {
+              "loss_sum": 80.43143465437606,
+              "tokens": 512,
+              "correct": 489,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.15709264580932825,
+              "argmax_agreement": 0.955078125
+            },
+            {
+              "loss_sum": 163.29381996992743,
+              "tokens": 512,
+              "correct": 471,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.3189332421287645,
+              "argmax_agreement": 0.919921875
+            },
+            {
+              "loss_sum": 261.0307374126569,
+              "tokens": 512,
+              "correct": 459,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.5098256590090955,
+              "argmax_agreement": 0.896484375
+            }
+          ],
+          "objective": 0.9434475492985621,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 3366,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step3366.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.12300954826979442,
+          "tokens": 7355,
+          "argmax_agreement": 0.9575798776342624,
+          "depths": [
+            {
+              "loss_sum": 904.7352275243379,
+              "tokens": 7355,
+              "correct": 7043,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.12300954826979442,
+              "argmax_agreement": 0.9575798776342624
+            },
+            {
+              "loss_sum": 84.32403595669712,
+              "tokens": 512,
+              "correct": 488,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.16469538272792406,
+              "argmax_agreement": 0.953125
+            },
+            {
+              "loss_sum": 165.15068075322415,
+              "tokens": 512,
+              "correct": 474,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.3225599233461409,
+              "argmax_agreement": 0.92578125
+            },
+            {
+              "loss_sum": 269.03920492867746,
+              "tokens": 512,
+              "correct": 458,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.5254671971263232,
+              "argmax_agreement": 0.89453125
+            }
+          ],
+          "objective": 0.9661266273756898,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    },
+    {
+      "step": 3740,
+      "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.safetensors",
+      "metrics": {
+        "BF16_export": {
+          "ce": 0.1222182170147518,
+          "tokens": 7355,
+          "argmax_agreement": 0.9575798776342624,
+          "depths": [
+            {
+              "loss_sum": 898.9149861434995,
+              "tokens": 7355,
+              "correct": 7043,
+              "depth": 1,
+              "weight": 1.0,
+              "ce": 0.1222182170147518,
+              "argmax_agreement": 0.9575798776342624
+            },
+            {
+              "loss_sum": 83.27431769189388,
+              "tokens": 512,
+              "correct": 492,
+              "depth": 2,
+              "weight": 1.0,
+              "ce": 0.16264515174198024,
+              "argmax_agreement": 0.9609375
+            },
+            {
+              "loss_sum": 169.45303108490407,
+              "tokens": 512,
+              "correct": 472,
+              "depth": 3,
+              "weight": 0.8,
+              "ce": 0.33096295133770326,
+              "argmax_agreement": 0.921875
+            },
+            {
+              "loss_sum": 297.797040239735,
+              "tokens": 512,
+              "correct": 455,
+              "depth": 4,
+              "weight": 0.8,
+              "ce": 0.5816348442182324,
+              "argmax_agreement": 0.888671875
+            }
+          ],
+          "objective": 1.0149416052014806,
+          "sequences": 64
+        },
+        "RTN_effective_dense": null
+      }
+    }
+  ],
+  "dev_selection": {
+    "step": 1496,
+    "path": "/home/shadeform/qwen-mtp-run/training/tuned-mtp.step1496.safetensors",
+    "metric": "dev.BF16_export.objective",
+    "value": 0.8809706300655034,
+    "promotion": false
+  },
+  "alignment": "base: x[j+1], observed h[j], p[j] -> x[j+2]; branch d: x[t+d], y[d-1], p[t]+d-1 -> x[t+d+1]",
+  "precision": {
+    "masters": "float32",
+    "export": "bfloat16",
+    "cpu_compute": "bfloat16_autocast (tiny tests only)",
+    "regime": "native_bf16",
+    "cuda_compute": "bfloat16_autocast",
+    "xpu_compute": "bfloat16_autocast",
+    "lm_head": "frozen original BF16 checkpoint weight",
+    "limitations": "Native BF16 metrics are actual BF16 exports; RTN-effective metrics are not applicable"
+  },
+  "counts": {
+    "train_sequences": 374,
+    "dev_sequences": 64,
+    "sequences_seen": 3740,
+    "input_tokens_seen": 985210,
+    "observed_hidden_rows_seen": 984610,
+    "useful_positions_seen": 441270,
+    "loss_tokens_by_depth": [
+      441270,
+      29920,
+      29920,
+      29920
+    ]
+  },
+  "memory_peak": {
+    "process_max_rss_kib": 9538184,
+    "cuda_max_allocated_bytes": 13020583424,
+    "cuda_max_reserved_bytes": 15107883008
+  },
+  "train_step_count": 3740,
+  "full_training_report": "R2 final archive: training/tuned-mtp.json"
+}
