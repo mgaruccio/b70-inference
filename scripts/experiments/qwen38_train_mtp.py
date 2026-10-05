@@ -633,13 +633,13 @@ def memory_peak(device):
 def run(args):
     rt = runtime()
     torch = rt.torch
-    if (not 3 <= args.max_length <= 2048 or not 1 <= args.steps <= 1000
+    if (not 3 <= args.max_length <= 2048 or not 1 <= args.steps <= 10000
             or not math.isfinite(args.lr) or args.lr <= 0
             or not 1 <= args.grad_accum <= 64 or not 1 <= args.logits_chunk <= 256
             or args.recursive_depth not in (1, 4) or not 1 <= args.roots <= 32
             or not 1 <= args.checkpoint_every <= 1000
             or (args.epochs is not None and not 1 <= args.epochs <= 100)):
-        raise TrainingError("Invalid bounds: length 3..2048, steps 1..1000, positive lr, accumulation 1..64, "
+        raise TrainingError("Invalid bounds: length 3..2048, steps 1..10000, positive lr, accumulation 1..64, "
                             "logits chunk 1..256, depth 1/4, roots 1..32, checkpoint interval 1..1000, epochs 1..100")
     args.depth_weights = args.depth_weights if args.depth_weights is not None else [1.0] * args.recursive_depth
     if (len(args.depth_weights) != args.recursive_depth
@@ -703,8 +703,8 @@ def run(args):
     train, dev = capture_sets(args.train_dir, args.eval_dir, checkpoint.config, args.max_length)
     sequence_budget = args.epochs * len(train) if args.epochs is not None else args.steps * args.grad_accum
     steps = math.ceil(sequence_budget / args.grad_accum)
-    if steps > 1000:
-        raise TrainingError("Epoch budget exceeds 1000 optimizer updates")
+    if steps > 10000:
+        raise TrainingError("Epoch budget exceeds 10000 optimizer updates")
     # Fail before training if ANY scheduled output would clobber an existing run.
     for step in range(0, steps, args.checkpoint_every):
         output_paths(checkpoint_path(output, step), checkpoint.path)
@@ -795,8 +795,8 @@ def parser():
     result.add_argument("--output", required=True, help="Final mtp-only BF16 file; step 0/intermediates saved beside it, no promotion")
     result.add_argument("--export-stock", action="store_true", help="Identity export only; no optimizer or target load")
     budget = result.add_mutually_exclusive_group()
-    budget.add_argument("--steps", type=int, default=10, help="Optimizer updates (1..1000)")
-    budget.add_argument("--epochs", type=int, help="Complete shuffled passes (1..100), instead of --steps; at most 1000 updates")
+    budget.add_argument("--steps", type=int, default=10, help="Optimizer updates (1..10000)")
+    budget.add_argument("--epochs", type=int, help="Complete shuffled passes (1..100), instead of --steps; at most 10000 updates")
     result.add_argument("--recursive-depth", type=int, choices=(1, 4), default=1)
     result.add_argument("--roots", type=int, default=8, help="Max sampled recursive roots per sequence (1..32)")
     result.add_argument("--depth-weights", type=float, nargs="+", help="One nonnegative weight per depth; default all 1, weighted SUM of means")

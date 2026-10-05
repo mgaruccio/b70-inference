@@ -832,12 +832,35 @@ def test_stock_remains_eligible_and_selection_uses_only_dev_rtn_objective(traine
     ["--roots", "0"], ["--roots", "33"], ["--epochs", "0"], ["--epochs", "101"],
     ["--checkpoint-every", "0"], ["--depth-weights", "nan"], ["--depth-weights", "0"],
     ["--depth-weights", "-1"], ["--recursive-depth", "4", "--depth-weights", "1"],
+    ["--steps", "0"], ["--steps", "10001"],
 ])
 def test_recursive_cli_bounds_fail_before_checkpoint_reads(trainer, tmp_path, options):
     args = trainer.parser().parse_args(["--model", str(tmp_path / "must-not-read"),
                                        "--output", str(tmp_path / "out.safetensors"), *options])
     with pytest.raises(trainer.TrainingError, match="bounds|weight"):
         trainer.run(args)
+
+
+def test_public_cli_supports_more_than_pilot_update_budget(checkpoint, native_record, tmp_path):
+    import torch
+    train, dev = tmp_path / "train", tmp_path / "dev"
+    train.mkdir()
+    dev.mkdir()
+    torch.save(dict(native_record, prompt_id="train"), train / "train.pt")
+    torch.save(dict(native_record, prompt_id="dev"), dev / "dev.pt")
+    output = tmp_path / "longer.safetensors"
+    command = [sys.executable, str(SCRIPT), "--model", str(checkpoint.path),
+               "--train-dir", str(train), "--eval-dir", str(dev), "--output", str(output),
+               "--steps", "1001", "--grad-accum", "1", "--checkpoint-every", "1000", "--max-length", "16",
+               "--recursive-depth", "4", "--roots", "2", "--logits-chunk", "2",
+               "--lr", "0.00001", "--seed", "19", "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stderr
+    report = json.loads(output.with_suffix(".json").read_text())
+    assert report["optimizer_steps"] == len(report["train_steps"]) == 1001
+    assert report["counts"]["sequences_seen"] == 1001
+    assert [row["step"] for row in report["checkpoints"]] == [0, 1000, 1001]
+    assert output.exists()
 
 
 @pytest.mark.parametrize("zero_head", [False, True])
