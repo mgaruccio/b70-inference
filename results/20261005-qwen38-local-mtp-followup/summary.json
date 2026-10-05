@@ -1,0 +1,124 @@
+{
+  "status": "training_completed_serving_evaluation_pending",
+  "optimizer_steps": 1000,
+  "eval_before": {
+    "ce": 0.13252553088222685,
+    "tokens": 2625,
+    "argmax_agreement": 0.9584761904761905,
+    "depths": [
+      {
+        "loss_sum": 347.8795185658455,
+        "tokens": 2625,
+        "correct": 2516,
+        "depth": 1,
+        "weight": 1.0,
+        "ce": 0.13252553088222685,
+        "argmax_agreement": 0.9584761904761905
+      },
+      {
+        "loss_sum": 15.311010669975076,
+        "tokens": 128,
+        "correct": 124,
+        "depth": 2,
+        "weight": 1.0,
+        "ce": 0.11961727085918028,
+        "argmax_agreement": 0.96875
+      },
+      {
+        "loss_sum": 29.470410702284425,
+        "tokens": 128,
+        "correct": 120,
+        "depth": 3,
+        "weight": 0.8,
+        "ce": 0.23023758361159707,
+        "argmax_agreement": 0.9375
+      },
+      {
+        "loss_sum": 115.89893945865333,
+        "tokens": 128,
+        "correct": 108,
+        "depth": 4,
+        "weight": 0.8,
+        "ce": 0.9054604645207291,
+        "argmax_agreement": 0.84375
+      }
+    ],
+    "objective": 1.1607012402472683,
+    "sequences": 16
+  },
+  "eval_after": {
+    "ce": 0.13420830451669366,
+    "tokens": 2625,
+    "argmax_agreement": 0.9546666666666667,
+    "depths": [
+      {
+        "loss_sum": 352.2967993563209,
+        "tokens": 2625,
+        "correct": 2506,
+        "depth": 1,
+        "weight": 1.0,
+        "ce": 0.13420830451669366,
+        "argmax_agreement": 0.9546666666666667
+      },
+      {
+        "loss_sum": 22.156305360782426,
+        "tokens": 128,
+        "correct": 122,
+        "depth": 2,
+        "weight": 1.0,
+        "ce": 0.1730961356311127,
+        "argmax_agreement": 0.953125
+      },
+      {
+        "loss_sum": 36.450152535922825,
+        "tokens": 128,
+        "correct": 119,
+        "depth": 3,
+        "weight": 0.8,
+        "ce": 0.2847668166868971,
+        "argmax_agreement": 0.9296875
+      },
+      {
+        "loss_sum": 139.32756893965416,
+        "tokens": 128,
+        "correct": 105,
+        "depth": 4,
+        "weight": 0.8,
+        "ce": 1.088496632341048,
+        "argmax_agreement": 0.8203125
+      }
+    ],
+    "objective": 1.4059151993701626,
+    "sequences": 16
+  },
+  "dev_selection": {
+    "step": 250,
+    "path": "/home/mike/b70-evals/20261005-qwen38-local-mtp-followup/run/training/tuned-mtp.step0250.safetensors",
+    "metric": "dev.BF16_export.objective",
+    "value": 1.1377569169518464,
+    "promotion": false
+  },
+  "memory_peak": {
+    "process_max_rss_kib": 9673292,
+    "cuda_max_allocated_bytes": 13017441792,
+    "cuda_max_reserved_bytes": 14069792768
+  },
+  "counts": {
+    "train_sequences": 64,
+    "dev_sequences": 16,
+    "sequences_seen": 1000,
+    "input_tokens_seen": 290075,
+    "observed_hidden_rows_seen": 289888,
+    "useful_positions_seen": 135787,
+    "loss_tokens_by_depth": [
+      135787,
+      8000,
+      8000,
+      8000
+    ]
+  },
+  "promotion": false,
+  "acceptance": null,
+  "throughput": null,
+  "limitation": "Reused pilot64/16 public corpus; no new expanded-data capture or native serving benchmark. Native serving remains pending confirmed capacity."
+}

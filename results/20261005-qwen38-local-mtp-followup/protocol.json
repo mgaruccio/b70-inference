@@ -1,0 +1,35 @@
+{
+  "tier": "development",
+  "purpose": "Local head-training fallback after both advertised-stock cloud rentals failed readiness and were canceled",
+  "model": "Qwen/Qwen3.8-27B",
+  "model_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "hardware": "RTX 5080 16GB; existing desktop processes untouched",
+  "teacher": "Existing public native CUDA BF16 pilot64-train/16-dev captures, generated on A10080GB with native vLLM0.27.1; not newly expanded data",
+  "teacher_archive": "r2:ml-archive/2026-10-05/cache/b70-evals/20261005-qwen38-cuda-mtp-pilot/final.tgz",
+  "teacher_archive_sha256": "508f6d405927058aa2ea5b76de837617f9f1395a99ff9056e616932c85d9271b",
+  "training": {
+    "optimizer_updates": 1000,
+    "recursive_depth": 4,
+    "roots": 8,
+    "depth_weights": [
+      1,
+      1,
+      0.8,
+      0.8
+    ],
+    "lr": 1e-06,
+    "seed": 42,
+    "grad_accum": 1,
+    "max_length": 1024,
+    "logits_chunk": 16,
+    "checkpoint_every": 250,
+    "frozen_trunk": true,
+    "state_supervision": false
+  },
+  "allocator": "PYTORCH_ALLOC_CONF=expandable_segments:True; experimental fragmentation aid, not a capacity guarantee",
+  "allocator_reference": "https://docs.pytorch.org/docs/2.14/notes/cuda.html",
+  "checkpoint_selection": "Minimum dev BF16-export CE among0/250/500/750/1000, including stock; no new test selection",
+  "test_process": "Physical CUDA availability/BF16 matmul and memory check. Real unchanged trainer CLI one-update smoke; assert actual optimizer step and changed BF16 tensors. If smoke succeeds, automatically run1000 steps, verify updates/exports, record native dev metrics and selection. Archive commands/environment/failures/checkpoints in existing R2. Native serving acceptance/throughput test remains pending: full BF16 teacher cannot fit this GPU. No production promotion or claimed new speedup.",
+  "limitations": "Same small public64/16 teacher corpus as pilot, potentially overfitting at1000 updates; not374/64 expanded corpus, not independent held-out serving evaluation.",
+  "primary_source": "https://pytorch.org/get-started/locally/: use an appropriate CUDA wheel and verify actual GPU accessibility; physical BF16 operations are required rather than inferring support."
+}
