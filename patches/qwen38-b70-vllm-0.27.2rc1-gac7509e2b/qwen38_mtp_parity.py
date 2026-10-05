@@ -87,7 +87,18 @@ def validate_control(control, key):
 
 def private_write(path, data):
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(fd, "wb") as handle:
+    try:
+        os.fchmod(fd, 0o600)
+        if os.geteuid() == 0:
+            # Match native capture: root workers preserve the bind-mount owner's
+            # access to private files rather than leaving root-owned artifacts.
+            owner = Path(path).parent.stat()
+            os.fchown(fd, owner.st_uid, owner.st_gid)
+        handle = os.fdopen(fd, "wb")
+    except BaseException:
+        os.close(fd)
+        raise
+    with handle:
         handle.write(data)
 
 

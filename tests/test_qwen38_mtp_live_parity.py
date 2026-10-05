@@ -83,6 +83,64 @@ class Guards(unittest.TestCase):
                 hook.private_write(link, b"second")
             self.assertEqual(path.read_bytes(), b"first")
 
+    def test_private_write_mode_and_owner_under_umask_022(self):
+        previous = hook.os.umask(0o022)
+        try:
+            with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+                parent = Path(directory) / "new-native"
+                parent.mkdir(mode=0o700)
+                path = parent / "control.json"
+                hook.private_write(path, b"{}")
+                owner, info = parent.stat(), path.stat()
+                self.assertEqual(owner.st_mode & 0o777, 0o700)
+                self.assertEqual(info.st_mode & 0o777, 0o600)
+                self.assertEqual((info.st_uid, info.st_gid), (owner.st_uid, owner.st_gid))
+                self.assertEqual(path.read_bytes(), b"{}")
+        finally:
+            hook.os.umask(previous)
+
+    def test_private_write_root_uses_parent_owner_and_closes_fd(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            path = Path(directory) / "trace.pt"
+            owner = path.parent.stat()
+            with patch.object(hook.os, "geteuid", return_value=0), \
+                    patch.object(hook.os, "fchmod", wraps=hook.os.fchmod) as chmod, \
+                    patch.object(hook.os, "fchown") as chown:
+                hook.private_write(path, b"trace")
+            fd = chmod.call_args.args[0]
+            chmod.assert_called_once_with(fd, 0o600)
+            chown.assert_called_once_with(fd, owner.st_uid, owner.st_gid)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            with self.assertRaises(OSError):
+                hook.os.fstat(fd)
+
+    def test_private_write_nonroot_does_not_chown(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            with patch.object(hook.os, "geteuid", return_value=1000), \
+                    patch.object(hook.os, "fchown") as chown:
+                hook.private_write(Path(directory) / "trace.pt", b"trace")
+            chown.assert_not_called()
+
+    def test_private_write_closes_on_permission_or_fdopen_failure(self):
+        for failing in ("fchmod", "fchown", "fdopen"):
+            with self.subTest(failing=failing), tempfile.TemporaryDirectory(dir=ROOT) as directory:
+                path = Path(directory) / "trace.pt"
+                with patch.object(hook.os, "geteuid", return_value=0), \
+                        patch.object(hook.os, "open", wraps=hook.os.open) as opened, \
+                        patch.object(hook.os, "close", wraps=hook.os.close) as closed, \
+                        patch.object(hook.os, "fchmod", wraps=hook.os.fchmod) as chmod, \
+                        patch.object(hook.os, "fchown") as chown, \
+                        patch.object(hook.os, "fdopen", wraps=hook.os.fdopen) as fdopen:
+                    {"fchmod": chmod, "fchown": chown, "fdopen": fdopen}[failing].side_effect = OSError("injected failure")
+                    with self.assertRaisesRegex(OSError, "injected failure"):
+                        hook.private_write(path, b"must not be written")
+                    fd = chmod.call_args.args[0]
+                    opened.assert_called_once()
+                    closed.assert_called_once_with(fd)
+                with self.assertRaises(OSError):
+                    hook.os.fstat(fd)
+                self.assertEqual(path.read_bytes(), b"")
+
     def test_hook_inert_without_opt_in(self):
         class Runner:
             def propose_draft_token_ids(self):
@@ -234,6 +292,79 @@ class HFReplay(unittest.TestCase):
         native["positions"] = native["positions"] + 1
         with self.assertRaisesRegex(ValueError, "row selection"):
             parity.compare_native_step(trace, native)
+
+    def check_cap_fixture(self, missing_before_cap=False, max_tokens=64):
+        """Exercise the checker/report path with real CPU HF replay, not GPU evidence."""
+        import json
+        traces, control, response = self.fixture(acceptance=(4,) * 15)
+        control.update(split="train", prompt_id="unit", max_tokens=max_tokens)
+        cap = len(control["prompt_token_ids"]) + control["max_tokens"]
+        precap_steps = [t["step"] for t in traces if parity.positions(t["target_positions"])[0] < cap]
+        # This final pre-cap round crosses the cap; missing it must still fail.
+        missing_step = precap_steps[-1] if missing_before_cap else None
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root, key = Path(directory), control["request_id"]
+            (root / "native" / key).mkdir(parents=True, mode=0o700)
+            (root / "runtime.json").write_text(json.dumps(dict(vllm="0.27.1", declared_image=hook.IMAGE,
+                declared_model_revision=hook.REVISION, native_capture_enabled=True)))
+            (root / (key + ".control.json")).write_text(json.dumps(control))
+            (root / (key + ".response.json")).write_text(json.dumps(dict(
+                prompt_token_ids=control["prompt_token_ids"], choices=[dict(token_ids=response[:max_tokens])])))
+            for trace in traces:
+                torch.save(trace, root / f"{key}.{trace['step']:03d}.pt")
+                if trace["step"] in precap_steps and trace["step"] != missing_step:
+                    keep = trace["first"]["selected"].item() + 1
+                    native = dict(request_id=key, step=trace["step"], input_ids=trace["target_ids"][:keep],
+                        positions=trace["target_positions"][:keep], target_last_hidden_states=trace["target_hidden"][:keep],
+                        output_ids=torch.tensor(parity.valid_samples(trace["sampled"])))
+                    torch.save(native, root / "native" / key / f"step-{trace['step']:06d}.pt")
+            # Only the CLI's CUDA bootstrap is stubbed; all tensors and actual
+            # unchanged trainer forwards stay on CPU, and the real report is read.
+            trainer = SimpleNamespace(
+                Checkpoint=lambda _: SimpleNamespace(regime="native_bf16", config=None, mtp_state=lambda: {}),
+                build_native_mtp=lambda *args: self.model,
+                frozen_heads=lambda *args: (self.embedding, self.head))
+            original_replay = parity.replay
+            def cpu_replay(*args):
+                return original_replay(*args[:3], self.trainer, *args[4:-1], "cpu")
+            args = SimpleNamespace(root=root, trainer=ROOT / "unused-trainer", model=ROOT / "unused-model", device="cuda")
+            with patch.object(torch.cuda, "is_available", return_value=True), \
+                    patch.object(parity, "module_at", return_value=trainer), \
+                    patch.object(parity, "replay", side_effect=cpu_replay):
+                code = parity.check_command(args, hook)
+            return code, json.loads((root / "parity-report.json").read_text())
+
+    def test_native_capture_cap_stopped_tail_keeps_numeric_report(self):
+        code, report = self.check_cap_fixture()
+        self.assertEqual(code, 0)
+        self.assertEqual(report["status"], "observed_parity_pass")
+        self.assertFalse(report["gate_a_closed"])
+        result = report["requests"][0]
+        self.assertTrue(result["observed_numeric_pass"])
+        self.assertEqual(len(result["rows"]), 16 * 4)
+        self.assertEqual(result["original_capture_rows_checked"], 68)
+        self.assertEqual(result["original_capture_cap_stop"], dict(position_limit=67, untested_tail=[
+            dict(round=14, start_position=68, rows=5), dict(round=15, start_position=73, rows=5)]))
+        self.assertTrue(any("cap" in item for item in result["untested"]))
+
+    def test_native_capture_tail_may_start_exactly_at_cap(self):
+        code, report = self.check_cap_fixture(max_tokens=60)
+        self.assertEqual(code, 0)
+        self.assertFalse(report["gate_a_closed"])
+        result = report["requests"][0]
+        self.assertEqual(result["original_capture_rows_checked"], 63)
+        self.assertEqual(result["original_capture_cap_stop"]["position_limit"], 63)
+        self.assertEqual(result["original_capture_cap_stop"]["untested_tail"][0],
+                         dict(round=13, start_position=63, rows=5))
+
+    def test_missing_native_pre_cap_round_fails_and_retains_numeric_report(self):
+        code, report = self.check_cap_fixture(missing_before_cap=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["status"], "blocked")
+        self.assertIn("missing original native capture before cap", report["error"])
+        self.assertFalse(report["gate_a_closed"])
+        self.assertTrue(report["requests"][0]["rows"])
+        self.assertEqual(report["requests"][0]["original_capture_rows_checked"], 63)
 
     def run_replay(self, fixture):
         with torch.inference_mode():

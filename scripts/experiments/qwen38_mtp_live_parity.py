@@ -367,15 +367,31 @@ def check_command(args, hook):
                 require(response["prompt_token_ids"] == control["prompt_token_ids"], "wrong API prompt")
                 result = replay(traces, control, response["choices"][0]["token_ids"], trainer, model, embedding, head, args.device)
                 result.update(request_id=key, round_limit_reached=len(traces) == hook.MAX_ROUNDS)
+                report["requests"].append(result)  # Retain numeric evidence even if capture comparison fails.
                 require(traces[0]["depth"] != 4 or runtime["native_capture_enabled"],
                         "D4 requires the unchanged native capture at the same API boundary; see --help")
                 if runtime["native_capture_enabled"]:
-                    result["original_capture_rows_checked"] = sum(compare_native_step(trace, torch.load(
-                        args.root / "native" / key / f"step-{trace['step']:06d}.pt",
-                        map_location="cpu", weights_only=True)) for trace in traces)
+                    cap = len(control["prompt_token_ids"]) + control["max_tokens"]
+                    result["original_capture_rows_checked"] = 0
+                    tail = []
+                    result["original_capture_cap_stop"] = dict(position_limit=cap, untested_tail=tail)
+                    for trace in traces:
+                        native_path = args.root / "native" / key / f"step-{trace['step']:06d}.pt"
+                        try:
+                            native = torch.load(native_path, map_location="cpu", weights_only=True)
+                        except FileNotFoundError:
+                            # The original collector stops before saving a round
+                            # only once its committed row cursor reaches this cap.
+                            start = positions(trace["target_positions"])[0]
+                            require(start >= cap, f"missing original native capture before cap: round {trace['step']}, position {start} < {cap}")
+                            tail.append(dict(round=trace["step"], start_position=start,
+                                             rows=trace["first"]["selected"].item() + 1))
+                            continue
+                        result["original_capture_rows_checked"] += compare_native_step(trace, native)
+                    if tail:
+                        result["untested"].append("original native-capture comparison after API cap stop (numeric replay retained)")
                 else:
                     result["untested"].append("original native-capture collector is D4-only (D8 not supported)")
-                report["requests"].append(result)
         report["status"] = "observed_parity_pass" if all(r["observed_numeric_pass"] for r in report["requests"]) else "numeric_or_argmax_failure"
         report["note"] = "Single-cell diagnostic only; Gate A still needs D4/D8 stock/complete-overlay, no-spec identity and coverage review. Sampled recurrence is not ground-truth teacher forcing."
     except Exception as exc:
