@@ -801,7 +801,8 @@ def initialize_head(head, checkpoint, rank, width):
     check_head_transition(checkpoint)
     require(checkpoint["rank"] == rank, "init-head rank mismatch")
     require(checkpoint.get("hidden_size", 6656) == width, "init-head representation width mismatch")
-    require(checkpoint["max_depth"] == 1, "init-head must be a one-step checkpoint")
+    require(checkpoint["max_depth"] == 1 or (checkpoint["variant"] != "fixed-ce" and len(head.blocks) == 1),
+            "init-head must be a one-step checkpoint or a shared recursive checkpoint for a single-block head")
     block = {k[len("blocks.0."):]: v for k, v in checkpoint["head"].items() if k.startswith("blocks.0.")}
     require(len(block) == len(checkpoint["head"]), "init-head must contain exactly one block")
     for destination in head.blocks:

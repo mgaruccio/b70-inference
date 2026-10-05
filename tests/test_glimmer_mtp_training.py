@@ -392,7 +392,39 @@ def test_warm_start_copies_one_block_without_sharing_independent_storage(variant
     with pytest.raises(ValueError, match="state-transition"):
         pilot.initialize_head(destination, {**ckpt, "state_transition": "unknown"}, 128, 12)
     with pytest.raises(ValueError, match="one-step"):
-        pilot.initialize_head(destination, {**ckpt, "max_depth": 8}, 128, 12)
+        pilot.initialize_head(destination, {**ckpt, "max_depth": 8, "variant": "fixed-ce"}, 128, 12)
+
+
+@pytest.mark.parametrize("depth", [2, 4, 8])
+def test_warm_start_preserves_shared_recursive_block(depth):
+    source = pilot.make_head(12, 128, True, depth)
+    destination = pilot.make_head(12, 128, True, depth)
+    saved = checkpoint(source, variant="shared-state-norm", depth=depth, rank=128)
+    pilot.initialize_head(destination, saved, 128, 12)
+    assert_nested_equal(source.state_dict(), destination.state_dict())
+    assert destination.blocks[0].up.weight.data_ptr() != source.blocks[0].up.weight.data_ptr()
+    with pytest.raises(ValueError, match="single-block"):
+        pilot.initialize_head(pilot.make_head(12, 128, False, depth), saved, 128, 12)
+
+
+def test_recursive_warm_start_training_writes_fresh_optimizer_steps(runtime, tmp_path):
+    index, _ = runtime
+    source = pilot.make_head(12, 128, True, 2)
+    saved = checkpoint(source, variant="shared-state-norm", depth=2, rank=128)
+    init_path = tmp_path / "recursive.pt"
+    torch.save(saved, init_path)
+    output = tmp_path / "continuation"
+    pilot.train_command(train_args(index, output, "--init-head", init_path,
+        "--variants", "shared-state-norm", "--rank", 128, "--train-depth", 2,
+        "--updates", 2, "--schedule-updates", 20000, "--warmup-updates", 200,
+        "--batch-size", 64, "--state-weight", .2, "--checkpoint-every", 1))
+    result = load(output / "checkpoint-last.pt")
+    assert result["update"] == 2 and result["max_depth"] == 2
+    assert result["root_exposures"] == 128 and result["loss_position_exposures"] == 256
+    assert all(float(s["step"]) == 2 for s in result["optimizer"]["state"].values())
+    assert result["init_head_identity"]["path"] == str(init_path)
+    assert any(not torch.equal(result["head"][k], saved["head"][k]) for k in saved["head"])
+    assert result["state_weight"] == result["state_norm_weight"] == .2
 
 
 def test_best_checkpoint_is_validation_only_and_last_is_separate(runtime, tmp_path, monkeypatch):
