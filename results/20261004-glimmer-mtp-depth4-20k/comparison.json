@@ -1,0 +1,335 @@
+{
+  "tier": "development",
+  "source_stage_update": 20000,
+  "prior_depth2_updates_in_lineage": 22000,
+  "additional_actual_depth4_updates": 20000,
+  "trained_depth": 4,
+  "root_exposures_this_stage": 1280000,
+  "loss_position_exposures_this_stage": 5120000,
+  "initialization": "completed depth2 continuation checkpoint; fresh optimizer/schedule and restarted deterministic sampler, not exact optimizer resume",
+  "evaluation": "initial depth2 and final depth4 heads on same physical GPU; fixed12 validation prompts,64 new tokens; final update used; no production promotion",
+  "evaluations": [
+    {
+      "phase": "initial",
+      "depth": 1,
+      "offline": [
+        {
+          "depth": 1,
+          "sequence_ce": 1.7693893339019269,
+          "teacher_argmax_agreement": 0.58203125,
+          "teacher_top5_recall": 0.8330078125,
+          "teacher_kl": 1.4817388765513897,
+          "normalized_mse": 0.871260954067111,
+          "cosine_distance": 0.43563047563657165,
+          "state_mse": 8.877225447446108,
+          "rms_ratio_error": 0.07369235657097306,
+          "predicted_rms": 3.4068853314965963,
+          "teacher_rms": 2.8229890186339617
+        },
+        {
+          "depth": 2,
+          "sequence_ce": 2.9261386138387024,
+          "teacher_argmax_agreement": 0.3916015625,
+          "teacher_top5_recall": 0.6962890625,
+          "teacher_kl": 2.6113820001482964,
+          "normalized_mse": 1.0208754888735712,
+          "cosine_distance": 0.5104377411771566,
+          "state_mse": 12.623632833361626,
+          "rms_ratio_error": 0.19034849450690672,
+          "predicted_rms": 3.9116955529898405,
+          "teacher_rms": 2.8236874658614397
+        }
+      ],
+      "acceptance": 0.45873320537428025,
+      "mean_accepted_drafts_per_pass": 0.45873320537428025,
+      "accepted_drafts": 239,
+      "proposed_drafts": 521,
+      "verification_passes": 521,
+      "fidelity": {
+        "exact_token_identity": false,
+        "exact_match_rate": 0.8333333333333334,
+        "diverged_pairs": 2,
+        "median_first_divergence_position": 57.5,
+        "max_absolute_generated_length_difference": 0
+      },
+      "diagnostic_median_decode_ratio_exact_pairs_only": 1.3049046051077031
+    },
+    {
+      "phase": "initial",
+      "depth": 2,
+      "offline": [
+        {
+          "depth": 1,
+          "sequence_ce": 1.7693893339019269,
+          "teacher_argmax_agreement": 0.58203125,
+          "teacher_top5_recall": 0.8330078125,
+          "teacher_kl": 1.4817388765513897,
+          "normalized_mse": 0.871260954067111,
+          "cosine_distance": 0.43563047563657165,
+          "state_mse": 8.877225447446108,
+          "rms_ratio_error": 0.07369235657097306,
+          "predicted_rms": 3.4068853314965963,
+          "teacher_rms": 2.8229890186339617
+        },
+        {
+          "depth": 2,
+          "sequence_ce": 2.9261386138387024,
+          "teacher_argmax_agreement": 0.3916015625,
+          "teacher_top5_recall": 0.6962890625,
+          "teacher_kl": 2.6113820001482964,
+          "normalized_mse": 1.0208754888735712,
+          "cosine_distance": 0.5104377411771566,
+          "state_mse": 12.623632833361626,
+          "rms_ratio_error": 0.19034849450690672,
+          "predicted_rms": 3.9116955529898405,
+          "teacher_rms": 2.8236874658614397
+        }
+      ],
+      "acceptance": 0.2815734989648033,
+      "mean_accepted_drafts_per_pass": 0.5573770491803278,
+      "accepted_drafts": 272,
+      "proposed_drafts": 966,
+      "verification_passes": 488,
+      "fidelity": {
+        "exact_token_identity": false,
+        "exact_match_rate": 0.8333333333333334,
+        "diverged_pairs": 2,
+        "median_first_divergence_position": 57.5,
+        "max_absolute_generated_length_difference": 0
+      },
+      "diagnostic_median_decode_ratio_exact_pairs_only": 1.362773676359991
+    },
+    {
+      "phase": "initial",
+      "depth": 4,
+      "offline": [
+        {
+          "depth": 1,
+          "sequence_ce": 1.7693893339019269,
+          "teacher_argmax_agreement": 0.58203125,
+          "teacher_top5_recall": 0.8330078125,
+          "teacher_kl": 1.4817388765513897,
+          "normalized_mse": 0.871260954067111,
+          "cosine_distance": 0.43563047563657165,
+          "state_mse": 8.877225447446108,
+          "rms_ratio_error": 0.07369235657097306,
+          "predicted_rms": 3.4068853314965963,
+          "teacher_rms": 2.8229890186339617
+        },
+        {
+          "depth": 2,
+          "sequence_ce": 2.9261386138387024,
+          "teacher_argmax_agreement": 0.3916015625,
+          "teacher_top5_recall": 0.6962890625,
+          "teacher_kl": 2.6113820001482964,
+          "normalized_mse": 1.0208754888735712,
+          "cosine_distance": 0.5104377411771566,
+          "state_mse": 12.623632833361626,
+          "rms_ratio_error": 0.19034849450690672,
+          "predicted_rms": 3.9116955529898405,
+          "teacher_rms": 2.8236874658614397
+        },
+        {
+          "depth": 4,
+          "sequence_ce": 4.651978921145201,
+          "teacher_argmax_agreement": 0.208984375,
+          "teacher_top5_recall": 0.44921875,
+          "teacher_kl": 4.309267945587635,
+          "normalized_mse": 1.1574024544097483,
+          "cosine_distance": 0.5787012220826,
+          "state_mse": 23.069340512156487,
+          "rms_ratio_error": 0.8083617235533893,
+          "predicted_rms": 5.18517067655921,
+          "teacher_rms": 2.820718267932534
+        }
+      ],
+      "acceptance": 0.14255654918463967,
+      "mean_accepted_drafts_per_pass": 0.5541922290388548,
+      "accepted_drafts": 271,
+      "proposed_drafts": 1901,
+      "verification_passes": 489,
+      "fidelity": {
+        "exact_token_identity": false,
+        "exact_match_rate": 0.9166666666666666,
+        "diverged_pairs": 1,
+        "median_first_divergence_position": 58,
+        "max_absolute_generated_length_difference": 0
+      },
+      "diagnostic_median_decode_ratio_exact_pairs_only": 1.3239214232772996
+    },
+    {
+      "phase": "final",
+      "depth": 1,
+      "offline": [
+        {
+          "depth": 1,
+          "sequence_ce": 1.8445231050718576,
+          "teacher_argmax_agreement": 0.5693359375,
+          "teacher_top5_recall": 0.8271484375,
+          "teacher_kl": 1.5489205132471398,
+          "normalized_mse": 0.8812139853835106,
+          "cosine_distance": 0.4406069905962795,
+          "state_mse": 8.593692656606436,
+          "rms_ratio_error": 0.05699865071801469,
+          "predicted_rms": 3.3036777563393116,
+          "teacher_rms": 2.8229890186339617
+        },
+        {
+          "depth": 2,
+          "sequence_ce": 2.84432512242347,
+          "teacher_argmax_agreement": 0.3896484375,
+          "teacher_top5_recall": 0.6767578125,
+          "teacher_kl": 2.529650237876922,
+          "normalized_mse": 1.0221733320504427,
+          "cosine_distance": 0.5110866636969149,
+          "state_mse": 11.197447575628757,
+          "rms_ratio_error": 0.11061348250950687,
+          "predicted_rms": 3.62152311578393,
+          "teacher_rms": 2.8236874658614397
+        },
+        {
+          "depth": 4,
+          "sequence_ce": 3.667555914260447,
+          "teacher_argmax_agreement": 0.3046875,
+          "teacher_top5_recall": 0.572265625,
+          "teacher_kl": 3.337126463651657,
+          "normalized_mse": 1.114839545916766,
+          "cosine_distance": 0.5574197680689394,
+          "state_mse": 15.425824411213398,
+          "rms_ratio_error": 0.2949076811783016,
+          "predicted_rms": 4.2300571501255035,
+          "teacher_rms": 2.820718267932534
+        }
+      ],
+      "acceptance": 0.4048059149722736,
+      "mean_accepted_drafts_per_pass": 0.4048059149722736,
+      "accepted_drafts": 219,
+      "proposed_drafts": 541,
+      "verification_passes": 541,
+      "fidelity": {
+        "exact_token_identity": false,
+        "exact_match_rate": 0.8333333333333334,
+        "diverged_pairs": 2,
+        "median_first_divergence_position": 57.5,
+        "max_absolute_generated_length_difference": 0
+      },
+      "diagnostic_median_decode_ratio_exact_pairs_only": 1.287887241272243
+    },
+    {
+      "phase": "final",
+      "depth": 2,
+      "offline": [
+        {
+          "depth": 1,
+          "sequence_ce": 1.8445231050718576,
+          "teacher_argmax_agreement": 0.5693359375,
+          "teacher_top5_recall": 0.8271484375,
+          "teacher_kl": 1.5489205132471398,
+          "normalized_mse": 0.8812139853835106,
+          "cosine_distance": 0.4406069905962795,
+          "state_mse": 8.593692656606436,
+          "rms_ratio_error": 0.05699865071801469,
+          "predicted_rms": 3.3036777563393116,
+          "teacher_rms": 2.8229890186339617
+        },
+        {
+          "depth": 2,
+          "sequence_ce": 2.84432512242347,
+          "teacher_argmax_agreement": 0.3896484375,
+          "teacher_top5_recall": 0.6767578125,
+          "teacher_kl": 2.529650237876922,
+          "normalized_mse": 1.0221733320504427,
+          "cosine_distance": 0.5110866636969149,
+          "state_mse": 11.197447575628757,
+          "rms_ratio_error": 0.11061348250950687,
+          "predicted_rms": 3.62152311578393,
+          "teacher_rms": 2.8236874658614397
+        },
+        {
+          "depth": 4,
+          "sequence_ce": 3.667555914260447,
+          "teacher_argmax_agreement": 0.3046875,
+          "teacher_top5_recall": 0.572265625,
+          "teacher_kl": 3.337126463651657,
+          "normalized_mse": 1.114839545916766,
+          "cosine_distance": 0.5574197680689394,
+          "state_mse": 15.425824411213398,
+          "rms_ratio_error": 0.2949076811783016,
+          "predicted_rms": 4.2300571501255035,
+          "teacher_rms": 2.820718267932534
+        }
+      ],
+      "acceptance": 0.25349301397205587,
+      "mean_accepted_drafts_per_pass": 0.5019762845849802,
+      "accepted_drafts": 254,
+      "proposed_drafts": 1002,
+      "verification_passes": 506,
+      "fidelity": {
+        "exact_token_identity": false,
+        "exact_match_rate": 0.8333333333333334,
+        "diverged_pairs": 2,
+        "median_first_divergence_position": 57.5,
+        "max_absolute_generated_length_difference": 0
+      },
+      "diagnostic_median_decode_ratio_exact_pairs_only": 1.331761547248609
+    },
+    {
+      "phase": "final",
+      "depth": 4,
+      "offline": [
+        {
+          "depth": 1,
+          "sequence_ce": 1.8445231050718576,
+          "teacher_argmax_agreement": 0.5693359375,
+          "teacher_top5_recall": 0.8271484375,
+          "teacher_kl": 1.5489205132471398,
+          "normalized_mse": 0.8812139853835106,
+          "cosine_distance": 0.4406069905962795,
+          "state_mse": 8.593692656606436,
+          "rms_ratio_error": 0.05699865071801469,
+          "predicted_rms": 3.3036777563393116,
+          "teacher_rms": 2.8229890186339617
+        },
+        {
+          "depth": 2,
+          "sequence_ce": 2.84432512242347,
+          "teacher_argmax_agreement": 0.3896484375,
+          "teacher_top5_recall": 0.6767578125,
+          "teacher_kl": 2.529650237876922,
+          "normalized_mse": 1.0221733320504427,
+          "cosine_distance": 0.5110866636969149,
+          "state_mse": 11.197447575628757,
+          "rms_ratio_error": 0.11061348250950687,
+          "predicted_rms": 3.62152311578393,
+          "teacher_rms": 2.8236874658614397
+        },
+        {
+          "depth": 4,
+          "sequence_ce": 3.667555914260447,
+          "teacher_argmax_agreement": 0.3046875,
+          "teacher_top5_recall": 0.572265625,
+          "teacher_kl": 3.337126463651657,
+          "normalized_mse": 1.114839545916766,
+          "cosine_distance": 0.5574197680689394,
+          "state_mse": 15.425824411213398,
+          "rms_ratio_error": 0.2949076811783016,
+          "predicted_rms": 4.2300571501255035,
+          "teacher_rms": 2.820718267932534
+        }
+      ],
+      "acceptance": 0.13360739979445016,
+      "mean_accepted_drafts_per_pass": 0.5189620758483033,
+      "accepted_drafts": 260,
+      "proposed_drafts": 1946,
+      "verification_passes": 501,
+      "fidelity": {
+        "exact_token_identity": false,
+        "exact_match_rate": 0.9166666666666666,
+        "diverged_pairs": 1,
+        "median_first_divergence_position": 58,
+        "max_absolute_generated_length_difference": 0
+      },
+      "diagnostic_median_decode_ratio_exact_pairs_only": 1.2937597513344365
+    }
+  ]
+}
