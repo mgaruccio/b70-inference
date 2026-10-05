@@ -1,0 +1,74 @@
+........s....................F........................F................. [ 75%]
+........................                                                 [100%]
+=================================== FAILURES ===================================
+________________ test_effective_head_matches_deployed_rtn_patch ________________
+
+trainer = <module 'qwen38_train_mtp' from '/home/mike/code/b70-inference/scripts/experiments/qwen38_train_mtp.py'>
+
+    def test_effective_head_matches_deployed_rtn_patch(trainer):
+        """Execute the repo's actual packer, then unpack its nibbles/scales on CPU."""
+        torch = trainer.runtime().torch
+>       source = ast.parse(RTN_PATCH.read_text())
+                           ^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_qwen38_train_mtp.py:417: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/pathlib.py:1027: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/home/mike/code/b70-inference/results/20260909-qwen38-dflash2-rtn-standard/mtp4-clients/reference-source/patches/patch_draft_lmhead_int4.py')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/home/mike/code/b70-inference/results/20260909-qwen38-dflash2-rtn-standard/mtp4-clients/reference-source/patches/patch_draft_lmhead_int4.py'
+
+../../.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/pathlib.py:1013: FileNotFoundError
+___________ test_effective_core_matches_deployment_fused_g128_packer ___________
+
+trainer = <module 'qwen38_train_mtp' from '/home/mike/code/b70-inference/scripts/experiments/qwen38_train_mtp.py'>
+checkpoint = <qwen38_train_mtp.Checkpoint object at 0x7f8dedf167e0>
+
+    def test_effective_core_matches_deployment_fused_g128_packer(trainer, checkpoint):
+        torch = trainer.runtime().torch
+        patch = RTN_PATCH.with_name("patch_draft_mtp_int4.py")
+>       source = ast.parse(patch.read_text())
+                           ^^^^^^^^^^^^^^^^^
+
+tests/test_qwen38_train_mtp.py:752: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/pathlib.py:1027: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/home/mike/code/b70-inference/results/20260909-qwen38-dflash2-rtn-standard/mtp4-clients/reference-source/patches/patch_draft_mtp_int4.py')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/home/mike/code/b70-inference/results/20260909-qwen38-dflash2-rtn-standard/mtp4-clients/reference-source/patches/patch_draft_mtp_int4.py'
+
+../../.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/pathlib.py:1013: FileNotFoundError
+=========================== short test summary info ============================
+FAILED tests/test_qwen38_train_mtp.py::test_effective_head_matches_deployed_rtn_patch
+FAILED tests/test_qwen38_train_mtp.py::test_effective_core_matches_deployment_fused_g128_packer
+2 failed, 93 passed, 1 skipped in 17.31s

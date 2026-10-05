@@ -56,6 +56,18 @@ class Guards(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "unsupported"):
                     hook.guard_sources(root, "0.27.1")
 
+    def test_method_hash_includes_empty_fields_independent_of_ast_dump_defaults(self):
+        # Fixed digest checked under Python 3.12 and 3.14. Their default ast.dump
+        # strings differ even though this source has the same semantic AST.
+        source = "class Runner:\n    def propose(self, x):\n        return x + 1\n"
+        expected = "d8da69073255bfcfbb9b07a6c86b7a6b27e7e381d4d3ca376ce619bdffdf4c50"
+        with patch.object(hook.ast, "dump", side_effect=AssertionError("version-dependent dump must not be used")):
+            self.assertEqual(hook.method_hash(source, "Runner", "propose"), expected)
+            self.assertNotEqual(hook.method_hash(source.replace("+ 1", "+ 2"), "Runner", "propose"), expected)
+        self.assertEqual(hook.method_hash("\n\n" + source, "Runner", "propose"), expected)
+        with self.assertRaisesRegex(RuntimeError, "ambiguous"):
+            hook.method_hash(source + source, "Runner", "propose")
+
     def test_wrappers_restore_and_do_not_replace_return_values(self):
         class Model:
             def forward(self, x):

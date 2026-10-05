@@ -1,0 +1,30 @@
+SERVER_START=parity-no-spec
+SERVER_READY=parity-no-spec
+b70-native-4d284e5618e2ce1d4995288f9db77d99: public API completed; no parity claim until check
+b70-native-f5d901ac3a9300a83cdb2fa00f627b6d: public API completed; no parity claim until check
+SERVER_START=parity-stock4
+Traceback (most recent call last):
+  File "/home/shadeform/qwen-mtp-code/live-gate.py", line 66, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/shadeform/qwen-mtp-code/live-gate.py", line 27, in main
+    with workflow.Server(label,depth,capture=False,weights=overlay) as server:
+  File "/home/shadeform/qwen-mtp-code/run-pilot.py", line 92, in __enter__
+    if self.proc.poll() is not None:raise RuntimeError('Native CUDA server exited; inspect '+str(self.cell/'server.log'))
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Native CUDA server exited; inspect /home/shadeform/qwen-mtp-run/parity-stock4/server.log
+{"uploaded": [{"path": "final.tgz", "bytes": 2030704640, "sha256": "5576ffad397ae70ec07491115fecdc8de9c1981d7e19fa9d1de2774db2f03b68"}], "seconds": 65.38878831199997}
+ARCHIVE_OBJECT_UPLOADED=final.tgz
+{"uploaded": [{"path": "final.tgz.parts.json", "bytes": 299, "sha256": "6fd4a6a25f3a265ac0c074f865023cbb3bb7cb9d4a8ef2c70819ea01c9b8d75a"}], "seconds": 0.4337071960000003}
+ARCHIVE_OBJECT_UPLOADED=final.tgz.parts.json
+ARCHIVE_COMPLETE=final SHA256=5576ffad397ae70ec07491115fecdc8de9c1981d7e19fa9d1de2774db2f03b68
+ARCHIVED_PHASE=final
+Traceback (most recent call last):
+  File "/home/shadeform/qwen-mtp-code/run-pilot.py", line 257, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/shadeform/qwen-mtp-code/run-pilot.py", line 222, in main
+    subprocess.run([sys.executable,str(CODE/'live-gate.py')],check=True)
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/shadeform/qwen-mtp-env/bin/python', '/home/shadeform/qwen-mtp-code/live-gate.py']' returned non-zero exit status 1.

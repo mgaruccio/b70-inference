@@ -1,0 +1,70 @@
+{
+  "tier": "development",
+  "model": "Qwen/Qwen3.8-27B",
+  "model_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "image": "vllm/vllm-openai@sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967",
+  "hardware": "1x H10080GB,Scaleway Paris; actual active GPU SSH readiness required",
+  "cuda_compatibility": "Host kernel driver570.124.06 retained; NVIDIA cuda-compat-13-0 userspace libraries prepended for isolated trainer. Pinned vLLM0.27.1 CUDA13 image unchanged; VLLM_ENABLE_CUDA_COMPATIBILITY=1 applied identically to every stock/candidate/no-spec/capture cell. Require physical BF16 matmul in trainer and patched serving container. Failed original bootstrap preserved.",
+  "lease_cap_hours": 4,
+  "lease_cap_usd": 13.2,
+  "training": {
+    "optimizer_updates": 3740,
+    "epochs": 10,
+    "recursive_depth": 4,
+    "depth_weights": [
+      1,
+      1,
+      0.8,
+      0.8
+    ],
+    "lr": 1e-06,
+    "seed": 42,
+    "grad_accum": 1,
+    "roots": 8,
+    "maximum_sequence": 2048,
+    "checkpoint_every": 374,
+    "frozen_trunk": true,
+    "state_supervision": false,
+    "kl_weight": 1.0,
+    "kl_temperature": 1.0
+  },
+  "checkpoint_selection": "Minimum dev.BF16_export CE objective among stock and10epochs; auxKL metrics never redefine selection.",
+  "baseline": "Prior full-corpus CE-only run17b72e58; fresh stock MTP4/MTP8/no-spec serving on same new H100 and pinned target/runtime. No previous B70 pooling.",
+  "test_process": "Restore and verify all374train64dev archived captures without recapture. Live native proposer state/position gate before distillation; fail on mismatch, list unobserved rejection cases. Actual trainer CLI one-update memory smoke then10complete epochs3740updates, dev CE selection across all64 per epoch. Same nine64request no-spec+ABBA D4D8 public API cells and sandbox/fidelity/acceptance. Preserve raw commands/state evidence/results; R2 full readback before owned GPU deletion. Test reused for heldout regression, not blind confirmation.",
+  "intentional_differences_from_pilot": "Versus full-corpus CE-only: primary CE+KL weight1 T1, cached unchanged teacher captures, fresh capped owned H100; same374/64data10epochs and serving recipe. No state term/no reduced corpus/no quantized teacher.",
+  "primary_research": [
+    {
+      "url": "https://docs.nvidia.com/deploy/cuda-compatibility/forward-compatibility.html",
+      "conclusion": "CUDA compatibility matrix supports cuda-compat-13-0 with driver570 for NVIDIA data-center GPUs; install userspace libraries and configure lookup path,without kernel-driver upgrade or reboot."
+    },
+    {
+      "url": "https://docs.shadeform.ai/api-reference/instances/instances-create",
+      "conclusion": "Creation is asynchronous; advertised availability is not readiness. Verify active status and physical H10080 over SSH; fail explicit capacity errors and bound boot at10min,not3min. Do not retry canceled providers."
+    },
+    {
+      "url": "https://docs.pytorch.org/tutorials/beginner/basics/optimization_tutorial.html",
+      "conclusion": "Use complete-data epochs with separate validation rather than interpreting a pilot update count as full training."
+    },
+    {
+      "url": "https://pytorch.org/blog/torchspec-speculative-decoding-training-at-scale/",
+      "conclusion": "Native inference hidden-state capture aligns training with serving; decouple teacher/head memory; offline capture remains appropriate at this bounded scale. Do not add TorchSpec/Mooncake infrastructure."
+    },
+    {
+      "url": "https://github.com/google-research/google-research/tree/master/mbpp",
+      "conclusion": "Use disjoint official train/dev/test ranges; report small coding subset and unknown public pretraining exposure."
+    },
+    {
+      "url": "https://huggingface.co/xkm/qwen3.8-27b-mtp-head-retrained",
+      "conclusion": "External author reports benefits from much larger public-corpus multi-step training. These Apple/MLX claims are not our CUDA baseline or verified gains; retain chain-faithful native training and measure actual native serving."
+    },
+    {
+      "url": "https://docs.pytorch.org/tutorials/beginner/knowledge_distillation_tutorial.html",
+      "conclusion": "Teacher-to-student KL with detached teacher,T^2,positive temperature. Initial primaryweight1 T1; preserve CE selection."
+    },
+    {
+      "url": "https://github.com/vllm-project/vllm/blob/v0.27.1/vllm/model_executor/models/qwen3_5_mtp.py",
+      "conclusion": "Pinned serving separates hidden/embed normalization,embedding-first concatenation and final MTP norm; verify partial rejection/branch alignment live."
+    }
+  ],
+  "cleanup": "Only exact owned CUDA containers and the named lease; retain raw public captures/checkpoints in R2 before deletion. Auto-delete4h/$13.20; cancel explicit capacity failures or boot exceeding10min. Earlier canceled attempts remain separate and are not successful runs. No persistent launcher changes."
+}

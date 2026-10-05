@@ -1,0 +1,12 @@
+B70_MTP_TRAINING_OVERLAY, B70_MTP_TRAINING_CAPTURE: /usr/local/lib/python3.12/dist-packages/vllm
+B70_MTP_NATIVE_CAPTURE_SEAM: installed
+Traceback (most recent call last):
+  File "/patches/qwen38_mtp_parity.py", line 308, in <module>
+    patch(Path(vllm.__file__).parent, vllm.__version__)
+  File "/patches/qwen38_mtp_parity.py", line 294, in patch
+    guard_sources(root, version)
+  File "/patches/qwen38_mtp_parity.py", line 64, in guard_sources
+    require(method_hash(sources[path], cls, method) == digest,
+  File "/patches/qwen38_mtp_parity.py", line 46, in require
+    raise RuntimeError("MTP parity: " + message)
+RuntimeError: MTP parity: unsupported installed method: GPUModelRunner.propose_draft_token_ids
