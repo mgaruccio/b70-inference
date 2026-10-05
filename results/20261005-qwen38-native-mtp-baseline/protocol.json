@@ -1,0 +1,85 @@
+{
+  "tier": "development",
+  "baseline": "stock checkpoint/native MTP4; no-spec target-only control",
+  "cells": [
+    "A1-MTP4",
+    "B1-no-spec",
+    "B2-no-spec",
+    "A2-MTP4"
+  ],
+  "prompts": [
+    [
+      "coding-merge",
+      "coding",
+      "Implement a Python function that merges two sorted integer lists without sorting their concatenation. Include edge-case examples and explain time and space complexity."
+    ],
+    [
+      "coding-cache",
+      "coding",
+      "Explain and implement a bounded LRU cache in Python using collections.OrderedDict. Include a complete class and a worked example."
+    ],
+    [
+      "prose-rain",
+      "prose",
+      "Write a detailed accessible explanation of how rain forms, from evaporation through clouds to precipitation. Distinguish condensation from freezing."
+    ],
+    [
+      "prose-library",
+      "prose",
+      "Write a thoughtful account of a fictional village opening its first public library. Describe practical challenges, volunteers and the opening day."
+    ],
+    [
+      "reasoning-crossing",
+      "reasoning",
+      "Four people take 1, 2, 5 and 10 minutes to cross a bridge at night. At most two cross together and they must carry a single torch. Explain a minimum-time crossing schedule and verify its total."
+    ],
+    [
+      "reasoning-bayes",
+      "reasoning",
+      "A condition affects 1 percent of people. A test has 90 percent sensitivity and 95 percent specificity. Explain the probability a positive result indicates the condition, using a population of 10000."
+    ],
+    [
+      "json-records",
+      "structured",
+      "Return only valid JSON: an object with key records holding six objects. Each object must have id from 1 through 6, name as item followed by its id, and active true for odd ids and false for even ids."
+    ],
+    [
+      "json-nesting",
+      "structured",
+      "Return only valid JSON representing a project named Orchard, with three milestones named Plan, Build and Test. Each milestone has a positive integer order and an empty tasks array."
+    ],
+    [
+      "repeat-table",
+      "repetitive",
+      "Produce a Markdown table of the integers 1 through 40 with columns n, n squared, and n cubed. Do not skip rows."
+    ],
+    [
+      "repeat-items",
+      "repetitive",
+      "Write 40 numbered lines. Each line must have exactly the form Item N: ready, with N running consecutively from 1 to 40."
+    ],
+    [
+      "entropy-words",
+      "high_entropy",
+      "Invent 30 distinct unusual compound words. For each give a short creative definition involving a different everyday object. Avoid conventional words and repeated endings."
+    ],
+    [
+      "entropy-scenes",
+      "high_entropy",
+      "Write a sequence of 12 very different imaginary scenes. In each combine an unexpected location, a surprising object, and a different emotion. Avoid repeating themes or objects."
+    ]
+  ],
+  "natural_eos": true,
+  "max_output_tokens": 512,
+  "sampling": "greedy seed42; thinking disabled; no tool execution",
+  "differences": "Only --speculative-config removed in no-spec; same target, patches, fp16/GPTQ+FP8, C1, graphs and cold prefix cache. Temporary loopback binding and balanced mode versus production.",
+  "metrics": "Native accepted draft tokens / native draft passes, excludes bonus. Not all base-model calls are inferred from this counter. Exact API token IDs, SSE, latency, counter snapshots retained.",
+  "limitations": "Synthetic development prompts, short contexts; not a held-out generalization claim or production quality qualification. Variable natural-EOS lengths; separately report repeated-output and cross-arm differences.",
+  "cleanup": "Stop only container matching owned /profile mount; persistent launcher and power cap unchanged",
+  "sources": [
+    "https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/config.json",
+    "https://github.com/vllm-project/vllm/blob/ac7509e2b/vllm/model_executor/models/qwen3_5_mtp.py",
+    "https://github.com/vllm-project/vllm/blob/ac7509e2b/vllm/v1/spec_decode/step3p5.py"
+  ],
+  "conclusions": "Checkpoint has one native MTP layer; physical layer is reused across speculative steps with state, token and native KV-cache machinery. Reuse native verifier, not Glimmer KV cropping."
+}
