@@ -1,0 +1,28 @@
+{
+  "tier": "development",
+  "image": "vllm/vllm-openai@sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967",
+  "model_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "baseline": "native CUDA BF16 stock MTP1/2/4/8 + no-spec; never pooled with B70",
+  "stock_sweep_split": "dev",
+  "train_sequences": 64,
+  "dev_sequences": 16,
+  "test_sequences": 16,
+  "training": {
+    "optimizer_updates": 100,
+    "recursive_depth": 4,
+    "depth_weights": [
+      1,
+      1,
+      0.8,
+      0.8
+    ],
+    "lr": 1e-06,
+    "seed": 42,
+    "grad_accum": 1,
+    "roots": 8
+  },
+  "test": "Prespecified final100 versus stock at depth4 ABBA on untouched test requests; test never enters optimizer/checkpoint selection; public MBPP pretraining exposure unknown",
+  "quality": "Natural-EOS public task checks in existing no-network/read-only/cap-dropped CPU sandbox; incomplete responses fail. Bare Python or single Python fence accepted.",
+  "drift": "Teacher-forced, validation-only post-final-norm state cosine/L2/norm/KL at depths1..4; no state-supervision loss yet",
+  "cleanup": "Stop only owned temporary native API containers; archive each stage directly to existing R2 store; target weights read-only in servers and never exported over original files"
+}
