@@ -24,14 +24,16 @@ HF's gated decoder, norms, RoPE and differentiable DynamicCache stay unmodified.
 Depth 1 uses every valid label; deeper roots require all four valid label masks.
 The objective is sum(depth_weight * depth_mean_CE), with per-update denominators.
 
-Precision limits: FP32 trainable masters/AdamW, FP16 XPU autocast + loss scaling,
-BF16 export. CPU is FP32 and only intended for tiny synthetic tests. The frozen
-LM head is the deployed RTN INT4-g128 effective weight (FP16 input and stored
-scales), NOT the checkpoint BF16 head. Dense dequantized GEMM is not bitwise XPU
+Precision regimes: FP32 trainable masters/AdamW and BF16 export. Native
+unquantized BF16 checkpoints use frozen original BF16 embedding/LM-head weights and
+CUDA BF16 autocast; GPTQ checkpoints retain FP16 XPU autocast/loss scaling and the
+deployed RTN INT4-g128 effective LM head. CPU is intended only for tiny synthetic
+tests. Native BF16 dev metrics use the BF16 export stage; GPTQ retains the existing
+BF16 export and RTN effective-core stages. Dense dequantized GEMM is not bitwise
 INT4-kernel equivalence. Core RTN is not used during training (no QAT). Step 0,
-intermediate and final BF16 overlays are reloaded for dev metrics both before and
-after the existing group-128 RTN effective-core transform. Stock remains eligible;
-the reported dev choice is NOT a serving promotion or an acceptance guarantee.
+intermediate and final BF16 overlays are reloaded for dev metrics. Stock remains
+eligible; the reported dev choice is NOT a serving promotion or an acceptance
+guarantee.
 
 Examples (new output paths, verifier unloaded before training):
   python qwen38_train_mtp.py --model MODEL --export-stock --output stock.safetensors
@@ -79,9 +81,22 @@ def runtime():
     )
 
 
+def precision_regime(raw):
+    quant = raw.get("quantization_config")
+    if quant in (None, {}):
+        return "native_bf16"
+    if not isinstance(quant, dict) or (
+            quant.get("quant_method") != "gptq"
+            or quant.get("bits") != 4
+            or quant.get("group_size") != 128
+            or quant.get("sym") is not True):
+        raise TrainingError("Only dense, gated-Q, one-layer native Qwen3.5 GPTQ INT4-g128 or unquantized BF16 is supported")
+    return "gptq_int4_g128"
+
+
 def native_config(raw):
     text = raw.get("text_config", {})
-    quant = raw.get("quantization_config", {})
+    precision_regime(raw)
     if (
         raw.get("model_type") != "qwen3_5"
         or text.get("model_type") != "qwen3_5_text"
@@ -96,12 +111,8 @@ def native_config(raw):
         or text.get("layer_scale", False)
         or not text.get("is_causal", True)
         or text.get("attention_dropout", 0) != 0
-        or quant.get("quant_method") != "gptq"
-        or quant.get("bits") != 4
-        or quant.get("group_size") != 128
-        or quant.get("sym") is not True
     ):
-        raise TrainingError("Only dense, gated-Q, one-layer native Qwen3.5 GPTQ INT4-g128 is supported")
+        raise TrainingError("Only dense, gated-Q, one-layer native Qwen3.5 GPTQ INT4-g128 or unquantized BF16 is supported")
     for key in ("hidden_size", "intermediate_size", "head_dim", "num_attention_heads",
                 "num_key_value_heads", "vocab_size", "max_position_embeddings"):
         if type(text.get(key)) is not int or text[key] <= 0:
@@ -117,7 +128,6 @@ def native_config(raw):
     config = runtime().Config.from_dict(text)
     config._attn_implementation = "sdpa"
     return config
-
 
 def expected_mtp_shapes(config):
     h, d = config.hidden_size, config.head_dim
@@ -168,6 +178,8 @@ class Checkpoint:
             )["weight_map"]
         except (OSError, ValueError, KeyError) as exc:
             raise TrainingError(f"Local checkpoint config/shard index unavailable: {self.path}") from exc
+        self.regime = precision_regime(self.raw)
+        self.precision_regime = self.regime
         self.config = native_config(self.raw)
         self.shapes = expected_mtp_shapes(self.config)
         if {k for k in self.weight_map if k.startswith("mtp.")} != set(self.shapes):
@@ -261,17 +273,33 @@ def rtn_effective_lm_head(weight, *, device="cpu", row_chunk=4096):
 def frozen_heads(checkpoint, device):
     torch = runtime().torch
     shape = (checkpoint.config.vocab_size, checkpoint.config.hidden_size)
+    native_bf16 = getattr(checkpoint, "regime",
+                           getattr(checkpoint, "precision_regime", "gptq_int4_g128")) == "native_bf16"
     weight = checkpoint.tensor(checkpoint.EMBEDDING_KEY)
-    if tuple(weight.shape) != shape or not torch.isfinite(weight).all().item():
+    if (tuple(weight.shape) != shape or not torch.is_floating_point(weight)
+            or not torch.isfinite(weight).all().item()):
         raise TrainingError("Invalid shared embedding")
-    dtype = torch.float16 if torch.device(device).type == "xpu" else torch.float32
-    # CPU tests reproduce the serving FP16 rounding before FP32 computation.
-    embedding = torch.nn.Embedding.from_pretrained(weight.half().to(device=device, dtype=dtype),
-                                                   freeze=True)
+    if native_bf16 and weight.dtype != torch.bfloat16:
+        raise TrainingError("Native BF16 checkpoint requires a BF16 shared embedding")
+    device_type = torch.device(device).type
+    if native_bf16:
+        dtype = torch.bfloat16
+        embedding_weight = weight.to(device=device, dtype=dtype)
+    else:
+        dtype = torch.float16 if device_type in ("xpu", "cuda") else torch.float32
+        # CPU tests reproduce the serving FP16 rounding before FP32 computation.
+        embedding_weight = weight.half().to(device=device, dtype=dtype)
+    embedding = torch.nn.Embedding.from_pretrained(embedding_weight, freeze=True)
     weight = checkpoint.tensor(checkpoint.LM_HEAD_KEY)
-    if tuple(weight.shape) != shape:
+    if (tuple(weight.shape) != shape or not torch.is_floating_point(weight)
+            or not torch.isfinite(weight).all().item()):
         raise TrainingError("Invalid separate LM-head shape")
-    effective = rtn_effective_lm_head(weight, device=device).to(dtype=dtype)
+    if native_bf16:
+        if weight.dtype != torch.bfloat16:
+            raise TrainingError("Native BF16 checkpoint requires an original BF16 LM head")
+        effective = weight.to(device=device, dtype=torch.bfloat16)
+    else:
+        effective = rtn_effective_lm_head(weight, device=device).to(dtype=dtype)
     with torch.device("meta"):
         head = torch.nn.Linear(shape[1], shape[0], bias=False)
     head.weight = torch.nn.Parameter(effective, requires_grad=False)
@@ -350,9 +378,17 @@ def capture_sets(train_dir, eval_dir, config, max_length):
     return train, evaluation
 
 
-def autocast(device):
+def autocast(device, *, dtype=None):
     torch = runtime().torch
-    return torch.autocast("xpu", dtype=torch.float16) if torch.device(device).type == "xpu" else nullcontext()
+    device_type = torch.device(device).type
+    if device_type == "cuda":
+        return torch.autocast("cuda", dtype=torch.bfloat16)
+    if device_type == "xpu":
+        compute_dtype = dtype if dtype in (torch.float16, torch.bfloat16) else torch.float16
+        return torch.autocast("xpu", dtype=compute_dtype)
+    if device_type == "cpu" and dtype == torch.bfloat16:
+        return torch.autocast("cpu", dtype=torch.bfloat16)
+    return nullcontext()
 
 
 def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
@@ -373,7 +409,7 @@ def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
     total = 0.0
     for offset in range(0, count, chunk_tokens):
         rows = indices[offset:offset + chunk_tokens]
-        with autocast(hidden.device):
+        with autocast(hidden.device, dtype=head.weight.dtype):
             logits = head(features.index_select(0, rows))
             loss = torch.nn.functional.cross_entropy(logits.float(), labels[rows], reduction="sum")
         if not torch.isfinite(loss).item():
@@ -398,7 +434,7 @@ def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
 def sequence_hidden(model, embedding, record, device):
     ids, hidden, positions, labels, mask = aligned_inputs(record, device)
     hidden = hidden.to(dtype=embedding.weight.dtype)
-    with autocast(device):
+    with autocast(device, dtype=embedding.weight.dtype):
         result = model(ids, hidden, positions, embedding)
     return result, labels, mask
 
@@ -435,7 +471,7 @@ def sequence_depths(model, embedding, record, device, depth=1, roots=()):
             or not mask[t:t + depth].all().item() for t in roots)):
         raise TrainingError("Recursive roots require distinct in-bounds, fully supervised label chains")
     cache = runtime().Cache()
-    with autocast(device):
+    with autocast(device, dtype=embedding.weight.dtype):
         base = model(ids, hidden.to(embedding.weight.dtype), positions, embedding,
                      past_key_values=cache)
         outputs = [[] for _ in range(depth - 1)]
@@ -538,7 +574,10 @@ def rtn_effective_core(state):
 
 def evaluate_export(path, checkpoint, embedding, head, files, args):
     metrics = {}
-    for stage in ("BF16_export", "RTN_effective_dense"):
+    native_bf16 = getattr(checkpoint, "regime",
+                           getattr(checkpoint, "precision_regime", "gptq_int4_g128")) == "native_bf16"
+    stages = ("BF16_export",) if native_bf16 else ("BF16_export", "RTN_effective_dense")
+    for stage in stages:
         if not files:
             metrics[stage] = None
             continue
@@ -551,18 +590,25 @@ def evaluate_export(path, checkpoint, embedding, head, files, args):
         del state
         metrics[stage] = evaluate(model, embedding, head, files, checkpoint.config, args)
         del model
+    if native_bf16:
+        # RTN is not an actual regime for an unquantized BF16 checkpoint.
+        metrics["RTN_effective_dense"] = None
     return metrics
 
 
 def select_dev_checkpoint(candidates):
     """Strict improvement only: stock wins ties; no test-set inputs or promotion."""
-    eligible = [candidate for candidate in candidates if candidate["metrics"]["RTN_effective_dense"] is not None]
-    if not eligible:
+    if any(candidate["metrics"].get("RTN_effective_dense") is not None for candidate in candidates):
+        stage = "RTN_effective_dense"
+    elif any(candidate["metrics"].get("BF16_export") is not None for candidate in candidates):
+        stage = "BF16_export"
+    else:
         return None
-    winner = min(eligible, key=lambda candidate: candidate["metrics"]["RTN_effective_dense"]["objective"])
+    eligible = [candidate for candidate in candidates if candidate["metrics"].get(stage) is not None]
+    winner = min(eligible, key=lambda candidate: candidate["metrics"][stage]["objective"])
     return {"step": winner["step"], "path": winner["path"],
-            "metric": "dev.RTN_effective_dense.objective",
-            "value": winner["metrics"]["RTN_effective_dense"]["objective"],
+            "metric": f"dev.{stage}.objective",
+            "value": winner["metrics"][stage]["objective"],
             "promotion": False}
 
 
@@ -574,9 +620,13 @@ def checkpoint_path(output, step):
 def memory_peak(device):
     import resource
     result = {"process_max_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}
+    torch = runtime().torch
     if device.type == "xpu":
-        result.update(xpu_max_allocated_bytes=runtime().torch.xpu.max_memory_allocated(device),
-                      xpu_max_reserved_bytes=runtime().torch.xpu.max_memory_reserved(device))
+        result.update(xpu_max_allocated_bytes=torch.xpu.max_memory_allocated(device),
+                      xpu_max_reserved_bytes=torch.xpu.max_memory_reserved(device))
+    elif device.type == "cuda":
+        result.update(cuda_max_allocated_bytes=torch.cuda.max_memory_allocated(device),
+                      cuda_max_reserved_bytes=torch.cuda.max_memory_reserved(device))
     return result
 
 
@@ -597,6 +647,26 @@ def run(args):
             or sum(args.depth_weights) <= 0):
         raise TrainingError("Supply one finite nonnegative weight per depth, with positive total weight")
     checkpoint = Checkpoint(args.model)
+    native_bf16 = checkpoint.regime == "native_bf16"
+    precision = {
+        "masters": "float32",
+        "export": "bfloat16",
+        "cpu_compute": "bfloat16_autocast (tiny tests only)" if native_bf16 else "float32 (tiny tests only)",
+    }
+    if native_bf16:
+        precision.update(
+            regime=checkpoint.regime,
+            cuda_compute="bfloat16_autocast",
+            xpu_compute="bfloat16_autocast",
+            lm_head="frozen original BF16 checkpoint weight",
+            limitations="Native BF16 metrics are actual BF16 exports; RTN-effective metrics are not applicable",
+        )
+    else:
+        precision.update(
+            xpu_compute="float16_autocast",
+            lm_head="frozen dequantized RTN INT4-g128, FP16 input/scales/effective weights",
+            limitations="No core QAT; exported/RTN dev CE != serving acceptance; dense GEMM != bitwise INT4 kernel",
+        )
     output, sidecar = output_paths(args.output, checkpoint.path)
     report = {
         "mode": "export_stock" if args.export_stock else (
@@ -606,12 +676,7 @@ def run(args):
         "optimizer_steps": 0, "train_steps": [], "eval_before": None, "eval_after": None,
         "checkpoints": [], "dev_selection": None,
         "alignment": "base: x[j+1], observed h[j], p[j] -> x[j+2]; branch d: x[t+d], y[d-1], p[t]+d-1 -> x[t+d+1]",
-        "precision": {
-            "masters": "float32", "export": "bfloat16", "xpu_compute": "float16_autocast",
-            "cpu_compute": "float32 (tiny tests only)",
-            "lm_head": "frozen dequantized RTN INT4-g128, FP16 input/scales/effective weights",
-            "limitations": "No core QAT; exported/RTN dev CE != serving acceptance; dense GEMM != bitwise INT4 kernel",
-        },
+        "precision": precision,
     }
     if args.export_stock:
         if args.train_dir or args.eval_dir:
@@ -621,8 +686,18 @@ def run(args):
     if not args.train_dir:
         raise TrainingError("Training requires --train-dir")
     device = torch.device(args.device)
-    if device.type not in ("cpu", "xpu") or (device.type == "xpu" and not torch.xpu.is_available()):
-        raise TrainingError("Use CPU for tiny synthetic tests or an available inference-host XPU")
+    if device.type == "cuda":
+        if not torch.cuda.is_available():
+            raise TrainingError("Requested CUDA device is not available")
+        if not torch.cuda.is_bf16_supported():
+            raise TrainingError("BF16 CUDA support required")
+        if not native_bf16:
+            raise TrainingError("CUDA training requires an unquantized BF16 checkpoint")
+    elif device.type == "xpu":
+        if not torch.xpu.is_available():
+            raise TrainingError("Requested inference-host XPU is not available")
+    elif device.type != "cpu":
+        raise TrainingError("Use CPU for tiny synthetic tests, or an available inference-host XPU/CUDA device")
     if device.type == "cpu" and sum(math.prod(s) for s in checkpoint.shapes.values()) > 5_000_000:
         raise TrainingError("Stock-size CPU training is forbidden; use inference-host XPU after unloading verifier")
     train, dev = capture_sets(args.train_dir, args.eval_dir, checkpoint.config, args.max_length)
@@ -633,14 +708,16 @@ def run(args):
     # Fail before training if ANY scheduled output would clobber an existing run.
     for step in range(0, steps, args.checkpoint_every):
         output_paths(checkpoint_path(output, step), checkpoint.path)
-    if device.type == "xpu":
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
+    elif device.type == "xpu":
         torch.xpu.reset_peak_memory_stats(device)
     torch.manual_seed(args.seed)
     rng, root_rng = random.Random(args.seed), random.Random(args.seed)
     model = build_native_mtp(checkpoint.config, checkpoint.mtp_state(), args.device)
     embedding, head = frozen_heads(checkpoint, args.device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.0, foreach=False)
-    scaler = torch.amp.GradScaler("xpu", init_scale=128.0) if device.type == "xpu" else None
+    scaler = torch.amp.GradScaler("xpu", init_scale=128.0) if device.type == "xpu" and not native_bf16 else None
 
     def save_candidate(step, path):
         state = {"mtp." + key: value for key, value in model.state_dict().items()}
@@ -710,7 +787,7 @@ def run(args):
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    result.add_argument("--model", required=True, help="Local GPTQ checkpoint directory; no downloads")
+    result.add_argument("--model", required=True, help="Local GPTQ or unquantized BF16 checkpoint directory; no downloads")
     result.add_argument("--train-dir")
     result.add_argument("--eval-dir", help="Development captures for checkpoint selection; NEVER the fresh test set")
     result.add_argument("--output", required=True, help="Final mtp-only BF16 file; step 0/intermediates saved beside it, no promotion")

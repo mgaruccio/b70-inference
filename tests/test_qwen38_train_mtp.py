@@ -54,6 +54,10 @@ def raw_config():
         },
     }
 
+@pytest.fixture
+def native_raw_config(raw_config):
+    raw_config.pop("quantization_config")
+    return raw_config
 
 @pytest.fixture
 def config(trainer, raw_config):
@@ -98,6 +102,117 @@ def checkpoint(tmp_path, trainer, config, raw_config):
     mapping["model.language_model.layers.0.self_attn.q_proj.qweight"] = "DO_NOT_READ_VERIFIER.safetensors"
     (model / "model.safetensors.index.json").write_text(json.dumps({"weight_map": mapping}))
     return trainer.Checkpoint(model)
+
+
+@pytest.fixture
+def native_checkpoint(tmp_path, trainer, native_raw_config):
+    torch = trainer.runtime().torch
+    model = tmp_path / "native-bf16-model"
+    model.mkdir()
+    (model / "config.json").write_text(json.dumps(native_raw_config))
+    config = trainer.native_config(native_raw_config)
+    tensors = state_for(trainer, config)
+    trainer.runtime().save_file(tensors, model / "mtp.safetensors")
+    mapping = {key: "mtp.safetensors" for key in tensors}
+    for key, name in [(trainer.Checkpoint.EMBEDDING_KEY, "embedding"),
+                      (trainer.Checkpoint.LM_HEAD_KEY, "lm_head")]:
+        weight = (torch.randn(config.vocab_size, config.hidden_size) * 0.02).bfloat16()
+        trainer.runtime().save_file({key: weight}, model / f"{name}.safetensors")
+        mapping[key] = f"{name}.safetensors"
+    (model / "model.safetensors.index.json").write_text(json.dumps({"weight_map": mapping}))
+    return trainer.Checkpoint(model)
+
+def test_native_bf16_config_and_frozen_heads(trainer, native_raw_config, native_checkpoint):
+    torch = trainer.runtime().torch
+    assert trainer.precision_regime(native_raw_config) == "native_bf16"
+    assert native_checkpoint.regime == native_checkpoint.precision_regime == "native_bf16"
+    embedding, head = trainer.frozen_heads(native_checkpoint, "cpu")
+    expected_embedding = native_checkpoint.tensor(trainer.Checkpoint.EMBEDDING_KEY)
+    expected_head = native_checkpoint.tensor(trainer.Checkpoint.LM_HEAD_KEY)
+    assert embedding.weight.dtype == torch.bfloat16
+    assert head.weight.dtype == torch.bfloat16
+    assert torch.equal(embedding.weight, expected_embedding)
+    assert torch.equal(head.weight, expected_head)
+
+
+def test_native_bf16_cpu_forward_and_actual_metric_stage(
+    trainer, native_checkpoint, record, tmp_path, monkeypatch
+):
+    torch = trainer.runtime().torch
+    model = trainer.build_native_mtp(native_checkpoint.config, native_checkpoint.mtp_state())
+    embedding, head = trainer.frozen_heads(native_checkpoint, "cpu")
+    assert all(parameter.dtype == torch.float32 for parameter in model.parameters())
+    hidden, labels, mask = trainer.sequence_hidden(model, embedding, record, "cpu")
+    assert hidden.dtype == torch.bfloat16
+    assert torch.isfinite(hidden).all()
+    losses = trainer.depth_losses([(hidden, labels, mask)], head, [1], chunk_tokens=2)
+    assert losses[0]["tokens"] == int(mask.sum().item())
+
+    output = tmp_path / "native-stock.safetensors"
+    trainer.export_mtp(native_checkpoint.mtp_state(), native_checkpoint, output, {})
+    capture = tmp_path / "dev.pt"
+    torch.save(dict(record, prompt_id="native-dev"), capture)
+    args = trainer.parser().parse_args(["--model", str(native_checkpoint.path), "--output", str(output),
+                                       "--device", "cpu"])
+    args.depth_weights = [1.0]
+    monkeypatch.setattr(trainer, "rtn_effective_core",
+                        lambda _: pytest.fail("RTN must not be evaluated for native BF16"))
+    metrics = trainer.evaluate_export(output, native_checkpoint, embedding, head, [capture], args)
+    assert metrics["BF16_export"] is not None
+    assert metrics["RTN_effective_dense"] is None
+    candidate = {"step": 0, "path": str(output), "metrics": metrics}
+    selected = trainer.select_dev_checkpoint([candidate])
+    assert selected["metric"] == "dev.BF16_export.objective"
+
+def test_public_cli_native_bf16_cpu_train_report(trainer, native_checkpoint, record, tmp_path):
+    torch = trainer.runtime().torch
+    train, heldout = tmp_path / "train", tmp_path / "heldout"
+    train.mkdir()
+    heldout.mkdir()
+    torch.save(record, train / "train.pt")
+    torch.save(dict(record, prompt_id="native-heldout"), heldout / "heldout.pt")
+    output = tmp_path / "native-cli.safetensors"
+    command = [sys.executable, str(SCRIPT), "--model", str(native_checkpoint.path),
+               "--train-dir", str(train), "--eval-dir", str(heldout), "--output", str(output),
+               "--steps", "1", "--grad-accum", "1", "--logits-chunk", "2", "--lr", "0.001",
+               "--max-length", "16", "--device", "cpu"]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stderr
+    report = json.loads(output.with_suffix(".json").read_text())
+    assert report["precision"]["regime"] == "native_bf16"
+    assert report["precision"]["lm_head"] == "frozen original BF16 checkpoint weight"
+    assert report["eval_before"]["objective"] is not None
+    assert all(candidate["metrics"]["RTN_effective_dense"] is None
+               for candidate in report["checkpoints"])
+    assert report["dev_selection"]["metric"] == "dev.BF16_export.objective"
+    with trainer.runtime().safe_open(output, framework="pt") as handle:
+        assert all(handle.get_tensor(key).dtype == torch.bfloat16 for key in handle.keys())
+
+@pytest.mark.parametrize("available,bf16,message", [
+    (False, True, "not available"),
+    (True, False, "BF16 CUDA support required"),
+])
+def test_cuda_capability_checks_fail_fast(
+    trainer, native_checkpoint, tmp_path, monkeypatch, available, bf16, message
+):
+    torch = trainer.runtime().torch
+    calls = {"available": 0, "bf16": 0}
+    def cuda_available():
+        calls["available"] += 1
+        return available
+    def cuda_bf16_supported():
+        calls["bf16"] += 1
+        return bf16
+    monkeypatch.setattr(torch.cuda, "is_available", cuda_available)
+    monkeypatch.setattr(torch.cuda, "is_bf16_supported", cuda_bf16_supported)
+    args = trainer.parser().parse_args(["--model", str(native_checkpoint.path),
+                                       "--train-dir", str(tmp_path / "missing-train"),
+                                       "--output", str(tmp_path / "cuda.safetensors"),
+                                       "--device", "cuda"])
+    with pytest.raises(trainer.TrainingError, match=message):
+        trainer.run(args)
+    assert calls["available"] == 1
+    assert calls["bf16"] == int(available)
 
 
 def test_alignment_mask_and_actual_positions(trainer, config, record):
