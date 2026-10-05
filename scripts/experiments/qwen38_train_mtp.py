@@ -391,20 +391,66 @@ def autocast(device, *, dtype=None):
     return nullcontext()
 
 
-def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
-               normalizer=None, scaler=None, weight=1.0, gradients=None, stats=None):
-    """Token-chunked CE; backward frees EACH logits graph before the next chunk.
+def kl_divergence(student_logits, teacher_logits, temperature=1.0):
+    """Return summed KL(teacher || student) in FP32 with T^2 scaling."""
+    torch = runtime().torch
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise TrainingError("KL temperature must be positive and finite")
+    if (student_logits.ndim != 2 or teacher_logits.shape != student_logits.shape):
+        raise TrainingError("KL logits must be matching rank-2 tensors")
+    student_logits = student_logits.float()
+    with torch.no_grad():
+        teacher_logits = teacher_logits.float()
+        if not torch.isfinite(teacher_logits).all().item():
+            raise TrainingError("Nonfinite KL teacher logits")
+        teacher_probs = torch.nn.functional.softmax(teacher_logits / temperature, dim=-1)
+    if not torch.isfinite(student_logits).all().item():
+        raise TrainingError("Nonfinite KL student logits")
+    student_log_probs = torch.nn.functional.log_softmax(student_logits / temperature, dim=-1)
+    result = torch.nn.functional.kl_div(student_log_probs, teacher_probs, reduction="sum")
+    result = result * (temperature * temperature)
+    if not torch.isfinite(result).item():
+        raise TrainingError("Nonfinite KL divergence")
+    return result
 
-    A detached leaf accumulates output gradients, then backpropagates through the
-    full-context native core once. Accumulating graph-connected chunk losses would
-    retain the entire T*vocab logits tensor and defeat the memory bound.
+
+def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
+                normalizer=None, scaler=None, weight=1.0, gradients=None, stats=None,
+                kl_teacher=None, kl_mask=None, kl_temperature=1.0, kl_weight=0.0,
+                kl_normalizer=None):
+    """Token-chunked CE plus an optional token-chunked teacher KL.
+
+    Each chunk frees its logits graph before the next chunk. A detached leaf
+    accumulates output gradients, then backpropagates through the full-context
+    native core once. Accumulating graph-connected chunk losses would retain the
+    entire T*vocab logits tensor and defeat the memory bound.
     """
     torch = runtime().torch
+    if not math.isfinite(kl_weight) or kl_weight < 0:
+        raise TrainingError("KL weight must be finite and nonnegative")
+    kl_enabled = kl_weight > 0
     indices = mask.nonzero(as_tuple=True)[0]
     count = indices.numel()
     denominator = count if normalizer is None else normalizer
     if count == 0 or chunk_tokens <= 0 or denominator <= 0:
         raise TrainingError("CE requires supervised labels and positive chunk/normalizer")
+    kl_indices = None
+    if kl_enabled:
+        if kl_teacher is None or kl_mask is None:
+            raise TrainingError("KL requires teacher states and a pair mask")
+        if (kl_teacher.shape != hidden.shape or kl_mask.shape != mask.shape
+                or kl_mask.dtype != torch.bool):
+            raise TrainingError("KL teacher states and pair mask must match student rows")
+        if not math.isfinite(kl_temperature) or kl_temperature <= 0:
+            raise TrainingError("KL temperature must be positive and finite")
+        kl_indices = kl_mask.nonzero(as_tuple=True)[0]
+        if kl_indices.numel():
+            kl_normalizer = (kl_indices.numel() if kl_normalizer is None else kl_normalizer)
+            if kl_normalizer <= 0:
+                raise TrainingError("KL requires a positive valid-pair normalizer")
+        if stats is not None:
+            stats["kl_loss_sum"] = stats.get("kl_loss_sum", 0.0)
+            stats["kl_pairs"] = stats.get("kl_pairs", 0) + int(kl_indices.numel())
     features = hidden.detach().requires_grad_(True) if backward else hidden
     total = 0.0
     for offset in range(0, count, chunk_tokens):
@@ -421,6 +467,20 @@ def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
             scaled = loss * (weight / denominator)
             (scaler.scale(scaled) if scaler is not None else scaled).backward()
         del logits, loss
+    if kl_enabled and kl_indices.numel():
+        for offset in range(0, kl_indices.numel(), chunk_tokens):
+            rows = kl_indices[offset:offset + chunk_tokens]
+            with autocast(hidden.device, dtype=head.weight.dtype):
+                student_logits = head(features.index_select(0, rows))
+                with torch.no_grad():
+                    teacher_logits = head(kl_teacher.index_select(0, rows).to(dtype=head.weight.dtype))
+            loss = kl_divergence(student_logits, teacher_logits, temperature=kl_temperature)
+            if stats is not None:
+                stats["kl_loss_sum"] += loss.detach().item()
+            if backward:
+                scaled = loss * (weight * kl_weight / kl_normalizer)
+                (scaler.scale(scaled) if scaler is not None else scaled).backward()
+            del student_logits, teacher_logits, loss
     if backward:
         if gradients is None:
             hidden.backward(features.grad)
@@ -429,7 +489,6 @@ def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
             # outputs and base KV, so freeing an earlier graph here is incorrect.
             gradients.append((hidden, features.grad))
     return total, count
-
 
 def sequence_hidden(model, embedding, record, device):
     ids, hidden, positions, labels, mask = aligned_inputs(record, device)
@@ -491,17 +550,96 @@ def sequence_depths(model, embedding, record, device, depth=1, roots=()):
                        torch.ones(len(roots), device=device, dtype=torch.bool)))
     return result
 
+def _kl_teacher_entries(record, depth, roots, device):
+    torch = runtime().torch
+    if depth not in (1, 4):
+        raise TrainingError("Only single-depth or native recursive depth 4 is supported")
+    roots = tuple(roots)
+    length = record["input_ids"].numel()
+    supervised = record["loss_mask"].to(device=device, dtype=torch.bool)
+    entries = [(torch.arange(length - 2, device=device, dtype=torch.long) + 1, supervised[2:])]
+    for d in range(2, depth + 1):
+        indices = torch.tensor([root + d for root in roots], device=device, dtype=torch.long)
+        labels = torch.tensor([root + d + 1 for root in roots], device=device, dtype=torch.long)
+        label_mask = torch.zeros(len(roots), device=device, dtype=torch.bool)
+        in_bounds = (labels >= 0) & (labels < length)
+        if in_bounds.any().item():
+            label_mask[in_bounds] = supervised.index_select(0, labels[in_bounds])
+        entries.append((indices, label_mask))
+    return entries
 
-def depth_losses(outputs, head, weights, *, chunk_tokens, backward=False, normalizers=None, scaler=None):
-    """Separate logits chunks, one connected backward through recursion AND base KV."""
+
+def kl_teacher_pairs(record, outputs, depth, roots, device):
+    """Align detached future target states and masks with CE output rows."""
+    torch = runtime().torch
+    target = record["target_last_hidden_states"].to(device=device).detach()
+    entries = _kl_teacher_entries(record, depth, roots, device)
+    if len(outputs) != len(entries):
+        raise TrainingError("KL teacher/output depth mismatch")
+    pairs = []
+    for (student, _, output_mask), (indices, supervised) in zip(outputs, entries):
+        if student.shape[0] != indices.numel():
+            raise TrainingError("KL teacher/output row mismatch")
+        if target.shape[0]:
+            in_bounds = (indices >= 0) & (indices < target.shape[0])
+            safe = indices.clamp(min=0, max=target.shape[0] - 1)
+            teacher = target.index_select(0, safe)
+            finite = torch.isfinite(teacher).all(dim=-1)
+        else:
+            in_bounds = torch.zeros(indices.shape, device=device, dtype=torch.bool)
+            teacher = target.new_zeros((indices.numel(), target.shape[1]))
+            finite = torch.zeros(indices.shape, device=device, dtype=torch.bool)
+        valid = output_mask.to(device=device, dtype=torch.bool) & supervised & in_bounds & finite
+        pairs.append((teacher.detach(), valid))
+    return pairs
+
+
+def kl_pair_counts(record, depth, roots, device="cpu"):
+    """Count finite, supervised future teacher rows without running the model."""
+    torch = runtime().torch
+    target = record["target_last_hidden_states"].to(device=device)
+    counts = []
+    for indices, supervised in _kl_teacher_entries(record, depth, roots, device):
+        if target.shape[0]:
+            in_bounds = (indices >= 0) & (indices < target.shape[0])
+            safe = indices.clamp(min=0, max=target.shape[0] - 1)
+            finite = torch.isfinite(target.index_select(0, safe)).all(dim=-1)
+            counts.append(int((supervised & in_bounds & finite).sum().item()))
+        else:
+            counts.append(0)
+    return counts
+
+def depth_losses(outputs, head, weights, *, chunk_tokens, backward=False, normalizers=None, scaler=None,
+                 teachers=None, kl_weight=0.0, kl_temperature=1.0, kl_normalizers=None):
+    """Separate CE/KL chunks, with one connected backward through recursion and base KV."""
+    if not math.isfinite(kl_weight) or kl_weight < 0:
+        raise TrainingError("KL weight must be finite and nonnegative")
+    kl_enabled = kl_weight > 0
+    if kl_enabled:
+        if teachers is None or len(teachers) != len(outputs):
+            raise TrainingError("KL requires one teacher pair set per depth")
+        if not math.isfinite(kl_temperature) or kl_temperature <= 0:
+            raise TrainingError("KL temperature must be positive and finite")
+        if kl_normalizers is not None and len(kl_normalizers) != len(outputs):
+            raise TrainingError("KL normalizers must match recursive depth")
     gradients, losses = [], []
     for index, (hidden, labels, mask) in enumerate(outputs):
         stats = {"loss_sum": 0.0, "tokens": int(mask.sum().item()), "correct": 0}
+        if kl_enabled:
+            stats.update(kl_loss_sum=0.0, kl_pairs=0)
         if stats["tokens"]:
+            kwargs = {}
+            if kl_enabled:
+                kwargs["kl_teacher"], kwargs["kl_mask"] = teachers[index]
+                kwargs["kl_temperature"] = kl_temperature
+                kwargs["kl_weight"] = kl_weight
+                kwargs["kl_normalizer"] = (
+                    kl_normalizers[index] if kl_normalizers is not None else None)
             stats["loss_sum"], _ = chunked_ce(
                 hidden, head, labels, mask, chunk_tokens=chunk_tokens, backward=backward,
                 normalizer=normalizers[index] if normalizers is not None else None,
-                scaler=scaler, weight=weights[index], gradients=gradients, stats=stats)
+                scaler=scaler, weight=weights[index], gradients=gradients, stats=stats,
+                **kwargs)
         losses.append(stats)
     if backward:
         runtime().torch.autograd.backward(*zip(*gradients))
@@ -509,13 +647,23 @@ def depth_losses(outputs, head, weights, *, chunk_tokens, backward=False, normal
 
 
 def loss_metrics(totals, weights):
+    report_kl = any("kl_pairs" in total for total in totals)
     depths = [{**total, "depth": d + 1, "weight": weights[d],
                "ce": total["loss_sum"] / total["tokens"] if total["tokens"] else None,
                "argmax_agreement": total["correct"] / total["tokens"] if total["tokens"] else None}
               for d, total in enumerate(totals)]
-    return {"ce": depths[0]["ce"], "tokens": depths[0]["tokens"],
-            "argmax_agreement": depths[0]["argmax_agreement"], "depths": depths,
-            "objective": sum(row["weight"] * row["ce"] for row in depths if row["tokens"])}
+    if report_kl:
+        for total, row in zip(totals, depths):
+            pairs = total["kl_pairs"]
+            row["kl"] = total["kl_loss_sum"] / pairs if pairs else None
+            row["kl_pairs"] = pairs
+    result = {"ce": depths[0]["ce"], "tokens": depths[0]["tokens"],
+              "argmax_agreement": depths[0]["argmax_agreement"], "depths": depths,
+              "objective": sum(row["weight"] * row["ce"] for row in depths if row["tokens"])}
+    if report_kl:
+        result["kl"] = sum(row["weight"] * row["kl"] for row in depths if row["kl"] is not None)
+        result["kl_pairs"] = sum(row["kl_pairs"] for row in depths)
+    return result
 
 
 def evaluate(model, embedding, head, files, config, args):
@@ -524,7 +672,14 @@ def evaluate(model, embedding, head, files, config, args):
     torch = runtime().torch
     was_training = model.training
     model.eval()
-    totals = [{"loss_sum": 0.0, "tokens": 0, "correct": 0} for _ in range(args.recursive_depth)]
+    kl_weight = getattr(args, "kl_weight", 0.0)
+    kl_temperature = getattr(args, "kl_temperature", 1.0)
+    kl_enabled = kl_weight > 0
+    totals = [{"loss_sum": 0.0, "tokens": 0, "correct": 0}
+              for _ in range(args.recursive_depth)]
+    if kl_enabled:
+        for total in totals:
+            total.update(kl_loss_sum=0.0, kl_pairs=0)
     # Reset for EVERY candidate/stage, independently of training order or RNG.
     rng = random.Random(args.seed)
     with torch.no_grad():
@@ -532,7 +687,11 @@ def evaluate(model, embedding, head, files, config, args):
             record = load_record(path, config, args.max_length)
             roots = sample_roots(record, args.recursive_depth, args.roots, rng)
             outputs = sequence_depths(model, embedding, record, args.device, args.recursive_depth, roots)
-            losses = depth_losses(outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk)
+            teachers = (kl_teacher_pairs(record, outputs, args.recursive_depth, roots, args.device)
+                        if kl_enabled else None)
+            losses = depth_losses(
+                outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk,
+                teachers=teachers, kl_weight=kl_weight, kl_temperature=kl_temperature)
             for total, loss in zip(totals, losses):
                 for key in total:
                     total[key] += loss[key]
@@ -633,19 +792,25 @@ def memory_peak(device):
 def run(args):
     rt = runtime()
     torch = rt.torch
+    args.kl_weight = getattr(args, "kl_weight", 0.0)
+    args.kl_temperature = getattr(args, "kl_temperature", 1.0)
     if (not 3 <= args.max_length <= 2048 or not 1 <= args.steps <= 10000
             or not math.isfinite(args.lr) or args.lr <= 0
             or not 1 <= args.grad_accum <= 64 or not 1 <= args.logits_chunk <= 256
             or args.recursive_depth not in (1, 4) or not 1 <= args.roots <= 32
             or not 1 <= args.checkpoint_every <= 1000
-            or (args.epochs is not None and not 1 <= args.epochs <= 100)):
+            or (args.epochs is not None and not 1 <= args.epochs <= 100)
+            or not math.isfinite(args.kl_weight) or args.kl_weight < 0
+            or not math.isfinite(args.kl_temperature) or args.kl_temperature <= 0):
         raise TrainingError("Invalid bounds: length 3..2048, steps 1..10000, positive lr, accumulation 1..64, "
-                            "logits chunk 1..256, depth 1/4, roots 1..32, checkpoint interval 1..1000, epochs 1..100")
+                            "logits chunk 1..256, depth 1/4, roots 1..32, checkpoint interval 1..1000, "
+                            "epochs 1..100, nonnegative finite KL weight, positive finite KL temperature")
     args.depth_weights = args.depth_weights if args.depth_weights is not None else [1.0] * args.recursive_depth
     if (len(args.depth_weights) != args.recursive_depth
             or any(not math.isfinite(w) or w < 0 for w in args.depth_weights)
             or sum(args.depth_weights) <= 0):
         raise TrainingError("Supply one finite nonnegative weight per depth, with positive total weight")
+    kl_enabled = args.kl_weight > 0
     checkpoint = Checkpoint(args.model)
     native_bf16 = checkpoint.regime == "native_bf16"
     precision = {
@@ -732,6 +897,8 @@ def run(args):
     report["counts"] = {"train_sequences": len(train), "dev_sequences": len(dev), "sequences_seen": 0,
                         "input_tokens_seen": 0, "observed_hidden_rows_seen": 0, "useful_positions_seen": 0,
                         "loss_tokens_by_depth": [0] * args.recursive_depth}
+    if kl_enabled:
+        report["counts"]["kl_pairs_by_depth"] = [0] * args.recursive_depth
     order, cursor = [], 0
     model.train()
     for step in range(steps):
@@ -746,16 +913,30 @@ def run(args):
         roots = [sample_roots(record, args.recursive_depth, args.roots, root_rng) for record in records]
         tokens = sum(int(record["loss_mask"][2:].sum().item()) for record in records)
         denominators = [tokens] + [sum(map(len, roots))] * (args.recursive_depth - 1)
+        kl_denominators = None
+        if kl_enabled:
+            kl_denominators = [0] * args.recursive_depth
+            for record, selected in zip(records, roots):
+                for index, count in enumerate(kl_pair_counts(record, args.recursive_depth, selected)):
+                    kl_denominators[index] += count
         totals = [{"loss_sum": 0.0, "tokens": 0, "correct": 0} for _ in denominators]
+        if kl_enabled:
+            for total in totals:
+                total.update(kl_loss_sum=0.0, kl_pairs=0)
         optimizer.zero_grad(set_to_none=True)
         for record, selected in zip(records, roots):
             outputs = sequence_depths(model, embedding, record, args.device, args.recursive_depth, selected)
-            losses = depth_losses(outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk,
-                                  backward=True, normalizers=denominators, scaler=scaler)
+            teachers = (kl_teacher_pairs(record, outputs, args.recursive_depth, selected, args.device)
+                        if kl_enabled else None)
+            losses = depth_losses(
+                outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk,
+                backward=True, normalizers=denominators, scaler=scaler,
+                teachers=teachers, kl_weight=args.kl_weight,
+                kl_temperature=args.kl_temperature, kl_normalizers=kl_denominators)
             for total, loss in zip(totals, losses):
                 for key in total:
                     total[key] += loss[key]
-            del outputs
+            del outputs, teachers
         if scaler is not None:
             scaler.unscale_(optimizer)
         # Abort rather than report a skipped/overflowed update as a step.
@@ -777,6 +958,9 @@ def run(args):
         counts["observed_hidden_rows_seen"] += sum(r["positions"].numel() for r in records)
         counts["useful_positions_seen"] += tokens
         counts["loss_tokens_by_depth"] = [a + b for a, b in zip(counts["loss_tokens_by_depth"], denominators)]
+        if kl_enabled:
+            counts["kl_pairs_by_depth"] = [a + b for a, b in zip(
+                counts["kl_pairs_by_depth"], [total["kl_pairs"] for total in totals])]
         print(json.dumps(result, allow_nan=False), flush=True)
         if (step + 1) % args.checkpoint_every == 0 and step + 1 < steps:
             save_candidate(step + 1, checkpoint_path(output, step + 1))
@@ -806,7 +990,9 @@ def parser():
     result.add_argument("--seed", type=int, default=0)
     result.add_argument("--max-length", type=int, default=2048, help="Reject, never truncate, longer sequences")
     result.add_argument("--grad-accum", type=int, default=4, help="Complete sequences per optimizer update")
-    result.add_argument("--logits-chunk", type=int, default=128, help="Supervised tokens per CE logits allocation")
+    result.add_argument("--logits-chunk", type=int, default=128, help="Supervised tokens per CE/KL logits allocation")
+    result.add_argument("--kl-weight", type=float, default=0.0, help="Auxiliary teacher-to-student KL weight; default disables KL")
+    result.add_argument("--kl-temperature", type=float, default=1.0, help="Positive finite KL temperature")
     return result
 
 

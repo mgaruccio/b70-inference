@@ -832,7 +832,9 @@ def test_stock_remains_eligible_and_selection_uses_only_dev_rtn_objective(traine
     ["--roots", "0"], ["--roots", "33"], ["--epochs", "0"], ["--epochs", "101"],
     ["--checkpoint-every", "0"], ["--depth-weights", "nan"], ["--depth-weights", "0"],
     ["--depth-weights", "-1"], ["--recursive-depth", "4", "--depth-weights", "1"],
-    ["--steps", "0"], ["--steps", "10001"],
+    ["--steps", "0"], ["--steps", "10001"], ["--kl-weight", "-1"],
+    ["--kl-weight", "nan"], ["--kl-weight", "inf"], ["--kl-temperature", "0"],
+    ["--kl-temperature", "nan"], ["--kl-temperature", "inf"],
 ])
 def test_recursive_cli_bounds_fail_before_checkpoint_reads(trainer, tmp_path, options):
     args = trainer.parser().parse_args(["--model", str(tmp_path / "must-not-read"),
@@ -916,3 +918,115 @@ def test_public_recursive_cli_epochs_export_reload_and_dev_selection(
             assert any(not torch.equal(handle.get_tensor(key), value) for key, value in checkpoint.mtp_state().items())
     # Keep exact public-boundary commands and stage/count evidence in pytest -s output.
     print(json.dumps({"command": command, "report": report}, allow_nan=False))
+
+
+def test_kl_direction_temperature_and_extreme_logits(trainer):
+    torch = trainer.runtime().torch
+    student = torch.tensor([[2.0, -1.0, 0.5], [-0.3, 1.5, 0.2]], requires_grad=True)
+    teacher = torch.tensor([[-1.0, 2.0, 0.0], [1.2, -0.4, 0.1]], requires_grad=True)
+    temperature = 2.0
+    value = trainer.kl_divergence(student, teacher, temperature=temperature)
+    expected = torch.nn.functional.kl_div(
+        torch.nn.functional.log_softmax(student.detach() / temperature, dim=-1),
+        torch.nn.functional.softmax(teacher.detach() / temperature, dim=-1),
+        reduction="sum") * temperature ** 2
+    torch.testing.assert_close(value.detach(), expected)
+    reverse = trainer.kl_divergence(teacher.detach(), student.detach(), temperature=temperature)
+    assert not torch.allclose(value.detach(), reverse.detach())
+    value.backward()
+    assert student.grad is not None and torch.isfinite(student.grad).all()
+    assert teacher.grad is None
+    extreme = trainer.kl_divergence(
+        torch.tensor([[10000.0, -10000.0]], requires_grad=True),
+        torch.tensor([[-10000.0, 10000.0]]),
+        temperature=3.0)
+    assert torch.isfinite(extreme) and extreme.item() > 0
+
+
+def test_kl_teacher_rows_use_future_indices_and_masks(trainer, config, native_record):
+    torch = trainer.runtime().torch
+    record = dict(native_record)
+    record["positions"] = torch.arange(10, dtype=torch.int64)
+    record["target_last_hidden_states"] = native_record["target_last_hidden_states"][:10].clone()
+    record["loss_mask"] = native_record["loss_mask"].clone()
+    record["loss_mask"][5] = False
+    record["target_last_hidden_states"][4, 0] = float("nan")
+    roots = [0, 2, 6]
+    outputs = [(
+        torch.zeros(10, config.hidden_size),
+        torch.zeros(10, dtype=torch.int64),
+        record["loss_mask"][2:],
+    )]
+    outputs.extend((
+        torch.zeros(3, config.hidden_size),
+        torch.zeros(3, dtype=torch.int64),
+        torch.ones(3, dtype=torch.bool),
+    ) for _ in range(3))
+    pairs = trainer.kl_teacher_pairs(record, outputs, 4, roots, "cpu")
+    assert [int(mask.sum()) for _, mask in pairs] == [8, 2, 3, 1]
+    assert trainer.kl_pair_counts(record, 4, roots) == [8, 2, 3, 1]
+    assert torch.equal(pairs[0][0][0], record["target_last_hidden_states"][1])
+    assert torch.equal(pairs[1][0][0], record["target_last_hidden_states"][2])
+    assert all(not teacher.requires_grad for teacher, _ in pairs)
+
+
+def test_kl_zero_weight_equivalence_and_frozen_teacher(trainer):
+    torch = trainer.runtime().torch
+    torch.manual_seed(101)
+    head = torch.nn.Linear(4, 5, bias=False).bfloat16()
+    head.weight.requires_grad_(False)
+    seed = torch.randn(4, 4)
+    labels = torch.tensor([0, 2, 1, 4], dtype=torch.int64)
+    mask = torch.ones(4, dtype=torch.bool)
+    teacher = torch.randn(4, 4)
+    def calculate(weight, teacher_state):
+        hidden = seed.clone().requires_grad_()
+        losses = trainer.depth_losses(
+            [(hidden, labels, mask)], head, [1], chunk_tokens=2, backward=True,
+            teachers=[(teacher_state, mask)], kl_weight=weight, kl_temperature=2.0)
+        return hidden, trainer.loss_metrics(losses, [1])
+    baseline_hidden, baseline = calculate(0.0, teacher.clone().requires_grad_())
+    zero_hidden, zero = calculate(0.0, teacher.clone().requires_grad_())
+    torch.testing.assert_close(zero_hidden.grad, baseline_hidden.grad)
+    assert zero == baseline
+    assert "kl" not in zero and "kl_pairs" not in zero
+    enabled_teacher = teacher.clone().requires_grad_()
+    enabled_hidden, enabled = calculate(1.0, enabled_teacher)
+    assert enabled["kl_pairs"] == 4 and enabled["kl"] > 0
+    assert enabled["depths"][0]["kl_pairs"] == 4
+    assert enabled_hidden.grad is not None and torch.isfinite(enabled_hidden.grad).all()
+    assert enabled_teacher.grad is None
+    assert head.weight.grad is None
+
+
+def test_recursive_kl_backward_reaches_base_and_branch_states(
+    trainer, checkpoint, native_record
+):
+    torch = trainer.runtime().torch
+    model = trainer.build_native_mtp(checkpoint.config, checkpoint.mtp_state())
+    embedding, head = trainer.frozen_heads(checkpoint, "cpu")
+    roots = [2]
+    seen = []
+    def retain_output(_, args, output):
+        output.retain_grad()
+        seen.append(output)
+    hook = model.register_forward_hook(retain_output)
+    outputs = trainer.sequence_depths(model, embedding, native_record, "cpu", 4, roots)
+    teachers = trainer.kl_teacher_pairs(native_record, outputs, 4, roots, "cpu")
+    normalizers = trainer.kl_pair_counts(native_record, 4, roots)
+    losses = trainer.depth_losses(
+        outputs, head, [0, 0, 0, 1], chunk_tokens=1, backward=True,
+        teachers=teachers, kl_weight=1.0, kl_temperature=1.0,
+        kl_normalizers=normalizers)
+    hook.remove()
+    assert [loss["kl_pairs"] for loss in losses] == [10, 1, 1, 1]
+    assert seen[0][2].abs().sum() > 0
+    assert len(seen) == 4 and all(output.grad.abs().sum() > 0 for output in seen[1:])
+    assert any(parameter.grad is not None and parameter.grad.abs().sum() > 0
+               for parameter in model.parameters())
+
+
+def test_kl_cli_defaults_are_off_and_temperature_is_one(trainer):
+    args = trainer.parser().parse_args(["--model", "unused", "--output", "unused.safetensors"])
+    assert args.kl_weight == 0.0
+    assert args.kl_temperature == 1.0
