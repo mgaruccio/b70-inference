@@ -148,7 +148,7 @@ def offline_report(manifest, hf_dir, native_dir, verifier_dir=None):
                 as_long(native.get("input_ids"), "native"), expected):
             fail("exact ID/prefix mismatch")
         positions = native.get("positions")
-        if not torch.is_tensor(positions) or positions.ndim != 1 or not torch.equal(positions.long(), torch.arange(len(ids))):
+        if not torch.is_tensor(positions) or positions.ndim != 1 or positions.dtype not in (torch.int32, torch.int64) or not torch.equal(positions.long(), torch.arange(len(ids))):
             fail("gapped or noncontiguous positions")
         hidden, hf_rows = native.get("target_last_hidden_states"), hf.get("teacher_rows")
         require_bf16(hidden, "native hidden", len(ids))
@@ -211,10 +211,14 @@ def cached_text_rows(teacher, tokens):
     first = teacher.text(input_ids=tokens[:-SCORED].unsqueeze(0), past_key_values=None, use_cache=True,
                          position_ids=torch.arange(length - SCORED, device=tokens.device).unsqueeze(0))
     past, rows = first.past_key_values, []
+    if past is None:
+        fail("teacher prefill did not return a hybrid cache")
     for position in range(length - SCORED, length):
         step = teacher.text(input_ids=tokens[position:position + 1].unsqueeze(0), past_key_values=past, use_cache=True,
                             position_ids=torch.tensor([[position]], device=tokens.device))
         past = step.past_key_values
+        if past is None:
+            fail("teacher decode did not return a hybrid cache")
         rows.append(step.last_hidden_state[0, -1])
     return torch.stack(rows), past
 
@@ -236,6 +240,8 @@ def run_hf_prefix(teacher, prefix):
         cached_seconds = trainer.synchronized_time(teacher.device) - started
         if cached.shape != full.shape or not bool(torch.isfinite(cached).all() and torch.isfinite(full).all()):
             fail("nonfinite or mismatched cached/full rows")
+        require_bf16(full, "HF full rows", SCORED)
+        require_bf16(cached, "HF cached rows", SCORED)
         errors = parity.errors(cached.detach().cpu(), full.detach().cpu())
         full_ids, cached_ids = shared_argmax(teacher, full), shared_argmax(teacher, cached)
     assert_frozen(teacher)
@@ -299,7 +305,7 @@ def cache_facts(cache):
     for layer in layers:
         for key, attr in (("conv", "conv_states"), ("recurrent", "recurrent_states")):
             states = getattr(layer, attr, None)
-            values = states.values() if isinstance(states, dict) else (states or [])
+            values = [states] if torch.is_tensor(states) else states.values() if isinstance(states, dict) else [] if states is None else states
             buckets[key].update(str(state.dtype).removeprefix("torch.") for state in values if torch.is_tensor(state))
         if torch.is_tensor(getattr(layer, "keys", None)):
             buckets["attention_key"].add(str(layer.keys.dtype).removeprefix("torch."))
@@ -344,12 +350,12 @@ def hf_report(model, manifest, output_dir, device):
                      "cached_seconds": result["cached_seconds"]})
     numeric, argmax = all(row["errors"]["pass"] for row in rows), all(row["argmax_equal"] for row in rows)
     raw = getattr(checkpoint, "raw", None)
-    return {"status": "numeric_and_argmax_pass" if numeric and argmax else "teacher_parity_gate_open",
+    return {"status": "hf_full_cached_internal_pass" if numeric and argmax else "hf_full_cached_internal_gate_open",
             "mode": "hf_cached", "optimizer_updates": 0, "optimizer": None, "training_allowed": False,
             "device": str(device), "checkpoint_revision": raw.get("_commit_hash") if isinstance(raw, dict) else None,
             "entries": len(rows), "tokens": sum(row["prefix_tokens"] for row in rows), "tolerance": parity.TOLERANCE,
             "numeric_passed": numeric, "argmax_passed": argmax, "kernels": kernel_facts(teacher, past), "rows": rows,
-            "scope": "FrozenTarget.replay versus teacher.text hybrid-cache decode; cache chained, not cropped"}
+            "scope": "HF-internal FrozenTarget.replay versus teacher.text hybrid-cache decode; cache chained, not cropped. Not native serving parity."}
 
 
 def parser():

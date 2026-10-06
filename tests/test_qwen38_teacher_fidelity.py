@@ -67,7 +67,7 @@ def test_offline_detects_swapped_row_without_wrap_or_model(tmp_path, monkeypatch
     assert code == 1 and saved["status"] == "teacher_parity_gate_open" and saved["optimizer"] is None
 
 
-@pytest.mark.parametrize("kind", ["ids", "gap", "dtype"])
+@pytest.mark.parametrize("kind", ["ids", "gap", "dtype", "position_dtype"])
 def test_offline_refuses_bad_ids_gaps_and_dtype(tmp_path, kind):
     ids = list(range(6))
     hidden = torch.eye(6, 8, dtype=torch.bfloat16)
@@ -76,10 +76,12 @@ def test_offline_refuses_bad_ids_gaps_and_dtype(tmp_path, kind):
         kwargs["hf_prefix"] = ids[:-1] + [99]
     elif kind == "gap":
         kwargs["positions"] = torch.tensor([0, 1, 2, 3, 5, 6])
+    elif kind == "position_dtype":
+        kwargs["positions"] = torch.arange(len(ids)).float() + 0.1
     else:
         hidden = hidden.float()
     manifest, hf_dir, native_dir = write_case(tmp_path, ids, hidden, torch.eye(6, 8, dtype=torch.bfloat16)[-4:], **kwargs)
-    with pytest.raises(ValueError, match={"ids": "ID/prefix", "gap": "gapped", "dtype": "BF16"}[kind]):
+    with pytest.raises(ValueError, match={"ids": "ID/prefix", "gap": "gapped", "dtype": "BF16", "position_dtype": "positions"}[kind]):
         fid.offline_report(manifest, hf_dir, native_dir)
 
 
@@ -162,8 +164,26 @@ def test_hf_cli_exact_cache_sequence_and_replay_forwarding(tmp_path, monkeypatch
                                                           dtype=torch.bfloat16))
     assert len(teacher.head_rows) == 2 and syncs == ["cpu"] * 4
     assert code == 1 and report["optimizer_updates"] == 0 and report["argmax_passed"] is True
+    assert report["status"] == "hf_full_cached_internal_gate_open"
+    assert "Not native serving parity" in report["scope"]
     assert {item["symbol"] for item in report["kernels"]["functions"]} >= {
         "causal_conv1d_update", "torch_recurrent_gated_delta_rule"}
     assert all(str(item["runtime_file"]).endswith(("modeling_qwen3_5.py", "fla.py")) or "fla" in str(item["runtime_file"])
                for item in report["kernels"]["functions"])
     assert report["kernels"]["cache"]["class"] == "dict"
+
+
+def test_cache_facts_accepts_actual_tensor_state_fields():
+    layer = SimpleNamespace(conv_states=torch.zeros(1, 4, 3, dtype=torch.bfloat16),
+                            recurrent_states=torch.zeros(1, 4, 2, 2),
+                            keys=torch.zeros(1, 2, 3, 8, dtype=torch.bfloat16))
+    cache = SimpleNamespace(layers=[layer], get_seq_length=lambda: 3)
+    facts = fid.cache_facts(cache)
+    assert facts["seq_length"] == 3
+    assert facts["state_dtypes"] == {"conv": ["bfloat16"], "recurrent": ["float32"], "attention_key": ["bfloat16"]}
+
+
+def test_cached_path_refuses_missing_hybrid_cache():
+    teacher = SimpleNamespace(text=lambda **kwargs: SimpleNamespace(past_key_values=None))
+    with pytest.raises(ValueError, match="hybrid cache"):
+        fid.cached_text_rows(teacher, torch.arange(5))
