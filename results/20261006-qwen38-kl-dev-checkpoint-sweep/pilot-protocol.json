@@ -1,0 +1,32 @@
+{
+  "tier": "development",
+  "purpose": "Evaluate all saved KL epoch heads on dev D8; no retraining, no test selection, no promotion",
+  "model": "Qwen/Qwen3.8-27B",
+  "model_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "image": "vllm/vllm-openai@sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967",
+  "hardware": "One physically verified Scaleway Warsaw H100 PCIe 80GB",
+  "lease_cap_hours": 4,
+  "lease_cap_usd": 13.2,
+  "optimizer_updates": 0,
+  "split": "dev",
+  "requests_per_cell": 64,
+  "checkpoint_order_seed": 42,
+  "checkpoint_order": [2992,1496,1122,3366,2244,2618,3740,1870,374,748],
+  "baseline": "Stock native D8 before and after the ten-checkpoint sweep, plus dev no-spec fidelity control; all on the same new lease",
+  "selection": "Maximum pooled accepted draft tokens per verification pass excluding bonus; tie-break E2E median then earlier step",
+  "confirmation": "Four fresh dev64 cells, CE-selected2618 / dev-acceptance winner / winner /2618 (ABBA); report repeats even if winner is2618",
+  "cells": 17,
+  "intentional_differences": ["Only saved MTP head weights change between D8 checkpoint cells", "Dev-only sweep replaces prior test evaluation and training", "New lease; never pool prior-lease throughput", "No new relaxed acceptance or serving algorithm"],
+  "test_process": {
+    "preconditions": "Fresh capped owned lease, physical H100 verification, pinned BF16 model/image, CUDA matmul and patch-source preflight; full source archive parts and whole SHA verified",
+    "data": "All eleven saved BF16 heads (stock plus ten epochs), only64 canonical dev requests/checks; no train/test records restored",
+    "boundary": "/v1/chat/completions plus /metrics on the real vLLM serving container",
+    "steps": ["Verify eleven checkpoint schemas and hashes", "Start no-spec, canary and warmup then all64 dev requests", "StockD8 start control", "Ten D8 epoch cells in declared seeded order with unchanged sampling and warmup", "StockD8 end control", "Rank on dev acceptance", "ABBA repeat selected head against previous CE-selected2618", "Report outputs, functional checks, first divergence versus no-spec, acceptance and throughput for every cell", "Upload raw final archive, stream full R2 readback, validate17 complete64-request cells and zero updates", "Delete only named owned lease, confirm provider absence"],
+    "expected": "All17 cells complete; no hidden shorter sweep; descriptive dev ranking and confirmation, no fidelity or statistical significance assumed",
+    "commands": ["bash launch-owned.sh", "bash launch-bootstrap.sh", "bash launch-ablation.sh", "python sweep.py", "python verify-final.py"],
+    "evidence": "Actual Docker/CLI argv, collect_env/runtime, per-request responses/token IDs/metric deltas/check results, summaries, sweep.json and archive manifest",
+    "cleanup": "Owned server stop after each cell; archive/readback before owned instance deletion; provider auto-delete4h/$13.20 remains enforced"
+  },
+  "limitations": ["Development not standard/community qualification; no BetterBench or long-context claim", "Dev ranking is selection, not a newly blind evaluation", "Prior strict parity and baseline fidelity failures remain explicitly known; this sweep reports rather than waives unseen failures", "No persistent launcher change, training, recapture, or promotion"],
+  "primary_research": ["https://github.com/vllm-project/vllm/blob/v0.27.1/vllm/v1/spec_decode/metrics.py", "https://docs.vllm.ai/en/v0.27.1/examples/features/speculative_decoding/", "https://huggingface.co/Qwen/Qwen3.8-27B"]
+}
