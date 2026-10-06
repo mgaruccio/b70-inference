@@ -1,6 +1,6 @@
 # Qwen3.8 serving-like recurrence: proposed experiment
 
-Status (2026-10-06): **design and local baseline checks only**. User chose serving-like recurrence, starting with design/correctness validation before new paid compute. No new training implementation, rental, optimizer updates, serving cells or promotion is authorized by this document. Development tier only.
+Status (2026-10-06): **default-off implementation integrated; H100 teacher fidelity gate failed**. User approved implementation and one correctness/profiling lease capped at four hours/$13.20; after Warsaw refused before create, user approved another H100 and Scaleway Paris was used at the same price. Zero optimizer updates occurred. No full training, test-set selection or promotion is authorized. Development tier only. [Actual results and failures](../results/20261006-qwen38-serving-recurrence-validation/README.md).
 
 ## Why this experiment
 
@@ -29,7 +29,7 @@ Initial target replay should recompute each root prefix from a fresh target stat
 
 ### Completed source/cache audit
 
-- Student root cache is the MTP's own rows `[0, r]`, length `r+1`, with a fresh branch object per root; append the earlier draft nodes at successive depths. The target hybrid cache is separate. Single-row MTP decode attends every supplied KV, so future/sibling cache leakage is invalid (`prefix_cache:511-518`, `NativeMTP.forward:222-239`). Verify the pinned Transformers cache append semantics and unchanged base tensors explicitly.
+- Student root cache is the MTP's own rows `[0, r]`, length `r+1`, with a fresh branch object per root; append the earlier draft nodes at successive depths. The target hybrid cache is separate. Single-row MTP decode attends every supplied KV, so future/sibling cache leakage is invalid (`prefix_cache:511-518`, `NativeMTP.forward:222-239`). Pinned Transformers5.15.1 CPU checks passed: first insertion copies rather than aliases source storage, appends are out-of-place, base tensors remain unchanged, and siblings are isolated. Gradient connectivity through these operations still needs new-path tests.
 - Native corpus capture retains only accepted verifier rows, `keep = len(outputs)`; its metadata's `source=native-quantized-verifier` is a generic label, not evidence this BF16 run was quantized. Its hidden rows cannot supervise divergent histories. A partial-rejection first pass selects `keep-1`, not the last scheduled row; retain this contract when reconstructing roots.
 - Require contiguous native positions and `teacher_position = student_query_position + 1`. Legacy gapped positions are accepted by the old record validator, but must be rejected on the new branch path. Confirm the restored 374/64 corpus satisfies this guard; do not silently reinterpret legacy RoPE positions.
 - An existing exact-token replay capture contract already exists in `b70_mtp_training.py:181-270`: speculation off, prefix caching off, one active request, `/v1/completions` with token-ID `prompt` and `max_tokens=1`, post-final-norm prompt rows. Native capture and target-only replay capture are mutually exclusive; use separate disposable cells.
@@ -64,7 +64,7 @@ Greedy proposal/teacher processing must match the existing serving configuration
 
 ## Required correctness and real-system test process
 
-This process must be finalized with executable commands **before implementation**. Existing public boundaries are the trainer CLI/export, parity client and native `/v1/chat/completions` serving endpoint. No new endpoint is needed.
+Implementation/validation was subsequently explicitly authorized: one H100, at most four hours or $13.20, **correctness/profiling only, no full training**. The execution contract below is defined before implementation. Existing public boundaries are the trainer CLI/export, parity client and native `/v1/chat/completions` serving endpoint. No new endpoint is needed.
 
 ### Local fixtures (supplementary, not real-model proof)
 
@@ -90,7 +90,32 @@ This is development preparation, not a standards-complete performance result. Be
 
 ## Evidence obtained in this design session
 
+### Authorized next-phase execution contract (defined before implementation)
+
+Preconditions: complete local CPU tests before renting; live price at or below the approved cap; fresh named owned lease with provider auto-delete; pinned model/image and restored original train/dev captures; no test-request deployment. Runtime and artifacts: `/home/mike/b70-evals/20261006-qwen38-serving-recurrence-validation/` locally; isolated `$RUN`, `$MODEL`, `$CODE`, `$PY` paths on the owned host. Select real train diagnostic captures spanning short/median/long lengths without optimizer updates; use identical records/roots for off/on comparisons. Full64 dev API controls remain separate from these diagnostic fixtures.
+
+Required new CLI contract: `--greedy-kl` defaults off and changes only deeper KL branches; `--validate-only` exercises the same teacher/branch/loss path without creating an optimizer or performing updates. It exports/reloads the untouched BF16 head, checks proposal equality and emits validation/timing/count/gradient evidence. Do not present its diagnostic record count as full-corpus training.
+
+```sh
+# CPU contract suite outside Pi's runtime:
+/home/mike/b70-evals/20261002-glimmer-mtp-training/state-check-env/bin/python -m pytest -q tests/test_qwen38_train_mtp.py tests/test_qwen38_mtp_live_parity.py
+# Owned GPU public trainer boundary, same real diagnostic records both modes:
+"$PY" "$CODE/scripts/experiments/qwen38_train_mtp.py" --model "$MODEL" --train-dir "$RUN/train-diagnostics" --eval-dir "$RUN/dev-diagnostics" --output "$RUN/off/tuned-mtp.safetensors" --validate-only --recursive-depth 4 --roots 8 --depth-weights 1 1 .8 .8 --device cuda --seed 42 --lr 1e-6 --max-length 2048 --grad-accum 1 --logits-chunk 64 --kl-weight 1 --kl-temperature 1
+"$PY" "$CODE/scripts/experiments/qwen38_train_mtp.py" --model "$MODEL" --train-dir "$RUN/train-diagnostics" --eval-dir "$RUN/dev-diagnostics" --output "$RUN/on/tuned-mtp.safetensors" --validate-only --greedy-kl --recursive-depth 4 --roots 8 --depth-weights 1 1 .8 .8 --device cuda --seed 42 --lr 1e-6 --max-length 2048 --grad-accum 1 --logits-chunk 64 --kl-weight 1 --kl-temperature 1
+# Existing native live-trace client, repeated per stock/overlay D4/D8 diagnostic:
+"$PY" "$CODE/scripts/experiments/qwen38_mtp_live_parity.py" request --root "$TRACE" --hook "$HOOK" --requests "$TRAIN_REQUESTS" --split train --prompt-id "$PROMPT_ID" --base-url http://127.0.0.1:8000
+"$PY" "$CODE/scripts/experiments/qwen38_mtp_live_parity.py" check --root "$TRACE" --hook "$HOOK" --trainer "$CODE/scripts/experiments/qwen38_train_mtp.py" --model "$MODEL" --device cuda
+```
+
+Execute native target-only exact-token `/v1/completions` replay with the existing capture contract on the diagnostic draft histories; compare its hidden rows/logits with the new teacher backend and live verifier trace. Use the existing `Server/evaluate` API harness for all64 dev requests per no-spec/stock/stock-overlay D4/D8 cell; preserve temperature0, seed42,512-token budget, concurrency1 and prefix-cache policy. Baseline/candidate differ only by overlay/recurrence path being checked, not target quantization or verification policy. Expected validation: zero optimizer updates, finite connected student gradients, no teacher/shared-weight gradients, CE-anchor identity, correct changed-prefix targets, BF16 export proposal equality and unchanged stock-overlay API behavior. Report every parity disagreement separately; a failed gate is not permission to train or weaken verification.
+
+Retain exact actual invocations, diagnostic IDs/root choices, JSON reports/timings, outputs/export hashes and parity errors. Finish archive readback and owned-lease deletion/absence confirmation within the cap; reserve cleanup time rather than using all four hours for work. These steps validate the real input class through the public trainer and API, not only tiny mocked models.
+
 Current source/report baseline verified at commit `f4685282`. Existing targeted CPU contracts ran in the external ML environment:
+
+Implementation integrated as `92c68398` (worker commit `cb599274`). The clean worker checkout's external CPU suite passed **122 tests, 1 skipped, 3 subtests**; the skip needs installed vLLM. In the lead checkout, **120 passed, 2 failed, 1 skipped, 3 subtests**: both failures require intentionally deleted historical RTN patch fixtures. Those unrelated deletions are preserved, and the disposable validation host receives the original fixtures from the clean worktree. Selective read-only review found no blocking implementation defect; CPU evidence does not establish H100 parity.
+
+The validation caller also replays actual native verifier histories, including scheduled rejected suffixes and later corrected-cache continuations, through the implementation's `FrozenTarget.replay`. It compares those rows with both fresh native target-only prefill and HF replay, preserving numerical and exact argmax gates. Missing acceptance classes or no-spec output divergence remain open gates; no prior BF16 exception is a fresh waiver.
 
 ```sh
 cd /home/mike/code/b70-inference
@@ -106,9 +131,10 @@ Design verification also checked the local report link/code fence and **208 symb
 - [Pinned Qwen MTP source, vLLM0.27.1](https://github.com/vllm-project/vllm/blob/v0.27.1/vllm/model_executor/models/qwen3_5_mtp.py), fetched in this session: separate embedding/hidden norms, embedding-first concat, one step-indexed layer interface and shared logits head. Model-specific source and live calls override generic independent-head MTP descriptions.
 - [Draft-OPD](https://arxiv.org/html/2605.29343v2): score draft-induced prefixes, including rejected proposals. Its reverse-KL/rejected-suffix weighting choices are additional hypotheses, deliberately not included here.
 - [Speculative decoding algorithm](https://arxiv.org/html/2211.17192): distinguish proposed histories from rejection-corrected accepted continuations; stochastic exact sampling requires the correct acceptance/residual rules. This experiment retains existing greedy native verification.
+- [Transformers5.15.1 Qwen model source](https://github.com/huggingface/transformers/blob/v5.15.1/src/transformers/models/qwen3_5/modeling_qwen3_5.py) and [official versioned documentation](https://huggingface.co/docs/transformers/v5.15.1/en/model_doc/qwen3_5): replay fresh exact prefixes with `use_cache=False` and read text-model `last_hidden_state` after final normalization. Original checkpoint architecture is `Qwen3_5ForConditionalGeneration`. A text-only `ForCausalLM` teacher requires explicit verified language-weight key mapping and strict loading diagnostics; never silently assume the multimodal key layout loads unchanged. The initial implementation may retain the original full structure and call only its text model to avoid that remapping risk.
 
 ## Readiness / next authorization
 
-Design prepared and source/cache audit completed; baseline CPU contracts passed. **Not implementation-ready or training-ready:** new teacher replay/export equality tests, actual restored-corpus position checks, a budgeted full-training teacher backend, finalized executable real-system steps and the real-model gate remain required. No performance gain is claimed.
+The H100 validated all438 restored records, actual zero-update CLI off/on gradients and stock BF16 export/reload equality. Teacher profiling completed, but HF/native-fresh numeric gates failed24/60 histories, with1/240 argmax-row disagreement; native fresh-prefill/incremental-verifier numeric gates also failed8/12 histories. Strict student recurrence and D4/no-spec identity remain open. The workflow stopped before full64-dev controls. **Not training-ready.** Isolate the teacher execution-path fidelity gap before any full experiment; a complete training schedule still needs separate budget approval. No performance gain is claimed.
 
-Next proposed authorization: implement the default-off path and tests, with an explicitly capped **correctness/profiling-only** GPU lease to execute the real-system gate. Obtain its budget separately; then propose the full-corpus experiment budget using observed costs. Do not invoke old lease-creation scripts merely to prepare this design.
+The user subsequently authorized implementation and one correctness/profiling-only H100 lease capped at four hours or $13.20. **Full-corpus training remains unauthorized.** Its budget must be proposed from observed costs. Do not invoke old lease-creation scripts unchanged; they belong to completed experiments.

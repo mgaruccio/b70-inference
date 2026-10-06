@@ -1,0 +1,1750 @@
+{
+  "status": "completed",
+  "optimizer_updates": 0,
+  "stock_tensor_identity": true,
+  "reports": {
+    "off": {
+      "execution": {
+        "command": [
+          "/home/shadeform/qwen-mtp-env/bin/python",
+          "/home/shadeform/qwen-mtp-code/scripts/experiments/qwen38_train_mtp.py",
+          "--model",
+          "/home/shadeform/qwen-model",
+          "--train-dir",
+          "/home/shadeform/qwen-mtp-run/train-diagnostics",
+          "--eval-dir",
+          "/home/shadeform/qwen-mtp-run/dev-diagnostics",
+          "--output",
+          "/home/shadeform/qwen-mtp-run/off/tuned-mtp.safetensors",
+          "--validate-only",
+          "--recursive-depth",
+          "4",
+          "--roots",
+          "8",
+          "--depth-weights",
+          "1",
+          "1",
+          ".8",
+          ".8",
+          "--device",
+          "cuda",
+          "--seed",
+          "42",
+          "--lr",
+          "1e-6",
+          "--max-length",
+          "2048",
+          "--grad-accum",
+          "1",
+          "--logits-chunk",
+          "64",
+          "--kl-weight",
+          "1",
+          "--kl-temperature",
+          "1"
+        ],
+        "returncode": 0,
+        "elapsed_s": 36.81557876900001,
+        "log": "cli-off.log"
+      },
+      "metadata": {
+        "mode": "recursive_teacher_forcing",
+        "config": {
+          "model": "/home/shadeform/qwen-model",
+          "train_dir": "/home/shadeform/qwen-mtp-run/train-diagnostics",
+          "eval_dir": "/home/shadeform/qwen-mtp-run/dev-diagnostics",
+          "output": "/home/shadeform/qwen-mtp-run/off/tuned-mtp.safetensors",
+          "export_stock": false,
+          "steps": 10,
+          "epochs": null,
+          "recursive_depth": 4,
+          "roots": 8,
+          "depth_weights": [
+            1.0,
+            1.0,
+            0.8,
+            0.8
+          ],
+          "checkpoint_every": 10,
+          "lr": 1e-06,
+          "device": "cuda",
+          "seed": 42,
+          "max_length": 2048,
+          "grad_accum": 1,
+          "logits_chunk": 64,
+          "kl_weight": 1.0,
+          "kl_temperature": 1.0,
+          "validate_only": true
+        },
+        "torch": "2.14.1+cu130",
+        "transformers": "5.15.1",
+        "python": "3.12.3",
+        "optimizer_steps": 0,
+        "train_steps": [],
+        "eval_before": null,
+        "eval_after": null,
+        "checkpoints": [],
+        "dev_selection": null,
+        "alignment": "base: x[j+1], observed h[j], p[j] -> x[j+2]; branch d: x[t+d], y[d-1], p[t]+d-1 -> x[t+d+1]",
+        "precision": {
+          "masters": "float32",
+          "export": "bfloat16",
+          "cpu_compute": "bfloat16_autocast (tiny tests only)",
+          "regime": "native_bf16",
+          "cuda_compute": "bfloat16_autocast",
+          "xpu_compute": "bfloat16_autocast",
+          "lm_head": "frozen original BF16 checkpoint weight",
+          "limitations": "Native BF16 metrics are actual BF16 exports; RTN-effective metrics are not applicable"
+        },
+        "status": "validation-only",
+        "validation": {
+          "train": {
+            "ce": 0.07168355315549994,
+            "tokens": 638,
+            "argmax_agreement": 0.9749216300940439,
+            "depths": [
+              {
+                "loss_sum": 45.73410691320896,
+                "tokens": 638,
+                "correct": 622,
+                "kl_loss_sum": 21.14363691955805,
+                "kl_pairs": 638,
+                "depth": 1,
+                "weight": 1.0,
+                "ce": 0.07168355315549994,
+                "argmax_agreement": 0.9749216300940439,
+                "kl": 0.033140496739119195
+              },
+              {
+                "loss_sum": 1.2855200599879026,
+                "tokens": 24,
+                "correct": 24,
+                "kl_loss_sum": 0.4708922393620014,
+                "kl_pairs": 24,
+                "depth": 2,
+                "weight": 1.0,
+                "ce": 0.053563335832829274,
+                "argmax_agreement": 1.0,
+                "kl": 0.019620509973416727
+              },
+              {
+                "loss_sum": 3.8858709526248276,
+                "tokens": 24,
+                "correct": 22,
+                "kl_loss_sum": 1.9492481108754873,
+                "kl_pairs": 24,
+                "depth": 3,
+                "weight": 0.8,
+                "ce": 0.16191128969270116,
+                "argmax_agreement": 0.9166666666666666,
+                "kl": 0.08121867128647864
+              },
+              {
+                "loss_sum": 12.59658082202077,
+                "tokens": 24,
+                "correct": 19,
+                "kl_loss_sum": 9.031517554074526,
+                "kl_pairs": 24,
+                "depth": 4,
+                "weight": 0.8,
+                "ce": 0.5248575342508653,
+                "argmax_agreement": 0.7916666666666666,
+                "kl": 0.3763132314197719
+              }
+            ],
+            "objective": 0.6746619481431825,
+            "kl": 0.4187865288775364,
+            "kl_pairs": 710,
+            "sequences": 3
+          },
+          "dev": {
+            "ce": 0.14720380306243896,
+            "tokens": 659,
+            "argmax_agreement": 0.9559939301972686,
+            "depths": [
+              {
+                "loss_sum": 97.00730621814728,
+                "tokens": 659,
+                "correct": 630,
+                "kl_loss_sum": 41.71346163749695,
+                "kl_pairs": 659,
+                "depth": 1,
+                "weight": 1.0,
+                "ce": 0.14720380306243896,
+                "argmax_agreement": 0.9559939301972686,
+                "kl": 0.06329812084597412
+              },
+              {
+                "loss_sum": 2.5962439571740106,
+                "tokens": 24,
+                "correct": 23,
+                "kl_loss_sum": 2.768662626389414,
+                "kl_pairs": 24,
+                "depth": 2,
+                "weight": 1.0,
+                "ce": 0.10817683154891711,
+                "argmax_agreement": 0.9583333333333334,
+                "kl": 0.11536094276622559
+              },
+              {
+                "loss_sum": 29.33363950997591,
+                "tokens": 24,
+                "correct": 21,
+                "kl_loss_sum": 28.705979850143194,
+                "kl_pairs": 24,
+                "depth": 3,
+                "weight": 0.8,
+                "ce": 1.2222349795823295,
+                "argmax_agreement": 0.875,
+                "kl": 1.1960824937559664
+              },
+              {
+                "loss_sum": 3.511474072933197,
+                "tokens": 24,
+                "correct": 23,
+                "kl_loss_sum": 4.232263147830963,
+                "kl_pairs": 24,
+                "depth": 4,
+                "weight": 0.8,
+                "ce": 0.14631141970554987,
+                "argmax_agreement": 0.9583333333333334,
+                "kl": 0.17634429782629013
+              }
+            ],
+            "objective": 1.3502177540416596,
+            "kl": 1.2766004968780051,
+            "kl_pairs": 731,
+            "sequences": 3
+          },
+          "ce_anchor_identical": true,
+          "gradient_checks": {
+            "student_connected": true,
+            "student_finite": true,
+            "student_nonzero": true,
+            "frozen_no_grad": true,
+            "group_grad_norms": [
+              266.41439152978296,
+              284.26778595443153,
+              18.701308344927906,
+              432.4395240564731,
+              56.70216665998455,
+              634.7628793311499
+            ]
+          },
+          "export_reload": {
+            "greedy_proposals_equal": true,
+            "proposal_tokens": 192,
+            "stock_mtp_sha256": "06f8b086a6ba9ebb8a9f5ea94170bd754f9ff953816e5293b90e34f227946fe8",
+            "export_mtp_sha256": "06f8b086a6ba9ebb8a9f5ea94170bd754f9ff953816e5293b90e34f227946fe8",
+            "records": [
+              {
+                "split": "train",
+                "prompt_id": "mbpp-709",
+                "roots": [
+                  330,
+                  375,
+                  389,
+                  432,
+                  443,
+                  458,
+                  645,
+                  697
+                ],
+                "proposals": [
+                  [
+                    14856,
+                    1120,
+                    41489,
+                    198
+                  ],
+                  [
+                    7606,
+                    1067,
+                    25,
+                    1698
+                  ],
+                  [
+                    4535,
+                    198,
+                    262,
+                    364
+                  ],
+                  [
+                    279,
+                    3481,
+                    2468,
+                    11
+                  ],
+                  [
+                    41662,
+                    198,
+                    262,
+                    10300
+                  ],
+                  [
+                    313,
+                    19,
+                    25,
+                    220
+                  ],
+                  [
+                    11,
+                    220,
+                    21,
+                    7025
+                  ],
+                  [
+                    17,
+                    198,
+                    262,
+                    653
+                  ]
+                ]
+              },
+              {
+                "split": "train",
+                "prompt_id": "mbpp-784",
+                "roots": [
+                  127,
+                  134,
+                  136,
+                  177,
+                  192,
+                  198,
+                  209,
+                  217
+                ],
+                "proposals": [
+                  [
+                    15144,
+                    66034,
+                    72128,
+                    7080
+                  ],
+                  [
+                    1118,
+                    66034,
+                    283,
+                    220
+                  ],
+                  [
+                    283,
+                    2168,
+                    198,
+                    262
+                  ],
+                  [
+                    25,
+                    198,
+                    285,
+                    413
+                  ],
+                  [
+                    72128,
+                    283,
+                    1572,
+                    198
+                  ],
+                  [
+                    198,
+                    262,
+                    413,
+                    1118
+                  ],
+                  [
+                    2168,
+                    25,
+                    198,
+                    285
+                  ],
+                  [
+                    262,
+                    460,
+                    1118,
+                    66034
+                  ]
+                ]
+              },
+              {
+                "split": "train",
+                "prompt_id": "mbpp-813",
+                "roots": [
+                  69,
+                  71,
+                  75,
+                  76,
+                  77,
+                  78,
+                  83,
+                  87
+                ],
+                "proposals": [
+                  [
+                    71093,
+                    12305,
+                    198,
+                    727
+                  ],
+                  [
+                    198,
+                    727,
+                    886,
+                    4956
+                  ],
+                  [
+                    1104,
+                    25,
+                    592,
+                    8
+                  ],
+                  [
+                    1590,
+                    198,
+                    262,
+                    460
+                  ],
+                  [
+                    592,
+                    8,
+                    1411,
+                    514
+                  ],
+                  [
+                    8,
+                    1411,
+                    514,
+                    25
+                  ],
+                  [
+                    262,
+                    460,
+                    2343,
+                    1104
+                  ],
+                  [
+                    8,
+                    198,
+                    71093,
+                    248046
+                  ]
+                ]
+              },
+              {
+                "split": "dev",
+                "prompt_id": "mbpp-518",
+                "roots": [
+                  76,
+                  77,
+                  78,
+                  79,
+                  83,
+                  84,
+                  87,
+                  94
+                ],
+                "proposals": [
+                  [
+                    71093,
+                    12305,
+                    198,
+                    727
+                  ],
+                  [
+                    12305,
+                    198,
+                    727,
+                    17410
+                  ],
+                  [
+                    198,
+                    727,
+                    17410,
+                    12621
+                  ],
+                  [
+                    727,
+                    17410,
+                    12621,
+                    1393
+                  ],
+                  [
+                    25,
+                    514,
+                    8,
+                    1411
+                  ],
+                  [
+                    198,
+                    262,
+                    4071,
+                    198
+                  ],
+                  [
+                    514,
+                    36036,
+                    17510,
+                    1393
+                  ],
+                  [
+                    8,
+                    198,
+                    71093,
+                    248046
+                  ]
+                ]
+              },
+              {
+                "split": "dev",
+                "prompt_id": "mbpp-521",
+                "roots": [
+                  103,
+                  110,
+                  153,
+                  168,
+                  174,
+                  185,
+                  193,
+                  213
+                ],
+                "proposals": [
+                  [
+                    1716,
+                    6677,
+                    428,
+                    341
+                  ],
+                  [
+                    292,
+                    11,
+                    272,
+                    1590
+                  ],
+                  [
+                    264,
+                    2610,
+                    20837,
+                    198
+                  ],
+                  [
+                    2564,
+                    292,
+                    466,
+                    292
+                  ],
+                  [
+                    2564,
+                    264,
+                    25,
+                    198
+                  ],
+                  [
+                    23255,
+                    1885,
+                    20837,
+                    682
+                  ],
+                  [
+                    27396,
+                    198,
+                    262,
+                    413
+                  ],
+                  [
+                    198,
+                    262,
+                    745,
+                    25
+                  ]
+                ]
+              },
+              {
+                "split": "dev",
+                "prompt_id": "mbpp-561",
+                "roots": [
+                  288,
+                  290,
+                  322,
+                  386,
+                  394,
+                  533,
+                  562,
+                  583
+                ],
+                "proposals": [
+                  [
+                    4535,
+                    198,
+                    262,
+                    364
+                  ],
+                  [
+                    262,
+                    364,
+                    6505,
+                    303
+                  ],
+                  [
+                    309,
+                    1067,
+                    17932,
+                    60
+                  ],
+                  [
+                    11,
+                    220,
+                    18,
+                    681
+                  ],
+                  [
+                    23,
+                    681,
+                    318,
+                    23
+                  ],
+                  [
+                    653,
+                    220,
+                    17,
+                    369
+                  ],
+                  [
+                    11,
+                    694,
+                    220,
+                    23
+                  ],
+                  [
+                    694,
+                    220,
+                    19,
+                    25
+                  ]
+                ]
+              }
+            ]
+          },
+          "seconds": {
+            "forward_backward": 17.44295832499995,
+            "export_reload": 13.02149577299997
+          }
+        },
+        "recurrence": {
+          "roots": 0,
+          "teacher_replays": 0,
+          "teacher_rows_by_depth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "proposal_divergences_by_depth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "divergent_histories_by_depth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "first_divergence_by_depth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "student_seconds": 0.0,
+          "teacher_seconds": 0.0,
+          "records": []
+        },
+        "counts": {
+          "train_sequences": 3,
+          "dev_sequences": 3,
+          "sequences_seen": 6,
+          "loss_tokens_by_depth": [
+            1297,
+            48,
+            48,
+            48
+          ],
+          "kl_pairs_by_depth": [
+            1297,
+            48,
+            48,
+            48
+          ],
+          "sampled_roots": 48
+        },
+        "memory_peak": {
+          "process_max_rss_kib": 9538056,
+          "cuda_max_allocated_bytes": 9537888256,
+          "cuda_max_reserved_bytes": 12496928768
+        }
+      }
+    },
+    "on": {
+      "execution": {
+        "command": [
+          "/home/shadeform/qwen-mtp-env/bin/python",
+          "/home/shadeform/qwen-mtp-code/scripts/experiments/qwen38_train_mtp.py",
+          "--model",
+          "/home/shadeform/qwen-model",
+          "--train-dir",
+          "/home/shadeform/qwen-mtp-run/train-diagnostics",
+          "--eval-dir",
+          "/home/shadeform/qwen-mtp-run/dev-diagnostics",
+          "--output",
+          "/home/shadeform/qwen-mtp-run/on/tuned-mtp.safetensors",
+          "--validate-only",
+          "--recursive-depth",
+          "4",
+          "--roots",
+          "8",
+          "--depth-weights",
+          "1",
+          "1",
+          ".8",
+          ".8",
+          "--device",
+          "cuda",
+          "--seed",
+          "42",
+          "--lr",
+          "1e-6",
+          "--max-length",
+          "2048",
+          "--grad-accum",
+          "1",
+          "--logits-chunk",
+          "64",
+          "--kl-weight",
+          "1",
+          "--kl-temperature",
+          "1",
+          "--greedy-kl"
+        ],
+        "returncode": 0,
+        "elapsed_s": 49.14060465,
+        "log": "cli-on.log"
+      },
+      "metadata": {
+        "mode": "greedy_deeper_kl",
+        "config": {
+          "model": "/home/shadeform/qwen-model",
+          "train_dir": "/home/shadeform/qwen-mtp-run/train-diagnostics",
+          "eval_dir": "/home/shadeform/qwen-mtp-run/dev-diagnostics",
+          "output": "/home/shadeform/qwen-mtp-run/on/tuned-mtp.safetensors",
+          "export_stock": false,
+          "steps": 10,
+          "epochs": null,
+          "recursive_depth": 4,
+          "roots": 8,
+          "depth_weights": [
+            1.0,
+            1.0,
+            0.8,
+            0.8
+          ],
+          "checkpoint_every": 10,
+          "lr": 1e-06,
+          "device": "cuda",
+          "seed": 42,
+          "max_length": 2048,
+          "grad_accum": 1,
+          "logits_chunk": 64,
+          "kl_weight": 1.0,
+          "kl_temperature": 1.0,
+          "greedy_kl": true,
+          "validate_only": true
+        },
+        "torch": "2.14.1+cu130",
+        "transformers": "5.15.1",
+        "python": "3.12.3",
+        "optimizer_steps": 0,
+        "train_steps": [],
+        "eval_before": null,
+        "eval_after": null,
+        "checkpoints": [],
+        "dev_selection": null,
+        "alignment": "base: x[j+1], observed h[j], p[j] -> x[j+2]; branch d: x[t+d], y[d-1], p[t]+d-1 -> x[t+d+1]",
+        "precision": {
+          "masters": "float32",
+          "export": "bfloat16",
+          "cpu_compute": "bfloat16_autocast (tiny tests only)",
+          "regime": "native_bf16",
+          "cuda_compute": "bfloat16_autocast",
+          "xpu_compute": "bfloat16_autocast",
+          "lm_head": "frozen original BF16 checkpoint weight",
+          "limitations": "Native BF16 metrics are actual BF16 exports; RTN-effective metrics are not applicable"
+        },
+        "recurrence": {
+          "roots": 48,
+          "teacher_replays": 48,
+          "teacher_rows_by_depth": [
+            48,
+            48,
+            48,
+            48
+          ],
+          "proposal_divergences_by_depth": [
+            2,
+            3,
+            8,
+            10
+          ],
+          "divergent_histories_by_depth": [
+            0,
+            2,
+            3,
+            8
+          ],
+          "first_divergence_by_depth": [
+            2,
+            1,
+            5,
+            4
+          ],
+          "student_seconds": 0.5780490720002263,
+          "teacher_seconds": 15.748083457000007,
+          "records": [
+            {
+              "prompt_id": "mbpp-709",
+              "roots": [
+                330,
+                375,
+                389,
+                432,
+                443,
+                458,
+                645,
+                697
+              ],
+              "proposals": [
+                [
+                  14856,
+                  1120,
+                  41489,
+                  198
+                ],
+                [
+                  7606,
+                  1067,
+                  25,
+                  1698
+                ],
+                [
+                  4535,
+                  198,
+                  262,
+                  364
+                ],
+                [
+                  279,
+                  3481,
+                  2468,
+                  11
+                ],
+                [
+                  41662,
+                  198,
+                  262,
+                  10300
+                ],
+                [
+                  313,
+                  19,
+                  25,
+                  220
+                ],
+                [
+                  11,
+                  220,
+                  21,
+                  7025
+                ],
+                [
+                  17,
+                  198,
+                  262,
+                  653
+                ]
+              ]
+            },
+            {
+              "prompt_id": "mbpp-784",
+              "roots": [
+                127,
+                134,
+                136,
+                177,
+                192,
+                198,
+                209,
+                217
+              ],
+              "proposals": [
+                [
+                  15144,
+                  66034,
+                  72128,
+                  7080
+                ],
+                [
+                  1118,
+                  66034,
+                  283,
+                  220
+                ],
+                [
+                  283,
+                  2168,
+                  198,
+                  262
+                ],
+                [
+                  25,
+                  198,
+                  285,
+                  413
+                ],
+                [
+                  72128,
+                  283,
+                  1572,
+                  198
+                ],
+                [
+                  198,
+                  262,
+                  413,
+                  1118
+                ],
+                [
+                  2168,
+                  25,
+                  198,
+                  285
+                ],
+                [
+                  262,
+                  460,
+                  1118,
+                  66034
+                ]
+              ]
+            },
+            {
+              "prompt_id": "mbpp-813",
+              "roots": [
+                69,
+                71,
+                75,
+                76,
+                77,
+                78,
+                83,
+                87
+              ],
+              "proposals": [
+                [
+                  71093,
+                  12305,
+                  198,
+                  727
+                ],
+                [
+                  198,
+                  727,
+                  886,
+                  4956
+                ],
+                [
+                  1104,
+                  25,
+                  592,
+                  8
+                ],
+                [
+                  1590,
+                  198,
+                  262,
+                  460
+                ],
+                [
+                  592,
+                  8,
+                  1411,
+                  514
+                ],
+                [
+                  8,
+                  1411,
+                  514,
+                  25
+                ],
+                [
+                  262,
+                  460,
+                  2343,
+                  1104
+                ],
+                [
+                  8,
+                  198,
+                  71093,
+                  248046
+                ]
+              ]
+            },
+            {
+              "prompt_id": "mbpp-518",
+              "roots": [
+                76,
+                77,
+                78,
+                79,
+                83,
+                84,
+                87,
+                94
+              ],
+              "proposals": [
+                [
+                  71093,
+                  12305,
+                  198,
+                  727
+                ],
+                [
+                  12305,
+                  198,
+                  727,
+                  17410
+                ],
+                [
+                  198,
+                  727,
+                  17410,
+                  12621
+                ],
+                [
+                  727,
+                  17410,
+                  12621,
+                  1393
+                ],
+                [
+                  25,
+                  514,
+                  8,
+                  1411
+                ],
+                [
+                  198,
+                  262,
+                  4071,
+                  198
+                ],
+                [
+                  514,
+                  36036,
+                  17510,
+                  1393
+                ],
+                [
+                  8,
+                  198,
+                  71093,
+                  248046
+                ]
+              ]
+            },
+            {
+              "prompt_id": "mbpp-521",
+              "roots": [
+                103,
+                110,
+                153,
+                168,
+                174,
+                185,
+                193,
+                213
+              ],
+              "proposals": [
+                [
+                  1716,
+                  6677,
+                  428,
+                  341
+                ],
+                [
+                  292,
+                  11,
+                  272,
+                  1590
+                ],
+                [
+                  264,
+                  2610,
+                  20837,
+                  198
+                ],
+                [
+                  2564,
+                  292,
+                  466,
+                  292
+                ],
+                [
+                  2564,
+                  264,
+                  25,
+                  198
+                ],
+                [
+                  23255,
+                  1885,
+                  20837,
+                  682
+                ],
+                [
+                  27396,
+                  198,
+                  262,
+                  413
+                ],
+                [
+                  198,
+                  262,
+                  745,
+                  25
+                ]
+              ]
+            },
+            {
+              "prompt_id": "mbpp-561",
+              "roots": [
+                288,
+                290,
+                322,
+                386,
+                394,
+                533,
+                562,
+                583
+              ],
+              "proposals": [
+                [
+                  4535,
+                  198,
+                  262,
+                  364
+                ],
+                [
+                  262,
+                  364,
+                  6505,
+                  303
+                ],
+                [
+                  309,
+                  1067,
+                  17932,
+                  60
+                ],
+                [
+                  11,
+                  220,
+                  18,
+                  681
+                ],
+                [
+                  23,
+                  681,
+                  318,
+                  23
+                ],
+                [
+                  653,
+                  220,
+                  17,
+                  369
+                ],
+                [
+                  11,
+                  694,
+                  220,
+                  23
+                ],
+                [
+                  694,
+                  220,
+                  19,
+                  25
+                ]
+              ]
+            }
+          ]
+        },
+        "status": "validation-only",
+        "validation": {
+          "train": {
+            "ce": 0.07168355315549994,
+            "tokens": 638,
+            "argmax_agreement": 0.9749216300940439,
+            "depths": [
+              {
+                "loss_sum": 45.73410691320896,
+                "tokens": 638,
+                "correct": 622,
+                "kl_loss_sum": 21.14363691955805,
+                "kl_pairs": 638,
+                "depth": 1,
+                "weight": 1.0,
+                "ce": 0.07168355315549994,
+                "argmax_agreement": 0.9749216300940439,
+                "kl": 0.033140496739119195
+              },
+              {
+                "loss_sum": 1.2855200599879026,
+                "tokens": 24,
+                "correct": 24,
+                "kl_loss_sum": 0.4809764474630356,
+                "kl_pairs": 24,
+                "depth": 2,
+                "weight": 1.0,
+                "ce": 0.053563335832829274,
+                "argmax_agreement": 1.0,
+                "kl": 0.020040685310959816
+              },
+              {
+                "loss_sum": 3.8858709526248276,
+                "tokens": 24,
+                "correct": 22,
+                "kl_loss_sum": 2.036783639341593,
+                "kl_pairs": 24,
+                "depth": 3,
+                "weight": 0.8,
+                "ce": 0.16191128969270116,
+                "argmax_agreement": 0.9166666666666666,
+                "kl": 0.08486598497256637
+              },
+              {
+                "loss_sum": 12.596586544066668,
+                "tokens": 24,
+                "correct": 19,
+                "kl_loss_sum": 9.68110802769661,
+                "kl_pairs": 24,
+                "depth": 4,
+                "weight": 0.8,
+                "ce": 0.5248577726694444,
+                "argmax_agreement": 0.7916666666666666,
+                "kl": 0.4033795011540254
+              }
+            ],
+            "objective": 0.6746621388780457,
+            "kl": 0.4437775709513524,
+            "kl_pairs": 710,
+            "sequences": 3
+          },
+          "dev": {
+            "ce": 0.14720380306243896,
+            "tokens": 659,
+            "argmax_agreement": 0.9559939301972686,
+            "depths": [
+              {
+                "loss_sum": 97.00730621814728,
+                "tokens": 659,
+                "correct": 630,
+                "kl_loss_sum": 41.71346163749695,
+                "kl_pairs": 659,
+                "depth": 1,
+                "weight": 1.0,
+                "ce": 0.14720380306243896,
+                "argmax_agreement": 0.9559939301972686,
+                "kl": 0.06329812084597412
+              },
+              {
+                "loss_sum": 2.5962439571740106,
+                "tokens": 24,
+                "correct": 23,
+                "kl_loss_sum": 2.728551565669477,
+                "kl_pairs": 24,
+                "depth": 2,
+                "weight": 1.0,
+                "ce": 0.10817683154891711,
+                "argmax_agreement": 0.9583333333333334,
+                "kl": 0.11368964856956154
+              },
+              {
+                "loss_sum": 29.33363950997591,
+                "tokens": 24,
+                "correct": 21,
+                "kl_loss_sum": 28.294334430247545,
+                "kl_pairs": 24,
+                "depth": 3,
+                "weight": 0.8,
+                "ce": 1.2222349795823295,
+                "argmax_agreement": 0.875,
+                "kl": 1.1789306012603145
+              },
+              {
+                "loss_sum": 3.511474072933197,
+                "tokens": 24,
+                "correct": 23,
+                "kl_loss_sum": 5.893238425254822,
+                "kl_pairs": 24,
+                "depth": 4,
+                "weight": 0.8,
+                "ce": 0.14631141970554987,
+                "argmax_agreement": 0.9583333333333334,
+                "kl": 0.24555160105228424
+              }
+            ],
+            "objective": 1.3502177540416596,
+            "kl": 1.3165735312656148,
+            "kl_pairs": 731,
+            "sequences": 3
+          },
+          "ce_anchor_identical": true,
+          "gradient_checks": {
+            "student_connected": true,
+            "student_finite": true,
+            "student_nonzero": true,
+            "frozen_no_grad": true,
+            "group_grad_norms": [
+              267.5314639602994,
+              284.125770676696,
+              18.707353566480677,
+              375.67210851232153,
+              58.53066383489638,
+              636.8065125589259
+            ]
+          },
+          "export_reload": {
+            "greedy_proposals_equal": true,
+            "proposal_tokens": 192,
+            "stock_mtp_sha256": "06f8b086a6ba9ebb8a9f5ea94170bd754f9ff953816e5293b90e34f227946fe8",
+            "export_mtp_sha256": "06f8b086a6ba9ebb8a9f5ea94170bd754f9ff953816e5293b90e34f227946fe8",
+            "records": [
+              {
+                "split": "train",
+                "prompt_id": "mbpp-709",
+                "roots": [
+                  330,
+                  375,
+                  389,
+                  432,
+                  443,
+                  458,
+                  645,
+                  697
+                ],
+                "proposals": [
+                  [
+                    14856,
+                    1120,
+                    41489,
+                    198
+                  ],
+                  [
+                    7606,
+                    1067,
+                    25,
+                    1698
+                  ],
+                  [
+                    4535,
+                    198,
+                    262,
+                    364
+                  ],
+                  [
+                    279,
+                    3481,
+                    2468,
+                    11
+                  ],
+                  [
+                    41662,
+                    198,
+                    262,
+                    10300
+                  ],
+                  [
+                    313,
+                    19,
+                    25,
+                    220
+                  ],
+                  [
+                    11,
+                    220,
+                    21,
+                    7025
+                  ],
+                  [
+                    17,
+                    198,
+                    262,
+                    653
+                  ]
+                ]
+              },
+              {
+                "split": "train",
+                "prompt_id": "mbpp-784",
+                "roots": [
+                  127,
+                  134,
+                  136,
+                  177,
+                  192,
+                  198,
+                  209,
+                  217
+                ],
+                "proposals": [
+                  [
+                    15144,
+                    66034,
+                    72128,
+                    7080
+                  ],
+                  [
+                    1118,
+                    66034,
+                    283,
+                    220
+                  ],
+                  [
+                    283,
+                    2168,
+                    198,
+                    262
+                  ],
+                  [
+                    25,
+                    198,
+                    285,
+                    413
+                  ],
+                  [
+                    72128,
+                    283,
+                    1572,
+                    198
+                  ],
+                  [
+                    198,
+                    262,
+                    413,
+                    1118
+                  ],
+                  [
+                    2168,
+                    25,
+                    198,
+                    285
+                  ],
+                  [
+                    262,
+                    460,
+                    1118,
+                    66034
+                  ]
+                ]
+              },
+              {
+                "split": "train",
+                "prompt_id": "mbpp-813",
+                "roots": [
+                  69,
+                  71,
+                  75,
+                  76,
+                  77,
+                  78,
+                  83,
+                  87
+                ],
+                "proposals": [
+                  [
+                    71093,
+                    12305,
+                    198,
+                    727
+                  ],
+                  [
+                    198,
+                    727,
+                    886,
+                    4956
+                  ],
+                  [
+                    1104,
+                    25,
+                    592,
+                    8
+                  ],
+                  [
+                    1590,
+                    198,
+                    262,
+                    460
+                  ],
+                  [
+                    592,
+                    8,
+                    1411,
+                    514
+                  ],
+                  [
+                    8,
+                    1411,
+                    514,
+                    25
+                  ],
+                  [
+                    262,
+                    460,
+                    2343,
+                    1104
+                  ],
+                  [
+                    8,
+                    198,
+                    71093,
+                    248046
+                  ]
+                ]
+              },
+              {
+                "split": "dev",
+                "prompt_id": "mbpp-518",
+                "roots": [
+                  76,
+                  77,
+                  78,
+                  79,
+                  83,
+                  84,
+                  87,
+                  94
+                ],
+                "proposals": [
+                  [
+                    71093,
+                    12305,
+                    198,
+                    727
+                  ],
+                  [
+                    12305,
+                    198,
+                    727,
+                    17410
+                  ],
+                  [
+                    198,
+                    727,
+                    17410,
+                    12621
+                  ],
+                  [
+                    727,
+                    17410,
+                    12621,
+                    1393
+                  ],
+                  [
+                    25,
+                    514,
+                    8,
+                    1411
+                  ],
+                  [
+                    198,
+                    262,
+                    4071,
+                    198
+                  ],
+                  [
+                    514,
+                    36036,
+                    17510,
+                    1393
+                  ],
+                  [
+                    8,
+                    198,
+                    71093,
+                    248046
+                  ]
+                ]
+              },
+              {
+                "split": "dev",
+                "prompt_id": "mbpp-521",
+                "roots": [
+                  103,
+                  110,
+                  153,
+                  168,
+                  174,
+                  185,
+                  193,
+                  213
+                ],
+                "proposals": [
+                  [
+                    1716,
+                    6677,
+                    428,
+                    341
+                  ],
+                  [
+                    292,
+                    11,
+                    272,
+                    1590
+                  ],
+                  [
+                    264,
+                    2610,
+                    20837,
+                    198
+                  ],
+                  [
+                    2564,
+                    292,
+                    466,
+                    292
+                  ],
+                  [
+                    2564,
+                    264,
+                    25,
+                    198
+                  ],
+                  [
+                    23255,
+                    1885,
+                    20837,
+                    682
+                  ],
+                  [
+                    27396,
+                    198,
+                    262,
+                    413
+                  ],
+                  [
+                    198,
+                    262,
+                    745,
+                    25
+                  ]
+                ]
+              },
+              {
+                "split": "dev",
+                "prompt_id": "mbpp-561",
+                "roots": [
+                  288,
+                  290,
+                  322,
+                  386,
+                  394,
+                  533,
+                  562,
+                  583
+                ],
+                "proposals": [
+                  [
+                    4535,
+                    198,
+                    262,
+                    364
+                  ],
+                  [
+                    262,
+                    364,
+                    6505,
+                    303
+                  ],
+                  [
+                    309,
+                    1067,
+                    17932,
+                    60
+                  ],
+                  [
+                    11,
+                    220,
+                    18,
+                    681
+                  ],
+                  [
+                    23,
+                    681,
+                    318,
+                    23
+                  ],
+                  [
+                    653,
+                    220,
+                    17,
+                    369
+                  ],
+                  [
+                    11,
+                    694,
+                    220,
+                    23
+                  ],
+                  [
+                    694,
+                    220,
+                    19,
+                    25
+                  ]
+                ]
+              }
+            ]
+          },
+          "seconds": {
+            "forward_backward": 27.727375366000047,
+            "export_reload": 9.70155003900004
+          }
+        },
+        "counts": {
+          "train_sequences": 3,
+          "dev_sequences": 3,
+          "sequences_seen": 6,
+          "loss_tokens_by_depth": [
+            1297,
+            48,
+            48,
+            48
+          ],
+          "kl_pairs_by_depth": [
+            1297,
+            48,
+            48,
+            48
+          ],
+          "sampled_roots": 48
+        },
+        "memory_peak": {
+          "process_max_rss_kib": 54287996,
+          "cuda_max_allocated_bytes": 62770401792,
+          "cuda_max_reserved_bytes": 62922948608
+        }
+      }
+    }
+  }
+}
