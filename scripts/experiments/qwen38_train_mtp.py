@@ -45,11 +45,13 @@ from __future__ import annotations
 import argparse
 from contextlib import nullcontext
 from functools import lru_cache
+import hashlib
 import json
 import math
 from pathlib import Path
 import platform
 import random
+import time
 from types import SimpleNamespace
 
 
@@ -417,7 +419,7 @@ def kl_divergence(student_logits, teacher_logits, temperature=1.0):
 def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
                 normalizer=None, scaler=None, weight=1.0, gradients=None, stats=None,
                 kl_teacher=None, kl_mask=None, kl_temperature=1.0, kl_weight=0.0,
-                kl_normalizer=None):
+                kl_normalizer=None, kl_hidden=None):
     """Token-chunked CE plus an optional token-chunked teacher KL.
 
     Each chunk frees its logits graph before the next chunk. A detached leaf
@@ -452,6 +454,10 @@ def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
             stats["kl_loss_sum"] = stats.get("kl_loss_sum", 0.0)
             stats["kl_pairs"] = stats.get("kl_pairs", 0) + int(kl_indices.numel())
     features = hidden.detach().requires_grad_(True) if backward else hidden
+    if kl_hidden is not None and (not kl_enabled or kl_hidden.shape != hidden.shape):
+        raise TrainingError("Separate KL student states require KL and matching CE row shapes")
+    kl_features = features if kl_hidden is None else (
+        kl_hidden.detach().requires_grad_(True) if backward else kl_hidden)
     total = 0.0
     for offset in range(0, count, chunk_tokens):
         rows = indices[offset:offset + chunk_tokens]
@@ -471,7 +477,7 @@ def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
         for offset in range(0, kl_indices.numel(), chunk_tokens):
             rows = kl_indices[offset:offset + chunk_tokens]
             with autocast(hidden.device, dtype=head.weight.dtype):
-                student_logits = head(features.index_select(0, rows))
+                student_logits = head(kl_features.index_select(0, rows))
                 with torch.no_grad():
                     teacher_logits = head(kl_teacher.index_select(0, rows).to(dtype=head.weight.dtype))
             loss = kl_divergence(student_logits, teacher_logits, temperature=kl_temperature)
@@ -482,12 +488,14 @@ def chunked_ce(hidden, head, labels, mask, *, chunk_tokens=128, backward=False,
                 (scaler.scale(scaled) if scaler is not None else scaled).backward()
             del student_logits, teacher_logits, loss
     if backward:
+        pending = [(hidden, features.grad)]
+        if kl_hidden is not None and kl_features.grad is not None:
+            pending.append((kl_hidden, kl_features.grad))
         if gradients is None:
-            hidden.backward(features.grad)
+            torch.autograd.backward(*zip(*pending))
         else:
-            # Joint backward after ALL depths: later outputs depend on earlier
-            # outputs and base KV, so freeing an earlier graph here is incorrect.
-            gradients.append((hidden, features.grad))
+            # Joint backward after ALL depths: both graphs share student masters.
+            gradients.extend(pending)
     return total, count
 
 def sequence_hidden(model, embedding, record, device):
@@ -550,6 +558,195 @@ def sequence_depths(model, embedding, record, device, depth=1, roots=()):
                        torch.ones(len(roots), device=device, dtype=torch.bool)))
     return result
 
+PINNED_BF16_REVISION = "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"
+
+
+def validate_greedy_checkpoint(checkpoint, device):
+    if checkpoint.regime != "native_bf16":
+        raise TrainingError("Greedy KL requires an unquantized native BF16 checkpoint")
+    if checkpoint.raw.get("architectures") != ["Qwen3_5ForConditionalGeneration"]:
+        raise TrainingError("Greedy KL requires the original Qwen3_5ForConditionalGeneration architecture")
+    # Only tiny CPU fixtures may bypass the real-checkpoint revision guard.
+    tiny_cpu = (runtime().torch.device(device).type == "cpu"
+                and sum(math.prod(s) for s in checkpoint.shapes.values()) <= 5_000_000
+                and checkpoint.raw["text_config"].get("num_hidden_layers", 0) <= 4)
+    if not tiny_cpu:
+        revision = checkpoint.raw.get("_commit_hash")
+        snapshot_revision = (checkpoint.path.name if checkpoint.path.parent.name == "snapshots" else None)
+        if ((revision or snapshot_revision) != PINNED_BF16_REVISION
+                or (revision and snapshot_revision and revision != snapshot_revision)):
+            raise TrainingError(f"Greedy KL requires exact BF16 model revision {PINNED_BF16_REVISION}")
+
+
+def validate_greedy_positions(record):
+    torch = runtime().torch
+    positions = record["positions"]
+    if not torch.equal(positions, torch.arange(positions.numel(), device=positions.device)):
+        raise TrainingError("Greedy KL requires contiguous native positions starting at zero")
+
+
+class FrozenTarget:
+    """Original multimodal checkpoint; fresh causal text replay, never a hybrid-cache fork."""
+
+    def __init__(self, checkpoint, device):
+        validate_greedy_checkpoint(checkpoint, device)
+        torch = runtime().torch
+        # Import/load ONLY on the opted-in path. No CausalLM key remapping or downloads.
+        from transformers import Qwen3_5ForConditionalGeneration
+        for shard_name in set(checkpoint.weight_map.values()):
+            shard = (checkpoint.path / shard_name).resolve()
+            if not shard.is_relative_to(checkpoint.path):
+                raise TrainingError("Teacher shard outside model directory")
+            with runtime().safe_open(shard, framework="pt", device="cpu") as handle:
+                if any(handle.get_slice(key).get_dtype() != "BF16" for key in handle.keys()):
+                    raise TrainingError("Teacher requires original BF16 checkpoint tensors")
+        self.model, info = Qwen3_5ForConditionalGeneration.from_pretrained(
+            checkpoint.path, local_files_only=True, use_safetensors=True,
+            dtype=torch.bfloat16, device_map=str(device), attn_implementation="sdpa",
+            output_loading_info=True,
+        )
+        # HF intentionally ignores mtp.*. Everything else must load exactly, including vision.
+        expected = set(checkpoint.weight_map) - set(checkpoint.shapes)
+        actual = set(self.model.state_dict())
+        unexpected = set(info.get("unexpected_keys", [])) - set(checkpoint.shapes)
+        if (expected != actual or unexpected or info.get("missing_keys")
+                or info.get("mismatched_keys") or info.get("error_msgs")):
+            raise TrainingError(f"Strict teacher loading failed: missing={sorted(actual - expected)}, "
+                                f"extra={sorted(expected - actual)}, diagnostics={info}")
+        self.model.requires_grad_(False).eval()
+        self.text = self.model.model.language_model
+        self.embedding, self.head = self.text.embed_tokens, self.model.lm_head
+        self.device = device
+        for module in (self.embedding, self.head):
+            if (module.weight.dtype != torch.bfloat16
+                    or not torch.isfinite(module.weight).all().item()):
+                raise TrainingError("Teacher shared embedding/head must be finite frozen BF16")
+
+    def replay(self, record, roots, proposals):
+        torch = runtime().torch
+        tokens = record["input_ids"].to(self.device)
+        if proposals.shape != (len(roots), 4):
+            raise TrainingError("Teacher replay requires one depth-four proposal per root")
+        rows = []
+        with torch.no_grad():
+            for root, draft in zip(roots, proposals):
+                # Row r+1 predicts y1; the last four rows predict y1..y4.
+                prefix = torch.cat([tokens[:root + 2], draft[:3].detach()])
+                result = self.text(
+                    input_ids=prefix.unsqueeze(0),
+                    position_ids=torch.arange(prefix.numel(), device=self.device).unsqueeze(0),
+                    past_key_values=None, use_cache=False,
+                ).last_hidden_state[0, -4:]
+                if result.shape != (4, self.head.in_features) or not torch.isfinite(result).all().item():
+                    raise TrainingError("Nonfinite or invalid full-prefix teacher replay rows")
+                # Copy only the scored rows, not the entire full-prefix backing storage.
+                rows.append(result.detach().clone())
+        return (torch.stack(rows) if rows else
+                self.head.weight.new_empty((0, 4, self.head.in_features)))
+
+
+def greedy_depths(model, embedding, head, record, device, roots):
+    """Own-token fixed-depth proposals with a differentiable serving-BF16 parameter view.
+
+    vLLM0.27.1 Qwen MTP uses the shared logits head and argmax, with no EOS
+    truncation inside its fixed-depth proposer. Discrete choices alone are detached.
+    """
+    torch = runtime().torch
+    validate_greedy_positions(record)
+    ids, hidden, positions, _, mask = aligned_inputs(record, device)
+    if (len(set(roots)) != len(roots) or any(
+            type(r) is not int or not 0 <= r < ids.numel() - 3
+            or not mask[r:r + 4].all().item() for r in roots)):
+        raise TrainingError("Greedy roots require distinct in-bounds, fully supervised label chains")
+    if not roots:
+        return [hidden[:0].detach()] * 4, ids.new_empty((0, 4))
+    parameters = {name: value.to(torch.bfloat16) for name, value in model.named_parameters()}
+    def forward(tokens, state, position, cache):
+        return torch.func.functional_call(
+            model, parameters, (tokens, state, position, embedding),
+            {"past_key_values": cache},
+        )
+    def choose(state):
+        with torch.no_grad():
+            logits = head(state.detach())
+            if not torch.isfinite(logits).all().item():
+                raise TrainingError("Nonfinite greedy proposal logits")
+            return logits.argmax(-1)
+    cache = runtime().Cache()
+    states, proposals = [[] for _ in range(4)], []
+    with autocast(device, dtype=torch.bfloat16):
+        base = forward(ids, hidden.detach().to(torch.bfloat16), positions, cache)
+        for root in roots:
+            branch = prefix_cache(cache, root + 1)
+            previous = base[root:root + 1]
+            draft = []
+            for d in range(4):
+                if d:
+                    previous = forward(draft[-1], previous, positions[root:root + 1] + d, branch)
+                states[d].append(previous)
+                draft.append(choose(previous))
+            proposals.append(torch.cat(draft))
+    return [torch.cat(rows) for rows in states], torch.stack(proposals)
+
+
+def synchronized_time(device):
+    torch = runtime().torch
+    device = torch.device(device)
+    if device.type in ("cuda", "xpu"):
+        getattr(torch, device.type).synchronize(device)
+    return time.perf_counter()
+
+
+def recurrence_counts():
+    return {"roots": 0, "teacher_replays": 0, "teacher_rows_by_depth": [0] * 4,
+            "proposal_divergences_by_depth": [0] * 4, "divergent_histories_by_depth": [0] * 4,
+            "first_divergence_by_depth": [0] * 4, "student_seconds": 0.0, "teacher_seconds": 0.0}
+
+
+def objective_inputs(model, embedding, head, record, args, roots, teacher=None, diagnostics=None):
+    """Keep the CE graph and captured depth-one KL exactly as on the legacy path."""
+    outputs = sequence_depths(model, embedding, record, args.device, args.recursive_depth, roots)
+    if not getattr(args, "greedy_kl", False):
+        pairs = (kl_teacher_pairs(record, outputs, args.recursive_depth, roots, args.device)
+                 if getattr(args, "kl_weight", 0.0) > 0 else None)
+        return outputs, pairs, None
+    if teacher is None:
+        raise TrainingError("Greedy KL requires the frozen original full target")
+    start = synchronized_time(args.device)
+    states, proposals = greedy_depths(model, embedding, head, record, args.device, roots)
+    drafted = synchronized_time(args.device)
+    replay = teacher.replay(record, roots, proposals)
+    replayed = synchronized_time(args.device)
+    pairs = kl_teacher_pairs(record, outputs[:1], 1, (), args.device)
+    pairs.extend((replay[:, d], outputs[d][2]) for d in range(1, 4))
+    if diagnostics is not None:
+        diagnostics["roots"] += len(roots)
+        diagnostics["teacher_replays"] += len(roots)
+        diagnostics["student_seconds"] += drafted - start
+        diagnostics["teacher_seconds"] += replayed - drafted
+        for root, draft in zip(roots, proposals.tolist()):
+            diverged = False
+            for d, token in enumerate(draft):
+                mismatch = token != record["input_ids"][root + d + 2].item()
+                diagnostics["teacher_rows_by_depth"][d] += 1
+                diagnostics["divergent_histories_by_depth"][d] += int(diverged)
+                diagnostics["proposal_divergences_by_depth"][d] += int(mismatch)
+                diagnostics["first_divergence_by_depth"][d] += int(mismatch and not diverged)
+                diverged |= mismatch
+        if "records" in diagnostics:
+            diagnostics["records"].append({"prompt_id": record["prompt_id"], "roots": list(roots),
+                                           "proposals": proposals.tolist()})
+    return outputs, pairs, [None] + states[1:]
+
+
+def objective_pair_counts(record, args, roots):
+    counts = kl_pair_counts(record, args.recursive_depth, roots)
+    if getattr(args, "greedy_kl", False):
+        # New full-prefix rows exist even if the capture lacks its final teacher row.
+        counts[1:] = [len(roots)] * 3
+    return counts
+
+
 def _kl_teacher_entries(record, depth, roots, device):
     torch = runtime().torch
     if depth not in (1, 4):
@@ -610,7 +807,7 @@ def kl_pair_counts(record, depth, roots, device="cpu"):
     return counts
 
 def depth_losses(outputs, head, weights, *, chunk_tokens, backward=False, normalizers=None, scaler=None,
-                 teachers=None, kl_weight=0.0, kl_temperature=1.0, kl_normalizers=None):
+                 teachers=None, kl_weight=0.0, kl_temperature=1.0, kl_normalizers=None, kl_students=None):
     """Separate CE/KL chunks, with one connected backward through recursion and base KV."""
     if not math.isfinite(kl_weight) or kl_weight < 0:
         raise TrainingError("KL weight must be finite and nonnegative")
@@ -631,6 +828,8 @@ def depth_losses(outputs, head, weights, *, chunk_tokens, backward=False, normal
             kwargs = {}
             if kl_enabled:
                 kwargs["kl_teacher"], kwargs["kl_mask"] = teachers[index]
+                if kl_students is not None:
+                    kwargs["kl_hidden"] = kl_students[index]
                 kwargs["kl_temperature"] = kl_temperature
                 kwargs["kl_weight"] = kl_weight
                 kwargs["kl_normalizer"] = (
@@ -666,7 +865,7 @@ def loss_metrics(totals, weights):
     return result
 
 
-def evaluate(model, embedding, head, files, config, args):
+def evaluate(model, embedding, head, files, config, args, teacher=None):
     if not files:
         return None
     torch = runtime().torch
@@ -686,12 +885,12 @@ def evaluate(model, embedding, head, files, config, args):
         for path in files:
             record = load_record(path, config, args.max_length)
             roots = sample_roots(record, args.recursive_depth, args.roots, rng)
-            outputs = sequence_depths(model, embedding, record, args.device, args.recursive_depth, roots)
-            teachers = (kl_teacher_pairs(record, outputs, args.recursive_depth, roots, args.device)
-                        if kl_enabled else None)
+            outputs, teachers, kl_students = objective_inputs(
+                model, embedding, head, record, args, roots, teacher)
             losses = depth_losses(
                 outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk,
-                teachers=teachers, kl_weight=kl_weight, kl_temperature=kl_temperature)
+                teachers=teachers, kl_weight=kl_weight, kl_temperature=kl_temperature,
+                kl_students=kl_students)
             for total, loss in zip(totals, losses):
                 for key in total:
                     total[key] += loss[key]
@@ -731,7 +930,7 @@ def rtn_effective_core(state):
                   if value.ndim == 2 else value.float()) for key, value in state.items()}
 
 
-def evaluate_export(path, checkpoint, embedding, head, files, args):
+def evaluate_export(path, checkpoint, embedding, head, files, args, teacher=None):
     metrics = {}
     native_bf16 = getattr(checkpoint, "regime",
                            getattr(checkpoint, "precision_regime", "gptq_int4_g128")) == "native_bf16"
@@ -747,7 +946,7 @@ def evaluate_export(path, checkpoint, embedding, head, files, args):
             state = rtn_effective_core(state)
         model = build_native_mtp(checkpoint.config, state, args.device)
         del state
-        metrics[stage] = evaluate(model, embedding, head, files, checkpoint.config, args)
+        metrics[stage] = evaluate(model, embedding, head, files, checkpoint.config, args, teacher)
         del model
     if native_bf16:
         # RTN is not an actual regime for an unquantized BF16 checkpoint.
@@ -789,6 +988,111 @@ def memory_peak(device):
     return result
 
 
+def mtp_digest(state):
+    """Content hash for the existing stock/export boundary, independent of file metadata."""
+    digest = hashlib.sha256()
+    torch = runtime().torch
+    for key, value in sorted(state.items()):
+        digest.update(key.encode())
+        digest.update(value.detach().to(device="cpu", dtype=torch.bfloat16).contiguous().view(torch.uint8).numpy().tobytes())
+    return digest.hexdigest()
+
+
+def validate_only(model, embedding, head, teacher, checkpoint, train, dev, args, report, output):
+    """Exercise the actual loss/backward/export CLI path without constructing an optimizer."""
+    torch = runtime().torch
+    started = synchronized_time(args.device)
+    stock_hash = mtp_digest(checkpoint.mtp_state())
+    report.update(status="validation-only", validation={}, recurrence=recurrence_counts())
+    report["recurrence"]["records"] = []
+    report["counts"] = {"train_sequences": len(train), "dev_sequences": len(dev),
+                        "sequences_seen": 0, "loss_tokens_by_depth": [0] * args.recursive_depth,
+                        "kl_pairs_by_depth": [0] * args.recursive_depth, "sampled_roots": 0}
+    frozen = list(teacher.model.parameters()) if teacher is not None else list(embedding.parameters()) + list(head.parameters())
+    gradients = {"student_connected": True, "student_finite": True, "student_nonzero": False,
+                 "frozen_no_grad": True, "group_grad_norms": []}
+    ce_identical, checks = True, []
+    for split, files in (("train", train), ("dev", dev)):
+        rng = random.Random(args.seed)
+        totals = [{"loss_sum": 0.0, "tokens": 0, "correct": 0, "kl_loss_sum": 0.0, "kl_pairs": 0}
+                  for _ in range(args.recursive_depth)]
+        for start in range(0, len(files), args.grad_accum):
+            records = [load_record(path, checkpoint.config, args.max_length)
+                       for path in files[start:start + args.grad_accum]]
+            roots = [sample_roots(record, args.recursive_depth, args.roots, rng) for record in records]
+            denominators = [sum(int(r["loss_mask"][2:].sum()) for r in records)] + [sum(map(len, roots))] * (args.recursive_depth - 1)
+            kl_denominators = [sum(counts[d] for counts in (objective_pair_counts(r, args, s)
+                               for r, s in zip(records, roots))) for d in range(args.recursive_depth)]
+            model.zero_grad(set_to_none=True)
+            for record, selected in zip(records, roots):
+                outputs, teachers, students = objective_inputs(
+                    model, embedding, head, record, args, selected, teacher, report["recurrence"])
+                with torch.no_grad():
+                    anchor = depth_losses(outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk)
+                losses = depth_losses(
+                    outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk, backward=True,
+                    normalizers=denominators, teachers=teachers, kl_students=students,
+                    kl_weight=args.kl_weight, kl_temperature=args.kl_temperature, kl_normalizers=kl_denominators)
+                ce_identical &= all(all(a[key] == b[key] for key in ("loss_sum", "tokens", "correct"))
+                                    for a, b in zip(anchor, losses))
+                for d, (total, loss) in enumerate(zip(totals, losses)):
+                    for key in total:
+                        total[key] += loss.get(key, 0)
+                    report["counts"]["loss_tokens_by_depth"][d] += loss["tokens"]
+                    report["counts"]["kl_pairs_by_depth"][d] += loss.get("kl_pairs", 0)
+                report["counts"]["sequences_seen"] += 1
+                report["counts"]["sampled_roots"] += len(selected)
+                checks.append((split, record["prompt_id"], selected))
+                del outputs, teachers, students
+            parameters = list(model.parameters())
+            gradients["student_connected"] &= all(p.grad is not None for p in parameters)
+            gradients["student_finite"] &= all(p.grad is not None and torch.isfinite(p.grad).all().item() for p in parameters)
+            norm = math.sqrt(sum(p.grad.float().norm().item() ** 2 for p in parameters if p.grad is not None))
+            gradients["group_grad_norms"].append(norm)
+            gradients["student_nonzero"] |= norm > 0
+            gradients["frozen_no_grad"] &= all(not p.requires_grad and p.grad is None for p in frozen)
+            model.zero_grad(set_to_none=True)
+        report["validation"][split] = {**loss_metrics(totals, args.depth_weights), "sequences": len(files)}
+    report["validation"]["ce_anchor_identical"] = ce_identical
+    report["validation"]["gradient_checks"] = gradients
+    if not ce_identical or not all(gradients[key] for key in (
+            "student_connected", "student_finite", "student_nonzero", "frozen_no_grad")):
+        raise TrainingError("Validation CE-anchor/gradient checks failed")
+    forward_backward_done = synchronized_time(args.device)
+    state = {"mtp." + key: value for key, value in model.state_dict().items()}
+    if mtp_digest(state) != stock_hash:
+        raise TrainingError("Validation changed the stock MTP weights")
+    export_mtp(state, checkpoint, output, report)
+    with runtime().safe_open(output, framework="pt", device="cpu") as handle:
+        reloaded_state = {key: handle.get_tensor(key) for key in handle.keys()}
+    validate_mtp_state(reloaded_state, checkpoint.shapes, stock=True)
+    export_hash = mtp_digest(reloaded_state)
+    if export_hash != stock_hash:
+        raise TrainingError("Validation export differs from the stock MTP")
+    reloaded = build_native_mtp(checkpoint.config, reloaded_state, args.device)
+    del reloaded_state, state
+    proposal_checks = []
+    with torch.no_grad():
+        for (split, prompt_id, selected), path in zip(checks, list(train) + list(dev)):
+            record = load_record(path, checkpoint.config, args.max_length)
+            _, before = greedy_depths(model, embedding, head, record, args.device, selected)
+            _, after = greedy_depths(reloaded, embedding, head, record, args.device, selected)
+            if not torch.equal(before, after):
+                raise TrainingError("BF16 export/reload greedy proposals differ")
+            proposal_checks.append({"split": split, "prompt_id": prompt_id, "roots": selected,
+                                    "proposals": before.tolist()})
+    report["validation"]["export_reload"] = {
+        "greedy_proposals_equal": True, "proposal_tokens": sum(len(c["roots"]) * 4 for c in proposal_checks),
+        "stock_mtp_sha256": stock_hash, "export_mtp_sha256": export_hash, "records": proposal_checks,
+    }
+    report["validation"]["seconds"] = {"forward_backward": forward_backward_done - started,
+                                        "export_reload": synchronized_time(args.device) - forward_backward_done}
+    report["memory_peak"] = memory_peak(torch.device(args.device))
+    output.with_suffix(".json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
+    print(json.dumps(report, allow_nan=False), flush=True)
+    return report
+
+
 def run(args):
     rt = runtime()
     torch = rt.torch
@@ -810,9 +1114,19 @@ def run(args):
             or any(not math.isfinite(w) or w < 0 for w in args.depth_weights)
             or sum(args.depth_weights) <= 0):
         raise TrainingError("Supply one finite nonnegative weight per depth, with positive total weight")
+    greedy_kl = getattr(args, "greedy_kl", False)
+    validation_only = getattr(args, "validate_only", False)
+    if greedy_kl and (args.recursive_depth != 4 or args.kl_weight <= 0 or args.export_stock):
+        raise TrainingError("--greedy-kl requires depth 4, positive KL weight and no --export-stock")
+    if validation_only and (args.recursive_depth != 4 or args.export_stock):
+        raise TrainingError("--validate-only requires depth 4 and no --export-stock")
     kl_enabled = args.kl_weight > 0
     checkpoint = Checkpoint(args.model)
     native_bf16 = checkpoint.regime == "native_bf16"
+    if greedy_kl:
+        validate_greedy_checkpoint(checkpoint, args.device)
+    if validation_only and not native_bf16:
+        raise TrainingError("--validate-only requires native BF16 for the greedy export boundary")
     precision = {
         "masters": "float32",
         "export": "bfloat16",
@@ -836,7 +1150,8 @@ def run(args):
     report = {
         "mode": "export_stock" if args.export_stock else (
             "recursive_teacher_forcing" if args.recursive_depth == 4 else "first_step_teacher_forcing"),
-        "config": vars(args).copy(), "torch": torch.__version__,
+        "config": {key: value for key, value in vars(args).items()
+                   if key not in ("greedy_kl", "validate_only") or value}, "torch": torch.__version__,
         "transformers": rt.transformers.__version__, "python": platform.python_version(),
         "optimizer_steps": 0, "train_steps": [], "eval_before": None, "eval_after": None,
         "checkpoints": [], "dev_selection": None,
@@ -866,13 +1181,18 @@ def run(args):
     if device.type == "cpu" and sum(math.prod(s) for s in checkpoint.shapes.values()) > 5_000_000:
         raise TrainingError("Stock-size CPU training is forbidden; use inference-host XPU after unloading verifier")
     train, dev = capture_sets(args.train_dir, args.eval_dir, checkpoint.config, args.max_length)
-    sequence_budget = args.epochs * len(train) if args.epochs is not None else args.steps * args.grad_accum
+    if greedy_kl or validation_only:
+        for path in train + dev:
+            validate_greedy_positions(load_record(path, checkpoint.config, args.max_length))
+    sequence_budget = (len(train) if validation_only else (
+        args.epochs * len(train) if args.epochs is not None else args.steps * args.grad_accum))
     steps = math.ceil(sequence_budget / args.grad_accum)
     if steps > 10000:
         raise TrainingError("Epoch budget exceeds 10000 optimizer updates")
     # Fail before training if ANY scheduled output would clobber an existing run.
-    for step in range(0, steps, args.checkpoint_every):
-        output_paths(checkpoint_path(output, step), checkpoint.path)
+    if not validation_only:
+        for step in range(0, steps, args.checkpoint_every):
+            output_paths(checkpoint_path(output, step), checkpoint.path)
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
     elif device.type == "xpu":
@@ -880,7 +1200,14 @@ def run(args):
     torch.manual_seed(args.seed)
     rng, root_rng = random.Random(args.seed), random.Random(args.seed)
     model = build_native_mtp(checkpoint.config, checkpoint.mtp_state(), args.device)
-    embedding, head = frozen_heads(checkpoint, args.device)
+    teacher = FrozenTarget(checkpoint, args.device) if greedy_kl else None
+    embedding, head = ((teacher.embedding, teacher.head) if teacher is not None
+                       else frozen_heads(checkpoint, args.device))
+    if greedy_kl:
+        report["mode"] = "greedy_deeper_kl"
+        report["recurrence"] = recurrence_counts()
+    if validation_only:
+        return validate_only(model, embedding, head, teacher, checkpoint, train, dev, args, report, output)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.0, foreach=False)
     scaler = torch.amp.GradScaler("xpu", init_scale=128.0) if device.type == "xpu" and not native_bf16 else None
 
@@ -888,7 +1215,8 @@ def run(args):
         state = {"mtp." + key: value for key, value in model.state_dict().items()}
         export_mtp(state, checkpoint, path, {"step": step})
         candidate = {"step": step, "path": str(path),
-                     "metrics": evaluate_export(path, checkpoint, embedding, head, dev, args)}
+                     "metrics": evaluate_export(path, checkpoint, embedding, head, dev, args,
+                                                **({"teacher": teacher} if teacher is not None else {}))}
         Path(path).with_suffix(".json").write_text(json.dumps(candidate, indent=2, allow_nan=False) + "\n")
         report["checkpoints"].append(candidate)
         return candidate["metrics"]["BF16_export"]
@@ -917,7 +1245,7 @@ def run(args):
         if kl_enabled:
             kl_denominators = [0] * args.recursive_depth
             for record, selected in zip(records, roots):
-                for index, count in enumerate(kl_pair_counts(record, args.recursive_depth, selected)):
+                for index, count in enumerate(objective_pair_counts(record, args, selected)):
                     kl_denominators[index] += count
         totals = [{"loss_sum": 0.0, "tokens": 0, "correct": 0} for _ in denominators]
         if kl_enabled:
@@ -925,18 +1253,17 @@ def run(args):
                 total.update(kl_loss_sum=0.0, kl_pairs=0)
         optimizer.zero_grad(set_to_none=True)
         for record, selected in zip(records, roots):
-            outputs = sequence_depths(model, embedding, record, args.device, args.recursive_depth, selected)
-            teachers = (kl_teacher_pairs(record, outputs, args.recursive_depth, selected, args.device)
-                        if kl_enabled else None)
+            outputs, teachers, kl_students = objective_inputs(
+                model, embedding, head, record, args, selected, teacher, report.get("recurrence"))
             losses = depth_losses(
                 outputs, head, args.depth_weights, chunk_tokens=args.logits_chunk,
                 backward=True, normalizers=denominators, scaler=scaler,
-                teachers=teachers, kl_weight=args.kl_weight,
+                teachers=teachers, kl_weight=args.kl_weight, kl_students=kl_students,
                 kl_temperature=args.kl_temperature, kl_normalizers=kl_denominators)
             for total, loss in zip(totals, losses):
                 for key in total:
                     total[key] += loss[key]
-            del outputs, teachers
+            del outputs, teachers, kl_students
         if scaler is not None:
             scaler.unscale_(optimizer)
         # Abort rather than report a skipped/overflowed update as a step.
@@ -993,6 +1320,10 @@ def parser():
     result.add_argument("--logits-chunk", type=int, default=128, help="Supervised tokens per CE/KL logits allocation")
     result.add_argument("--kl-weight", type=float, default=0.0, help="Auxiliary teacher-to-student KL weight; default disables KL")
     result.add_argument("--kl-temperature", type=float, default=1.0, help="Positive finite KL temperature")
+    result.add_argument("--greedy-kl", action="store_true",
+                        help="Opt-in native BF16 own-token deeper KL; frozen full target, depth 4 only")
+    result.add_argument("--validate-only", action="store_true",
+                        help="Native BF16 depth-4 diagnostics/backward/export/reload; no optimizer or updates")
     return result
 
 

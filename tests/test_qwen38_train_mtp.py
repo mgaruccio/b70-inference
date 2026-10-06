@@ -56,8 +56,10 @@ def raw_config():
 
 @pytest.fixture
 def native_raw_config(raw_config):
-    raw_config.pop("quantization_config")
-    return raw_config
+    # Copy: full-model fixtures mutate text/vision fields and must not strip GPTQ from raw_config.
+    config = {**raw_config, "text_config": dict(raw_config["text_config"])}
+    config.pop("quantization_config", None)
+    return config
 
 @pytest.fixture
 def config(trainer, raw_config):
@@ -1030,3 +1032,412 @@ def test_kl_cli_defaults_are_off_and_temperature_is_one(trainer):
     args = trainer.parser().parse_args(["--model", "unused", "--output", "unused.safetensors"])
     assert args.kl_weight == 0.0
     assert args.kl_temperature == 1.0
+    assert args.greedy_kl is False and args.validate_only is False
+
+
+@pytest.fixture
+def full_checkpoint(tmp_path, trainer, native_raw_config):
+    """A real, tiny original multimodal architecture, not a CausalLM key proxy."""
+    from transformers import Qwen3_5Config, Qwen3_5ForConditionalGeneration
+    torch = trainer.runtime().torch
+    native_raw_config["text_config"].update(
+        linear_key_head_dim=16, linear_value_head_dim=16,
+        linear_num_key_heads=2, linear_num_value_heads=4, linear_conv_kernel_dim=4)
+    native_raw_config["vision_config"] = {
+        "model_type": "qwen3_5_vision", "hidden_size": 32, "intermediate_size": 64,
+        "num_heads": 4, "depth": 1, "out_hidden_size": 128, "patch_size": 2,
+        "temporal_patch_size": 1, "spatial_merge_size": 2, "num_position_embeddings": 16,
+    }
+    torch.manual_seed(137)
+    original = Qwen3_5ForConditionalGeneration(Qwen3_5Config.from_dict(native_raw_config)).bfloat16().eval()
+    model = tmp_path / "full-original"
+    original.save_pretrained(model, max_shard_size="100KB")
+    config = trainer.native_config(json.loads((model / "config.json").read_text()))
+    mtp = state_for(trainer, config)
+    trainer.runtime().save_file(mtp, model / "mtp.safetensors")
+    index_path = model / "model.safetensors.index.json"
+    index = json.loads(index_path.read_text())
+    index["weight_map"].update({key: "mtp.safetensors" for key in mtp})
+    index_path.write_text(json.dumps(index))
+    return trainer.Checkpoint(model)
+
+
+@pytest.fixture
+def full_target(trainer, full_checkpoint):
+    return trainer.FrozenTarget(full_checkpoint, "cpu")
+
+
+@pytest.fixture
+def replay_record(trainer, full_target, native_record):
+    torch = trainer.runtime().torch
+    with torch.no_grad():
+        hidden = full_target.text(input_ids=native_record["input_ids"][None], use_cache=False).last_hidden_state[0]
+    return dict(native_record, positions=torch.arange(12), target_last_hidden_states=hidden)
+
+
+def greedy_args(trainer, checkpoint, tmp_path, **overrides):
+    args = trainer.parser().parse_args([
+        "--model", str(checkpoint.path), "--output", str(tmp_path / "validation.safetensors"),
+        "--device", "cpu", "--recursive-depth", "4", "--roots", "8",
+        "--depth-weights", "1", "1", ".8", ".8", "--kl-weight", "1",
+        "--greedy-kl", "--validate-only", "--grad-accum", "1", "--logits-chunk", "2",
+    ])
+    for key, value in overrides.items():
+        setattr(args, key, value)
+    return args
+
+
+def test_full_target_original_structure_shared_weights_and_fresh_prefix_rows(
+    trainer, full_checkpoint, full_target, replay_record
+ ):
+    torch = trainer.runtime().torch
+    assert type(full_target.model).__name__ == "Qwen3_5ForConditionalGeneration"
+    assert hasattr(full_target.model.model, "visual")
+    assert full_target.embedding is full_target.text.embed_tokens
+    assert full_target.head is full_target.model.lm_head
+    assert torch.equal(full_target.head.weight.cpu(), full_checkpoint.tensor("lm_head.weight"))
+    assert torch.equal(full_target.embedding.weight.cpu(), full_checkpoint.tensor(full_checkpoint.EMBEDDING_KEY))
+    assert all(not p.requires_grad and p.grad is None for p in full_target.model.parameters())
+    assert not full_target.model.training
+    proposals = torch.tensor([[25, 24, 23, 22], [21, 20, 19, 18]])
+    roots, calls = [1, 5], []
+    def capture(_, args, kwargs):
+        calls.append(kwargs)
+    hook = full_target.text.register_forward_pre_hook(capture, with_kwargs=True)
+    rows = full_target.replay(replay_record, roots, proposals)
+    hook.remove()
+    assert len(calls) == 2 and rows.shape == (2, 4, 128) and not rows.requires_grad
+    for index, (root, call) in enumerate(zip(roots, calls)):
+        expected = torch.cat([replay_record["input_ids"][:root + 2], proposals[index, :3]])
+        assert torch.equal(call["input_ids"][0], expected)
+        assert call["past_key_values"] is None and call["use_cache"] is False
+        assert call["position_ids"].tolist() == [list(range(root + 5))]
+        with torch.no_grad():
+            for d in range(4):
+                prefix = torch.cat([replay_record["input_ids"][:root + 2], proposals[index, :d]])
+                sequential = full_target.text(input_ids=prefix[None], use_cache=False).last_hidden_state[0, -1]
+                torch.testing.assert_close(rows[index, d], sequential, atol=0.016, rtol=0.016)
+    changed = dict(replay_record, target_last_hidden_states=torch.full_like(replay_record["target_last_hidden_states"], 999))
+    assert torch.equal(rows, full_target.replay(changed, roots, proposals))
+
+
+@pytest.mark.parametrize("divergence", [None, 1, 2, 3])
+def test_greedy_own_argmax_offsets_and_divergent_teacher_history(
+    trainer, full_checkpoint, full_target, replay_record, monkeypatch, divergence
+ ):
+    torch = trainer.runtime().torch
+    model = trainer.build_native_mtp(full_checkpoint.config, full_checkpoint.mtp_state())
+    root = 2
+    expected = replay_record["input_ids"][root + 2:root + 6].clone()
+    if divergence is not None:
+        expected[divergence - 1] = 31
+    calls, chosen = [], []
+    original = full_target.head.forward
+    def forced_argmax(hidden):
+        logits = original(hidden)
+        logits[:, expected[len(chosen)]] += 100
+        chosen.append(logits.argmax(-1))
+        return logits
+    monkeypatch.setattr(full_target.head, "forward", forced_argmax)
+    def capture(_, args, kwargs):
+        calls.append((args[0].clone(), args[2].clone(), kwargs["past_key_values"].get_seq_length()))
+    hook = model.register_forward_pre_hook(capture, with_kwargs=True)
+    states, draft = trainer.greedy_depths(model, full_target.embedding, full_target.head, replay_record, "cpu", [root])
+    hook.remove()
+    monkeypatch.setattr(full_target.head, "forward", original)
+    assert torch.equal(draft[0], expected) and not draft.requires_grad
+    assert calls[0][0].tolist() == list(range(1, 11))
+    for d, (tokens, positions, cache_length) in enumerate(calls[1:], start=1):
+        assert tokens.tolist() == [expected[d - 1].item()]
+        assert positions.tolist() == [root + d]
+        assert cache_length == root + d
+    replay_calls = []
+    hook = full_target.text.register_forward_pre_hook(
+        lambda _, args, kwargs: replay_calls.append(kwargs["input_ids"].clone()), with_kwargs=True)
+    teacher_rows = full_target.replay(replay_record, [root], draft)
+    hook.remove()
+    assert replay_calls[0][0].tolist() == list(range(root + 2)) + expected[:3].tolist()
+    if divergence is None:
+        for d in range(4):
+            # CPU BF16 hybrid prefix-vs-full is not bitwise; a wrong row is far outside this band.
+            torch.testing.assert_close(teacher_rows[0, d], replay_record["target_last_hidden_states"][root + d + 1],
+                                       atol=0.05, rtol=0.25)
+    else:
+        # Later matching tokens do not repair an earlier changed prefix.
+        assert not torch.equal(teacher_rows[0, divergence], replay_record["target_last_hidden_states"][root + divergence + 1])
+    assert all(state.requires_grad for state in states)
+
+
+def test_greedy_prefix_cache_isolation_append_and_no_future_capture_leak(
+    trainer, native_checkpoint, native_record, monkeypatch
+ ):
+    torch = trainer.runtime().torch
+    model = trainer.build_native_mtp(native_checkpoint.config, native_checkpoint.mtp_state())
+    embedding, head = trainer.frozen_heads(native_checkpoint, "cpu")
+    original, bases, branches = trainer.prefix_cache, [], []
+    def track(cache, length):
+        bases.append((cache, cache.layers[0].keys.clone(), cache.layers[0].values.clone()))
+        result = original(cache, length)
+        branches.append((result, length))
+        return result
+    monkeypatch.setattr(trainer, "prefix_cache", track)
+    roots = [1, 4, 6]
+    states, draft = trainer.greedy_depths(model, embedding, head, native_record, "cpu", roots)
+    assert len({id(cache) for cache, _ in branches}) == 3
+    for cache, length in branches:
+        assert cache.get_seq_length() == length + 3
+    for cache, keys, values in bases:
+        assert torch.equal(cache.layers[0].keys, keys) and torch.equal(cache.layers[0].values, values)
+    reversed_states, reversed_draft = trainer.greedy_depths(model, embedding, head, native_record, "cpu", roots[::-1])
+    assert torch.equal(draft, reversed_draft.flip(0))
+    for actual, reverse in zip(states, reversed_states):
+        assert torch.equal(actual, reverse.flip(0))
+    changed = dict(native_record)
+    changed["target_last_hidden_states"] = native_record["target_last_hidden_states"].clone()
+    changed["target_last_hidden_states"][2:] *= -100
+    changed["input_ids"] = native_record["input_ids"].clone()
+    changed["input_ids"][3:] = 30
+    for record in (native_record, changed, native_record):
+        solo, tokens = trainer.greedy_depths(model, embedding, head, record, "cpu", [1])
+        assert torch.equal(tokens[0], draft[0])
+        for actual, expected in zip(solo, states):
+            assert torch.equal(actual, expected[:1])
+
+
+def test_greedy_kl_backprop_through_bf16_cast_state_and_base_kv_not_teacher(
+    trainer, full_checkpoint, full_target, replay_record, monkeypatch
+ ):
+    torch = trainer.runtime().torch
+    model = trainer.build_native_mtp(full_checkpoint.config, full_checkpoint.mtp_state())
+    replay_record["target_last_hidden_states"].requires_grad_()
+    seen, kv = [], []
+    def retain(_, args, output):
+        output.retain_grad()
+        seen.append(output)
+    hook = model.register_forward_hook(retain)
+    original = trainer.prefix_cache
+    def retain_cache(cache, length):
+        for tensor in (cache.layers[0].keys, cache.layers[0].values):
+            tensor.retain_grad()
+            kv.append(tensor)
+        return original(cache, length)
+    monkeypatch.setattr(trainer, "prefix_cache", retain_cache)
+    states, tokens = trainer.greedy_depths(model, full_target.embedding, full_target.head, replay_record, "cpu", [2])
+    target = full_target.replay(replay_record, [2], tokens)
+    with trainer.autocast("cpu", dtype=torch.bfloat16):
+        loss = trainer.kl_divergence(full_target.head(states[3]), full_target.head(target[:, 3]))
+    loss.backward()
+    hook.remove()
+    assert len(seen) == 4 and all(s.grad is not None and s.grad.abs().sum() > 0 for s in seen)
+    for tensor in kv:
+        assert tensor.grad[..., :3, :].abs().sum() > 0
+        assert tensor.grad[..., 3:, :].count_nonzero() == 0
+    assert all(p.dtype == torch.float32 and p.grad is not None and torch.isfinite(p.grad).all()
+               and p.grad.abs().sum() > 0 for p in model.parameters())
+    assert replay_record["target_last_hidden_states"].grad is None
+    assert all(p.grad is None and not p.requires_grad for p in full_target.model.parameters())
+
+
+def test_greedy_ce_anchor_masks_missing_rows_and_chunked_dense_gradients(
+    trainer, full_checkpoint, full_target, replay_record, tmp_path
+ ):
+    torch = trainer.runtime().torch
+    args = greedy_args(trainer, full_checkpoint, tmp_path)
+    state = full_checkpoint.mtp_state()
+    model, reference = (trainer.build_native_mtp(full_checkpoint.config, state) for _ in range(2))
+    replay_record["positions"] = replay_record["positions"][:10]
+    replay_record["target_last_hidden_states"] = replay_record["target_last_hidden_states"][:10]
+    normalizers, kl_normalizers = [20, 3, 3, 3], [18, 3, 3, 3]
+    dense_loss = 0
+    for roots in ([0, 2], [6]):
+        outputs, teachers, students = trainer.objective_inputs(
+            model, full_target.embedding, full_target.head, replay_record, args, roots, full_target)
+        control = trainer.sequence_depths(model, full_target.embedding, replay_record, "cpu", 4, roots)
+        for actual, expected in zip(outputs, control):
+            assert all(torch.equal(a, b) for a, b in zip(actual, expected))
+        losses = trainer.depth_losses(
+            outputs, full_target.head, args.depth_weights, chunk_tokens=1, backward=True,
+            teachers=teachers, kl_students=students, kl_weight=1, kl_temperature=2,
+            normalizers=normalizers, kl_normalizers=kl_normalizers)
+        assert [loss["tokens"] for loss in losses] == [10] + [len(roots)] * 3
+        assert [loss["kl_pairs"] for loss in losses] == [9] + [len(roots)] * 3
+        assert trainer.objective_pair_counts(replay_record, args, roots) == [9] + [len(roots)] * 3
+        with torch.no_grad():
+            ce_only = trainer.depth_losses(control, full_target.head, args.depth_weights, chunk_tokens=1)
+        assert all(a["loss_sum"] == b["loss_sum"] and a["correct"] == b["correct"] for a, b in zip(losses, ce_only))
+        dense, target, branch = trainer.objective_inputs(
+            reference, full_target.embedding, full_target.head, replay_record, args, roots, full_target)
+        for d, ((hidden, labels, mask), (teacher_rows, valid)) in enumerate(zip(dense, target)):
+            with trainer.autocast("cpu", dtype=torch.bfloat16):
+                ce = torch.nn.functional.cross_entropy(full_target.head(hidden)[mask].float(), labels[mask], reduction="sum")
+                kl = trainer.kl_divergence(
+                    full_target.head(hidden if d == 0 else branch[d])[valid],
+                    full_target.head(teacher_rows)[valid], temperature=2)
+            dense_loss = dense_loss + args.depth_weights[d] * (ce / normalizers[d] + kl / kl_normalizers[d])
+    dense_loss.backward()
+    for actual, expected in zip(model.parameters(), reference.parameters()):
+        # BF16 accumulation order differs between token chunks and dense GEMMs.
+        torch.testing.assert_close(actual.grad, expected.grad, atol=0.003, rtol=0.03)
+    assert full_target.head.weight.grad is None and full_target.embedding.weight.grad is None
+
+
+def test_greedy_empty_roots_and_nonfinite_teacher_replay(
+    trainer, full_checkpoint, full_target, replay_record, tmp_path, monkeypatch
+ ):
+    torch = trainer.runtime().torch
+    args = greedy_args(trainer, full_checkpoint, tmp_path)
+    model = trainer.build_native_mtp(full_checkpoint.config, full_checkpoint.mtp_state())
+    outputs, teachers, students = trainer.objective_inputs(
+        model, full_target.embedding, full_target.head, replay_record, args, [], full_target)
+    losses = trainer.depth_losses(outputs, full_target.head, args.depth_weights, chunk_tokens=2, backward=True,
+                                  teachers=teachers, kl_students=students, kl_weight=1)
+    assert [loss["tokens"] for loss in losses] == [10, 0, 0, 0]
+    assert [loss["kl_pairs"] for loss in losses] == [10, 0, 0, 0]
+    monkeypatch.setattr(full_target.text, "forward", lambda **kw: SimpleNamespace(
+        last_hidden_state=torch.full((1, kw["input_ids"].shape[1], 128), float("nan"))))
+    with pytest.raises(trainer.TrainingError, match="Nonfinite") :
+        full_target.replay(replay_record, [0], torch.tensor([[10, 11, 12, 13]]))
+
+
+def test_bf16_current_parameter_view_equals_real_export_reload(
+    trainer, native_checkpoint, native_record, tmp_path
+ ):
+    torch = trainer.runtime().torch
+    model = trainer.build_native_mtp(native_checkpoint.config, native_checkpoint.mtp_state())
+    embedding, head = trainer.frozen_heads(native_checkpoint, "cpu")
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.add_(torch.randn_like(parameter) * 0.003)
+    path = tmp_path / "current.safetensors"
+    trainer.export_mtp({"mtp." + key: value for key, value in model.state_dict().items()}, native_checkpoint, path, {})
+    with trainer.runtime().safe_open(path, framework="pt") as handle:
+        state = {key: handle.get_tensor(key) for key in handle.keys()}
+    reloaded = trainer.build_native_mtp(native_checkpoint.config, state).bfloat16()
+    # RoPE's nonpersistent inv_freq is FP32 in the actual serving/export view.
+    reloaded.rotary_emb = trainer.runtime().Rotary(native_checkpoint.config)
+    states, proposals = trainer.greedy_depths(model, embedding, head, native_record, "cpu", [1, 4])
+    with torch.no_grad(), trainer.autocast("cpu", dtype=torch.bfloat16):
+        ids, hidden, positions, _, _ = trainer.aligned_inputs(native_record)
+        cache = trainer.runtime().Cache()
+        base = reloaded(ids, hidden.bfloat16(), positions, embedding, past_key_values=cache)
+        for index, root in enumerate([1, 4]):
+            branch, previous = trainer.prefix_cache(cache, root + 1), base[root:root + 1]
+            for d in range(4):
+                if d:
+                    previous = reloaded(token, previous, positions[root:root + 1] + d, embedding, past_key_values=branch)
+                assert torch.equal(previous, states[d][index:index + 1])
+                token = head(previous).argmax(-1)
+                assert token.item() == proposals[index, d].item()
+
+
+@pytest.mark.parametrize("extra,match", [
+    (["--greedy-kl"], "depth 4"),
+    (["--greedy-kl", "--recursive-depth", "4"], "positive KL"),
+    (["--greedy-kl", "--recursive-depth", "4", "--kl-weight", "1", "--export-stock"], "export-stock"),
+    (["--validate-only"], "depth 4"),
+])
+def test_greedy_incompatible_flags_fail_before_weight_reads(trainer, extra, match):
+    args = trainer.parser().parse_args(["--model", "absent", "--output", "unused.safetensors"] + extra)
+    with pytest.raises(trainer.TrainingError, match=match):
+        trainer.run(args)
+
+
+def test_greedy_architecture_precision_revision_and_positions_guards(
+    trainer, full_checkpoint, checkpoint, native_checkpoint, replay_record, tmp_path, monkeypatch
+ ):
+    torch = trainer.runtime().torch
+    with pytest.raises(trainer.TrainingError, match="unquantized"):
+        trainer.validate_greedy_checkpoint(checkpoint, "cpu")
+    with pytest.raises(trainer.TrainingError, match="original.*architecture"):
+        trainer.validate_greedy_checkpoint(native_checkpoint, "cpu")
+    with pytest.raises(trainer.TrainingError, match="exact BF16 model revision"):
+        trainer.validate_greedy_checkpoint(full_checkpoint, "cuda")
+    full_checkpoint.raw["_commit_hash"] = trainer.PINNED_BF16_REVISION
+    trainer.validate_greedy_checkpoint(full_checkpoint, "cuda")
+    for positions in (torch.arange(12) * 2, torch.arange(12) + 1):
+        record = dict(replay_record, positions=positions)
+        trainer.validate_record(record, full_checkpoint.config, 16)  # Deliberately valid legacy input.
+        with pytest.raises(trainer.TrainingError, match="contiguous native positions starting at zero"):
+            trainer.validate_greedy_positions(record)
+    train = tmp_path / "gapped"
+    train.mkdir()
+    torch.save(record, train / "record.pt")
+    args = greedy_args(trainer, full_checkpoint, tmp_path, train_dir=str(train))
+    monkeypatch.setattr(trainer, "FrozenTarget", lambda *a: pytest.fail("invalid input loaded teacher"))
+    with pytest.raises(trainer.TrainingError, match="contiguous native"):
+        trainer.run(args)
+
+
+@pytest.mark.parametrize("greedy", [False, True])
+def test_public_cli_original_multimodal_validate_only(
+    trainer, full_checkpoint, replay_record, tmp_path, greedy
+ ):
+    torch = trainer.runtime().torch
+    train, dev = tmp_path / "train", tmp_path / "dev"
+    train.mkdir()
+    dev.mkdir()
+    torch.save(replay_record, train / "train.pt")
+    torch.save(dict(replay_record, prompt_id="dev-diagnostic"), dev / "dev.pt")
+    output = tmp_path / "validated.safetensors"
+    command = [sys.executable, str(SCRIPT), "--model", str(full_checkpoint.path),
+               "--train-dir", str(train), "--eval-dir", str(dev), "--output", str(output),
+               "--validate-only", "--recursive-depth", "4", "--roots", "8",
+               "--depth-weights", "1", "1", ".8", ".8", "--device", "cpu", "--seed", "42",
+               "--lr", "1e-6", "--max-length", "2048", "--grad-accum", "1", "--logits-chunk", "64",
+               "--kl-weight", "1", "--kl-temperature", "1"] + (["--greedy-kl"] if greedy else [])
+    result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stderr
+    report = json.loads(output.with_suffix(".json").read_text())
+    assert report["status"] == "validation-only" and report["optimizer_steps"] == 0
+    assert report["train_steps"] == [] and report["checkpoints"] == []
+    assert report["counts"]["loss_tokens_by_depth"] == [20, 14, 14, 14]
+    assert report["counts"]["kl_pairs_by_depth"] == [20, 14, 14, 14]
+    assert report["counts"]["sampled_roots"] == 14
+    assert report["recurrence"]["teacher_replays"] == (14 if greedy else 0)
+    assert report["validation"]["ce_anchor_identical"]
+    assert all(report["validation"]["gradient_checks"].values())
+    export = report["validation"]["export_reload"]
+    assert export["greedy_proposals_equal"] and export["proposal_tokens"] == 56
+    assert export["stock_mtp_sha256"] == export["export_mtp_sha256"]
+    with trainer.runtime().safe_open(output, framework="pt") as handle:
+        assert all(torch.equal(handle.get_tensor(key), tensor) for key, tensor in full_checkpoint.mtp_state().items())
+    print(json.dumps({"command": command, "report": report}, allow_nan=False))
+
+
+def test_validate_only_constructs_no_optimizer_and_off_path_no_teacher(
+    trainer, native_checkpoint, native_record, tmp_path, monkeypatch
+ ):
+    torch = trainer.runtime().torch
+    train = tmp_path / "train"
+    train.mkdir()
+    torch.save(native_record, train / "train.pt")
+    args = greedy_args(trainer, native_checkpoint, tmp_path, train_dir=str(train), greedy_kl=False)
+    monkeypatch.setattr(torch.optim, "AdamW", lambda *a, **kw: pytest.fail("validation constructed an optimizer"))
+    monkeypatch.setattr(trainer, "FrozenTarget", lambda *a: pytest.fail("off path loaded a teacher"))
+    report = trainer.run(args)
+    assert report["optimizer_steps"] == 0 and report["recurrence"]["teacher_replays"] == 0
+
+
+def test_greedy_off_objective_outputs_gradients_and_report_unchanged(
+    trainer, native_checkpoint, native_record, tmp_path, monkeypatch
+ ):
+    torch = trainer.runtime().torch
+    args = greedy_args(trainer, native_checkpoint, tmp_path, greedy_kl=False, validate_only=False)
+    model, reference = (trainer.build_native_mtp(native_checkpoint.config, native_checkpoint.mtp_state()) for _ in range(2))
+    embedding, head = trainer.frozen_heads(native_checkpoint, "cpu")
+    monkeypatch.setattr(trainer, "FrozenTarget", lambda *a: pytest.fail("off path loaded a teacher"))
+    outputs, teachers, students = trainer.objective_inputs(model, embedding, head, native_record, args, [1, 4])
+    legacy = trainer.sequence_depths(reference, embedding, native_record, "cpu", 4, [1, 4])
+    captured = trainer.kl_teacher_pairs(native_record, legacy, 4, [1, 4], "cpu")
+    assert students is None
+    actual = trainer.depth_losses(outputs, head, args.depth_weights, chunk_tokens=2, backward=True,
+                                   teachers=teachers, kl_students=students, kl_weight=1)
+    expected = trainer.depth_losses(legacy, head, args.depth_weights, chunk_tokens=2, backward=True,
+                                     teachers=captured, kl_weight=1)
+    assert actual == expected
+    for a, b in zip(model.parameters(), reference.parameters()):
+        assert torch.equal(a.grad, b.grad)
+    args.export_stock = True
+    report = trainer.run(args)
+    assert "greedy_kl" not in report["config"] and "validate_only" not in report["config"]
+    assert "recurrence" not in report and "validation" not in report and "status" not in report
