@@ -1,0 +1,51 @@
+{
+  "tier": "development",
+  "mode": "matched_teacher_execution_path_diagnostics",
+  "authorized": true,
+  "lease_name": "qwen38-teacher-fidelity-check-20261006",
+  "provider": "scaleway",
+  "region": "paris-france-1",
+  "lease_cap_hours": 2,
+  "lease_cap_usd": 6.6,
+  "hourly_price_cents": 330,
+  "optimizer_updates": 0,
+  "full_training_authorized": false,
+  "test_data_deployed": false,
+  "promotion_authorized": false,
+  "persistent_launcher_changes": false,
+  "model": "Qwen/Qwen3.8-27B",
+  "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+  "dtype": "bfloat16",
+  "quantization": null,
+  "image": "vllm/vllm-openai@sha256:0a51ea5b4ae2dc5d81890e5173f54203d2a3ae0cfffe51b8fd2afd4391bfd967",
+  "trainer_runtime": {"torch": "2.14.1+cu130", "transformers": "5.15.1"},
+  "source_archive_sha256": "5b42d82d793fa593e59fcb5d7bd6c1e73ea86bfb4a73a68229db904e0fc293f8",
+  "source_archive_bytes": 4848547840,
+  "fresh_research": [
+    {"url": "https://raw.githubusercontent.com/huggingface/transformers/v5.15.1/src/transformers/models/qwen3_5/modeling_qwen3_5.py", "conclusion": "Full-prefix chunk and one-token cached GDN use separate FP32-internal algorithms; last_hidden_state is post-final-norm."},
+    {"url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py", "conclusion": "H100 supports the existing FlashInfer prefill backend; Triton is separate. Backend remains FlashInfer in first control."},
+    {"url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/model_executor/layers/mamba/mamba_utils.py", "conclusion": "GDN SSM auto inherits convolution/cache dtype, BF16 for this model. Float32 is an explicit precision change, not the baseline."},
+    {"url": "https://raw.githubusercontent.com/huggingface/transformers/v5.15.1/src/transformers/integrations/hub_kernels.py", "conclusion": "USE_HUB_KERNELS=NO can make the intended native HF fallback explicit; no FLA/kernel package installation is authorized."}
+  ],
+  "hypotheses": [
+    "Concrete confound: native fresh replay compiled with native norms, while incremental verifier was eager with vllm_c/native norms.",
+    "Chunk versus recurrent GDN arithmetic and state precision may contribute; not an established cache/index bug.",
+    "Weight, exact-prefix, position and row-neighbor checks precede any inference about kernels."
+  ],
+  "e2e": {
+    "journey": "Score the exact same genuine greedy proposal histories through the existing FrozenTarget and actual pinned native BF16 vLLM API, then compare post-final-norm rows and original shared-head logits.",
+    "preconditions": "Verified archive and CPU tests; own fresh physical H10080; live price/cap check; original full pinned weights; no optimizer or test requests; runtime/source guards pass.",
+    "offline": "Verify all archive parts/whole SHA; restore only diagnostic tensors; existing parity.errors must reproduce prior reports; compare each HF scored row with native aligned and +/-1 rows without wrapping; exact IDs/positions/dtype/finiteness required.",
+    "data": "48 fixed genuine archived greedy branches plus up to12 current native verifier histories selected by the existing bounded acceptance-class selector. No performance/checkpoint/loss tuning or full-corpus training substitute.",
+    "native_trace_steps": "Existing live parity request/check CLI for canonical train/dev requests at stockD4 and stockD8, eager execution; retain actual rejected and corrected-continuation histories, classes and failures.",
+    "hf_steps": "Actual FrozenTarget.replay on exact complete prefixes; compare actual teacher.text cached execution: prefix minus4 then4 one-token calls with contiguous positions and the full hybrid cache. Frozen/no-grad, original BF16 head, no backend or attention-policy change.",
+    "native_prefill_steps": "Separate compiled and eager /v1/completions cells, exact token-ID prompt,max_tokens1,temp0,seed42,C1,prefixcacheOFF,speculationOFF,FlashInfer GDN,SSMautoBF16. Capture-on all histories; capture-off checks first fixed branch and first current partial-rejection history.",
+    "intentional_difference": "Native compilation/eager runtime bundle only in first pair; HF full/cached execution only in the second pair. SSM dtype, model weights, GDN backend and sampling remain fixed. No attribution to one fused operation from this bundle alone.",
+    "expected_results": "Exact prefix/position identity and capture-on/off output identity. Report unchanged numeric+exact-argmax gates separately for HF full/cached, HF/native compiled/eager, native compiled/eager, and current incremental verifier. Gate failure is valid diagnostic evidence, not permission to train or loosen tolerances.",
+    "tolerances": {"relative_l2": 0.03, "cosine": 0.999, "max_abs_over_rms": 0.25},
+    "fresh_waivers": false,
+    "artifacts": "Exact public requests, all commands/logs/configs/runtime, source hashes, prefix manifests, raw BF16 tensors, row-neighbor and paired comparison reports, failures, full backup/readback and cleanup receipt in existing multipart archive workflow.",
+    "cleanup": "Reserve20min; archive and verify complete readback; explicitly delete only recorded owned UUID and confirm API absence before claiming cleanup. Provider auto-delete2h/$6.60. No active prior lease."
+  },
+  "success_claim": "Bounded execution-path diagnosis only; no training readiness, acceptance or throughput improvement claim"
+}
