@@ -19,4 +19,6 @@ Layer 0 is not the break. Both stacks start near zero and the error grows with d
 
 Both linear-attention and full-attention layers fail after the error has propagated. This does not isolate one kernel, and it does not show an indexing or rejection-cache bug. The native rows are decoder residual streams, not the post-norm final hidden state used by the original gate.
 
+Lease `3b0c36c8-8155-498b-a341-e37e6a60a0a9` repeated the native pair with `--gdn-prefill-backend triton` on both the fresh prefill and the depth-8 replay. Two Triton prefills of the same 200 tokens matched at every layer. The one reproduced 9-token continuation, verifier-010 positions 235–238, diverged at layer 0 (relative L2 0.24–0.36) and was worse at the final layer. Triton chunk prefill is not the fix. vLLM 0.27.1 has no recurrent-prefill flag; decode remains a separate fused recurrent kernel. FlashInfer stays the closer prefill backend.
+
 **Do not train yet.**
