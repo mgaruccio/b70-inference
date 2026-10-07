@@ -1,0 +1,91 @@
+{
+  "status": "layer_localization_complete",
+  "optimizer_updates": 0,
+  "training_ready": false,
+  "training_allowed": false,
+  "lease": "789d1b2e-0b02-48c5-9fac-7b6ad3ba8c6f",
+  "lease_deleted_after_copy": true,
+  "position_layout": "vLLM positions are 3 identical mRoPE rows; sequence positions are row 0",
+  "hf": {
+    "verifier-000": {
+      "final_relative_l2": [
+        0.04825,
+        0.0585,
+        0.05484,
+        0.05359
+      ],
+      "argmax_equal": true,
+      "first_relative_l2_over_0.03": [
+        50,
+        48,
+        45,
+        45
+      ]
+    },
+    "verifier-008": {
+      "final_relative_l2": [
+        0.01105,
+        0.03826,
+        0.01459,
+        0.0296
+      ],
+      "argmax_equal": true,
+      "first_relative_l2_over_0.03": [
+        null,
+        54,
+        null,
+        59
+      ]
+    },
+    "verifier-010": {
+      "final_relative_l2": [
+        0.0108,
+        0.01918,
+        0.01178,
+        0.01315
+      ],
+      "argmax_equal": true,
+      "first_relative_l2_over_0.03": [
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "native_eager_vs_incremental": {
+    "verifier-000": {
+      "comparison": "200-token eager prefill vs depth-8 live prefill",
+      "failing_layers": 0,
+      "relative_l2": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "verifier-008": {
+      "comparison": "212-token eager prefill vs 9-token target forward at positions 208-211",
+      "first_gate_layer": 4,
+      "first_gate_metric": "max_abs_over_rms",
+      "position_1_relative_l2_crosses_0.03_at_layer": 51,
+      "final_layer_relative_l2": [
+        0.01292,
+        0.0569,
+        0.01709,
+        0.0239
+      ]
+    },
+    "verifier-010": {
+      "comparison": "239-token eager prefill vs 9-token target forward at positions 235-238",
+      "first_gate_layer": 7,
+      "first_gate_metric": "max_abs_over_rms",
+      "final_layer_relative_l2": [
+        0.02522,
+        0.02787,
+        0.02664,
+        0.02978
+      ]
+    }
+  }
+}
