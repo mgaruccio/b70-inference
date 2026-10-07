@@ -1087,6 +1087,22 @@ def greedy_args(trainer, checkpoint, tmp_path, **overrides):
     return args
 
 
+def test_greedy_teacher_rows_come_from_the_same_request_capture(trainer, replay_record):
+    torch = trainer.runtime().torch
+    tokens = replay_record["input_ids"]
+    root = 2
+    draft = tokens[root + 2:root + 6].clone()
+    rows, valid = trainer.native_greedy_teacher_rows(replay_record, [root], draft.view(1, 4))
+    assert rows.shape == (1, 4, replay_record["target_last_hidden_states"].shape[1])
+    assert valid.tolist() == [[True, True, True, True]]
+    for depth in range(4):
+        assert torch.equal(rows[0, depth], replay_record["target_last_hidden_states"][root + depth + 1])
+    changed = draft.clone()
+    changed[1] += 1
+    _, masked = trainer.native_greedy_teacher_rows(replay_record, [root], changed.view(1, 4))
+    assert masked.tolist() == [[True, True, False, False]]
+
+
 def test_full_target_original_structure_shared_weights_and_fresh_prefix_rows(
     trainer, full_checkpoint, full_target, replay_record
  ):
@@ -1260,7 +1276,7 @@ def test_greedy_ce_anchor_masks_missing_rows_and_chunked_dense_gradients(
             teachers=teachers, kl_students=students, kl_weight=1, kl_temperature=2,
             normalizers=normalizers, kl_normalizers=kl_normalizers)
         assert [loss["tokens"] for loss in losses] == [10] + [len(roots)] * 3
-        assert [loss["kl_pairs"] for loss in losses] == [9] + [len(roots)] * 3
+        assert [loss["kl_pairs"] for loss in losses] == [9, 0, 0, 0]
         assert trainer.objective_pair_counts(replay_record, args, roots) == [9] + [len(roots)] * 3
         with torch.no_grad():
             ce_only = trainer.depth_losses(control, full_target.head, args.depth_weights, chunk_tokens=1)
@@ -1391,9 +1407,10 @@ def test_public_cli_original_multimodal_validate_only(
     assert report["status"] == "validation-only" and report["optimizer_steps"] == 0
     assert report["train_steps"] == [] and report["checkpoints"] == []
     assert report["counts"]["loss_tokens_by_depth"] == [20, 14, 14, 14]
-    assert report["counts"]["kl_pairs_by_depth"] == [20, 14, 14, 14]
+    assert report["counts"]["kl_pairs_by_depth"] == ([20, 0, 0, 0] if greedy else [20, 14, 14, 14])
     assert report["counts"]["sampled_roots"] == 14
-    assert report["recurrence"]["teacher_replays"] == (14 if greedy else 0)
+    assert report["recurrence"]["teacher_replays"] == 0
+    assert report["recurrence"].get("native_teacher_rows", 0) == (14 if greedy else 0)
     assert report["validation"]["ce_anchor_identical"]
     assert all(report["validation"]["gradient_checks"].values())
     export = report["validation"]["export_reload"]

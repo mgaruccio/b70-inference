@@ -645,6 +645,43 @@ class FrozenTarget:
                 self.head.weight.new_empty((0, 4, self.head.in_features)))
 
 
+def native_greedy_teacher_rows(record, roots, proposals):
+    """Same-request native hidden states. No second model forward.
+
+    Row d is the captured state at position root+d+1. It is valid only when that
+    state was produced by the drafted prefix: row 0 does not depend on the draft,
+    and later rows require draft[:d] to equal the captured tokens.
+    """
+    torch = runtime().torch
+    tokens = record["input_ids"].detach().cpu()
+    target = record["target_last_hidden_states"].detach()
+    if proposals.shape != (len(roots), 4):
+        raise TrainingError("Native teacher rows require one depth-four proposal per root")
+    if not target.ndim == 2 or target.shape[1] == 0:
+        raise TrainingError("Native teacher rows require captured hidden states")
+    rows, valid = [], []
+    drafts = proposals.detach().cpu()
+    for root, draft in zip(roots, drafts):
+        positions = [root + depth + 1 for depth in range(4)]
+        if any(position < 0 or position >= tokens.numel() for position in positions):
+            raise TrainingError("Native teacher row is outside the captured token request")
+        present = [0 <= position < target.shape[0] and bool(torch.isfinite(target[position]).all())
+                   for position in positions]
+        row = target.new_zeros((4, target.shape[1]))
+        for depth, position in enumerate(positions):
+            if present[depth]:
+                row[depth] = target[position]
+        matched = [present[0]]
+        for depth in range(1, 4):
+            expected = tokens[root + 2:root + 2 + depth]
+            matched.append(present[depth] and bool(torch.equal(draft[:depth], expected)))
+        rows.append(row)
+        valid.append(matched)
+    stacked = torch.stack(rows) if rows else target.new_empty((0, 4, target.shape[1]))
+    mask = torch.tensor(valid, dtype=torch.bool).reshape(len(rows), 4)
+    return stacked, mask
+
+
 def greedy_depths(model, embedding, head, record, device, roots):
     """Own-token fixed-depth proposals with a differentiable serving-BF16 parameter view.
 
@@ -698,7 +735,8 @@ def synchronized_time(device):
 
 
 def recurrence_counts():
-    return {"roots": 0, "teacher_replays": 0, "teacher_rows_by_depth": [0] * 4,
+    return {"roots": 0, "teacher_replays": 0, "native_teacher_rows": 0,
+            "native_teacher_masked": 0, "teacher_rows_by_depth": [0] * 4,
             "proposal_divergences_by_depth": [0] * 4, "divergent_histories_by_depth": [0] * 4,
             "first_divergence_by_depth": [0] * 4, "student_seconds": 0.0, "teacher_seconds": 0.0}
 
@@ -710,18 +748,21 @@ def objective_inputs(model, embedding, head, record, args, roots, teacher=None, 
         pairs = (kl_teacher_pairs(record, outputs, args.recursive_depth, roots, args.device)
                  if getattr(args, "kl_weight", 0.0) > 0 else None)
         return outputs, pairs, None
-    if teacher is None:
-        raise TrainingError("Greedy KL requires the frozen original full target")
+    if teacher is not None and not hasattr(teacher, "replay"):
+        raise TrainingError("Greedy KL teacher handle is not a frozen target")
     start = synchronized_time(args.device)
     states, proposals = greedy_depths(model, embedding, head, record, args.device, roots)
     drafted = synchronized_time(args.device)
-    replay = teacher.replay(record, roots, proposals)
+    replay, row_valid = native_greedy_teacher_rows(record, roots, proposals)
+    replay = replay.to(args.device)
+    row_valid = row_valid.to(args.device)
     replayed = synchronized_time(args.device)
     pairs = kl_teacher_pairs(record, outputs[:1], 1, (), args.device)
-    pairs.extend((replay[:, d], outputs[d][2]) for d in range(1, 4))
+    pairs.extend((replay[:, depth], outputs[depth][2] & row_valid[:, depth]) for depth in range(1, 4))
     if diagnostics is not None:
         diagnostics["roots"] += len(roots)
-        diagnostics["teacher_replays"] += len(roots)
+        diagnostics["native_teacher_rows"] += len(roots)
+        diagnostics["native_teacher_masked"] += int((~row_valid).sum().item())
         diagnostics["student_seconds"] += drafted - start
         diagnostics["teacher_seconds"] += replayed - drafted
         for root, draft in zip(roots, proposals.tolist()):
@@ -742,7 +783,7 @@ def objective_inputs(model, embedding, head, record, args, roots, teacher=None, 
 def objective_pair_counts(record, args, roots):
     counts = kl_pair_counts(record, args.recursive_depth, roots)
     if getattr(args, "greedy_kl", False):
-        # New full-prefix rows exist even if the capture lacks its final teacher row.
+        # Depths 2-4 use same-request native rows, not a second model replay.
         counts[1:] = [len(roots)] * 3
     return counts
 
