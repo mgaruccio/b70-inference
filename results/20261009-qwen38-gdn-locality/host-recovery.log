@@ -222,3 +222,77 @@ PY
 printf 'DONE '; date --iso-8601=seconds
 
 [background task timeout: Timed out after 75s]
+
+
+===== Authorized continuation: selected ordinary outputs; full raw files retained at listed local paths =====
+Session snapshot source: .pi/tasks/01a11e21-ac98-76c7-8380-5d71b7e6ef84-69439/b9cf886dd.output
+SESSION_DIAGNOSIS_START 2026-10-09T01:37:28-04:00
+BOOT_ID=c93aea98-bb22-4cf6-879f-42d2980cb726
+63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4  /home/mike/inference/launchers/start-qwen38.sh
+PROCESS 718 Ss x64_sys_epoll_wait systemd-logind
+PROCESS 792 SNs x64_sys_ppoll.cold sshd
+PROCESS 2718 SNs x64_sys_poll.cold sshd-session
+PROCESS 2734 SN x64_sys_ppoll.cold sshd-session
+sshd.service / systemd-logind.service / user@1000.service: active, running, Result=success
+Recent session-service logs
+[background task timeout: Timed out after 180s]
+
+Transport comparison source: /tmp/b70-ssh-transport-766dnzs5 (raw stdin/stdout/debug files)
+512-byte payload: exit0,596 output bytes, exact match; BEGIN2026-10-09T01:47:19-04:00,sameboot
+32768-byte single-write payload: TIMEOUT45,79 output bytes (header only); BEGIN2026-10-09T01:47:25-04:00,sameboot
+Peer banner: OpenSSH_10.5; authentication: publickey
+LAN-address connection to192.168.8.172:22 timed out. This was later found NOT to be direct LAN:
+ip -4 route get192.168.8.172
+192.168.8.172 dev tailscale0 table52 src100.109.144.103
+
+Small-state source: .pi/tasks/01a11e21-ac98-76c7-8380-5d71b7e6ef84-69439/b28488a67.output
+BOOT=c93aea98-bb22-4cf6-879f-42d2980cb726
+wlan0 UP192.168.8.172/24; tailscale0 UNKNOWN100.75.79.54/32; docker0 DOWN172.17.0.1/16
+USER_FREEZE=0
+USER_EVENTS
+populated1
+frozen0
+default via192.168.8.1 devwlan0 proto dhcp src192.168.8.172 metric600
+END_SMALL_STATE
+MAC identifiers remain in private original output, omitted here.
+
+Chunked stream source: /tmp/b70-chunked-stream-check.py; /tmp/b70-chunked-check-ex8eooub
+ARTIFACTS /tmp/b70-chunked-check-ex8eooub EXIT0 BYTES32779 EXACT_PASS True
+STDERR empty
+Payload:64 flushed512-byte ASCII chunks,30ms spacing; same32768 payload bytes plus11 BEGIN/END framing bytes.
+No MTU/offload/PAM/logind/sleep/SSH service change was performed.
+
+===== Actual native qualification =====
+Command: python3 /tmp/b70-launch-native-smoke.py
+Exact local launch input/logs: /tmp/b70-native-smoke-launch-yoku151_
+REMOTE_OUTPUT=/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality/native-smoke-20261009-023244-b84caf
+SFTP_EXIT=0
+NATIVE_QUALIFICATION_EXIT=0
+controller-footer: elapsed_s217.93894404399907,failure=null,status0
+SSH_EXIT=0,STDERR empty
+Actual HTTP/metric validation source: /tmp/b70-native-smoke-results-4155xkx7/raw/native/length-512/long-context
+Existing validate_long_result rerun with PROMPT_TOKENS=512:
+point_count1,warmup_count1,measured_count6,expected_prompt_tokens512,expected_completion_tokens128
+Seven valid attempts: prompt_tokens512,completion_tokens128,finish_reason=length,parse_errors=[]
+raw_snapshot_count14,counter_errors=[],parse_errors={}
+spec_counter_bases=[vllm:spec_decode_num_accepted_tokens_total,vllm:spec_decode_num_draft_tokens_total,vllm:spec_decode_num_drafts_total]
+Complete small post records: /tmp/b70-native-smoke-small-bx2t42c4
+kernel-post-check={new_guarded_error_lines:[],status:clear}
+post-state: bootc93aea98-bb22-4cf6-879f-42d2980cb726,boost0,all16 cached scaling caps3801000kHz,running_containers=[]
+cleanup: b70-qwen38-mtp4-smoke-3366-48f7118233,owned_container_observed=true,returncode0,status=removed
+host-before==host-after
+Effective configuration: nativeMTP4,GPTQ,FP16,FP8KV,maxmodel212992,batch8192,C1,util.95,capture[1,2,4,8],prefixcache=false,thinking=false
+No speed comparison/full-stock stability/fusion/attribution conclusion is established.
+
+Bulk retrieval: timeout300 after163 files/~2056654 bytes; generic native/summary.json incomplete locally.
+Actual512 HTTP summary and raw metrics complete; small final records fetched separately withSFTP exit0.
+Remote originals retained. Retrieval timeout is not a native workload failure.
+
+===== Next graph-aware diagnostic started; outcome pending =====
+Command: python3 /tmp/b70-launch-unitrace512.py
+Controller: /tmp/native-qwen38-mtp4-unitrace512-controller.py
+No65K point: in-memory PROMPT_TOKENS512 / metadata[512], unchanged maxmodel212992/C1.
+Unique alphanumeric unitrace session/owned container; existing controlsresume,pause,stop-flush.
+Profile delay3/maxiterations5/replay-event bound512; startup1800/request180/control60/outer2330+65s.
+CPU-only existing CLI parser/output-freshness/artifact-check invocation: PASS.
+Valid trace/control success is necessary, not sufficient; complete target-graph reconciliation remains required.
