@@ -6,8 +6,9 @@ inference-host execution. Nothing here launches Docker or touches the remote
 host during CPU-only validation.
 
 **Execution paused:** the native baseline passed, but graph attribution remains
-inconclusive and the second tracer startup coincided with a host reboot of
-unknown cause. Do not repeat GPU launches until the host-safety blocker is
+inconclusive. The second tracer startup coincided with a fatal AMD CPU execution-unit
+MCA/data-fabric reset signature, also recorded before this experiment. The trigger
+is unresolved. Do not repeat GPU launches until the host-safety blocker is
 resolved. See [`execution.md`](execution.md) for results and partial artifacts.
 
 ## Scope and hard boundary

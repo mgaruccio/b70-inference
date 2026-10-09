@@ -1,8 +1,9 @@
 # Qwen 3.8 B70 GDN locality / megakernel program
 
 **Status: native baseline completed; graph attribution blocked, development-only.**
-The second tracer attempt coincided with an unexplained host reboot; GPU work is
-paused. See `results/20261009-qwen38-gdn-locality/execution.md` for ordinary
+The second tracer attempt coincided with a fatal AMD execution-unit MCA/data-fabric
+reset signature. Its trigger is unresolved; GPU work remains paused. See
+`results/20261009-qwen38-gdn-locality/execution.md` for ordinary
 results and failure evidence. No kernel candidate or gain has been established.
 The bounded harness lives in `results/20261009-qwen38-gdn-locality/` and uses the existing
 step-profile lifecycle through `runpy`.

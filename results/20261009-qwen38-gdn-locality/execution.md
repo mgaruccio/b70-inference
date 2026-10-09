@@ -1,6 +1,6 @@
 # B70 GDN locality program — execution
 
-Development-only. Native baseline completed; graph attribution is blocked after an unexplained host reboot. GPU attempts are stopped. No kernel candidate or production change has been made.
+Development-only. Native baseline completed; graph attribution is blocked after a reboot with a fatal AMD execution-unit MCA/data-fabric reset signature. The underlying trigger is unresolved. GPU attempts are stopped. No kernel candidate or production change has been made.
 
 ## Native baseline (completed)
 
@@ -62,3 +62,31 @@ Before any candidate is selected, the lead must establish actual graph coverage,
 Native source audit already found recurrent state and the convolution window resident across all five MTP4 rows. The remaining conditional candidate is only conv-to-rule intermediate traffic/one dispatch, preserving all rollback checkpoints. Fusion is queued behind credible attribution and the predeclared >=5% complete target-replay gate; no negative or positive hotspot conclusion is currently justified.
 
 The source comparison examined `csrc/xpu/gdn_attn/{causal_conv1d.hpp,gated_delta_rule.hpp,gdn_attn_interface.cpp}` at native commit `1796aa8b` (v0.1.12/.1). The installed wheel identifies as0.1.12.3; exact wheel/source parity has not been established. Lithos's [Metal mixer design](https://raw.githubusercontent.com/lithos-ai/lithos-metal/main/docs/design/mixers.md) supplies reusable locality and tuned-multi-dispatch comparison ideas, not portable Metal kernels or an unchanged eight-row recipe. Intel workgroup ownership, graph execution and rollback checkpoints require native implementations. The source audit guides a conditional conv-to-rule hypothesis; it does not prove installed-kernel parity, measured headroom, or benefit.
+
+## Read-only reboot diagnosis (user-authorized follow-up)
+
+`reboot-diagnosis.log` retains focused kernel records, exact CPU/BIOS identity and existing crash-record checks. No workload, service, package, clock, voltage, firmware or host setting was changed. All GPU experiments remain stopped.
+
+- The next boot reports reset reason `0x08000800`: **an uncorrected error caused a data fabric sync flood event**. Its MCA record is `System Fatal error`, logical reporting CPU1, `MC5_STATUS=0xbaa0000000090150`, `IPID=0x000500b000000000`, syndrome `0x000000004d000008`, and Execution Unit extended code9. `UC` and `PCC` indicate an uncorrected error with processor context corruption.
+- The same execution-unit code9/reset signature appears at2026-10-05 22:51:17 EDT, before the tracer trial. The earlier03:55:57 EDT boot reports the same block/reset signature with extended code4. These historical records establish that the signature predates this experiment; they do not by themselves establish distinct triggers or a faulty component.
+- CPU: **Ryzen7 5800XT**, CPUID decimal family25/model33/stepping2 = hex19h/21h/2, microcode `0xa201213`. Board: Gigabyte X570 I AORUS PRO WIFI; BIOS F39, dated2025-10-28. BIOS tuning/AGESA were not established from the available records.
+- The available prior-boot journal has no clean shutdown, OOM, panic/oops, AER-error or explicit xe-crash evidence around the reset. Absence from an abruptly ended journal does not rule out those mechanisms as contributors. A later post-boot clocksource watchdog timeout is secondary evidence, not the reset's cause.
+- Lead-side bounded `sudo -n` collection succeeded. No files were listed in `/sys/fs/pstore` or `/var/lib/systemd/pstore`; no systemd-pstore entries or coredumps were found for the incident. `panic`, `panic_on_oops` and `panic_on_warn` are all0. Nothing was configured to capture a new failure.
+
+The key read-only queries were:
+
+```sh
+ssh inference-host 'bash -lc '\''timeout 10s sudo -n journalctl -b 0 -k --no-pager --grep "Previous system reset reason|Hardware Error|Execution Unit Ext|sync flood"'\'''
+ssh inference-host 'bash -lc '\''for b in -1 -2; do timeout 8s journalctl -b "$b" -k --no-pager --grep "Previous system reset reason|Hardware Error|Execution Unit Ext|sync flood"; done'\'''
+```
+
+Primary-source interpretation:
+
+- [Linux AMD SMCA mapping](https://github.com/torvalds/linux/blob/master/arch/x86/kernel/cpu/mce/amd.c): `(HwId=0xB0, McaType=0x5)` maps to the CPU **Execution Unit**, not a PCIe/GPU MCA block. Logical CPU1 is the reporting CPU, not proof of damaged silicon or a uniquely faulty physical core.
+- [Linux AMD reset decoder](https://github.com/torvalds/linux/blob/master/arch/x86/kernel/cpu/amd.c): bit27 is the uncorrected-error/data-fabric-sync-flood reason. Bit11 of the recorded value is not decoded by that table.
+- [Linux MCA status definitions](https://github.com/torvalds/linux/blob/master/arch/x86/include/asm/mce.h) and [severity decoder](https://github.com/torvalds/linux/blob/master/drivers/edac/mce_amd.c) explain `UC`, `PCC`, and the `System Fatal error` label.
+- [AMD PPR55901](https://docs.amd.com/v/u/en-US/55901) gives implementation-dependent extended-code definitions. Its available Model11h EX table labels bit9 scheduler-queue parity, but this host is Model21h: **that precise fault label has not been certified for this CPU**. Generic `RESV/INSN/IRD` fields do not identify a specific instruction, GPU memory operation or DRAM fault.
+
+Conclusion: the reboot has a fatal CPU-side MCA/platform-reset signature, with matching historical records. Neither failed silicon, CPU undervolting, memory instability nor a causal role for unitrace is proven. The next safe step is to establish the current CPU BIOS tuning (PBO/Curve Optimizer/manual voltage or clocks), not repeat the GPU experiment. No stock-setting change, firmware update, stress test or new logging infrastructure is authorized or performed by this diagnosis.
+
+A later read-only boot-ID query timed out. Two bounded SSH probes (including a fresh non-multiplexed connection) returned255/server-not-responding; direct LAN SSH also timed out. Tailscale still reported the peer online/active with a recent handshake. This is an **access blocker**, not proof of a further reboot or a fully frozen host. Further collection now requires checking the physical/console state; no automatic reboot or restart is performed. Client-side observations are explicitly labeled in `reboot-diagnosis.log`.
