@@ -5,6 +5,11 @@ contains no GDN kernel candidate and makes no speed claim. The lead owns all
 inference-host execution. Nothing here launches Docker or touches the remote
 host during CPU-only validation.
 
+**Execution paused:** the native baseline passed, but graph attribution remains
+inconclusive and the second tracer startup coincided with a host reboot of
+unknown cause. Do not repeat GPU launches until the host-safety blocker is
+resolved. See [`execution.md`](execution.md) for results and partial artifacts.
+
 ## Scope and hard boundary
 
 The accepted question is whether Lithos-metal's locality ideas justify a narrow
@@ -58,7 +63,7 @@ python3 results/20261009-qwen38-gdn-locality/run-phase0.py \
 ssh inference-host bash "$HARNESS/build-unitrace.sh"
 ```
 
-`build-unitrace.sh` clones Intel PTI `pti-1.0.0` source at exact commit
+`build-unitrace.sh` clones Intel PTI source at exact commit
 `887bba6e28ce84cc0d3813ef876e24add107c318`, then builds it in the pinned vLLM
 image with no GPU device, no package/driver mutation, bounded CPU/memory/time,
 and a read-only cached compiler mount. It writes only fresh
@@ -105,9 +110,9 @@ ssh inference-host python3 -u "$HARNESS/summarize-gdn.py" \
   --out "$CAMPAIGN/diagnostic-unitrace-01/unitrace-summary.json"
 ```
 
-The default report deliberately remains inconclusive. Only after manually
-reviewing the trace against the `step-timing/` whole-replay events may the lead
-rerun the pure summarizer with explicit coverage and reconciliation facts:
+The report remains inconclusive: coverage/reconciliation CLI values are caller
+assertions, not independent proof. The following optional fields retain review
+notes but cannot authorize fusion or establish a measured GDN share:
 
 ```bash
 ssh inference-host python3 -u "$HARNESS/summarize-gdn.py" \
@@ -119,12 +124,11 @@ ssh inference-host python3 -u "$HARNESS/summarize-gdn.py" \
   --out "$CAMPAIGN/diagnostic-unitrace-01/unitrace-summary-reconciled.json"
 ```
 
-`fusion_decision.fusion_selection_allowed` can become true only for complete
-normal graph-enabled unitrace coverage with explicit target-root provenance, a
-positive whole-target replay measurement, explicit reconciliation, and a detected
-explicit-target GDN kernel share of at least 5%. Eager `--mode eager-profile`
-remains an operation-identification control only; it can never establish a share
-or select/reject fusion.
+`fusion_decision.fusion_selection_allowed` remains false even with those flags.
+The lead must separately inspect actual graph coverage, target provenance,
+window ownership and whole-replay alignment before considering the >=5% gate.
+Unknown hooks remain unknown. Eager `--mode eager-profile` identifies operations
+only; neither eager timing nor a visible-kernel sum selects or rejects fusion.
 
 The older graph torch profile remains available for visibility diagnostics:
 

@@ -1,8 +1,10 @@
 # Qwen 3.8 B70 GDN locality / megakernel program
 
-**Status: queued Phase0, development-only.** This is an attribution-first
-program, not a kernel implementation or a performance result. The bounded
-harness lives in `results/20261009-qwen38-gdn-locality/` and uses the existing
+**Status: native baseline completed; graph attribution blocked, development-only.**
+The second tracer attempt coincided with an unexplained host reboot; GPU work is
+paused. See `results/20261009-qwen38-gdn-locality/execution.md` for ordinary
+results and failure evidence. No kernel candidate or gain has been established.
+The bounded harness lives in `results/20261009-qwen38-gdn-locality/` and uses the existing
 step-profile lifecycle through `runpy`.
 
 ## Authority and boundaries
@@ -85,16 +87,17 @@ values rather than editing that file. The queued execution is:
    `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality-harness`
    with `run-phase0.py --stage-only`. The staging CLI fails if the directory
    exists and stages no runtime or model.
-2. Do **not** rerun the already-running uninstrumented four-way baseline. The
+2. Do **not** rerun the completed uninstrumented four-way baseline. The
    lead-owned `baseline-original-01` output is the unchanged normal-serving
-   reference; wait for it to complete and retain its raw artifacts.
+   reference; its raw artifacts and reproduced statistics are retained.
 3. After the baseline is idle, run the bounded `build-unitrace.sh` from the
    fresh harness. It uses the pinned PTI source/image/compiler contract below;
    it must not compile concurrently with the baseline and it has no GPU.
 4. Run `--mode unitrace-profile` with fresh `diagnostic-unitrace-01`. This is
    the normal graph-enabled MTP4 server under unitrace, with `/start_profile`
-   resuming and `/stop_profile` pausing a finite capture around the real
-   streamed request. The original vLLM launch remains unchanged.
+   resuming and `/stop_profile` pausing, synchronizing and stopping/flushing a
+   finite capture around the real streamed request. The original vLLM launch
+   remains unchanged. The revised flush path still lacks a completed GPU test.
 5. Review the unitrace trace together with the external whole-replay timing and
    run `summarize-gdn.py`. Missing, partial, draft-only, or unreconciled graph
    coverage is an explicit attribution blocker, not a fusion result.

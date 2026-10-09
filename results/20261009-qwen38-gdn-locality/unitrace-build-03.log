@@ -1,0 +1,127 @@
+Cloning into '/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality-harness-retry2/unitrace-src'...
+HEAD is now at 887bba6 [PTI] Reduce Log Level for On-Demand SYCL Graph Feature (#1023)
+   WARNING: vars.sh does not set up dependencies when invoked directly. Please perform environment setup for UMF before running DPC++ applications.
+-- The C compiler identification is IntelLLVM 2026.0.0
+-- The CXX compiler identification is IntelLLVM 2026.0.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /opt/intel/oneapi/compiler/bin/icx - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /opt/intel/oneapi/compiler/bin/icpx - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Python: /opt/venv/bin/python3.12 (found suitable version "3.12.3", minimum required is "3.9") found components: Interpreter
+-- Build Type: Release
+-- Bitness: 64 bits
+-- Level Zero headers are found at /build
+-- Level Zero headers are found at /build
+-- Level Zero headers are found at /build
+-- Performing Test FILESYSTEM_JUST_WORKS
+-- Performing Test FILESYSTEM_JUST_WORKS - Success
+-- Configuring done (0.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /build
+[1/13] Generating unitrace_tool_commit_hash.h
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[2/13] Generating unitrace_commit_hash.h
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[3/13] Generating CL/tracing_api.h, CL/tracing_types.h, CL/cl_ext_private.h, level_zero/ze_stypes.h, level_zero/ze_intel_gpu.h
+Cloning into '/build/compute-runtime'...
+Note: switching to 'aa5ab7a8288f96f1bed187cec0d359bd65354ef3'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at aa5ab7a828 fix: correctly set max value for HW generated local IDs
+Cloning compute-runtime to /build/compute-runtime...
+Copying OpenCL tracing headers from /build/compute-runtime/opencl/source/tracing...
+Copying OpenCL extension headers from /build/compute-runtime/opencl/extensions/public...
+Copying Level Zero headers from /build/compute-runtime/level_zero/include/level_zero...
+Copying Level Zero driver_experimental headers from /build/compute-runtime/level_zero/include/level_zero/driver_experimental...
+SUCCESS: All headers copied to /build
+[4/13] Generating level_zero/ze_api.h, level_zero/zes_api.h, level_zero/zet_api.h, level_zero/zer_api.h, level_zero/layers/zel_tracing_api.h, level_zero/layers/zel_tracing_register_cb.h
+Cloning into '/build/level-zero'...
+Note: switching to 'v1.26.0'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 248d6df Add documentation on dllmain restrictions (#389)
+[5/13] Generating l0_loader.gen
+[6/13] Generating common_header.gen
+[7/13] Generating tracing.gen
+[8/13] Building CXX object CMakeFiles/unitrace.dir/src/utils/logger_factory.cc.o
+[9/13] Building CXX object CMakeFiles/unitrace.dir/src/unitrace.cc.o
+In file included from /src/tools/unitrace/src/unitrace.cc:39:
+In file included from /src/tools/unitrace/src/levelzero/ze_metrics.h:16:
+In file included from /src/tools/unitrace/src/levelzero/ze_loader.h:13:
+/build/level_zero/layers/zel_tracing_register_cb.h:2515:9: warning: empty struct has size 0 in C, size 1 in C++ [-Wextern-c-compat]
+ 2515 | typedef struct _zer_get_default_context_params_t
+      |         ^
+1 warning generated.
+[10/13] Linking CXX executable unitrace
+[11/13] Building CXX object CMakeFiles/unitrace_tool.dir/src/utils/logger_factory.cc.o
+[12/13] Building CXX object CMakeFiles/unitrace_tool.dir/src/tracer.cc.o
+In file included from /src/tools/unitrace/src/tracer.cc:11:
+In file included from /src/tools/unitrace/src/tracer.h:20:
+In file included from /src/tools/unitrace/src/levelzero/ze_collector.h:30:
+/build/level_zero/layers/zel_tracing_register_cb.h:2515:9: warning: empty struct has size 0 in C, size 1 in C++ [-Wextern-c-compat]
+ 2515 | typedef struct _zer_get_default_context_params_t
+      |         ^
+1 warning generated.
+[13/13] Linking CXX shared library libunitrace_tool.so
+-- Install configuration: "Release"
+-- Installing: /install/bin/unitrace
+-- Installing: /install/lib/libunitrace_tool.so
+-- Installing: /install/bin/uniview.py
+-- Installing: /install/bin/mergetrace.py
+-- Installing: /install/bin/analyzeperfmetrics.py
+-- Installing: /install/bin/addrasm.py
+-- Installing: /install/etc/unitrace/metrics/config
+-- Installing: /install/etc/unitrace/metrics/config/bmg
+-- Installing: /install/etc/unitrace/metrics/config/bmg/ComputeBasic.txt
+-- Installing: /install/etc/unitrace/metrics/config/bmg/MemoryProfile.txt
+-- Installing: /install/etc/unitrace/metrics/config/pvc
+-- Installing: /install/etc/unitrace/metrics/config/pvc/ComputeBasic.txt
+-- Installing: /install/etc/unitrace/metrics/config/pvc/GpuOffload.txt
+-- Installing: /install/etc/unitrace/metrics/config/pvc/L1ProfileReads.txt
+-- Installing: /install/etc/unitrace/metrics/config/pvc/L1ProfileSlmBankConflicts.txt
+-- Installing: /install/etc/unitrace/metrics/config/pvc/L1ProfileWrites.txt
+-- Installing: /install/etc/unitrace/metrics/config/pvc/MemProfile.txt
+-- Installing: /install/bin/summary
+-- Installing: /install/bin/summary/categorize.py
+-- Installing: /install/bin/summary/schemas
+-- Installing: /install/bin/summary/schemas/LLaMA.ini
+-- Installing: /install/bin/summary/schemas/LLaMA.json
+-- Installing: /install/bin/summary/summary.py
+unitrace source=887bba6e28ce84cc0d3813ef876e24add107c318
+unitrace install=/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality-harness-retry2/unitrace-install

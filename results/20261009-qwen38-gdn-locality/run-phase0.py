@@ -38,7 +38,7 @@ BASELINE_LENGTHS = (512, 65_536)
 PROFILE_DELAY_ITERATIONS = 3
 PROFILE_MAX_ITERATIONS = 5
 PROFILE_STOP_AFTER_EVENTS = 24
-UNITRACE_SESSION = "b70gdnlocality"
+UNITRACE_SESSION = "b70gdnlocality02"
 UNITRACE_CONTAINER_ROOT = "/unitrace"
 UNITRACE_SOURCE_SHA = "887bba6e28ce84cc0d3813ef876e24add107c318"
 UNITRACE_OPTIONS = (
@@ -238,7 +238,7 @@ def _append_instrumentation(
         "-e",
         "B70_STEP_TIMING_DIR=/output/step-timing",
         "-e",
-        "B70_STEP_TIMING_MAX_SAMPLES=64",
+        "B70_STEP_TIMING_MAX_SAMPLES=512",
         "-e",
         "B70_GDN_LOCALITY=1",
         "-e",
@@ -253,7 +253,7 @@ def _append_instrumentation(
         "PYTHONPATH=/timing:/gdn",
         "B70_STEP_TIMING=1",
         "B70_STEP_TIMING_DIR=/output/step-timing",
-        "B70_STEP_TIMING_MAX_SAMPLES=64",
+        "B70_STEP_TIMING_MAX_SAMPLES=512",
         "B70_GDN_LOCALITY=1",
         "B70_GDN_LOCALITY_MAX_SAMPLES=128",
     ]
@@ -459,7 +459,28 @@ def _unitrace_artifact_check(out: Path) -> int:
                         f"{event.get('action', 'unknown')} returncode={event.get('returncode')!r}"
                     )
 
-    observed = bool(json_files)
+    valid_json_files = []
+    invalid_trace_files = []
+    for path in json_files:
+        if path.suffix != ".json":
+            invalid_trace_files.append(str(path.relative_to(out)))
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            events = payload.get("traceEvents", []) if isinstance(payload, dict) else payload
+            if not isinstance(events, list) or not any(
+                isinstance(event, dict) and event.get("ph") == "X"
+                and isinstance(event.get("dur"), (int, float)) and event["dur"] > 0
+                for event in events
+            ):
+                raise ValueError("no completed trace activities")
+            valid_json_files.append(path)
+        except (OSError, ValueError, TypeError):
+            invalid_trace_files.append(str(path.relative_to(out)))
+    successful_actions = {event.get("action") for event in control_events if event.get("returncode") == 0}
+    if not {"resume", "pause", "stop"}.issubset(successful_actions):
+        control_failures.append("capture requires successful resume, pause and stop/flush controls")
+    observed = bool(valid_json_files)
     blocked = not observed or bool(control_failures)
     if not observed:
         reason = "unitrace emitted no trace; no graph-aware attribution is available"
@@ -472,6 +493,8 @@ def _unitrace_artifact_check(out: Path) -> int:
         "trace_directory": str(trace_dir),
         "files": [{"path": str(path.relative_to(out)), "bytes": path.stat().st_size} for path in files],
         "json_trace_files": [str(path.relative_to(out)) for path in json_files],
+        "valid_json_trace_files": [str(path.relative_to(out)) for path in valid_json_files],
+        "invalid_or_empty_trace_files": invalid_trace_files,
         "unitrace_control_events": control_events,
         "unitrace_control_failures": control_failures,
         "decision_status": "inconclusive_until_graph_coverage_reconciled",

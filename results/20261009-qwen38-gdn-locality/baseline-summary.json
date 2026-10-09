@@ -1,0 +1,19 @@
+{
+  "tier": "development",
+  "status": "passed",
+  "host_unchanged": true,
+  "source": "baseline-original-01.tar.gz",
+  "command": "ssh inference-host 'timeout --signal=TERM --kill-after=30s 1800s python3 -u /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260914-qwen38-four-way-speed/run-comparison.py --cell mtp4 --out /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality/baseline-original-01'",
+  "timing": "(128-1)/(stream_end-first_nonempty), not device-only throughput",
+  "samples_per_context": 6,
+  "warmups_per_context": 1,
+  "exclusions": 0,
+  "candidate_result": false,
+  "points": [
+    {"prompt_tokens":512,"output_tokens":128,"decode_median_tok_s":70.87523142860877,"decode_q1_tok_s":69.7105803814176,"decode_q3_tok_s":73.36181140236862,"ttft_median_s":0.2890919629862765,"request_latency_median_s":2.0823809354915284,"speculative_counter_deltas":{"accepted":511,"proposed":1068,"rounds":267},"draft_acceptance":0.47846441947565543,"mean_acceptance_length":2.9138576779026217},
+    {"prompt_tokens":8192,"output_tokens":128,"decode_median_tok_s":63.300261186778485,"decode_q1_tok_s":62.30622970946509,"decode_q3_tok_s":63.31361112105441,"ttft_median_s":4.198290714484756,"request_latency_median_s":6.205831440514885,"speculative_counter_deltas":{"accepted":487,"proposed":1132,"rounds":283},"draft_acceptance":0.4302120141342756,"mean_acceptance_length":2.7208480565371023},
+    {"prompt_tokens":32768,"output_tokens":128,"decode_median_tok_s":62.10289292052225,"decode_q1_tok_s":61.30714229340833,"decode_q3_tok_s":64.00874824552491,"ttft_median_s":21.114508918995853,"request_latency_median_s":23.15432647751004,"speculative_counter_deltas":{"accepted":505,"proposed":1040,"rounds":260},"draft_acceptance":0.4855769230769231,"mean_acceptance_length":2.9423076923076925},
+    {"prompt_tokens":65536,"output_tokens":128,"decode_median_tok_s":55.739303451326734,"decode_q1_tok_s":54.158184232775525,"decode_q3_tok_s":57.46576584373048,"ttft_median_s":53.86617717750778,"request_latency_median_s":56.152897562496946,"speculative_counter_deltas":{"accepted":518,"proposed":1008,"rounds":252},"draft_acceptance":0.5138888888888888,"mean_acceptance_length":3.0555555555555554}
+  ],
+  "limitations": ["One server load and six samples per context; no paired candidate comparison", "Baseline uses unchanged historical reference runner, not the new Phase0 diagnostic", "No GDN hotspot or graph-kernel attribution established by these throughput measurements"]
+}

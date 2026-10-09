@@ -282,22 +282,12 @@ def fusion_decision(
     if gdn_provenance != "target":
         reasons.append("target GDN provenance is not explicit")
 
-    # Do not even publish a GDN/whole-replay ratio unless every attribution
-    # prerequisite is satisfied.  Eager, partial, and stage-unknown traces may
-    # contain useful operator rows, but they cannot establish a share or a
-    # fusion decision.
-    measurement_ready = (
-        evidence_mode == "unitrace-profile"
-        and graph_coverage == "complete"
-        and whole is not None
-        and replay_reconciled
-        and gdn is not None
-        and gdn_provenance == "target"
-    )
-    share = (gdn / whole) if measurement_ready else None
-    if share is not None and share < FUSION_SHARE_THRESHOLD:
-        reasons.append(f"GDN share is below the {FUSION_SHARE_THRESHOLD:.0%} candidate gate")
-    eligible = measurement_ready and not reasons
+    # CLI flags are unvalidated caller assertions, not evidence of graph
+    # completeness or timestamp alignment. This diagnostic cannot authorize
+    # fusion without a separate review of the actual capture and replay data.
+    reasons.append("caller review flags do not independently establish graph coverage or reconciliation")
+    share = None
+    eligible = False
     return {
         "decision_status": "eligible" if eligible else "inconclusive",
         "fusion_selection_allowed": eligible,

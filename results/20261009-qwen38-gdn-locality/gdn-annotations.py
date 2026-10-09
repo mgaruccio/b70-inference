@@ -68,13 +68,10 @@ def is_gdn_component(class_name: Any, module_name: Any = "", qualified_name: Any
 
 
 def classify_stage(*values: Any) -> str:
-    """Classify a component as target or drafter from provenance names."""
+    """Honor explicit root ownership; names alone cannot establish provenance."""
     if values and str(values[0] or "").lower() in {"target", "draft"}:
         return str(values[0]).lower()
-    text = " ".join(str(value or "") for value in values).lower()
-    if any(marker in text for marker in ("draft", "speculator", "eagle", "mtp")):
-        return "draft"
-    return "target"
+    return "unknown"
 
 
 def classify_operator(name: Any, annotation: Any = "") -> str:
@@ -254,7 +251,7 @@ class GDNSession:
                 [control, f"--{action}", session],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=45 if action == "stop" else 10,
                 check=False,
             )
             row.update(
@@ -383,7 +380,7 @@ class GDNSession:
         if key not in self._seen_metadata and len(self.metadata) < self.max_metadata:
             self._seen_metadata.add(key)
             row = {
-                "stage": self._object_stages.get(id(instance), "target"),
+                "stage": self._object_stages.get(id(instance), "unknown"),
                 "operator": "torch.ops._xpu_C.gdn_attention",
                 "label": label,
                 "class": _type_name(instance),
@@ -416,7 +413,7 @@ class GDNSession:
 
         @functools.wraps(original)
         def call(instance: Any, *args: Any, **kwargs: Any) -> Any:
-            stage = session._object_stages.get(id(instance), "target")
+            stage = session._object_stages.get(id(instance), "unknown")
             label = f"b70_gdn/{stage}/operator:gdn_attention"
             token = session._begin(label, args, kwargs, instance)
             try:
@@ -477,6 +474,10 @@ class GDNSession:
                         synchronize()
                 except Exception as exc:
                     self.errors.append(f"xpu-synchronize:{type(exc).__name__}:{exc}")
+            if self.active:
+                # Flush the completed capture while the worker is still alive;
+                # pause alone leaves buffered JSON empty on forced container exit.
+                self._unitrace_control("stop")
             self.active = False
             self.stopped_unix_ns = time.time_ns()
             self._emit_summary(reason=reason)

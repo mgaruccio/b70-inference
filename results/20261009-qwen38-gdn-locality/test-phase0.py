@@ -37,6 +37,8 @@ def main() -> int:
     assert annotations.classify_stage("target", "model.layers.0.linear_attn") == "target"
     assert annotations.classify_stage("draft", "speculator.model.layers.0") == "draft"
     assert annotations.classify_stage("target", "qwen3_5_mtp") == "target"
+    assert annotations.classify_stage("qwen3_5_mtp") == "unknown"
+    assert annotations.classify_stage("UnownedGDN") == "unknown"
     assert annotations.classify_operator("aten::gdn_attention") == "gdn"
     assert annotations.classify_operator("_xpu_C::gdn_attention_core_xpu") == "gdn"
     assert annotations.classify_operator("_vllm_fa2_C::varlen_fwd") == "attention"
@@ -71,8 +73,8 @@ def main() -> int:
         gdn_kernel_ms=6.0,
         gdn_provenance="target",
     )
-    assert eligible_gate["fusion_selection_allowed"]
-    assert eligible_gate["gdn_share_of_whole_replay"] == 0.06
+    assert not eligible_gate["fusion_selection_allowed"]
+    assert eligible_gate["gdn_share_of_whole_replay"] is None
     assert "unitrace-profile" in harness["DEFAULT_OUT_NAMES"]
     assert harness["UNITRACE_SOURCE_SHA"] == "887bba6e28ce84cc0d3813ef876e24add107c318"
     source = "import torch\n\nclass XPUWorker:\n    def profile(self, is_start=True, profile_prefix=None):\n        return None\n"
@@ -160,8 +162,8 @@ def main() -> int:
             whole_replay_ms=100.0,
             replay_reconciled=True,
         )
-        assert target_report["fusion_decision"]["fusion_selection_allowed"]
-        assert target_report["fusion_decision"]["gdn_share_of_whole_replay"] == 0.06
+        assert not target_report["fusion_decision"]["fusion_selection_allowed"]
+        assert target_report["fusion_decision"]["gdn_share_of_whole_replay"] is None
         artifact_out = Path(directory) / "artifact-check"
         (artifact_out / "unitrace").mkdir(parents=True)
         (artifact_out / "unitrace" / "chrome_trace.json").write_text("{}", encoding="utf-8")
@@ -174,10 +176,23 @@ def main() -> int:
         assert harness["_unitrace_artifact_check"](artifact_out) == 1
         artifact_check = json.loads((artifact_out / "unitrace-artifact-check.json").read_text(encoding="utf-8"))
         assert artifact_check["status"] == "blocked"
+        # Successful controls plus an empty file must not pass trace visibility.
+        (artifact_out / "unitrace" / "chrome_trace.json").write_text("", encoding="utf-8")
+        (artifact_out / "server.log").write_text(
+            "B70_GDN_LOCALITY_SUMMARY: " + json.dumps({"unitrace_control_events": [
+                {"action": action, "returncode": 0} for action in ("resume", "pause", "stop")
+            ]}) + "\n", encoding="utf-8"
+        )
+        assert harness["_unitrace_artifact_check"](artifact_out) == 1
+        artifact_check = json.loads((artifact_out / "unitrace-artifact-check.json").read_text())
+        assert not artifact_check["valid_json_trace_files"]
 
     build_script = (ROOT / "build-unitrace.sh").read_text(encoding="utf-8")
     assert "887bba6e28ce84cc0d3813ef876e24add107c318" in build_script
-    assert "--network=none" in build_script
+    # PTI fetches its public header dependencies; isolation is CPU-only, not offline.
+    assert "--device" not in build_script and "--privileged" not in build_script
+    assert '--cidfile "$CID_FILE"' in build_script and "trap cleanup EXIT" in build_script
+    assert '-v "$COMPILER_ROOT:/opt/intel/oneapi/compiler:ro"' in build_script
     assert "-DBUILD_WITH_MPI=0" in build_script
     assert "-DBUILD_WITH_XPTI=0" in build_script
     assert "-DBUILD_WITH_OPENCL=0" in build_script

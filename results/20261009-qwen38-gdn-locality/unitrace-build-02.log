@@ -1,0 +1,59 @@
+Cloning into '/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality-harness-retry1/unitrace-src'...
+HEAD is now at 887bba6 [PTI] Reduce Log Level for On-Demand SYCL Graph Feature (#1023)
+   WARNING: vars.sh does not set up dependencies when invoked directly. Please perform environment setup for UMF before running DPC++ applications.
+-- The C compiler identification is IntelLLVM 2026.0.0
+-- The CXX compiler identification is IntelLLVM 2026.0.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /opt/intel/oneapi/compiler/bin/icx - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /opt/intel/oneapi/compiler/bin/icpx - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Python: /opt/venv/bin/python3.12 (found suitable version "3.12.3", minimum required is "3.9") found components: Interpreter
+-- Build Type: Release
+-- Bitness: 64 bits
+-- Level Zero headers are found at /build
+-- Level Zero headers are found at /build
+-- Level Zero headers are found at /build
+-- Performing Test FILESYSTEM_JUST_WORKS
+-- Performing Test FILESYSTEM_JUST_WORKS - Success
+-- Configuring done (0.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: /build
+[1/13] Generating unitrace_commit_hash.h
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[2/13] Generating unitrace_tool_commit_hash.h
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+[3/13] Generating CL/tracing_api.h, CL/tracing_types.h, CL/cl_ext_private.h, level_zero/ze_stypes.h, level_zero/ze_intel_gpu.h
+Cloning into '/build/compute-runtime'...
+fatal: unable to access 'https://github.com/intel/compute-runtime.git/': Could not resolve host: github.com
+Cloning compute-runtime to /build/compute-runtime...
+ERROR: Failed to extract headers: [Errno 2] No such file or directory: '/build/compute-runtime'
+[4/13] Generating level_zero/ze_api.h, level_zero/zes_api.h, level_zero/zet_api.h, level_zero/zer_api.h, level_zero/layers/zel_tracing_api.h, level_zero/layers/zel_tracing_register_cb.h
+FAILED: [code=1] level_zero/ze_api.h level_zero/zes_api.h level_zero/zet_api.h level_zero/zer_api.h level_zero/layers/zel_tracing_api.h level_zero/layers/zel_tracing_register_cb.h /build/level_zero/ze_api.h /build/level_zero/zes_api.h /build/level_zero/zet_api.h /build/level_zero/zer_api.h /build/level_zero/layers/zel_tracing_api.h /build/level_zero/layers/zel_tracing_register_cb.h 
+cd /build && /opt/venv/bin/python3.12 /src/build_utils/get_ze_headers.py /build /build v1.26.0
+Cloning into '/build/level-zero'...
+fatal: unable to access 'https://github.com/oneapi-src/level-zero.git/': Could not resolve host: github.com
+Traceback (most recent call last):
+  File "/src/build_utils/get_ze_headers.py", line 42, in <module>
+    main()
+  File "/src/build_utils/get_ze_headers.py", line 29, in main
+    build_utils.clone(url, commit, clone_path)
+  File "/src/build_utils/build_utils.py", line 9, in clone
+    subprocess.call(["git", "checkout", commit], cwd = os.path.abspath(clone_path))
+  File "/usr/lib/python3.12/subprocess.py", line 389, in call
+    with Popen(*popenargs, **kwargs) as p:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/usr/lib/python3.12/subprocess.py", line 1955, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: '/build/level-zero'
+ninja: build stopped: subcommand failed.
+unitrace build failed (status=1); no serving run is authorized

@@ -41,6 +41,17 @@ if docker ps -a --format '{{.Names}}' | grep -Fxq "$BUILD_NAME"; then
 fi
 
 mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+CID_FILE="$BUILD_DIR/container.cid"
+cleanup() {
+  if [[ -s "$CID_FILE" ]]; then
+    local cid
+    cid=$(<"$CID_FILE")
+    if [[ "$cid" =~ ^[0-9a-f]{64}$ ]]; then
+      docker rm -f "$cid" >/dev/null 2>&1 || true
+    fi
+  fi
+}
+trap cleanup EXIT
 git clone --filter=blob:none --no-checkout "$SOURCE_URL" "$SOURCE_DIR"
 git -C "$SOURCE_DIR" checkout --detach "$SOURCE_SHA"
 actual=$(git -C "$SOURCE_DIR" rev-parse HEAD)
@@ -55,7 +66,7 @@ actual=$(git -C "$SOURCE_DIR" rev-parse HEAD)
 set +e
 timeout --signal=TERM --kill-after=30s "${TIMEOUT_SECONDS}s" docker run --rm \
   --name "$BUILD_NAME" \
-  --network=none \
+  --cidfile "$CID_FILE" \
   --cpus="$CPUS" \
   --memory="$MEMORY" \
   --pids-limit=512 \
@@ -67,7 +78,10 @@ timeout --signal=TERM --kill-after=30s "${TIMEOUT_SECONDS}s" docker run --rm \
     set -euo pipefail
     test -x /opt/intel/oneapi/compiler/bin/icpx
     test -f /opt/intel/oneapi/compiler/env/vars.sh
+    # Intel environment setup expects optional shell variables to be unset.
+    set +u
     source /opt/intel/oneapi/compiler/env/vars.sh
+    set -u
     command -v cmake >/dev/null
     command -v ninja >/dev/null
     cmake -S /src/tools/unitrace -B /build -G Ninja \
