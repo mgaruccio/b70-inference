@@ -15,6 +15,8 @@ COOKBOOK = Path('/home/mike/inference/src/intel-arc-pro-b70-inference-cookbook')
 GUARD = ROOT / '20261009-qwen38-gdn-locality/native-boundary64k-assets-20261009-100052-ff9f86/registered-controller.py'
 BLOBS = {'b70-realworld-context-harness.py': 'a4ca3c28c2d87436f80e93c42cb9f9712f3765e7',
          'b70-generate-exact-prompts.py': '645c021089c82d671a0c332497cfe2ec503c3f57'}
+PREFILL_PROMPTS = None
+CHECK_BUILD = None
 
 
 def main():
@@ -68,15 +70,20 @@ def main():
                 raise RuntimeError('Server startup timed out')
             assert cid
             execute(['docker', 'inspect', cid], 'container.json', 30)
+            if CHECK_BUILD:
+                CHECK_BUILD(OUT, False)
             execute(['docker', 'cp', str(OUT / 'b70-generate-exact-prompts.py'), f'{cid}:/tmp/b70-community-prompts.py'], 'copy-generator.log', 30)
             previous_prompts = OUT.parent / 'current-serving/prompts.json'
             (OUT / 'prompts.json').write_bytes(previous_prompts.read_bytes())
             # New entropy for the prefill cell: do not reuse the decode prompts
             # against the unchanged production setup's enabled prefix cache.
-            execute(['docker', 'exec', cid, '/opt/venv/bin/python', '/tmp/b70-community-prompts.py',
-                     '--model', '/model', '--output', '/tmp/b70-community-prefill.json',
-                     '--targets', '8192', '--per-target', '6'], 'generate-prompts.log')
-            execute(['docker', 'cp', f'{cid}:/tmp/b70-community-prefill.json', str(OUT / 'prefill-prompts.json')], 'copy-prompts.log', 30)
+            if PREFILL_PROMPTS:
+                (OUT / 'prefill-prompts.json').write_bytes(PREFILL_PROMPTS.read_bytes())
+            else:
+                execute(['docker', 'exec', cid, '/opt/venv/bin/python', '/tmp/b70-community-prompts.py',
+                         '--model', '/model', '--output', '/tmp/b70-community-prefill.json',
+                         '--targets', '8192', '--per-target', '6'], 'generate-prompts.log')
+                execute(['docker', 'cp', f'{cid}:/tmp/b70-community-prefill.json', str(OUT / 'prefill-prompts.json')], 'copy-prompts.log', 30)
             summaries = []
             for prompt, output in ((512, 128), (8192, 128), (8192, 1), (130944, 128)):
                 label = f'p{prompt}-g{output}'
@@ -92,6 +99,8 @@ def main():
                 summaries.append({'cell': label, 'summary': result['summary']})
                 guard['put'](OUT / 'summary.json', summaries)
                 print(json.dumps(summaries[-1]), flush=True)
+            if CHECK_BUILD:
+                CHECK_BUILD(OUT, True)
             success = True
         finally:
             if cid:

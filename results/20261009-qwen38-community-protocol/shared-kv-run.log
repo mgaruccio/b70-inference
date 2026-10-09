@@ -1,0 +1,28 @@
+Verified shared-KV build dispatch before measurements
+Starting p512-g128
+{"cell": "p512-g128", "summary": {"input_tokens_per_ttft_s": {"n": 5, "median": 1741.710645399078, "mean": 1741.7713228214973, "min": 1740.9708136104066, "max": 1742.6712183151315, "pstdev": 0.5443320686946859}, "client_post_first_decode_tps": {"n": 5, "median": 116.28693909902559, "mean": 116.34183309945507, "min": 112.0887690660536, "max": 120.59492519006814, "pstdev": 3.7557262209510527}, "actual_prompt_tokens": [512, 512, 512, 512, 512], "actual_completion_tokens": [128, 128, 128, 128, 128], "prefix_cache_hits_delta": 0.0, "mtp_proposed_tokens": 548.0, "mtp_accepted_tokens": 509.0}}
+Starting p8192-g128
+{"cell": "p8192-g128", "summary": {"input_tokens_per_ttft_s": {"n": 5, "median": 1923.0095023594367, "mean": 1921.9495356648188, "min": 1915.4319854712408, "max": 1927.8004804706652, "pstdev": 4.67715589464448}, "client_post_first_decode_tps": {"n": 5, "median": 109.54508108376817, "mean": 93.91626848643094, "min": 67.41912762169378, "max": 114.08973660857119, "pstdev": 21.0748043682764}, "actual_prompt_tokens": [8192, 8192, 8192, 8192, 8192], "actual_completion_tokens": [128, 128, 128, 128, 128], "prefix_cache_hits_delta": 0.0, "mtp_proposed_tokens": 676.0, "mtp_accepted_tokens": 475.0}}
+Starting p8192-g1
+{"cell": "p8192-g1", "summary": {"input_tokens_per_ttft_s": {"n": 5, "median": 1930.1685134610266, "mean": 1931.2798815052722, "min": 1929.435095741411, "max": 1934.6102468650881, "pstdev": 1.9498347664757076}, "client_post_first_decode_tps": {"n": 0, "median": null, "mean": null, "min": null, "max": null, "pstdev": null}, "actual_prompt_tokens": [8192, 8192, 8192, 8192, 8192], "actual_completion_tokens": [1, 1, 1, 1, 1], "prefix_cache_hits_delta": 0.0, "mtp_proposed_tokens": 0.0, "mtp_accepted_tokens": 0.0}}
+Starting p130944-g128
+{"cell": "p130944-g128", "summary": {"input_tokens_per_ttft_s": {"n": 5, "median": 825.183991912073, "mean": 825.234744194004, "min": 825.1567894390042, "max": 825.4154504374361, "pstdev": 0.09663845225427979}, "client_post_first_decode_tps": {"n": 5, "median": 67.2165166143674, "mean": 67.32279565475977, "min": 57.51839251484299, "max": 74.7512204631765, "pstdev": 5.975830384889675}, "actual_prompt_tokens": [130944, 130944, 130944, 130944, 130944], "actual_completion_tokens": [128, 128, 128, 128, 128], "prefix_cache_hits_delta": 0.0, "mtp_proposed_tokens": 612.0, "mtp_accepted_tokens": 494.0}}
+Verified shared-KV build dispatch after benchmark
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/run-build.py", line 72, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/run-build.py", line 65, in main
+    run['main']()
+    ~~~~~~~~~~~^^
+  File "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/run.py", line 103, in main
+    CHECK_BUILD(OUT, True)
+    ~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/run-build.py", line 60, in check_build
+    adapter['_candidate_execution_evidence'](directory)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20260913-qwen38-native-grouped-verify/run-serving.py", line 134, in _candidate_execution_evidence
+    raise ServingContractError(
+    ...<2 lines>...
+    )
+<run_path>.ServingContractError: candidate did not prove a FULL graph capture and run: {'server_log': '/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/shared-kv-serving-01/server.log', 'eligible_dispatch_log_count': 1, 'eligible_dispatch_log': ['Capturing CUDA graphs (decode, FULL):   0%|          | 0/1 [00:00<?, ?it/s](EngineCore pid=269) [B70_GROUPED_SERVING] {"capture_state":"not-capturing","event":"eligible-dispatch","graph_capture_state":"not-capturing","k_device":"xpu:0","k_dtype":"torch.float8_e4m3fn","k_shape":[152,1664,4,256],"k_stride":[3407872,2048,512,1],"library_sha256":"e0c6f2a78a1a50eef9dcc11b9c378c2e94799a3f5ffa0c8971849f03b3c1ddec","q_device":"xpu:0","q_dtype":"torch.float16","q_shape":[5,24,256],"q_stride":[6144,256,1],"v_device":"xpu:0","v_dtype":"torch.float8_e4m3fn","v_shape":[152,1664,4,256],"v_stride":[3407872,2048,512,1]}'], 'unsupported_q5_log_count': 0, 'unsupported_q5_log': [], 'full_graph_capture_seen': True, 'full_graph_run_seen': False, 'required_public_boundary': 'real HTTP benchmark completed before this check'}
