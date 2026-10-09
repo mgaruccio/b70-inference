@@ -5,11 +5,11 @@ contains no GDN kernel candidate and makes no speed claim. The lead owns all
 inference-host execution. Nothing here launches Docker or touches the remote
 host during CPU-only validation.
 
-**Execution paused:** the native baseline passed, but graph attribution remains
-inconclusive. The second tracer startup coincided with a fatal AMD CPU execution-unit
-MCA/data-fabric reset signature, also recorded before this experiment. The trigger
-is unresolved. Do not repeat GPU launches until the host-safety blocker is
-resolved. See [`execution.md`](execution.md) for results and partial artifacts.
+**Execution resumed:** calibrated public fill markers now bracket every observed
+native512 target replay; the predeclared64K profiling cell is in progress.
+Development runs use the explicitly authorized current-boot CPUFreq boost-off
+mitigation and full pre/post guards. The earlier MCA trigger and BIOS CO remain
+unresolved; this is not proof of complete host stability. See [`execution.md`](execution.md).
 
 ## Scope and hard boundary
 
