@@ -24,11 +24,13 @@ pinned target ``vllm.v1.worker.gpu_model_runner._model_forward`` and its
 its event/duration/result/error path is untouched.  Draft and ambiguous stacks
 are recorded as ``unknown`` control metadata but never get a target marker.
 
-False-event completion is deferred until canonical ``stop``.  The shim does
-not synchronize per replay and never stores event handles, IDs, or pointers in
-the JSON artifact.  Control metadata is added to the canonical overlay's
-existing event records; no second service, store, schema, protocol, or receipt
-is created.
+False-event handles are retained until canonical ``stop``.  The shim does
+not synchronize per replay, does not call ``elapsed_time`` on the
+``enable_timing=False`` barriers, and never stores event handles, IDs, or
+pointers in the JSON artifact.  Boundary duration stays unknown until the lead
+correlates the visibility markers with PTI device events.  Control metadata is
+added to the canonical overlay's existing event records; no second service,
+store, schema, protocol, or receipt is created.
 """
 from __future__ import annotations
 
@@ -52,10 +54,11 @@ class _PendingBoundary:
     """Internal state for one false event pair.
 
     The event objects are intentionally kept only in this process-local object
-    until the deferred stop resolver has called ``elapsed_time``.  They are
-    never copied to the result payload.
+    until canonical ``stop`` releases them.  They are never copied to the
+    result payload, and no false-event duration is computed: these
+    ``enable_timing=False`` barriers are visibility markers only.  The lead
+    correlates them with PTI device events.
     """
-
     __slots__ = (
         "start_event",
         "end_event",
@@ -202,12 +205,12 @@ class TargetBoundaryControl:
 
             def resolve(*_args: Any, **_kwargs: Any) -> Any:
                 # Canonical resolution performs its existing one public XPU
-                # synchronize before its own elapsed_time calls.  Resolve false
-                # pairs only after that call, so there is no per-replay sync.
+                # synchronize before its own elapsed_time calls.  Release false-event
+                # references only after that call, so there is no per-replay sync.
                 try:
                     return previous_resolver()
                 finally:
-                    control._resolve_pending_boundaries()
+                    control._release_pending_boundaries()
 
             setattr(self.overlay, "_resolve_event_durations", resolve)
 
@@ -458,7 +461,7 @@ class TargetBoundaryControl:
             except Exception as exc:  # never mask an existing model exception
                 metadata.setdefault("error", f"boundary-finish:{type(exc).__name__}:{exc}")
 
-    def _resolve_pending_boundaries(self) -> None:
+    def _release_pending_boundaries(self) -> None:
         with self._lock:
             pending = list(self._pending)
         if not pending:
@@ -485,23 +488,11 @@ class TargetBoundaryControl:
                         )
 
         for boundary in pending:
-            start_event = boundary.start_event
-            end_event = boundary.end_event
-            if start_event is not None and end_event is not None:
-                try:
-                    duration = float(start_event.elapsed_time(end_event))
-                    if duration >= 0.0:
-                        boundary.metadata["boundary_duration_ms"] = duration
-                    else:
-                        boundary.metadata["boundary_duration_ms"] = None
-                        boundary.metadata.setdefault("error", "elapsed-time:negative")
-                except Exception as exc:
-                    boundary.metadata["boundary_duration_ms"] = None
-                    boundary.metadata.setdefault(
-                        "error", f"elapsed-time:{type(exc).__name__}:{exc}"
-                    )
-            else:
-                boundary.metadata.setdefault("boundary_duration_ms", None)
+            # ``enable_timing=False`` events are visibility barriers, not
+            # elapsed-time sources.  The public XPU API rejects elapsed_time()
+            # for them, so the duration deliberately remains unknown until the
+            # lead correlates this marker with PTI device events.
+            boundary.metadata["boundary_duration_ms"] = None
             # Deferred cleanup: no event object survives stop resolution and no
             # object, ID, or pointer can enter the existing JSON result.
             boundary.start_event = None

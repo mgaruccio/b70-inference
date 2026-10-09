@@ -49,6 +49,8 @@ class FakeEvent:
         self.recorded = type(self).clock
 
     def elapsed_time(self, other: "FakeEvent") -> float:
+        if not self.enable_timing or not other.enable_timing:
+            raise AssertionError("false events must never be elapsed")
         if self.recorded is None or other.recorded is None:
             raise AssertionError("elapsed_time called before both records")
         self.elapsed_calls += 1
@@ -80,11 +82,13 @@ class FakeGraph:
         return {"replay": type(self).replays}
 
 
+ORIGINAL_GRAPH_REPLAY = FakeGraph.replay
+
+
 class FakeTorch:
     def __init__(self) -> None:
         self.xpu = FakeXpu()
-        self.graph_class = type(f"FixtureGraph{id(self)}", (FakeGraph,), {})
-        self.xpu.XPUGraph = self.graph_class
+        self.xpu.XPUGraph = FakeGraph
 
 class CudaGraphManager:
     def __init__(self, graph: FakeGraph):
@@ -180,6 +184,9 @@ class TargetBoundaryControlTest(unittest.TestCase):
         )
         overlay.install()
         control = shim.install(overlay)
+        # unittest cleanups run LIFO: remove the shim first, then let the
+        # canonical overlay restore its own replay hook.
+        self.addCleanup(overlay.close)
         self.addCleanup(control.close)
         return overlay, control, torch
 
@@ -201,13 +208,13 @@ class TargetBoundaryControlTest(unittest.TestCase):
     def test_target_pair_is_inner_to_canonical_pair_and_deferred(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             overlay, control, torch = self.make_overlay(Path(tmp))
-            graph = torch.graph_class()
+            graph = FakeGraph()
             runner = target_holder(CudaGraphManager(graph))
             overlay.start(kind="fixture", profile_prefix="target")
 
             result = runner.execute_model()
             self.assertEqual(result, {"replay": 1})
-            self.assertEqual(torch.graph_class.replays, 1)
+            self.assertEqual(FakeGraph.replays, 1)
             self.assertEqual(torch.xpu.synchronize_calls, 0)
             self.assertEqual(control.pending_event_references, 2)
             self.assertEqual(
@@ -238,7 +245,15 @@ class TargetBoundaryControlTest(unittest.TestCase):
             self.assertIsInstance(
                 control_data["end_record"]["after_monotonic_raw_ns"], int
             )
-            self.assertGreaterEqual(control_data["boundary_duration_ms"], 0.0)
+            self.assertIsNone(control_data["boundary_duration_ms"])
+            self.assertEqual(
+                sum(event.elapsed_calls for event in FakeEvent.instances if not event.enable_timing),
+                0,
+            )
+            self.assertEqual(
+                sum(event.elapsed_calls for event in FakeEvent.instances if event.enable_timing),
+                1,
+            )
             self.assertEqual(event["duration_ms"], 1.0)
             self.assertNotIn("start_event", json.dumps(data))
             self.assertNotIn("FakeEvent", json.dumps(data))
@@ -246,7 +261,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
     def test_only_two_target_markers_skip_warmup_inactive_capture_draft_ambiguous(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             overlay, control, torch = self.make_overlay(Path(tmp))
-            graph = torch.graph_class()
+            graph = FakeGraph()
             target = target_holder(CudaGraphManager(graph))
             draft = draft_holder(ModelCudaGraphManager(graph))
             draft_anchor = draft_anchor_holder(CudaGraphManager(graph))
@@ -295,7 +310,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
     def test_original_exception_and_result_are_preserved_exactly_once(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             overlay, control, _torch = self.make_overlay(Path(tmp))
-            graph = _torch.graph_class()
+            graph = FakeGraph()
             runner = target_holder(CudaGraphManager(graph))
             expected = RuntimeError("native graph failure")
             FakeGraph.should_raise = expected
@@ -304,7 +319,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
             with self.assertRaises(RuntimeError) as raised:
                 runner.execute_model()
             self.assertIs(raised.exception, expected)
-            self.assertEqual(_torch.graph_class.replays, 1)
+            self.assertEqual(FakeGraph.replays, 1)
             self.assertEqual(control.pending_event_references, 2)
 
             data = self.stop_json(overlay)
@@ -314,7 +329,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
     def test_no_false_marker_after_canonical_512_sample_bound(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             overlay, control, torch = self.make_overlay(Path(tmp), max_samples=512)
-            graph = torch.graph_class()
+            graph = FakeGraph()
             runner = target_holder(CudaGraphManager(graph))
             overlay.start(kind="fixture", profile_prefix="bound")
 
@@ -322,7 +337,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
                 runner.execute_model()
             self.assertEqual(control.pending_event_references, 1024)
             runner.execute_model()
-            self.assertEqual(torch.graph_class.replays, 513)
+            self.assertEqual(FakeGraph.replays, 513)
             self.assertEqual(control.pending_boundary_count, 512)
             self.assertEqual(
                 sum(event.enable_timing is False for event in FakeEvent.instances),
@@ -338,11 +353,39 @@ class TargetBoundaryControlTest(unittest.TestCase):
                 512,
             )
 
+    def test_two_overlay_cycles_restore_shared_graph_hook(self) -> None:
+        original = ORIGINAL_GRAPH_REPLAY
+        for cycle in range(2):
+            with tempfile.TemporaryDirectory() as tmp:
+                torch = FakeTorch()
+                overlay = canonical.TimingOverlay(torch, output_dir=Path(tmp))
+                control: shim.TargetBoundaryControl | None = None
+                try:
+                    overlay.install()
+                    self.assertIsNot(FakeGraph.replay, original)
+                    control = shim.install(overlay)
+                    overlay.start(kind="cycle", profile_prefix=f"cycle-{cycle}")
+
+                    # The shim owns only its outer wrapper.  Removing it must
+                    # leave the canonical wrapper for overlay.close() to remove.
+                    control.close()
+                    self.assertIs(FakeGraph.replay, control.previous_replay)
+                finally:
+                    if control is not None:
+                        control.close()
+                    overlay.close()
+                self.assertIs(FakeGraph.replay, original)
+
     def test_install_before_canonical_is_rejected(self) -> None:
+        self.assertIs(FakeGraph.replay, ORIGINAL_GRAPH_REPLAY)
         torch = FakeTorch()
         overlay = canonical.TimingOverlay(torch)
-        with self.assertRaisesRegex(RuntimeError, "after canonical TimingOverlay.install"):
-            shim.install(overlay)
+        try:
+            with self.assertRaisesRegex(RuntimeError, "after canonical TimingOverlay.install"):
+                shim.install(overlay)
+        finally:
+            overlay.close()
+        self.assertIs(FakeGraph.replay, ORIGINAL_GRAPH_REPLAY)
 
 
 if __name__ == "__main__":
