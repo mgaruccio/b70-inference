@@ -45,6 +45,10 @@ class FakeEvent:
         type(self).instances.append(self)
 
     def record(self) -> None:
+        if self.enable_timing:
+            OperationLog.on_true_record()
+        else:
+            OperationLog.on_false_record()
         type(self).clock += 1
         self.recorded = type(self).clock
 
@@ -76,6 +80,7 @@ class FakeGraph:
     should_raise: BaseException | None = None
 
     def replay(self) -> object:
+        OperationLog.on_replay()
         type(self).replays += 1
         if type(self).should_raise is not None:
             raise type(self).should_raise
@@ -85,9 +90,66 @@ class FakeGraph:
 ORIGINAL_GRAPH_REPLAY = FakeGraph.replay
 
 
+class OperationLog:
+    """Shared ordered trace for shim vs canonical replay instrumentation."""
+
+    log: list[str] = []
+    _false_phase = 0
+    _true_phase = 0
+
+    @classmethod
+    def reset(cls) -> None:
+        cls.log = []
+        cls._false_phase = 0
+        cls._true_phase = 0
+
+    @classmethod
+    def on_false_record(cls) -> None:
+        if cls._false_phase == 0:
+            cls.log.append("FalseStart")
+            cls._false_phase = 1
+        else:
+            cls.log.append("FalseEnd")
+            cls._false_phase = 0
+
+    @classmethod
+    def on_true_record(cls) -> None:
+        if cls._true_phase == 0:
+            cls.log.append("TrueStart")
+            cls._true_phase = 1
+        else:
+            cls.log.append("TrueEnd")
+            cls._true_phase = 0
+
+    @classmethod
+    def on_fill(cls, value: complex) -> None:
+        if value == complex(1, 2):
+            cls.log.append("startFill")
+        elif value == complex(-1, -2):
+            cls.log.append("endFill")
+        else:
+            cls.log.append(f"fill:{value!r}")
+
+    @classmethod
+    def on_replay(cls) -> None:
+        cls.log.append("nativeGraph")
+
+
+EXPECTED_TARGET_OPERATION_ORDER = [
+    "FalseStart",
+    "startFill",
+    "TrueStart",
+    "nativeGraph",
+    "TrueEnd",
+    "endFill",
+    "FalseEnd",
+]
+
+
 class FakeTensor:
     allocations = 0
     instances: list["FakeTensor"] = []
+    fill_raise_on: tuple[complex, ...] | None = None
 
     def __init__(self, size: int, *, dtype: object = None, device: object = None) -> None:
         self.size = size
@@ -98,6 +160,10 @@ class FakeTensor:
         type(self).instances.append(self)
 
     def fill_(self, value: complex) -> "FakeTensor":
+        if self.fill_raise_on is not None and value in self.fill_raise_on:
+            OperationLog.on_fill(value)
+            raise RuntimeError(f"simulated fill failure for {value!r}")
+        OperationLog.on_fill(value)
         self.fill_calls.append(value)
         self.value = value
         return self
@@ -105,6 +171,7 @@ class FakeTensor:
 
 class FakeTorch:
     complex64 = "complex64"
+    empty_raise_on_xpu = False
 
     def __init__(self) -> None:
         self.xpu = FakeXpu()
@@ -112,6 +179,8 @@ class FakeTorch:
 
     def empty(self, size: int, *, dtype: object = None, device: object = None) -> FakeTensor:
         if device == "xpu":
+            if type(self).empty_raise_on_xpu:
+                raise OSError("simulated private buffer allocation failure")
             FakeTensor.allocations += 1
         return FakeTensor(size, dtype=dtype, device=device)
 
@@ -195,10 +264,13 @@ def draft_anchor_holder(manager: object) -> Holder:
 
 class TargetBoundaryControlTest(unittest.TestCase):
     def setUp(self) -> None:
+        OperationLog.reset()
         FakeEvent.clock = 0
         FakeEvent.instances = []
         FakeTensor.allocations = 0
         FakeTensor.instances = []
+        FakeTensor.fill_raise_on = None
+        FakeTorch.empty_raise_on_xpu = False
         FakeGraph.replays = 0
         FakeGraph.should_raise = None
 
@@ -296,6 +368,46 @@ class TargetBoundaryControlTest(unittest.TestCase):
             self.assertEqual(end_buf.value, complex(-1, -2))
             self.assertIsNone(control._private_fill_begin)
             self.assertIsNone(control._private_fill_end)
+            self.assertEqual(OperationLog.log, EXPECTED_TARGET_OPERATION_ORDER)
+            start_fill = control_data["start_fill"]
+            end_fill = control_data["end_fill"]
+            if start_fill["before_monotonic_raw_ns"] is not None:
+                self.assertLessEqual(
+                    start_fill["before_monotonic_raw_ns"],
+                    start_fill["after_monotonic_raw_ns"],
+                )
+            if end_fill["before_monotonic_raw_ns"] is not None:
+                self.assertLessEqual(
+                    end_fill["before_monotonic_raw_ns"],
+                    end_fill["after_monotonic_raw_ns"],
+                )
+            if (
+                start_fill["after_monotonic_raw_ns"] is not None
+                and end_fill["before_monotonic_raw_ns"] is not None
+            ):
+                self.assertLessEqual(
+                    start_fill["after_monotonic_raw_ns"],
+                    end_fill["before_monotonic_raw_ns"],
+                )
+
+    def test_target_operation_order_per_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            overlay, _control, torch = self.make_overlay(Path(tmp))
+            graph = FakeGraph()
+            runner = target_holder(CudaGraphManager(graph))
+            overlay.start(kind="fixture", profile_prefix="order")
+
+            runner.execute_model()
+            self.assertEqual(OperationLog.log, EXPECTED_TARGET_OPERATION_ORDER)
+            self.assertEqual(torch.xpu.synchronize_calls, 0)
+
+            runner.execute_model()
+            self.assertEqual(
+                OperationLog.log,
+                EXPECTED_TARGET_OPERATION_ORDER * 2,
+            )
+            self.stop_json(overlay)
+            self.assertEqual(torch.xpu.synchronize_calls, 1)
 
     def test_private_complex64_fill_allocates_once_reuses_and_releases_at_stop(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -391,6 +503,108 @@ class TargetBoundaryControlTest(unittest.TestCase):
             data = self.stop_json(overlay)
             self.assertEqual(len(data["events"]), 1)  # type: ignore[arg-type]
             self.assertTrue(data["events"][0][shim.CONTROL_KEY]["boundary_recorded"])  # type: ignore[index]
+            self.assertEqual(
+                sum(event.elapsed_calls for event in FakeEvent.instances if not event.enable_timing),
+                0,
+            )
+
+    def test_private_buffer_allocation_failure_is_measurement_error_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            overlay, control, torch = self.make_overlay(Path(tmp))
+            FakeTorch.empty_raise_on_xpu = True
+            graph = FakeGraph()
+            runner = target_holder(CudaGraphManager(graph))
+            overlay.start(kind="fixture", profile_prefix="alloc-fail")
+
+            result = runner.execute_model()
+            self.assertEqual(result, {"replay": 1})
+            self.assertEqual(FakeGraph.replays, 1)
+            self.assertEqual(FakeTensor.allocations, 0)
+            self.assertEqual(torch.xpu.synchronize_calls, 0)
+            self.assertIsNone(control._private_fill_begin)
+            self.assertIsNone(control._private_fill_end)
+
+            data = self.stop_json(overlay)
+            control_data = data["events"][0][shim.CONTROL_KEY]  # type: ignore[index]
+            self.assertIn("fill-buffer-alloc", control_data["error"])
+            self.assertNotIn("start_fill", control_data)
+            self.assertNotIn("end_fill", control_data)
+            self.assertTrue(control_data["boundary_recorded"])
+            self.assertEqual(
+                sum(event.elapsed_calls for event in FakeEvent.instances if not event.enable_timing),
+                0,
+            )
+            self.assertEqual(OperationLog.log, ["FalseStart", "TrueStart", "nativeGraph", "TrueEnd", "FalseEnd"])
+
+    def test_fill_failure_records_measurement_error_without_masking_native(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            overlay, control, torch = self.make_overlay(Path(tmp))
+            graph = FakeGraph()
+            runner = target_holder(CudaGraphManager(graph))
+            overlay.start(kind="fixture", profile_prefix="fill-fail")
+
+            FakeTensor.fill_raise_on = (complex(1, 2),)
+            result = runner.execute_model()
+            self.assertEqual(result, {"replay": 1})
+            self.assertEqual(FakeGraph.replays, 1)
+
+            data = self.stop_json(overlay)
+            control_data = data["events"][0][shim.CONTROL_KEY]  # type: ignore[index]
+            self.assertIn("start_fill:RuntimeError", control_data["error"])
+            self.assertIsNotNone(control_data["start_fill"]["error"])
+            self.assertIsNone(control_data["end_fill"]["error"])
+            self.assertTrue(control_data["boundary_recorded"])
+            self.assertIsNone(control._private_fill_begin)
+            self.assertIsNone(control._private_fill_end)
+            self.assertEqual(
+                OperationLog.log,
+                [
+                    "FalseStart",
+                    "startFill",
+                    "TrueStart",
+                    "nativeGraph",
+                    "TrueEnd",
+                    "endFill",
+                    "FalseEnd",
+                ],
+            )
+
+            FakeTensor.fill_raise_on = (complex(-1, -2),)
+            FakeGraph.replays = 0
+            OperationLog.reset()
+            overlay.start(kind="fixture", profile_prefix="fill-fail-end")
+            runner.execute_model()
+            data = self.stop_json(overlay)
+            control_data = data["events"][0][shim.CONTROL_KEY]  # type: ignore[index]
+            self.assertIn("end_fill:RuntimeError", control_data["error"])
+            self.assertIsNone(control_data["start_fill"]["error"])
+            self.assertIsNotNone(control_data["end_fill"]["error"])
+
+    def test_native_exception_is_retained_when_end_fill_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            overlay, control, _torch = self.make_overlay(Path(tmp))
+            graph = FakeGraph()
+            runner = target_holder(CudaGraphManager(graph))
+            expected = RuntimeError("native graph failure")
+            FakeGraph.should_raise = expected
+            FakeTensor.fill_raise_on = (complex(-1, -2),)
+            overlay.start(kind="fixture", profile_prefix="native-and-fill")
+
+            with self.assertRaises(RuntimeError) as raised:
+                runner.execute_model()
+            self.assertIs(raised.exception, expected)
+            self.assertEqual(FakeGraph.replays, 1)
+
+            data = self.stop_json(overlay)
+            control_data = data["events"][0][shim.CONTROL_KEY]  # type: ignore[index]
+            self.assertIn("end_fill:RuntimeError", control_data["error"])
+            self.assertTrue(control_data["boundary_recorded"])
+            self.assertIsNone(control._private_fill_begin)
+            self.assertIsNone(control._private_fill_end)
+            self.assertEqual(
+                sum(event.elapsed_calls for event in FakeEvent.instances if not event.enable_timing),
+                0,
+            )
 
     def test_no_false_marker_after_canonical_512_sample_bound(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -405,6 +619,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
             runner.execute_model()
             self.assertEqual(FakeGraph.replays, 513)
             self.assertEqual(control.pending_boundary_count, 512)
+            self.assertEqual(FakeTensor.allocations, 2)
             self.assertEqual(
                 sum(event.enable_timing is False for event in FakeEvent.instances),
                 1024,
