@@ -296,3 +296,33 @@ Unique alphanumeric unitrace session/owned container; existing controlsresume,pa
 Profile delay3/maxiterations5/replay-event bound512; startup1800/request180/control60/outer2330+65s.
 CPU-only existing CLI parser/output-freshness/artifact-check invocation: PASS.
 Valid trace/control success is necessary, not sufficient; complete target-graph reconciliation remains required.
+
+
+===== Guarded native-unitrace512 completed: safe postflight, attribution blocked =====
+Remote: /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality/native-unitrace512-20261009-031337-b674cb
+Exact local launch: /tmp/b70-unitrace512-launch-3jb5jb2g
+Controller/SSH exit1,elapsed_s395.35123186300007,failure=null
+Small records: /tmp/b70-unitrace512-small-c9cov43t; SFTP exit0; native/failure.txt absent
+kernel-post-check: clear,new_guarded_error_lines=[]
+post-state: samebootc93aea98-bb22-4cf6-879f-42d2980cb726,boost0,all16cachedcaps3801000kHz,power275000000uW,correctlauncher/helper/clienthashes,running_containers=[]
+Owned b70qwen38unitrace487063eb3d3edb observed,removed,returncode0;host-before==host-after
+Artifact checker: blocked,inconclusive_until_graph_coverage_reconciled,11JSONfiles,0totalbytes,no valid trace
+Control resume/pause/stop: allreturncode0,control_failures=[]
+No GDN-share or performance/fusion conclusion.
+
+Producer records: /tmp/b70-unitrace512-producer-74f2nr03; SFTP exit0
+Actual public HTTP: requested_length512,done=true,finish_reason=length,prompt_tokens512,completion_tokens128,total_tokens640,parse_errors=[],error_objects=[]
+/start_profile200,/stop_profile200
+Existing metric_validation: raw_snapshot_count2,counter_errors=[],parse_errors={},all3speculativecounterfamilies
+server.log producer flush acknowledgement count0
+Existing Torch trace: native/profile/rank0.1791530216753863788.pt.trace.json.gz,342868bytes (retained remote)
+Driver failed on explicit UnitraceTraceMissing artifact gate; not a Torch-file expectation conflict.
+Archive: native-unitrace512-empty-01.tar.gz (actual HTTP/control/log/final records and exact used controller/launch; environment dumps excluded)
+
+===== Source-backed flush-before-cleanup follow-up started, outcome pending =====
+Pinned PTI887bba6 source: TemporalStop changes shared state, not direct flush; producer IsCollectionEnabled calls OnSessionStopped->Flush after observing stop. Acknowledgement precedes flush completion. Paused graph descriptors are retained; replay callback checks collection state.
+Prior zero-byte output consistent with buffered output lost on SIGKILL, not proof of no GPU work or proven sole cause.
+Same512->128 native capture/config/budget. Then exactlyone separate unprofiled512->1 API drain,120s timeout, after matching successful stopped-session controls.
+Require drain HTTP/tokens plus producer flush acknowledgement and complete positive-duration JSON before owned forced cleanup; no whole-target graph qualification from activity alone.
+CPU cases PASS: success,missingstop,noack,partialJSON,wrongtokens; original measured payload unchanged.
+No kernel/model/warmup/firmware/network/persistent-service change. Existing outer2330+65s andboot/boost/caps/kernel/hash/ownership guards remain.
