@@ -1,0 +1,224 @@
+=== Initial client helper failure (local Python syntax; no SSH command sent) ===
+  File "<string>", line 2
+    cmd=["ssh","-o","BatchMode=yes","-o","StrictHostKeyChecking=yes","-o","ControlMaster=no","-o","ControlPath=none","-o","ConnectTimeout=5","-o","ConnectionAttempts=1","-o","ServerAliveInterval=3","-o","ServerAliveCountMax=1","inference-host","bash -lc \"printf B70_BOOT_ID=; cat /proc/sys/kernel/random/boot_id; date --iso-8601=seconds; uptime; journalctl -b 0 -k --no-pager --grep \\"Previous system reset reason|Hardware Error|Execution Unit Ext|sync flood\\"; printf \\"\\nUEFI variable names only\\n\\"; timeout 10s sudo -n find /sys/firmware/efi/efivars -maxdepth 1 -type f -printf \\"%f %s bytes\\n\\" 2>/dev/null | grep -Ei \\"amd|^setup-|^amitse-|overclock|curve|pbo\\"; printf \\"\\nRunning containers\\n\\"; docker ps --format \\"{{.Names}} {{.Status}}\\"; printf \\"\\nRender holders\\n\\"; fuser /dev/dri/renderD* 2>/dev/null || true\""]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ^
+SyntaxError: unexpected character after line continuation character
+
+=== Corrected readiness helper: recovered read-only host snapshot ===
+2026-10-08T23:42:48.574473-04:00 attempt 1 exit 255 Connection to 100.75.79.54 port 22 timed out
+HOST RETURNED 2026-10-08T23:43:20.596191-04:00
+B70_BOOT_ID=c93aea98-bb22-4cf6-879f-42d2980cb726
+2026-10-08T23:43:20-04:00
+ 23:43:20 up 21 min,  1 user,  load average: 0.02, 0.01, 0.00
+Oct 08 23:21:56 cachyos kernel: x86/amd: Previous system reset reason [0x00200800]: ACPI power state transition occurred
+
+UEFI setup variable names only
+Setup-80e1202e-2697-4264-9cc9-80762c3e5863 11 bytes
+AmdSetup-3a997502-647a-4c82-998e-52ef9486a247 1557 bytes
+Setup-ec87d643-eba4-4bb5-a1e5-3f3e36b20da9 576 bytes
+AMD_PBS_SETUP-a339d746-f678-49b3-9fc7-54ce0f9df226 132 bytes
+AMD_RAID-fe26a894-d199-47d4-8afa-070e3d54ba86 12 bytes
+
+Running containers
+
+Render holders
+
+
+ONE LONG SESSION PROBE 2026-10-09T00:14:26.738936-04:00
+SSH exit: 0
+COMMAND_SESSION_OPENED 2026-10-09T00:14:30-04:00
+BOOT_ID=c93aea98-bb22-4cf6-879f-42d2980cb726
+
+UPTIME/LOAD
+3157.49 50503.74
+0.00 0.00 0.00 1/377 1904
+
+Blocked tasks and diagnostic readers
+    PID PSR STAT WCHAN                            COMMAND
+    718   2 Ss   -                                systemd-logind
+    792   2 SNs  -                                sshd
+   1883   0 SNs  -                                sshd-session
+   1897   5 SN   -                                sshd-session
+
+Recent kernel faults
+-- No entries --
+
+DONE 2026-10-09T00:14:30-04:00
+
+
+warning: An error occurred while redirecting file '/tmp/b70-read-cpu-tuning-20261009.sh'
+warning: Path '/tmp/b70-read-cpu-tuning-20261009.sh' does not exist
+READ_ONLY_CPU_TUNING 2026-10-09T00:23:21-04:00
+BOOT_ID=c93aea98-bb22-4cf6-879f-42d2980cb726
+7.2.0-1-cachyos
+
+Schema-matched AMD CBS fields
+AmdSetup size: 1557 attributes: 0x7
+Core Performance Boost raw= 1 data_offset= 0x23 bytes= 1
+Global C-state Control raw= 1 data_offset= 0x24 bytes= 1
+Power Supply Idle Control raw= 0 data_offset= 0x25 bytes= 1
+Precision Boost Overdrive raw= 15 data_offset= 0x156 bytes= 1
+PBO scalar mode raw= 15 data_offset= 0x163 bytes= 1
+Conditional customized PBO scalar raw= 200 data_offset= 0x164 bytes= 4
+Persisted fields only; applied hardware state and enabling conditions are not inferred.
+AOD variable metadata only:
+AOD_SETUP-5ed15dc0-edef-4161-9151-6014c4cc630c 1024
+
+DONE 2026-10-09T00:23:21-04:00
+READ_ONLY_AOD_TUNING 2026-10-09T00:29:17-04:00
+BOOT_ID=c93aea98-bb22-4cf6-879f-42d2980cb726
+AOD_SETUP size: 1024 attributes: 0x7
+PBO mode raw= 2 data_offset= 0x8e bytes= 1
+PBO limits mode raw= 2 data_offset= 0x8f bytes= 1
+PBO scalar mode raw= 15 data_offset= 0xa4 bytes= 1
+Conditional customized PBO scalar raw= 100 data_offset= 0xa5 bytes= 4
+Curve Optimizer mode raw= 1 data_offset= 0x170 bytes= 1
+Conditional all-core CO sign raw= 1 data_offset= 0x171 bytes= 1
+Conditional all-core CO magnitude raw= 20 data_offset= 0x172 bytes= 2
+Custom CPU frequency raw= 0 data_offset= 0x26 bytes= 4
+Custom CPU voltage raw= 0 data_offset= 0x2a bytes= 4
+Persisted fields only; applied hardware state and enabling conditions are not inferred.
+
+DONE 2026-10-09T00:29:17-04:00
+TEMPORARY_KERNEL_BOOST_GUARD 2026-10-09T00:43:33-04:00
+BOOT_ID=c93aea98-bb22-4cf6-879f-42d2980cb726
+ORIGINAL boost= 1 cpuinfo_max_freq_kHz= 4968237
+Writing only the documented kernel boost control; BIOS variables untouched.
+READBACK boost= 0 cpuinfo_max_freq_kHz= 3801000 scaling_max_freq_kHz= 3801000
+KERNEL_GUARD_VERIFIED; current boot only; BIOS CO remains unchanged.
+Restore original 1 through /sys/devices/system/cpu/cpufreq/boost when appropriate; not restored automatically.
+DONE 2026-10-09T00:43:33-04:00
+
+
+=== Exact SSH commands and stdin for kernel guard and fresh-session verification ===
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ControlMaster=no -o ControlPath=none -o ConnectTimeout=10 -o ServerAliveInterval=0 inference-host bash -s < /tmp/b70-boost-guard-20261009.sh
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ControlMaster=no -o ControlPath=none -o ConnectTimeout=10 -o ServerAliveInterval=0 inference-host bash -s < /tmp/b70-verify-guard-20261009.sh
+=== /tmp/b70-boost-guard-20261009.sh stdin ===
+set -eu
+printf 'TEMPORARY_KERNEL_BOOST_GUARD '; date --iso-8601=seconds
+printf 'BOOT_ID='; cat /proc/sys/kernel/random/boot_id
+timeout --kill-after=1s 15s sudo -n python3 - <<'PY'
+from pathlib import Path
+import subprocess
+
+def read(path):
+    return subprocess.run(['cat', str(path)], check=True, capture_output=True,
+                          text=True, timeout=3).stdout.strip()
+
+assert read('/proc/sys/kernel/random/boot_id') == 'c93aea98-bb22-4cf6-879f-42d2980cb726', 'Unexpected boot; no write'
+policy = Path('/sys/devices/system/cpu/cpufreq/policy0')
+assert read(policy/'scaling_driver') == 'amd-pstate-epp', 'Unexpected driver; no write'
+p = Path('/sys/devices/system/cpu/cpufreq/boost')
+assert p.is_file(), 'System-wide boost interface absent; no write'
+before = read(p)
+assert before == '1', ('Unexpected initial boost state; no write', before)
+max_before = int(read(policy/'cpuinfo_max_freq'))
+print('ORIGINAL boost=', before, 'cpuinfo_max_freq_kHz=', max_before, flush=True)
+print('Writing only the documented kernel boost control; BIOS variables untouched.', flush=True)
+with p.open('w') as f:
+    f.write('0\n')
+after = read(p)
+max_after = int(read(policy/'cpuinfo_max_freq'))
+scaling_after = int(read(policy/'scaling_max_freq'))
+print('READBACK boost=', after, 'cpuinfo_max_freq_kHz=', max_after,
+      'scaling_max_freq_kHz=', scaling_after, flush=True)
+assert after == '0', 'Boost disable readback failed'
+assert max_after < max_before, 'Cached maximum did not decrease'
+assert scaling_after <= max_after, 'Policy maximum exceeds non-boost CPUinfo maximum'
+print('KERNEL_GUARD_VERIFIED; current boot only; BIOS CO remains unchanged.', flush=True)
+print('Restore original 1 through /sys/devices/system/cpu/cpufreq/boost when appropriate; not restored automatically.', flush=True)
+PY
+printf 'DONE '; date --iso-8601=seconds
+
+
+=== /tmp/b70-verify-guard-20261009.sh stdin ===
+set -eu
+printf 'FRESH_SESSION_GUARD_VERIFICATION '; date --iso-8601=seconds
+printf 'BOOT_ID='; cat /proc/sys/kernel/random/boot_id
+printf 'GLOBAL_BOOST='; timeout --kill-after=1s 3s cat /sys/devices/system/cpu/cpufreq/boost
+printf '\nCached per-policy maximums only; no hardware frequency queries\n'
+timeout --kill-after=1s 25s python3 - <<'PY'
+from pathlib import Path
+import subprocess
+root = Path('/sys/devices/system/cpu/cpufreq')
+policies = sorted(root.glob('policy*'), key=lambda p:int(p.name[6:]))
+assert policies, 'No CPU policies'
+for p in policies:
+    r = subprocess.run(['cat', str(p/'scaling_max_freq')], check=True,
+                       capture_output=True, text=True, timeout=3)
+    maximum = int(r.stdout.strip())
+    print(p.name, 'scaling_max_freq_kHz=', maximum, flush=True)
+    assert maximum <= 3801000, ('Policy remains above measured non-boost cap', p.name, maximum)
+print('ALL_POLICY_CAPS_VERIFIED', len(policies), flush=True)
+PY
+printf '\nBlocked tasks\n'
+timeout --kill-after=1s 4s ps -eo pid,psr,stat,wchan:32,comm | awk 'NR==1 || $3 ~ /D/ {print}'
+printf '\nKernel faults since guard application\n'
+timeout --kill-after=1s 6s journalctl -b 0 -k --no-pager --since '2026-10-09 00:43:33' --grep 'Hardware Error|System Fatal|sync flood|watchdog|hung task|blocked for|stall|Oops|BUG:|soft lockup'
+printf '\nPersistent inference launcher\n'
+sha256sum /home/mike/inference/launchers/start-qwen38.sh
+printf 'DONE '; date --iso-8601=seconds
+
+
+=== Initial fresh-session verification output: exit1 after journalctl no matches ===
+FRESH_SESSION_GUARD_VERIFICATION 2026-10-09T00:49:26-04:00
+BOOT_ID=c93aea98-bb22-4cf6-879f-42d2980cb726
+GLOBAL_BOOST=0
+
+Cached per-policy maximums only; no hardware frequency queries
+policy0 scaling_max_freq_kHz= 3801000
+policy1 scaling_max_freq_kHz= 3801000
+policy2 scaling_max_freq_kHz= 3801000
+policy3 scaling_max_freq_kHz= 3801000
+policy4 scaling_max_freq_kHz= 3801000
+policy5 scaling_max_freq_kHz= 3801000
+policy6 scaling_max_freq_kHz= 3801000
+policy7 scaling_max_freq_kHz= 3801000
+policy8 scaling_max_freq_kHz= 3801000
+policy9 scaling_max_freq_kHz= 3801000
+policy10 scaling_max_freq_kHz= 3801000
+policy11 scaling_max_freq_kHz= 3801000
+policy12 scaling_max_freq_kHz= 3801000
+policy13 scaling_max_freq_kHz= 3801000
+policy14 scaling_max_freq_kHz= 3801000
+policy15 scaling_max_freq_kHz= 3801000
+ALL_POLICY_CAPS_VERIFIED 16
+
+Blocked tasks
+    PID PSR STAT WCHAN                            COMMAND
+
+Kernel faults since guard application
+-- No entries --
+
+
+=== Final read-only check: command and stdin; failed before any remote output ===
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ControlMaster=no -o ControlPath=none -o ConnectTimeout=10 -o ServerAliveInterval=0 inference-host bash -s < /tmp/b70-final-guard-check-20261009.sh
+set -eu
+printf 'FINAL_GUARD_CHECK '; date --iso-8601=seconds
+printf 'BOOT_ID='; cat /proc/sys/kernel/random/boot_id
+printf 'GLOBAL_BOOST='; timeout --kill-after=1s 3s cat /sys/devices/system/cpu/cpufreq/boost
+timeout --kill-after=1s 10s sudo -n python3 - <<'PY'
+import subprocess
+from pathlib import Path
+r = subprocess.run(['journalctl', '-b', '0', '-k', '--no-pager', '--since',
+                    '2026-10-09 00:43:33', '--grep',
+                    'Hardware Error|System Fatal|sync flood|watchdog|hung task|blocked for|stall|Oops|BUG:|soft lockup'],
+                   capture_output=True, text=True, timeout=6)
+print('KERNEL_QUERY_EXIT', r.returncode)
+print(r.stdout, end='')
+if r.stderr:
+    print(r.stderr, end='')
+assert not r.stderr.strip(), 'Kernel query warning/error; absence not established'
+assert r.returncode == 1 and r.stdout.strip() == '-- No entries --', 'Expected no matching faults; inspect actual output'
+expected = '63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4'
+r = subprocess.run(['sha256sum', '/home/mike/inference/launchers/start-qwen38.sh'],
+                   check=True, capture_output=True, text=True, timeout=3)
+print(r.stdout, end='')
+assert r.stdout.split()[0] == expected, 'Persistent launcher changed'
+assert Path('/sys/devices/system/cpu/cpufreq/boost').read_text().strip() == '0', 'Boost guard no longer active'
+assert Path('/proc/sys/kernel/random/boot_id').read_text().strip() == 'c93aea98-bb22-4cf6-879f-42d2980cb726', 'Unexpected reboot'
+print('FINAL_GUARD_CHECK_PASS; no matching kernel faults in this short window; not a stability proof.')
+PY
+printf 'DONE '; date --iso-8601=seconds
+
+[background task timeout: Timed out after 75s]
