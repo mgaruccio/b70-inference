@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep CPU frequency boost disabled on the B70 inference host
+After=systemd-modules-load.service cpupower.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -ec 'echo 0 > /sys/devices/system/cpu/cpufreq/boost; test "$(cat /sys/devices/system/cpu/cpufreq/boost)" = 0'
+RemainAfterExit=yes
+TimeoutStartSec=10
+
+[Install]
+WantedBy=multi-user.target
