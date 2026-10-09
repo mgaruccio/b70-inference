@@ -10,7 +10,7 @@ GROUP = 128
 ROUTES = ("m5", "m8", "m16")
 SHAPES = (("gate_up", 5120, 34816), ("down", 17408, 5120),
           ("gdn_in", 5120, 16384), ("output", 6144, 5120), ("qkv", 5120, 14336))
-SOURCE = "/tmp/b70-gemm-attention-source/vllm/model_executor/kernels/linear/mixed_precision/xpu.py"
+SOURCE = "/opt/venv/lib/python3.12/site-packages/vllm/model_executor/kernels/linear/mixed_precision/xpu.py"
 def _version(name):
     try:
         return importlib.metadata.version(name)
@@ -30,13 +30,13 @@ def _runtime(torch):
         env["device_name"] = torch.xpu.get_device_name(0)
         props = torch.xpu.get_device_properties(0)
         env["device_properties"] = {k: getattr(props, k) for k in
-            ("name", "total_memory", "driver_version", "major", "minor")
+            ("name", "total_memory", "driver_version", "major", "minor", "gpu_slices", "gpu_subslices_per_slice", "max_compute_units")
             if isinstance(getattr(props, k, None), (str, int, float, bool))}
     return env
 def _register(torch):
     present = lambda: hasattr(torch.ops._xpu_C, "int4_gemm_w4a16")
     errors = []
-    for module in ("vllm._xpu_ops.xpu_ops", "vllm_xpu_kernels._xpu_C"):
+    for module in ("vllm._xpu_ops", "vllm._C"):
         if present():
             break
         try:
@@ -105,9 +105,10 @@ def _case(torch, op, name, k, n, seed, args, mismatches):
         graph = torch.xpu.XPUGraph()
         with torch.xpu.stream(stream):
             with torch.xpu.graph(graph):
+                capture_stream = str(torch.xpu.current_stream())
                 output = invoke(route)
         graphs[route], outputs[route] = graph, output  # Persistent graph outputs stay live.
-        case["graphs"][route] = {"capture_stream": str(stream), "output": _meta(output)}
+        case["graphs"][route] = {"capture_stream": capture_stream, "output": _meta(output)}
     for _ in range(args.warmup):
         for route in ROUTES:
             graphs[route].replay()
@@ -156,6 +157,8 @@ def main(argv=None):
     if not (0 <= args.warmup <= 20 and 1 <= args.rounds <= 20 and 1 <= args.replays <= 100):
         parser.error("bounded values required: warmup 0..20, rounds 1..20, replays 1..100")
     args.out.parent.mkdir(parents=True, exist_ok=True)
+    if args.out.exists():
+        parser.error("output already exists; retain it and choose a new path")
     report = {"schema_version": 1, "status": "running", "tier": "development", "command": shlex.join(sys.argv),
         "source": {"path": SOURCE}, "contract": {
             "scope": "synthetic operator-only; not a serving gain or MTP result", "baseline": "native M5 int4_gemm_w4a16",
@@ -165,7 +168,7 @@ def main(argv=None):
         "research": {"pinned_kernel": SOURCE, "official_refs": [
             "https://raw.githubusercontent.com/vllm-project/vllm-xpu-kernels/v0.1.12/csrc/xpu/onednn/int4_gemm_w4a16.h",
             "https://raw.githubusercontent.com/vllm-project/vllm-xpu-kernels/v0.1.12/tests/test_int4_gemm_onednn.py"],
-            "registration": "vllm._xpu_ops.xpu_ops or vllm_xpu_kernels._xpu_C"}, "cases": []}
+            "registration": "vllm._xpu_ops or vllm._C"}, "cases": []}
     source_path = Path(SOURCE)
     report["source"]["sha256"] = hashlib.sha256(source_path.read_bytes()).hexdigest() if source_path.is_file() else None
     report["benchmark_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()

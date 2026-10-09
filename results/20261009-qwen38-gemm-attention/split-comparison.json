@@ -1,0 +1,779 @@
+{
+  "tier": "development",
+  "cells": [
+    {
+      "archive": "auto-before-01.tar.gz",
+      "sha256": "67395fc0a6a08df336dbc1bf847738bc587a89f0cb03cb2f47069f1d9da8611f",
+      "split_patch": {
+        "split_choice": "auto",
+        "path": "/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py",
+        "before_sha256": "2a8ce07e2839232bc9f0e9cc9969a4410099c0c75ce616e72d4583e950864942",
+        "after_sha256": "2a8ce07e2839232bc9f0e9cc9969a4410099c0c75ce616e72d4583e950864942",
+        "scope": "batch1 five-row native speculative helper only"
+      },
+      "rows": [
+        {
+          "trial": "warmup",
+          "kind": "warmup",
+          "request_sha256": "710a316fa06c89befa83779d33177685313320ece363283645384666a63f781c",
+          "output_text_sha256": "52f4941d458f6f055da971e8efe85d0df61306e321e86afb95b9ac14737f454a",
+          "speculative_counter_deltas": {
+            "num_drafts": 41.0,
+            "num_draft_tokens": 164.0,
+            "num_accepted_tokens": 86.0
+          },
+          "decode_tps_post_first": 56.26667698057482,
+          "ttft_s": 54.37258899099834,
+          "total_time_s": 56.62969758200052,
+          "e2e_tps": 2.260298137998254
+        },
+        {
+          "trial": 1,
+          "kind": "measured",
+          "request_sha256": "3b6e534642418c67f7a9ae7957fa607ce19cb181825b7db82fb4b772324b56dc",
+          "output_text_sha256": "e513c9b5ca50810b06fe264e0eacd2312c1c5cccb2755fd33a620b0253147a84",
+          "speculative_counter_deltas": {
+            "num_drafts": 44.0,
+            "num_draft_tokens": 176.0,
+            "num_accepted_tokens": 84.0
+          },
+          "decode_tps_post_first": 52.339941120864516,
+          "ttft_s": 53.73778259699611,
+          "total_time_s": 56.16422781799338,
+          "e2e_tps": 2.279030709988548
+        },
+        {
+          "trial": 2,
+          "kind": "measured",
+          "request_sha256": "447eaab8a6e16ae5997dc50b1d71ab3ab87b9406c1ba7874e7a142b9d4fb84e3",
+          "output_text_sha256": "7b8143e5c2cc9a1fe3f867a3e6667dd9cd128185073fb01b93710470be322166",
+          "speculative_counter_deltas": {
+            "num_drafts": 44.0,
+            "num_draft_tokens": 176.0,
+            "num_accepted_tokens": 87.0
+          },
+          "decode_tps_post_first": 53.50886769921325,
+          "ttft_s": 53.82466119700257,
+          "total_time_s": 56.1980995720005,
+          "e2e_tps": 2.2776570911620873
+        },
+        {
+          "trial": 3,
+          "kind": "measured",
+          "request_sha256": "5af8facd3a34f079fe1728d1a23ee943798d37239310fd243f2b0521682bf019",
+          "output_text_sha256": "7a004f9d5da35bd8421558c74da9fa09ddf4e5da2c1b126ff3fb1cf8f6948850",
+          "speculative_counter_deltas": {
+            "num_drafts": 43.0,
+            "num_draft_tokens": 172.0,
+            "num_accepted_tokens": 88.0
+          },
+          "decode_tps_post_first": 54.767031550620544,
+          "ttft_s": 53.84873518800305,
+          "total_time_s": 56.16764852699998,
+          "e2e_tps": 2.2788919129927607
+        },
+        {
+          "trial": 4,
+          "kind": "measured",
+          "request_sha256": "82164622f5f6087daae4f03837e6af901e9325d4096548e7be6d8c5465b7ab81",
+          "output_text_sha256": "52f4941d458f6f055da971e8efe85d0df61306e321e86afb95b9ac14737f454a",
+          "speculative_counter_deltas": {
+            "num_drafts": 45.0,
+            "num_draft_tokens": 180.0,
+            "num_accepted_tokens": 82.0
+          },
+          "decode_tps_post_first": 51.16541436370762,
+          "ttft_s": 53.866073338002025,
+          "total_time_s": 56.34821877900686,
+          "e2e_tps": 2.2715891074038317
+        },
+        {
+          "trial": 5,
+          "kind": "measured",
+          "request_sha256": "6cc69ebc37f3a6b4748e9e3725889f55d53967121913e13789b101c7774baab8",
+          "output_text_sha256": "36d6af5d97333e57f82a822a8fa70adb0e6b738899af628940975eb5d56385ce",
+          "speculative_counter_deltas": {
+            "num_drafts": 42.0,
+            "num_draft_tokens": 168.0,
+            "num_accepted_tokens": 85.0
+          },
+          "decode_tps_post_first": 54.846017118618754,
+          "ttft_s": 53.882485185000405,
+          "total_time_s": 56.198058980000496,
+          "e2e_tps": 2.2776587363195593
+        },
+        {
+          "trial": 6,
+          "kind": "measured",
+          "request_sha256": "24ccae839dd6e4feb68242bf903f680085b5f8bf43d003774c62e2d69d08e34d",
+          "output_text_sha256": "e751e828223b3bd682ec1583656c0a574dc675214ca272aeaac8db3374a606c6",
+          "speculative_counter_deltas": {
+            "num_drafts": 41.0,
+            "num_draft_tokens": 164.0,
+            "num_accepted_tokens": 88.0
+          },
+          "decode_tps_post_first": 56.2009207591872,
+          "ttft_s": 53.88552079600049,
+          "total_time_s": 56.145270250002795,
+          "e2e_tps": 2.279800229476919
+        }
+      ],
+      "summary": {
+        "complete": true,
+        "invalid_count": 0,
+        "iqr_inclusive": {
+          "decode_elapsed_s": 0.09678482849813008,
+          "decode_tps_post_first": 2.1940979611675004,
+          "e2e_tps": 0.0013385082881458565,
+          "prefill_proxy_input_tps": 1.077920627618596,
+          "total_time_s": 0.03300642875547055,
+          "ttft_s": 0.047702528498120955
+        },
+        "measured_count": 6,
+        "median": {
+          "decode_elapsed_s": 2.3461758569974336,
+          "decode_tps_post_first": 54.1379496249169,
+          "e2e_tps": 2.27827532465616,
+          "prefill_proxy_input_tps": 1216.8429317156701,
+          "total_time_s": 56.18285375350024,
+          "ttft_s": 53.857404263002536
+        },
+        "required_valid_measurements": 6,
+        "statistics": "median and inclusive IQR over six valid measured rows only",
+        "valid_count": 6,
+        "warmups_excluded": true
+      },
+      "kv_cache_size_tokens": 226397,
+      "contract": {
+        "serve": [
+          "vllm",
+          "serve",
+          "/model",
+          "--performance-mode",
+          "balanced",
+          "--compilation-config",
+          "{\"cudagraph_capture_sizes\":[1,2,4,8]}",
+          "--cudagraph-metrics",
+          "--quantization",
+          "gptq",
+          "--dtype",
+          "float16",
+          "--max-model-len",
+          "212992",
+          "--gpu-memory-utilization",
+          "0.95",
+          "--kv-cache-dtype",
+          "fp8",
+          "--port",
+          "8000",
+          "--max-num-seqs",
+          "1",
+          "--max-num-batched-tokens",
+          "8192",
+          "--no-enable-prefix-caching",
+          "--mamba-cache-mode",
+          "align",
+          "--chat-template-content-format",
+          "openai",
+          "--default-chat-template-kwargs",
+          "{\"enable_thinking\":false}",
+          "--reasoning-parser",
+          "qwen3",
+          "--override-generation-config",
+          "{\"temperature\":0.6,\"top_p\":0.95,\"top_k\":20,\"min_p\":0}",
+          "--served-model-name",
+          "qwen38",
+          "--language-model-only",
+          "--speculative-config",
+          "{\"method\":\"mtp\",\"num_speculative_tokens\":4}",
+          "--enable-auto-tool-choice",
+          "--tool-call-parser",
+          "qwen3_xml"
+        ],
+        "environment": [
+          "VLLM_TARGET_DEVICE=xpu",
+          "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+          "ZE_AFFINITY_MASK=0",
+          "B70_MTP_BF16_DRAFT=1",
+          "B70_DRAFT_LMHEAD_INT4=1",
+          "B70_DRAFT_MTP_INT4=1",
+          "VLLM_XPU_ENABLE_XPU_GRAPH=1",
+          "PYTORCH_ALLOC_CONF=expandable_segments:True"
+        ],
+        "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+        "common_contract": {
+          "base_url": "http://127.0.0.1:8000",
+          "cpu_offload": false,
+          "kv_cache_dtype": "fp8",
+          "max_model_len": 212992,
+          "max_num_batched_tokens": 8192,
+          "max_num_seqs": 1,
+          "prefix_caching": false,
+          "served_model_name": "qwen38",
+          "target_dtype": "float16 compute / GPTQ Int4 symmetric G128",
+          "thinking": false,
+          "xpu_graphs": true
+        }
+      },
+      "host": {
+        "boot_id": "c93aea98-bb22-4cf6-879f-42d2980cb726",
+        "boost": "0",
+        "cpu_max_khz": {
+          "0": "3801000",
+          "1": "3801000",
+          "10": "3801000",
+          "11": "3801000",
+          "12": "3801000",
+          "13": "3801000",
+          "14": "3801000",
+          "15": "3801000",
+          "2": "3801000",
+          "3": "3801000",
+          "4": "3801000",
+          "5": "3801000",
+          "6": "3801000",
+          "7": "3801000",
+          "8": "3801000",
+          "9": "3801000"
+        },
+        "launcher_sha256": "63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4",
+        "power_cap_microwatts": "275000000"
+      }
+    },
+    {
+      "archive": "splits16-01.tar.gz",
+      "sha256": "18a920ac18c151986e9aa0170504a01bf7f78b176d105479ec8b995b215a56b2",
+      "split_patch": {
+        "split_choice": "16",
+        "path": "/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py",
+        "before_sha256": "2a8ce07e2839232bc9f0e9cc9969a4410099c0c75ce616e72d4583e950864942",
+        "after_sha256": "1dcdd96cb600d32ccd2b9c74bba31cc776e1cce0ba89a80101017e823432c41e",
+        "scope": "batch1 five-row native speculative helper only"
+      },
+      "rows": [
+        {
+          "trial": "warmup",
+          "kind": "warmup",
+          "request_sha256": "710a316fa06c89befa83779d33177685313320ece363283645384666a63f781c",
+          "output_text_sha256": "52f4941d458f6f055da971e8efe85d0df61306e321e86afb95b9ac14737f454a",
+          "speculative_counter_deltas": {
+            "num_drafts": 41.0,
+            "num_draft_tokens": 164.0,
+            "num_accepted_tokens": 86.0
+          },
+          "decode_tps_post_first": 55.562000091307524,
+          "ttft_s": 54.574245645999326,
+          "total_time_s": 56.859980496999924,
+          "e2e_tps": 2.2511439307784076
+        },
+        {
+          "trial": 1,
+          "kind": "measured",
+          "request_sha256": "3b6e534642418c67f7a9ae7957fa607ce19cb181825b7db82fb4b772324b56dc",
+          "output_text_sha256": "36d6af5d97333e57f82a822a8fa70adb0e6b738899af628940975eb5d56385ce",
+          "speculative_counter_deltas": {
+            "num_drafts": 43.0,
+            "num_draft_tokens": 172.0,
+            "num_accepted_tokens": 84.0
+          },
+          "decode_tps_post_first": 52.96023959353371,
+          "ttft_s": 53.83842451599776,
+          "total_time_s": 56.236449920994346,
+          "e2e_tps": 2.276103846879116
+        },
+        {
+          "trial": 2,
+          "kind": "measured",
+          "request_sha256": "447eaab8a6e16ae5997dc50b1d71ab3ab87b9406c1ba7874e7a142b9d4fb84e3",
+          "output_text_sha256": "13730e807dadf4ae9874e1d2bb732b8fed59583f0701897ef2049af2dd102646",
+          "speculative_counter_deltas": {
+            "num_drafts": 42.0,
+            "num_draft_tokens": 168.0,
+            "num_accepted_tokens": 89.0
+          },
+          "decode_tps_post_first": 55.48281775151444,
+          "ttft_s": 53.87148568100383,
+          "total_time_s": 56.16048261999822,
+          "e2e_tps": 2.279182692679005
+        },
+        {
+          "trial": 3,
+          "kind": "measured",
+          "request_sha256": "5af8facd3a34f079fe1728d1a23ee943798d37239310fd243f2b0521682bf019",
+          "output_text_sha256": "7a004f9d5da35bd8421558c74da9fa09ddf4e5da2c1b126ff3fb1cf8f6948850",
+          "speculative_counter_deltas": {
+            "num_drafts": 42.0,
+            "num_draft_tokens": 168.0,
+            "num_accepted_tokens": 89.0
+          },
+          "decode_tps_post_first": 55.48474241284454,
+          "ttft_s": 53.886424750002334,
+          "total_time_s": 56.17534228799923,
+          "e2e_tps": 2.2785797965194545
+        },
+        {
+          "trial": 4,
+          "kind": "measured",
+          "request_sha256": "82164622f5f6087daae4f03837e6af901e9325d4096548e7be6d8c5465b7ab81",
+          "output_text_sha256": "13730e807dadf4ae9874e1d2bb732b8fed59583f0701897ef2049af2dd102646",
+          "speculative_counter_deltas": {
+            "num_drafts": 44.0,
+            "num_draft_tokens": 176.0,
+            "num_accepted_tokens": 87.0
+          },
+          "decode_tps_post_first": 52.884453137625556,
+          "ttft_s": 53.889669395000965,
+          "total_time_s": 56.29113130800397,
+          "e2e_tps": 2.2738928322408727
+        },
+        {
+          "trial": 5,
+          "kind": "measured",
+          "request_sha256": "6cc69ebc37f3a6b4748e9e3725889f55d53967121913e13789b101c7774baab8",
+          "output_text_sha256": "229ed132f30312551ea2bbfa0722ed2fb8cef6ac173506031781dab9b5217c85",
+          "speculative_counter_deltas": {
+            "num_drafts": 41.0,
+            "num_draft_tokens": 164.0,
+            "num_accepted_tokens": 89.0
+          },
+          "decode_tps_post_first": 55.53432234994079,
+          "ttft_s": 53.89647153200349,
+          "total_time_s": 56.18334557000344,
+          "e2e_tps": 2.2782552142701133
+        },
+        {
+          "trial": 6,
+          "kind": "measured",
+          "request_sha256": "24ccae839dd6e4feb68242bf903f680085b5f8bf43d003774c62e2d69d08e34d",
+          "output_text_sha256": "ab27bde40ea4e655bafc87a71347b5afd01c4a2bd22ecb070a766032b3a919a0",
+          "speculative_counter_deltas": {
+            "num_drafts": 43.0,
+            "num_draft_tokens": 172.0,
+            "num_accepted_tokens": 84.0
+          },
+          "decode_tps_post_first": 54.16041697577979,
+          "ttft_s": 53.902422736005974,
+          "total_time_s": 56.24730867100152,
+          "e2e_tps": 2.275664436652252
+        }
+      ],
+      "summary": {
+        "complete": true,
+        "invalid_count": 0,
+        "iqr_inclusive": {
+          "decode_elapsed_s": 0.0958031492500595,
+          "decode_tps_post_first": 2.223977308416792,
+          "e2e_tps": 0.0027243617481511606,
+          "prefill_proxy_input_tps": 0.4412826887303254,
+          "total_time_s": 0.06725087499944493,
+          "ttft_s": 0.019550549499399494
+        },
+        "measured_count": 6,
+        "median": {
+          "decode_elapsed_s": 2.3169414369949664,
+          "decode_tps_post_first": 54.821617363647114,
+          "e2e_tps": 2.2771795305746148,
+          "prefill_proxy_input_tps": 1216.1509577666588,
+          "total_time_s": 56.20989774549889,
+          "ttft_s": 53.88804707250165
+        },
+        "required_valid_measurements": 6,
+        "statistics": "median and inclusive IQR over six valid measured rows only",
+        "valid_count": 6,
+        "warmups_excluded": true
+      },
+      "kv_cache_size_tokens": 226397,
+      "contract": {
+        "serve": [
+          "vllm",
+          "serve",
+          "/model",
+          "--performance-mode",
+          "balanced",
+          "--compilation-config",
+          "{\"cudagraph_capture_sizes\":[1,2,4,8]}",
+          "--cudagraph-metrics",
+          "--quantization",
+          "gptq",
+          "--dtype",
+          "float16",
+          "--max-model-len",
+          "212992",
+          "--gpu-memory-utilization",
+          "0.95",
+          "--kv-cache-dtype",
+          "fp8",
+          "--port",
+          "8000",
+          "--max-num-seqs",
+          "1",
+          "--max-num-batched-tokens",
+          "8192",
+          "--no-enable-prefix-caching",
+          "--mamba-cache-mode",
+          "align",
+          "--chat-template-content-format",
+          "openai",
+          "--default-chat-template-kwargs",
+          "{\"enable_thinking\":false}",
+          "--reasoning-parser",
+          "qwen3",
+          "--override-generation-config",
+          "{\"temperature\":0.6,\"top_p\":0.95,\"top_k\":20,\"min_p\":0}",
+          "--served-model-name",
+          "qwen38",
+          "--language-model-only",
+          "--speculative-config",
+          "{\"method\":\"mtp\",\"num_speculative_tokens\":4}",
+          "--enable-auto-tool-choice",
+          "--tool-call-parser",
+          "qwen3_xml"
+        ],
+        "environment": [
+          "VLLM_TARGET_DEVICE=xpu",
+          "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+          "ZE_AFFINITY_MASK=0",
+          "B70_MTP_BF16_DRAFT=1",
+          "B70_DRAFT_LMHEAD_INT4=1",
+          "B70_DRAFT_MTP_INT4=1",
+          "VLLM_XPU_ENABLE_XPU_GRAPH=1",
+          "PYTORCH_ALLOC_CONF=expandable_segments:True"
+        ],
+        "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+        "common_contract": {
+          "base_url": "http://127.0.0.1:8000",
+          "cpu_offload": false,
+          "kv_cache_dtype": "fp8",
+          "max_model_len": 212992,
+          "max_num_batched_tokens": 8192,
+          "max_num_seqs": 1,
+          "prefix_caching": false,
+          "served_model_name": "qwen38",
+          "target_dtype": "float16 compute / GPTQ Int4 symmetric G128",
+          "thinking": false,
+          "xpu_graphs": true
+        }
+      },
+      "host": {
+        "boot_id": "c93aea98-bb22-4cf6-879f-42d2980cb726",
+        "boost": "0",
+        "cpu_max_khz": {
+          "0": "3801000",
+          "1": "3801000",
+          "10": "3801000",
+          "11": "3801000",
+          "12": "3801000",
+          "13": "3801000",
+          "14": "3801000",
+          "15": "3801000",
+          "2": "3801000",
+          "3": "3801000",
+          "4": "3801000",
+          "5": "3801000",
+          "6": "3801000",
+          "7": "3801000",
+          "8": "3801000",
+          "9": "3801000"
+        },
+        "launcher_sha256": "63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4",
+        "power_cap_microwatts": "275000000"
+      }
+    },
+    {
+      "archive": "auto-after-01.tar.gz",
+      "sha256": "f9a6d885c8b075ed60ffdf812737162815286e38ecf0ea453d4dfee5daaca83f",
+      "split_patch": {
+        "split_choice": "auto",
+        "path": "/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/flash_attn_interface.py",
+        "before_sha256": "2a8ce07e2839232bc9f0e9cc9969a4410099c0c75ce616e72d4583e950864942",
+        "after_sha256": "2a8ce07e2839232bc9f0e9cc9969a4410099c0c75ce616e72d4583e950864942",
+        "scope": "batch1 five-row native speculative helper only"
+      },
+      "rows": [
+        {
+          "trial": "warmup",
+          "kind": "warmup",
+          "request_sha256": "710a316fa06c89befa83779d33177685313320ece363283645384666a63f781c",
+          "output_text_sha256": "f4d4de9a92a2e739b2acdf8d829ae698e7574a498fc3a635a3efcf7b825a45a0",
+          "speculative_counter_deltas": {
+            "num_drafts": 43.0,
+            "num_draft_tokens": 172.0,
+            "num_accepted_tokens": 84.0
+          },
+          "decode_tps_post_first": 53.6675183841752,
+          "ttft_s": 54.599858548004704,
+          "total_time_s": 56.966280619002646,
+          "e2e_tps": 2.246943255012196
+        },
+        {
+          "trial": 1,
+          "kind": "measured",
+          "request_sha256": "3b6e534642418c67f7a9ae7957fa607ce19cb181825b7db82fb4b772324b56dc",
+          "output_text_sha256": "36d6af5d97333e57f82a822a8fa70adb0e6b738899af628940975eb5d56385ce",
+          "speculative_counter_deltas": {
+            "num_drafts": 43.0,
+            "num_draft_tokens": 172.0,
+            "num_accepted_tokens": 84.0
+          },
+          "decode_tps_post_first": 53.5993400886361,
+          "ttft_s": 53.84392231699894,
+          "total_time_s": 56.21335447399906,
+          "e2e_tps": 2.277038991850329
+        },
+        {
+          "trial": 2,
+          "kind": "measured",
+          "request_sha256": "447eaab8a6e16ae5997dc50b1d71ab3ab87b9406c1ba7874e7a142b9d4fb84e3",
+          "output_text_sha256": "13730e807dadf4ae9874e1d2bb732b8fed59583f0701897ef2049af2dd102646",
+          "speculative_counter_deltas": {
+            "num_drafts": 44.0,
+            "num_draft_tokens": 176.0,
+            "num_accepted_tokens": 87.0
+          },
+          "decode_tps_post_first": 53.55805966791497,
+          "ttft_s": 53.88356920200022,
+          "total_time_s": 56.25482762300089,
+          "e2e_tps": 2.275360274104985
+        },
+        {
+          "trial": 3,
+          "kind": "measured",
+          "request_sha256": "5af8facd3a34f079fe1728d1a23ee943798d37239310fd243f2b0521682bf019",
+          "output_text_sha256": "7a004f9d5da35bd8421558c74da9fa09ddf4e5da2c1b126ff3fb1cf8f6948850",
+          "speculative_counter_deltas": {
+            "num_drafts": 41.0,
+            "num_draft_tokens": 164.0,
+            "num_accepted_tokens": 90.0
+          },
+          "decode_tps_post_first": 57.596686169361405,
+          "ttft_s": 53.89305859900196,
+          "total_time_s": 56.09804656699998,
+          "e2e_tps": 2.2817193794283877
+        },
+        {
+          "trial": 4,
+          "kind": "measured",
+          "request_sha256": "82164622f5f6087daae4f03837e6af901e9325d4096548e7be6d8c5465b7ab81",
+          "output_text_sha256": "36d6af5d97333e57f82a822a8fa70adb0e6b738899af628940975eb5d56385ce",
+          "speculative_counter_deltas": {
+            "num_drafts": 42.0,
+            "num_draft_tokens": 168.0,
+            "num_accepted_tokens": 85.0
+          },
+          "decode_tps_post_first": 54.88817489517088,
+          "ttft_s": 53.89899862099992,
+          "total_time_s": 56.212793900995166,
+          "e2e_tps": 2.2770616992537343
+        },
+        {
+          "trial": 5,
+          "kind": "measured",
+          "request_sha256": "6cc69ebc37f3a6b4748e9e3725889f55d53967121913e13789b101c7774baab8",
+          "output_text_sha256": "36d6af5d97333e57f82a822a8fa70adb0e6b738899af628940975eb5d56385ce",
+          "speculative_counter_deltas": {
+            "num_drafts": 40.0,
+            "num_draft_tokens": 160.0,
+            "num_accepted_tokens": 87.0
+          },
+          "decode_tps_post_first": 57.64437853880331,
+          "ttft_s": 53.90848350700253,
+          "total_time_s": 56.11164716700296,
+          "e2e_tps": 2.2811663257547665
+        },
+        {
+          "trial": 6,
+          "kind": "measured",
+          "request_sha256": "24ccae839dd6e4feb68242bf903f680085b5f8bf43d003774c62e2d69d08e34d",
+          "output_text_sha256": "e751e828223b3bd682ec1583656c0a574dc675214ca272aeaac8db3374a606c6",
+          "speculative_counter_deltas": {
+            "num_drafts": 41.0,
+            "num_draft_tokens": 164.0,
+            "num_accepted_tokens": 88.0
+          },
+          "decode_tps_post_first": 56.264447923918745,
+          "ttft_s": 53.90411103099905,
+          "total_time_s": 56.161309042996436,
+          "e2e_tps": 2.2791491541268156
+        }
+      ],
+      "summary": {
+        "complete": true,
+        "invalid_count": 0,
+        "iqr_inclusive": {
+          "decode_elapsed_s": 0.13748245875103748,
+          "decode_tps_post_first": 3.3420778177309387,
+          "e2e_tps": 0.003617364146598856,
+          "prefill_proxy_input_tps": 0.38112167337362735,
+          "total_time_s": 0.08915169474676077,
+          "ttft_s": 0.016891377248612116
+        },
+        "measured_count": 6,
+        "median": {
+          "decode_elapsed_s": 2.285496645996318,
+          "decode_tps_post_first": 55.576311409544815,
+          "e2e_tps": 2.278105426690275,
+          "prefill_proxy_input_tps": 1215.9708588779515,
+          "total_time_s": 56.1870514719958,
+          "ttft_s": 53.89602861000094
+        },
+        "required_valid_measurements": 6,
+        "statistics": "median and inclusive IQR over six valid measured rows only",
+        "valid_count": 6,
+        "warmups_excluded": true
+      },
+      "kv_cache_size_tokens": 226397,
+      "contract": {
+        "serve": [
+          "vllm",
+          "serve",
+          "/model",
+          "--performance-mode",
+          "balanced",
+          "--compilation-config",
+          "{\"cudagraph_capture_sizes\":[1,2,4,8]}",
+          "--cudagraph-metrics",
+          "--quantization",
+          "gptq",
+          "--dtype",
+          "float16",
+          "--max-model-len",
+          "212992",
+          "--gpu-memory-utilization",
+          "0.95",
+          "--kv-cache-dtype",
+          "fp8",
+          "--port",
+          "8000",
+          "--max-num-seqs",
+          "1",
+          "--max-num-batched-tokens",
+          "8192",
+          "--no-enable-prefix-caching",
+          "--mamba-cache-mode",
+          "align",
+          "--chat-template-content-format",
+          "openai",
+          "--default-chat-template-kwargs",
+          "{\"enable_thinking\":false}",
+          "--reasoning-parser",
+          "qwen3",
+          "--override-generation-config",
+          "{\"temperature\":0.6,\"top_p\":0.95,\"top_k\":20,\"min_p\":0}",
+          "--served-model-name",
+          "qwen38",
+          "--language-model-only",
+          "--speculative-config",
+          "{\"method\":\"mtp\",\"num_speculative_tokens\":4}",
+          "--enable-auto-tool-choice",
+          "--tool-call-parser",
+          "qwen3_xml"
+        ],
+        "environment": [
+          "VLLM_TARGET_DEVICE=xpu",
+          "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+          "ZE_AFFINITY_MASK=0",
+          "B70_MTP_BF16_DRAFT=1",
+          "B70_DRAFT_LMHEAD_INT4=1",
+          "B70_DRAFT_MTP_INT4=1",
+          "VLLM_XPU_ENABLE_XPU_GRAPH=1",
+          "PYTORCH_ALLOC_CONF=expandable_segments:True"
+        ],
+        "image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
+        "common_contract": {
+          "base_url": "http://127.0.0.1:8000",
+          "cpu_offload": false,
+          "kv_cache_dtype": "fp8",
+          "max_model_len": 212992,
+          "max_num_batched_tokens": 8192,
+          "max_num_seqs": 1,
+          "prefix_caching": false,
+          "served_model_name": "qwen38",
+          "target_dtype": "float16 compute / GPTQ Int4 symmetric G128",
+          "thinking": false,
+          "xpu_graphs": true
+        }
+      },
+      "host": {
+        "boot_id": "c93aea98-bb22-4cf6-879f-42d2980cb726",
+        "boost": "0",
+        "cpu_max_khz": {
+          "0": "3801000",
+          "1": "3801000",
+          "10": "3801000",
+          "11": "3801000",
+          "12": "3801000",
+          "13": "3801000",
+          "14": "3801000",
+          "15": "3801000",
+          "2": "3801000",
+          "3": "3801000",
+          "4": "3801000",
+          "5": "3801000",
+          "6": "3801000",
+          "7": "3801000",
+          "8": "3801000",
+          "9": "3801000"
+        },
+        "launcher_sha256": "63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4",
+        "power_cap_microwatts": "275000000"
+      }
+    }
+  ],
+  "candidate_vs_before": {
+    "same_requests_including_warmup": true,
+    "output_text_matches_including_warmup": 2,
+    "output_text_total_including_warmup": 7,
+    "identical_acceptance_counter_requests": 1,
+    "median_paired_decode_rate_delta_pct": 1.2827286805374039,
+    "paired_decode_rate_delta_pct": [
+      1.185134066614224,
+      3.689014806662061,
+      1.3104797574442717,
+      3.3597671303865706,
+      1.254977603630536,
+      -3.6307301657043545
+    ],
+    "median_paired_total_latency_delta_pct": -0.0062417488668642385,
+    "ratio_of_decode_medians_delta_pct": 1.2628253257961575
+  },
+  "candidate_vs_after": {
+    "same_requests_including_warmup": true,
+    "output_text_matches_including_warmup": 3,
+    "output_text_total_including_warmup": 7,
+    "identical_acceptance_counter_requests": 1,
+    "median_paired_decode_rate_delta_pct": -3.655512228698049,
+    "paired_decode_rate_delta_pct": [
+      -1.1923663501183457,
+      3.5937785937987243,
+      -3.6667799781167187,
+      -3.6505527126237336,
+      -3.6604717447723645,
+      -3.7395389553702585
+    ],
+    "median_paired_total_latency_delta_pct": 0.13278247151795597,
+    "ratio_of_decode_medians_delta_pct": -1.3579419482094068
+  },
+  "control_drift_after_vs_before": {
+    "same_requests_including_warmup": true,
+    "output_text_matches_including_warmup": 3,
+    "output_text_total_including_warmup": 7,
+    "identical_acceptance_counter_requests": 2,
+    "median_paired_decode_rate_delta_pct": 3.7542027481089923,
+    "paired_decode_rate_delta_pct": [
+      2.406191028880511,
+      0.09193236713256336,
+      5.166711685159431,
+      7.275931559940352,
+      5.102214467337474,
+      0.11303580772947797
+    ],
+    "median_paired_total_latency_delta_pct": -0.047675820244147404,
+    "ratio_of_decode_medians_delta_pct": 2.65684569621365
+  },
+  "limitations": [
+    "One A/B/A block, six measured prompts per cell; not a publishable performance result.",
+    "Output text equality is checked, not token-ID equality (API did not return token IDs).",
+    "Same FP16/FP8 types do not guarantee bitwise equality after changing reduction order.",
+    "Uninstrumented API timings do not prove native split-count dispatch."
+  ]
+}
