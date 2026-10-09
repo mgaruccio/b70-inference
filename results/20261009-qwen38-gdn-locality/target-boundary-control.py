@@ -89,6 +89,8 @@ class TargetBoundaryControl:
         self._control_by_index: dict[int, dict[str, Any]] = {}
         self._stop_sync_attempted = False
         self._saved_instance_attrs: dict[str, tuple[bool, Any]] = {}
+        self._private_fill_begin: Any = None
+        self._private_fill_end: Any = None
 
     @staticmethod
     def _resolve_graph_class(overlay: Any) -> type[Any]:
@@ -229,6 +231,57 @@ class TargetBoundaryControl:
             self._pending.clear()
             self._control_by_index.clear()
             self._stop_sync_attempted = False
+            self._private_fill_begin = None
+            self._private_fill_end = None
+
+    def _clear_private_fill_buffers(self) -> None:
+        self._private_fill_begin = None
+        self._private_fill_end = None
+
+    def _ensure_private_fill_buffers(self, metadata: dict[str, Any]) -> bool:
+        metadata.setdefault("marker_operation", "private_complex64_fill")
+        torch_mod = getattr(self.overlay, "torch", None)
+        if torch_mod is None:
+            metadata.setdefault("error", "overlay.torch is unavailable")
+            return False
+        if self._private_fill_begin is not None and self._private_fill_end is not None:
+            return True
+        try:
+            empty = getattr(torch_mod, "empty", None)
+            complex64 = getattr(torch_mod, "complex64", None)
+            if not callable(empty) or complex64 is None:
+                metadata.setdefault("error", "overlay.torch.empty/complex64 unavailable")
+                return False
+            self._private_fill_begin = empty(1, dtype=complex64, device="xpu")
+            self._private_fill_end = empty(1, dtype=complex64, device="xpu")
+        except Exception as exc:
+            metadata.setdefault("error", f"fill-buffer-alloc:{type(exc).__name__}:{exc}")
+            self._clear_private_fill_buffers()
+            return False
+        return True
+
+    @classmethod
+    def _record_fill(
+        cls,
+        tensor: Any,
+        value: complex,
+        metadata: dict[str, Any],
+        key: str,
+    ) -> None:
+        before = cls._clock_raw_ns()
+        error: str | None = None
+        try:
+            tensor.fill_(value)
+        except Exception as exc:
+            error = f"{type(exc).__name__}:{exc}"
+        after = cls._clock_raw_ns()
+        metadata[key] = {
+            "before_monotonic_raw_ns": before,
+            "after_monotonic_raw_ns": after,
+            "error": error,
+        }
+        if error is not None:
+            metadata.setdefault("error", f"{key}:{error}")
     @staticmethod
     def _clock_raw_ns() -> int | None:
         try:
@@ -390,6 +443,13 @@ class TargetBoundaryControl:
             boundary.start_event = None
             boundary.end_event = None
             return None
+        if self._ensure_private_fill_buffers(metadata) and self._private_fill_begin is not None:
+            self._record_fill(
+                self._private_fill_begin,
+                complex(1, 2),
+                metadata,
+                "start_fill",
+            )
         with self._lock:
             self._pending.append(boundary)
         return boundary
@@ -399,6 +459,13 @@ class TargetBoundaryControl:
         boundary: _PendingBoundary,
         before_count: int,
     ) -> None:
+        if self._private_fill_end is not None:
+            self._record_fill(
+                self._private_fill_end,
+                complex(-1, -2),
+                boundary.metadata,
+                "end_fill",
+            )
         if boundary.end_event is not None:
             end_record = self._record_boundary_call(boundary.end_event)
             boundary.end_record = end_record
@@ -499,6 +566,7 @@ class TargetBoundaryControl:
             boundary.end_event = None
         with self._lock:
             self._pending.clear()
+        self._clear_private_fill_buffers()
 
     def uninstall(self) -> None:
         """Remove the wrapper without changing the canonical source."""
@@ -512,6 +580,7 @@ class TargetBoundaryControl:
             self._restore_instance_attr("start")
             self._saved_instance_attrs.clear()
             self._installed = False
+            self._clear_private_fill_buffers()
 
     def close(self) -> None:
         """Stop the canonical window, resolve false pairs, and uninstall."""

@@ -85,10 +85,35 @@ class FakeGraph:
 ORIGINAL_GRAPH_REPLAY = FakeGraph.replay
 
 
+class FakeTensor:
+    allocations = 0
+    instances: list["FakeTensor"] = []
+
+    def __init__(self, size: int, *, dtype: object = None, device: object = None) -> None:
+        self.size = size
+        self.dtype = dtype
+        self.device = device
+        self.value: complex | None = None
+        self.fill_calls: list[complex] = []
+        type(self).instances.append(self)
+
+    def fill_(self, value: complex) -> "FakeTensor":
+        self.fill_calls.append(value)
+        self.value = value
+        return self
+
+
 class FakeTorch:
+    complex64 = "complex64"
+
     def __init__(self) -> None:
         self.xpu = FakeXpu()
         self.xpu.XPUGraph = FakeGraph
+
+    def empty(self, size: int, *, dtype: object = None, device: object = None) -> FakeTensor:
+        if device == "xpu":
+            FakeTensor.allocations += 1
+        return FakeTensor(size, dtype=dtype, device=device)
 
 class CudaGraphManager:
     def __init__(self, graph: FakeGraph):
@@ -172,6 +197,8 @@ class TargetBoundaryControlTest(unittest.TestCase):
     def setUp(self) -> None:
         FakeEvent.clock = 0
         FakeEvent.instances = []
+        FakeTensor.allocations = 0
+        FakeTensor.instances = []
         FakeGraph.replays = 0
         FakeGraph.should_raise = None
 
@@ -224,7 +251,9 @@ class TargetBoundaryControlTest(unittest.TestCase):
             # Keep an extra harness stage value to verify that the shim only
             # adds metadata and does not rewrite canonical event fields.
             overlay._events[0]["provenance"]["stage"] = "future-harness-stage"  # type: ignore[attr-defined]
-
+            begin_buf, end_buf = FakeTensor.instances[:2]
+            self.assertIs(control._private_fill_begin, begin_buf)
+            self.assertIs(control._private_fill_end, end_buf)
 
             data = self.stop_json(overlay)
             self.assertEqual(torch.xpu.synchronize_calls, 1)
@@ -257,6 +286,41 @@ class TargetBoundaryControlTest(unittest.TestCase):
             self.assertEqual(event["duration_ms"], 1.0)
             self.assertNotIn("start_event", json.dumps(data))
             self.assertNotIn("FakeEvent", json.dumps(data))
+            self.assertEqual(control_data["marker_operation"], "private_complex64_fill")
+            self.assertIsNone(control_data["start_fill"]["error"])
+            self.assertIsNone(control_data["end_fill"]["error"])
+            self.assertEqual(FakeTensor.allocations, 2)
+            self.assertEqual(begin_buf.fill_calls, [complex(1, 2)])
+            self.assertEqual(end_buf.fill_calls, [complex(-1, -2)])
+            self.assertEqual(begin_buf.value, complex(1, 2))
+            self.assertEqual(end_buf.value, complex(-1, -2))
+            self.assertIsNone(control._private_fill_begin)
+            self.assertIsNone(control._private_fill_end)
+
+    def test_private_complex64_fill_allocates_once_reuses_and_releases_at_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            overlay, control, _torch = self.make_overlay(Path(tmp))
+            graph = FakeGraph()
+            runner = target_holder(CudaGraphManager(graph))
+            overlay.start(kind="fixture", profile_prefix="fill-reuse")
+
+            runner.execute_model()
+            runner.execute_model()
+            self.assertEqual(FakeTensor.allocations, 2)
+            begin_buf, end_buf = FakeTensor.instances[:2]
+            self.assertEqual(begin_buf.fill_calls, [complex(1, 2), complex(1, 2)])
+            self.assertEqual(end_buf.fill_calls, [complex(-1, -2), complex(-1, -2)])
+
+            data = self.stop_json(overlay)
+            self.assertIsNone(control._private_fill_begin)
+            self.assertIsNone(control._private_fill_end)
+            for event in data["events"]:  # type: ignore[index]
+                control_data = event[shim.CONTROL_KEY]
+                if control_data["classification"] != "target":
+                    continue
+                self.assertEqual(control_data["marker_operation"], "private_complex64_fill")
+                self.assertIn("start_fill", control_data)
+                self.assertIn("end_fill", control_data)
 
     def test_only_two_target_markers_skip_warmup_inactive_capture_draft_ambiguous(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -269,6 +333,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
 
             # Warmup is before the canonical active window.
             target.execute_model()
+            self.assertEqual(FakeTensor.allocations, 0)
             overlay.start(kind="fixture", profile_prefix="roles")
 
             # Capture is passed through by both layers and gets no marker.
@@ -285,6 +350,7 @@ class TargetBoundaryControlTest(unittest.TestCase):
             target.execute_model()
 
             data = self.stop_json(overlay)
+            self.assertEqual(FakeTensor.allocations, 2)
             self.assertEqual(torch.xpu.synchronize_calls, 1)
             self.assertEqual(control.pending_event_references, 0)
             events = data["events"]  # type: ignore[index]
