@@ -41,8 +41,40 @@ def main() -> int:
     assert annotations.classify_operator("_xpu_C::gdn_attention_core_xpu") == "gdn"
     assert annotations.classify_operator("_vllm_fa2_C::varlen_fwd") == "attention"
     assert annotations.classify_operator("aten::mm") == "matmul"
+    assert annotations.classify_operator("aten::mm", "b70_gdn/target/module:qwen3_5_mtp") == "matmul"
     assert summary.classify_operator("aten::gdn_attention", "b70_gdn/target/operator:gdn_attention") == "gdn"
-
+    assert summary.classify_operator("aten::mm", "b70_gdn/target/module:qwen3_5_mtp") == "matmul"
+    eager_gate = summary.fusion_decision(
+        evidence_mode="eager-profile",
+        graph_coverage="complete",
+        whole_replay_ms=100.0,
+        replay_reconciled=True,
+        gdn_kernel_ms=20.0,
+    )
+    assert eager_gate["decision_status"] == "inconclusive"
+    assert not eager_gate["fusion_selection_allowed"]
+    assert eager_gate["gdn_share_of_whole_replay"] is None
+    partial_gate = summary.fusion_decision(
+        evidence_mode="unitrace-profile",
+        graph_coverage="partial",
+        whole_replay_ms=100.0,
+        replay_reconciled=True,
+        gdn_kernel_ms=20.0,
+    )
+    assert not partial_gate["fusion_selection_allowed"]
+    assert partial_gate["gdn_share_of_whole_replay"] is None
+    eligible_gate = summary.fusion_decision(
+        evidence_mode="unitrace-profile",
+        graph_coverage="complete",
+        whole_replay_ms=100.0,
+        replay_reconciled=True,
+        gdn_kernel_ms=6.0,
+        gdn_provenance="target",
+    )
+    assert eligible_gate["fusion_selection_allowed"]
+    assert eligible_gate["gdn_share_of_whole_replay"] == 0.06
+    assert "unitrace-profile" in harness["DEFAULT_OUT_NAMES"]
+    assert harness["UNITRACE_SOURCE_SHA"] == "887bba6e28ce84cc0d3813ef876e24add107c318"
     source = "import torch\n\nclass XPUWorker:\n    def profile(self, is_start=True, profile_prefix=None):\n        return None\n"
     patched = patch.patch_text(source)
     assert patch.MARKER in patched
@@ -90,7 +122,67 @@ def main() -> int:
         assert report["gdn_operator_event_count"] == 1
         assert report["gdn_operator_events"][0]["input_dims"] == [[5, 24, 256]]
         assert any(row["category"] == "gdn" for row in report["categories"])
+        assert any(row["category"] == "gdn" for row in report["categories"])
+        unitrace_path = Path(directory) / "unitrace.json"
+        unitrace_path.write_text(
+            json.dumps(
+                {
+                    "traceEvents": [
+                        {"cat": "kernel", "name": "causal_conv1d_spec_kernel", "dur": 60, "ts": 1},
+                        {"cat": "kernel", "name": "other_kernel", "dur": 940, "ts": 2},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        unitrace_report = summary.summarize_unitrace(unitrace_path)
+        assert unitrace_report["status"] == "ok"
+        assert unitrace_report["gdn_kernel_count"] == 1
+        assert not unitrace_report["fusion_decision"]["fusion_selection_allowed"]
+        assert unitrace_report["target_gdn_kernel_count"] == 0
+        assert unitrace_report["fusion_decision"]["gdn_share_of_whole_replay"] is None
+        assert unitrace_report["attribution_status"] == "inconclusive"
+        target_path = Path(directory) / "unitrace-target.json"
+        target_path.write_text(
+            json.dumps(
+                {
+                    "traceEvents": [
+                        {"cat": "kernel", "name": "causal_conv1d_spec_kernel", "dur": 6000, "ts": 1, "args": {"stage": "target"}},
+                        {"cat": "kernel", "name": "other_kernel", "dur": 94000, "ts": 2},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        target_report = summary.summarize_unitrace(
+            target_path,
+            graph_coverage="complete",
+            whole_replay_ms=100.0,
+            replay_reconciled=True,
+        )
+        assert target_report["fusion_decision"]["fusion_selection_allowed"]
+        assert target_report["fusion_decision"]["gdn_share_of_whole_replay"] == 0.06
+        artifact_out = Path(directory) / "artifact-check"
+        (artifact_out / "unitrace").mkdir(parents=True)
+        (artifact_out / "unitrace" / "chrome_trace.json").write_text("{}", encoding="utf-8")
+        (artifact_out / "server.log").write_text(
+            "B70_GDN_LOCALITY_SUMMARY: "
+            + json.dumps({"unitrace_control_events": [{"action": "resume", "returncode": 1}]})
+            + "\n",
+            encoding="utf-8",
+        )
+        assert harness["_unitrace_artifact_check"](artifact_out) == 1
+        artifact_check = json.loads((artifact_out / "unitrace-artifact-check.json").read_text(encoding="utf-8"))
+        assert artifact_check["status"] == "blocked"
 
+    build_script = (ROOT / "build-unitrace.sh").read_text(encoding="utf-8")
+    assert "887bba6e28ce84cc0d3813ef876e24add107c318" in build_script
+    assert "--network=none" in build_script
+    assert "-DBUILD_WITH_MPI=0" in build_script
+    assert "-DBUILD_WITH_XPTI=0" in build_script
+    assert "-DBUILD_WITH_OPENCL=0" in build_script
+    assert "-DBUILD_WITH_OMP=" not in build_script
+    assert "-DBUILD_WITH_PERFETTO=" not in build_script
     print("phase0 CPU fixtures: PASS")
     return 0
 

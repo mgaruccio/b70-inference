@@ -32,11 +32,21 @@ DEFAULT_OUT_NAMES = {
     "baseline": "baseline-01",
     "profile": "diagnostic-graph-01",
     "eager-profile": "diagnostic-eager-01",
+    "unitrace-profile": "diagnostic-unitrace-01",
 }
 BASELINE_LENGTHS = (512, 65_536)
 PROFILE_DELAY_ITERATIONS = 3
 PROFILE_MAX_ITERATIONS = 5
 PROFILE_STOP_AFTER_EVENTS = 24
+UNITRACE_SESSION = "b70gdnlocality"
+UNITRACE_CONTAINER_ROOT = "/unitrace"
+UNITRACE_SOURCE_SHA = "887bba6e28ce84cc0d3813ef876e24add107c318"
+UNITRACE_OPTIONS = (
+    "--start-paused",
+    "--device-timing",
+    "--chrome-kernel-logging",
+    "--chrome-device-logging",
+)
 
 EXPECTED_LAUNCHER_SHA256 = "63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4"
 EXPECTED_IMAGE_DIGEST = "f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f"
@@ -141,6 +151,7 @@ def _container_name(mode: str) -> str:
         "baseline": "b70-gdn-locality-baseline",
         "profile": "b70-gdn-locality-graph-profile",
         "eager-profile": "b70-gdn-locality-eager-profile",
+        "unitrace-profile": "b70-gdn-locality-unitrace-profile",
     }[mode]
 
 
@@ -180,6 +191,7 @@ def _append_instrumentation(
     *,
     mode: str,
     timing: Path,
+    unitrace_install: Path | None = None,
 ) -> None:
     module = ROOT / "gdn-annotations.py"
     patch = ROOT / "gdn-patch.py"
@@ -187,13 +199,32 @@ def _append_instrumentation(
         if not path.is_file():
             raise HarnessError(f"diagnostic source is missing: {path}")
 
-    serve = list(metadata["serve"])
-    # _configure_launch has already replaced profiler flags and, when selected,
-    # removed graph flags.  This helper only adds the opt-in instrumentation
-    # mounts and rebuilds the shell command from the final serve list.
-    metadata["serve"] = serve
+    original_serve = list(metadata["serve"])
+    serve = list(original_serve)
+    unitrace_binary = None
+    if mode == "unitrace-profile":
+        if unitrace_install is None:
+            raise HarnessError("unitrace-profile requires --unitrace-install")
+        unitrace_install = unitrace_install.resolve()
+        unitrace_binary = unitrace_install / "bin" / "unitrace"
+        if not unitrace_binary.is_file():
+            raise HarnessError(f"unitrace binary is missing: {unitrace_binary}")
+        serve = [
+            f"{UNITRACE_CONTAINER_ROOT}/bin/unitrace",
+            *UNITRACE_OPTIONS,
+            "--session",
+            UNITRACE_SESSION,
+            "--output-dir-path",
+            "/output/unitrace",
+            *serve,
+        ]
+
+    # _configure_launch has already replaced profiler args and, when selected,
+    # removed graph flags.  This helper adds only read-only diagnostic mounts
+    # and rebuilds the shell command.  The original vLLM argv remains in
+    # metadata['serve']; unitrace's wrapper is recorded separately.
     index = argv.index("--entrypoint")
-    argv[index:index] = [
+    extra_argv = [
         "-v",
         f"{timing}:/timing:ro",
         "-v",
@@ -213,25 +244,51 @@ def _append_instrumentation(
         "-e",
         "B70_GDN_LOCALITY_MAX_SAMPLES=128",
     ]
+    mounts = [
+        {"host": str(timing), "container": "/timing", "mode": "ro", "role": "canonical_step_timing"},
+        {"host": str(module), "container": "/gdn/gdn_annotations.py", "mode": "ro", "role": "gdn_annotations"},
+        {"host": str(patch), "container": "/gdn/gdn-patch.py", "mode": "ro", "role": "gdn_patch_wrapper"},
+    ]
+    environment = [
+        "PYTHONPATH=/timing:/gdn",
+        "B70_STEP_TIMING=1",
+        "B70_STEP_TIMING_DIR=/output/step-timing",
+        "B70_STEP_TIMING_MAX_SAMPLES=64",
+        "B70_GDN_LOCALITY=1",
+        "B70_GDN_LOCALITY_MAX_SAMPLES=128",
+    ]
+    if unitrace_binary is not None:
+        extra_argv.extend([
+            "-v",
+            f"{unitrace_install}:{UNITRACE_CONTAINER_ROOT}:ro",
+            "-e",
+            f"B70_UNITRACE_CONTROL={UNITRACE_CONTAINER_ROOT}/bin/unitrace",
+            "-e",
+            f"B70_UNITRACE_SESSION={UNITRACE_SESSION}",
+            "-e",
+            "B70_GDN_LOCALITY_XPU_EVENTS=0",
+        ])
+        mounts.append({"host": str(unitrace_install), "container": UNITRACE_CONTAINER_ROOT, "mode": "ro", "role": "unitrace_install"})
+        environment.extend([
+            f"B70_UNITRACE_CONTROL={UNITRACE_CONTAINER_ROOT}/bin/unitrace",
+            f"B70_UNITRACE_SESSION={UNITRACE_SESSION}",
+            "B70_GDN_LOCALITY_XPU_EVENTS=0",
+        ])
+        metadata["unitrace"] = {
+            "source_sha": UNITRACE_SOURCE_SHA,
+            "binary": str(unitrace_binary),
+            "container_binary": f"{UNITRACE_CONTAINER_ROOT}/bin/unitrace",
+            "session": UNITRACE_SESSION,
+            "options": [*UNITRACE_OPTIONS, "--session", UNITRACE_SESSION, "--output-dir-path", "/output/unitrace"],
+            "capture_control": "worker /start_profile resumes and /stop_profile pauses the unitrace session",
+            "per_gdn_xpu_event_markers": False,
+            "trace_directory": "unitrace",
+        }
+    argv[index:index] = extra_argv
     prefix = argv[-1].rsplit("; exec ", 1)[0]
     argv[-1] = prefix + "; /opt/venv/bin/python -P /gdn/gdn-patch.py; exec " + shlex.join(serve)
-    metadata["mounts"].extend(
-        [
-            {"host": str(timing), "container": "/timing", "mode": "ro", "role": "canonical_step_timing"},
-            {"host": str(module), "container": "/gdn/gdn_annotations.py", "mode": "ro", "role": "gdn_annotations"},
-            {"host": str(patch), "container": "/gdn/gdn-patch.py", "mode": "ro", "role": "gdn_patch_wrapper"},
-        ]
-    )
-    metadata["environment"].extend(
-        [
-            "PYTHONPATH=/timing:/gdn",
-            "B70_STEP_TIMING=1",
-            "B70_STEP_TIMING_DIR=/output/step-timing",
-            "B70_STEP_TIMING_MAX_SAMPLES=64",
-            "B70_GDN_LOCALITY=1",
-            "B70_GDN_LOCALITY_MAX_SAMPLES=128",
-        ]
-    )
+    metadata["mounts"].extend(mounts)
+    metadata["environment"].extend(environment)
     metadata["annotation_sources"] = {
         str(path): sha256_file(path)
         for path in (module, patch, timing / "qwen38_step_timing_overlay.py", timing / "qwen38_step_timing_patch.py")
@@ -240,21 +297,50 @@ def _append_instrumentation(
     metadata["attribution_contract"] = {
         "operator": "torch.ops._xpu_C.gdn_attention",
         "metadata_source": "bounded server-log B70_GDN_LOCALITY_METADATA lines",
-        "timing_source": "torch.xpu.Event around GDN forward-core/module boundary",
+        "timing_source": "deferred XPU Event pairs around complete graph replay; unitrace Level Zero kernel/device trace for inner instances",
         "native_trace_source": "vLLM torch profiler with record_shapes=true",
         "graph_inner_ops_may_be_hidden": True,
+        "eager_or_partial_graph_cannot_establish_gdn_share": True,
+        "fusion_candidate_gate": "at least 5% of reconciled target graph replay device time",
+        "fusion_selection_requires": [
+            "normal graph-enabled MTP4 serving",
+            "complete target graph kernel coverage from unitrace",
+            "explicit target-root GDN provenance",
+            "whole-replay timing reconciliation",
+            "native-relative output/state parity",
+        ],
+        "unsupported_measurement": "no in-graph PyTorch event markers or inferred eager-to-graph shares",
         "eager_mode_is_diagnostic_not_baseline": True,
         "scope_activation": "after native /start_profile returns",
         "scope_stop": "on native /stop_profile return or cleanup",
     }
     if mode == "eager-profile":
-        metadata["attribution_contract"]["graph_mode"] = False
-        metadata["attribution_contract"]["purpose"] = "diagnostic fallback when graph trace hides GDN inner kernels"
+        metadata["attribution_contract"].update(
+            graph_mode=False,
+            decision_status="inconclusive",
+            purpose="diagnostic fallback only; cannot select or reject fusion",
+        )
+    elif mode == "unitrace-profile":
+        metadata["attribution_contract"].update(
+            graph_mode=True,
+            decision_status="inconclusive_until_unitrace_coverage_reconciled",
+            purpose="normal graph-enabled serving attribution only",
+        )
     else:
-        metadata["attribution_contract"]["graph_mode"] = True
+        metadata["attribution_contract"].update(
+            graph_mode=True,
+            decision_status="inconclusive_until_complete_graph_coverage_reconciled",
+            purpose="graph torch trace is diagnostic evidence, never a fusion decision",
+        )
 
 
-def _configure_launch(namespace: dict[str, Any], original_build: Any, mode: str, timing: Path | None):
+def _configure_launch(
+    namespace: dict[str, Any],
+    original_build: Any,
+    mode: str,
+    timing: Path | None,
+    unitrace_install: Path | None,
+):
     def build(cell: str, out: Path, args: argparse.Namespace):
         if cell != "mtp4":
             raise HarnessError("Phase0 is limited to the pinned native MTP4 cell")
@@ -278,7 +364,13 @@ def _configure_launch(namespace: dict[str, Any], original_build: Any, mode: str,
             # serve list; instrumentation rebuilds it after these changes.
             prefix = argv[-1].rsplit("; exec ", 1)[0]
             argv[-1] = prefix + "; exec " + shlex.join(metadata["serve"])
-            _append_instrumentation(argv, metadata, mode=mode, timing=timing or _resolve_timing_dir(None))
+            _append_instrumentation(
+                argv,
+                metadata,
+                mode=mode,
+                timing=timing or _resolve_timing_dir(None),
+                unitrace_install=unitrace_install,
+            )
         metadata["phase0_mode"] = mode
         metadata["golden_launch_contract"] = golden
         metadata["container_name"] = _container_name(mode)
@@ -334,9 +426,86 @@ def _reject_overrides(remaining: Sequence[str]) -> None:
             raise HarnessError(f"Phase0 owns {token}; use --mode and the pinned MTP4 cell")
 
 
-def run_on_current_host(mode: str, out: Path, remaining: Sequence[str], timing: Path | None) -> int:
+def _unitrace_artifact_check(out: Path) -> int:
+    """Record trace visibility and session-control failures after server exit."""
+    trace_dir = out / "unitrace"
+    files = sorted(path for path in trace_dir.rglob("*") if path.is_file()) if trace_dir.is_dir() else []
+    json_files = [path for path in files if path.suffix in {".json", ".pftrace", ".jsonl"}]
+    control_events: list[dict[str, Any]] = []
+    control_failures: list[str] = []
+    marker = "B70_GDN_LOCALITY_SUMMARY:"
+    for log_path in sorted(out.rglob("*.log")):
+        try:
+            lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            if marker not in line:
+                continue
+            try:
+                payload = json.loads(line.split(marker, 1)[1].strip())
+            except json.JSONDecodeError:
+                control_failures.append(f"malformed GDN summary in {log_path.name}")
+                continue
+            events = payload.get("unitrace_control_events") if isinstance(payload, dict) else None
+            if not isinstance(events, list):
+                continue
+            control_events.extend(event for event in events if isinstance(event, dict))
+            for event in events:
+                if not isinstance(event, dict):
+                    continue
+                if event.get("returncode") != 0:
+                    control_failures.append(
+                        f"{event.get('action', 'unknown')} returncode={event.get('returncode')!r}"
+                    )
+
+    observed = bool(json_files)
+    blocked = not observed or bool(control_failures)
+    if not observed:
+        reason = "unitrace emitted no trace; no graph-aware attribution is available"
+    elif control_failures:
+        reason = "unitrace session control failed; graph capture coverage is not trustworthy"
+    else:
+        reason = None
+    result = {
+        "status": "blocked" if blocked else "observed",
+        "trace_directory": str(trace_dir),
+        "files": [{"path": str(path.relative_to(out)), "bytes": path.stat().st_size} for path in files],
+        "json_trace_files": [str(path.relative_to(out)) for path in json_files],
+        "unitrace_control_events": control_events,
+        "unitrace_control_failures": control_failures,
+        "decision_status": "inconclusive_until_graph_coverage_reconciled",
+        "reason": reason,
+    }
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "unitrace-artifact-check.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    summary_path = out / "summary.json"
+    if summary_path.is_file():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary["unitrace_artifact_check"] = result
+        summary["attribution_status"] = result["decision_status"]
+        if blocked and summary.get("status") == "passed":
+            summary["status"] = "failed"
+            summary["error"] = {
+                "type": "UnitraceTraceMissing" if not observed else "UnitraceControlFailed",
+                "message": reason,
+            }
+        summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return 1 if blocked else 0
+
+def run_on_current_host(
+    mode: str,
+    out: Path,
+    remaining: Sequence[str],
+    timing: Path | None,
+    unitrace_install: Path | None,
+) -> int:
     if not BASE_DRIVER.is_file():
         raise HarnessError(f"existing lifecycle driver is unavailable: {BASE_DRIVER}")
+    if mode == "unitrace-profile" and unitrace_install is None:
+        raise HarnessError("unitrace-profile requires --unitrace-install")
     if mode == "baseline":
         _reject_overrides(remaining)
     driver = runpy.run_path(str(BASE_DRIVER))
@@ -348,7 +517,13 @@ def run_on_current_host(mode: str, out: Path, remaining: Sequence[str], timing: 
         PROMPT_TOKENS=65_536,
         cell_name=lambda _cell: _container_name(mode),
     )
-    namespace["build_launch"] = _configure_launch(namespace, namespace["build_launch"], mode, timing)
+    namespace["build_launch"] = _configure_launch(
+        namespace,
+        namespace["build_launch"],
+        mode,
+        timing,
+        unitrace_install,
+    )
     if mode == "baseline":
         namespace["run_benchmark"] = _configure_benchmark(namespace, namespace["run_benchmark"])
     else:
@@ -358,7 +533,12 @@ def run_on_current_host(mode: str, out: Path, remaining: Sequence[str], timing: 
                      "--profile-max-iterations", str(PROFILE_MAX_ITERATIONS),
                      "--profile-stop-after-events", str(PROFILE_STOP_AFTER_EVENTS)]
     sys.argv = [str(ROOT / "run-phase0.py"), *remaining, "--cell", "mtp4", "--out", str(out)]
-    return int(driver["main"]())
+    status = int(driver["main"]())
+    if mode == "unitrace-profile" and status == 0:
+        return _unitrace_artifact_check(out)
+    if mode == "unitrace-profile":
+        _unitrace_artifact_check(out)
+    return status
 
 
 def _tar_payload() -> bytes:
@@ -369,6 +549,7 @@ def _tar_payload() -> bytes:
         "summarize-gdn.py",
         "README.md",
         "test-phase0.py",
+        "build-unitrace.sh",
     ]
     timing_files = [
         TIMING_SOURCE / "qwen38_step_timing_overlay.py",
@@ -413,7 +594,7 @@ def stage_campaign(remote_host: str, remote_dir: str) -> None:
         "status": "staged",
         "remote_host": remote_host,
         "remote_dir": remote_dir,
-        "files": ["run-phase0.py", "gdn-annotations.py", "gdn-patch.py", "summarize-gdn.py", "timing/qwen38_step_timing_overlay.py", "timing/qwen38_step_timing_patch.py"],
+        "files": ["run-phase0.py", "gdn-annotations.py", "gdn-patch.py", "summarize-gdn.py", "README.md", "test-phase0.py", "build-unitrace.sh", "timing/qwen38_step_timing_overlay.py", "timing/qwen38_step_timing_patch.py"],
     }, sort_keys=True), flush=True)
 
 
@@ -423,6 +604,9 @@ def run_remote(remote_host: str, remote_dir: str, mode: str, out_name: str, extr
         raise HarnessError(f"--out-name must be a fresh child name, got {out_name!r}")
     remote_script = f"{remote_dir}/run-phase0.py"
     remote_out = f"{remote_dir}/{out_name}"
+    extra = list(extra)
+    if mode == "unitrace-profile" and "--unitrace-install" not in extra:
+        extra.extend(["--unitrace-install", f"{remote_dir}/unitrace-install"])
     command = ["python3", "-u", remote_script, "--mode", mode, "--out", remote_out, *extra]
     print(f"REMOTE_COMMAND ssh {remote_host} {shlex.join(command)}", flush=True)
     result = subprocess.run(["ssh", remote_host, shlex.join(command)], check=False)
@@ -434,6 +618,7 @@ def parse_cli(argv: Sequence[str] | None = None) -> tuple[argparse.Namespace, li
     parser.add_argument("--mode", choices=tuple(DEFAULT_OUT_NAMES), help="direct remote mode")
     parser.add_argument("--out", type=Path, help="new output directory for direct inference-host execution")
     parser.add_argument("--timing-dir", type=Path, help="canonical timing source directory for direct execution")
+    parser.add_argument("--unitrace-install", type=Path, help="read-only unitrace install root containing bin/unitrace")
     parser.add_argument("--stage-only", action="store_true", help="stage source files to a fresh remote directory and stop")
     parser.add_argument("--stage", action="store_true", help="stage to a fresh remote directory, then run the selected mode")
     parser.add_argument("--remote-host", default=DEFAULT_REMOTE_HOST)
@@ -466,7 +651,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         out_name = args.out_name or DEFAULT_OUT_NAMES[args.mode]
         return run_remote(args.remote_host, args.remote_dir, args.mode, out_name, args.remote_arg)
-    return run_on_current_host(args.mode, args.out, remaining, args.timing_dir)
+    return run_on_current_host(args.mode, args.out, remaining, args.timing_dir, args.unitrace_install)
 
 
 if __name__ == "__main__":

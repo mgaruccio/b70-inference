@@ -34,6 +34,21 @@ The lead performed the required fresh primary-source checks before this slice:
   native profiler traces and public deferred `torch.xpu.Event` pairs; do not add
   CPU scope durations to graph/device timings or present a graph replay as an
   inner-kernel speed claim.
+- <https://github.com/pytorch/pytorch/blob/v2.13.0/c10/xpu/XPUEvent.h> documents the
+  XPU event implementation used for deferred stream-boundary timing. **Conclusion:**
+  use it for complete replay boundaries, not as a per-node graph marker.
+- <https://github.com/intel/llvm/blob/sycl/sycl/doc/extensions/experimental/sycl_ext_oneapi_graph.asciidoc>
+  defines aggregate graph profiling and its event/profiling limitations. **Conclusion:**
+  graph profiling does not provide a supported per-GDN node timestamp and can alter
+  optimization behavior.
+- <https://github.com/intel/pti-gpu/blob/master/tools/unitrace/README.md>
+  documents unitrace device timing, Chrome kernel/device logging, and paused-session
+  controls. **Conclusion:** the build pins the exact source commit separately; attempt
+  the normal graph replay with `--start-paused`, then resume/pause at the disposable
+  worker's profile hooks.
+- <https://intel.github.io/pti-gpu/whatsnew.html> describes SYCL graph tracing as
+  evolving/initial proof-of-concept support. **Conclusion:** missing or partial
+  graph records are a tool-coverage blocker, never evidence that GDN is absent.
 
 The existing pinned vLLM/XPU source and prior campaign evidence are local
 orientation, not substitutes for that research gate. They motivate the
@@ -65,29 +80,28 @@ temperature 0, seed 42, EOS ignored, and exactly 128 forced output tokens.
 `results/20260914-qwen38-four-way-speed/mtp4-reference-launch.json` is the
 local canonical launch reference; the wrapper validates its effective MTP4
 values rather than editing that file. The queued execution is:
-   directory with `run-phase0.py --stage-only`. The staging CLI fails if the
-   directory exists and stages no runtime or model.
-2. Run `--mode baseline` with a fresh `baseline-01` output. The wrapper runs
-   only 512 and 65,536 input tokens, one warmup and six measured requests per
-   point. It does not pass profiler flags or diagnostic mounts. The existing
-   client retains rendered token counts, request JSON, raw SSE, metrics before
-   and after each request, and machine-readable summaries.
-3. Only after the baseline completes, run `--mode profile` with fresh
-   `diagnostic-graph-01`. It profiles one streamed 65,536/128 request through
-   the real API. The finite native window is delay 3, maximum 5 worker
-   iterations, and 24 non-empty SSE events; actual captured counts, not an
-   assumed count, are authoritative.
-4. Run `summarize-gdn.py` on the retained native trace. It correlates CPU
-   `External id` records to kernel rows and reports actual GDN operator names,
-   input shapes, GDN/matmul/full-attention/draft categories, and finite timing
-   evidence. It consumes the ordinary trace and server log only.
-5. If graph replay hides the GDN operator or inner kernels, run the separate
-   `--mode eager-profile` diagnostic. It explicitly disables graph capture and
-   enables shape recording; it is an attribution control, never the baseline
-   and never a throughput comparison. A missing GDN operator after both
-   diagnostics is a blocker to a credible locality decision; ask the lead
-   before implementing a candidate.
-6. Retain the raw trace, SSE/counter files, commands, launch metadata,
+
+1. Stage the harness into the fresh sibling
+   `/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality-harness`
+   with `run-phase0.py --stage-only`. The staging CLI fails if the directory
+   exists and stages no runtime or model.
+2. Do **not** rerun the already-running uninstrumented four-way baseline. The
+   lead-owned `baseline-original-01` output is the unchanged normal-serving
+   reference; wait for it to complete and retain its raw artifacts.
+3. After the baseline is idle, run the bounded `build-unitrace.sh` from the
+   fresh harness. It uses the pinned PTI source/image/compiler contract below;
+   it must not compile concurrently with the baseline and it has no GPU.
+4. Run `--mode unitrace-profile` with fresh `diagnostic-unitrace-01`. This is
+   the normal graph-enabled MTP4 server under unitrace, with `/start_profile`
+   resuming and `/stop_profile` pausing a finite capture around the real
+   streamed request. The original vLLM launch remains unchanged.
+5. Review the unitrace trace together with the external whole-replay timing and
+   run `summarize-gdn.py`. Missing, partial, draft-only, or unreconciled graph
+   coverage is an explicit attribution blocker, not a fusion result.
+6. Only as a diagnostic operation-identification control, run
+   `--mode eager-profile` if graph replay hides individual operators. Eager
+   timing can never establish a GDN share or select/reject a fusion candidate.
+7. Retain the raw trace, SSE/counter files, commands, launch metadata,
    environment/runtime identity, and cleanup/host-after artifacts on
    `inference-host`. The lifecycle removes only the observed mode-specific
    container and must leave the launcher, power cap, running-container set and
@@ -104,27 +118,34 @@ Phase0 is a development run under `BENCHMARKING_STANDARDS.md`, not a
 publishable benchmark. The Phase0 decision gate is:
 
 - **Configuration gate:** effective launch metadata matches the golden contract;
-  only the eager diagnostic may differ in graph flags.
+  only the explicitly diagnostic eager mode may differ in graph flags.
 - **Ownership gate:** host preflight and postflight invariants pass; output and
   container names are unique and the new output is fail-if-existing.
 - **Public correctness gate:** `/health`, `/v1/models`, `/server_info`, finite
   metrics/counters, `/tokenize`, and complete streaming responses pass with
   exact rendered input and output counts.
-- **Attribution gate:** the trace has enough actual call/operator/shape and
-  deferred XPU timing evidence to separate GDN from matmul, draft, and full
-  attention. Graph-hidden results require the eager diagnostic; no proxy or
-  historical timing is substituted.
-- **Decision gate:** no speedup is claimed from profile traces. A later
-  candidate must be selected from the observed dominant path, keep native MTP4
-  K4 and all quality/capacity controls fixed, and pass output parity/correctness
-  before a serving A/B.
+- **Attribution gate:** only a normal graph-enabled MTP4 unitrace capture with
+  complete target graph kernel coverage, explicit target-root provenance,
+  external whole-target replay timing, and reconciled coverage can establish a GDN
+  device-time share. The unitrace rows must be reconciled to the complete replay,
+  not just to a visible subset. Eager-only, partial, missing, draft-only, failed,
+  stage-unknown, or unreconciled traces are **inconclusive** and cannot select or
+  reject fusion. XPU event boundaries are whole-replay evidence, not unsupported
+  in-graph per-node markers.
+- **Decision gate:** a fusion candidate is eligible only when explicit-target GDN
+  is at least 5% of that reconciled complete graph-enabled target device work.
+  Below 5%, or when any attribution prerequisite is missing, the result remains
+  **inconclusive**; no candidate is selected or rejected. Any later candidate
+  must preserve native MTP4 K4, all quality/capacity controls, and pass
+  native-relative output parity/correctness. Unrelated training teacher-fidelity
+  gaps are not this kernel-locality gate.
 
 Only after those gates are met is the next program phase queued:
 
 | Phase | Arm / question | Entry gate | Exit evidence |
 | --- | --- | --- | --- |
-| P0 | Native MTP4 attribution at 512 + 64K, then graph/eager diagnostic if needed | This document and the harness contract | Credible GDN-vs-matmul/attention/draft attribution or an explicit blocker |
-| P1 | Native control versus one bounded GDN locality candidate | P0 identifies a recoverable GDN boundary; no quality/capacity change | Real HTTP correctness, raw trace, finite unprofiled measurements, and unchanged host |
+| P0 | Native MTP4 graph-aware attribution at 512 + 64K, with bounded unitrace and eager diagnostic only if needed | This document, the harness contract, and a complete normal graph replay | Reconciled GDN share or an explicit tool-coverage blocker; eager/partial evidence remains inconclusive |
+| P1 | Native control versus one bounded GDN locality candidate | P0 reaches the >=5% complete graph-enabled target-work gate; no quality/capacity change | Real HTTP correctness, native-relative parity, raw trace, finite unprofiled measurements, and unchanged host |
 | P2 | Narrow comparison: native MTP4, tuned multi-dispatch control, or narrow workgroup-local fused region | P1 candidate clears parity and shows a meaningful signal | Paired/interleaved evidence at the same 64K contract; no production promotion |
 | P3 | Full 512/8K/32K/64K three-arm campaign | Candidate warranted and parity established; lead approval | Development comparison only, with retained raw SSE/counters/environment |
 

@@ -22,8 +22,10 @@ import sys
 from typing import Any, Iterable, Mapping
 
 
-FORMAT = "b70-gdn-locality-summary-v1"
+FORMAT = "b70-gdn-locality-summary-v2"
+UNITRACE_FORMAT = "b70-gdn-locality-unitrace-v1"
 ANNOTATION_PREFIX = "b70_gdn/"
+FUSION_SHARE_THRESHOLD = 0.05
 
 
 class SummaryError(RuntimeError):
@@ -40,18 +42,35 @@ def _duration(value: Any, label: str) -> float:
     return float(value)
 
 
-def classify_operator(name: Any, annotation: Any = "") -> str:
-    """Classify a trace operator without relying on a runtime import."""
-    text = f"{name or ''} {annotation or ''}".lower()
-    compact = text.replace("_", "").replace("-", "")
-    if any(marker in compact for marker in ("gdnattention", "gdnattn", "gateddelta")) or "gdn" in text:
-        return "gdn"
-    if any(marker in text for marker in ("eagle", "spec_decode", "specdecode", "draft", "mtp")):
+def _annotation_stage(annotation: Any) -> str:
+    text = str(annotation or "").lower()
+    if text in {"draft", "target"}:
+        return text
+    if "/draft/" in text or text.startswith("draft/"):
         return "draft"
-    if any(marker in text for marker in ("flash_attn", "flashattention", "varlen_fwd", "self_attn", "attention")):
+    if "/target/" in text or text.startswith("target/"):
+        return "target"
+    return "unknown"
+
+
+def classify_operator(name: Any, annotation: Any = "") -> str:
+    """Classify an operator without letting provenance names change its kind."""
+    name_text = str(name or "").lower()
+    annotation_text = str(annotation or "").lower()
+    if annotation_text.startswith("b70_gdn/"):
+        annotation_text = annotation_text.split("/", 2)[-1]
+    compact = f"{name_text} {annotation_text}".replace("_", "").replace("-", "")
+    if any(marker in compact for marker in ("gdnattention", "gdnattn", "gateddelta")) or "gdn" in compact:
+        return "gdn"
+    # A target module can contain qwen3_5_mtp.  Draft markers are therefore
+    # read from the operator name only; stage/root provenance is reported
+    # separately by _annotation_stage.
+    if any(marker in name_text for marker in ("flash_attn", "flashattention", "varlen_fwd", "self_attn", "attention")):
         return "attention"
-    if any(marker in text for marker in ("matmul", "mm.", "mm_", "::mm", "gemm", "addmm", "linear")):
+    if any(marker in name_text for marker in ("matmul", "mm.", "mm_", "::mm", "gemm", "addmm", "linear")):
         return "matmul"
+    if any(marker in name_text for marker in ("eagle", "spec_decode", "specdecode", "draft", "mtp")):
+        return "draft"
     return "other"
 
 
@@ -115,7 +134,7 @@ def _innermost(event: Mapping[str, Any], scopes: Iterable[Mapping[str, Any]]) ->
 
 
 def _stage(annotation: str | None) -> str:
-    return "draft" if annotation and "/draft/" in annotation else "target"
+    return _annotation_stage(annotation)
 
 
 def summarize_trace(path: Path) -> dict[str, Any]:
@@ -170,7 +189,7 @@ def summarize_trace(path: Path) -> dict[str, Any]:
         scope = _innermost(cpu, scopes_by_thread.get((cpu.get("pid"), cpu.get("tid")), []))
         annotation = str(scope.get("name", "")) if scope is not None else ""
         category = classify_operator(cpu.get("name", ""), annotation)
-        stage = _stage(annotation) if annotation else ("draft" if category == "draft" else "target")
+        stage = _stage(annotation) if annotation else "unknown"
         key = (category, stage)
         row = aggregate.setdefault(
             key,
@@ -235,17 +254,207 @@ def summarize_trace(path: Path) -> dict[str, Any]:
     }
 
 
-def summarize(input_path: Path) -> dict[str, Any]:
-    return summarize_trace(_find_trace(input_path))
+def fusion_decision(
+    *,
+    evidence_mode: str,
+    graph_coverage: str,
+    whole_replay_ms: Any,
+    replay_reconciled: bool,
+    gdn_kernel_ms: Any,
+    gdn_provenance: str = "unknown",
+) -> dict[str, Any]:
+    """Apply the no-proxy gate for a possible locality/fusion decision."""
+    reasons: list[str] = []
+    whole = float(whole_replay_ms) if _finite(whole_replay_ms) and float(whole_replay_ms) > 0 else None
+    gdn = float(gdn_kernel_ms) if _finite(gdn_kernel_ms) and float(gdn_kernel_ms) >= 0 else None
+    if evidence_mode != "unitrace-profile":
+        reasons.append("only normal graph-enabled unitrace evidence can establish a fusion share")
+    if evidence_mode == "eager-profile":
+        reasons.append("eager-only timing is diagnostic and cannot select or reject fusion")
+    if graph_coverage != "complete":
+        reasons.append("target graph kernel coverage is not complete")
+    if whole is None:
+        reasons.append("whole target graph replay timing is missing")
+    if not replay_reconciled:
+        reasons.append("unitrace kernel timestamps are not reconciled with whole replay timing")
+    if gdn is None:
+        reasons.append("GDN kernel duration is missing")
+    if gdn_provenance != "target":
+        reasons.append("target GDN provenance is not explicit")
+
+    # Do not even publish a GDN/whole-replay ratio unless every attribution
+    # prerequisite is satisfied.  Eager, partial, and stage-unknown traces may
+    # contain useful operator rows, but they cannot establish a share or a
+    # fusion decision.
+    measurement_ready = (
+        evidence_mode == "unitrace-profile"
+        and graph_coverage == "complete"
+        and whole is not None
+        and replay_reconciled
+        and gdn is not None
+        and gdn_provenance == "target"
+    )
+    share = (gdn / whole) if measurement_ready else None
+    if share is not None and share < FUSION_SHARE_THRESHOLD:
+        reasons.append(f"GDN share is below the {FUSION_SHARE_THRESHOLD:.0%} candidate gate")
+    eligible = measurement_ready and not reasons
+    return {
+        "decision_status": "eligible" if eligible else "inconclusive",
+        "fusion_selection_allowed": eligible,
+        "candidate_gate": f">={FUSION_SHARE_THRESHOLD:.0%} of reconciled target graph replay device time",
+        "evidence_mode": evidence_mode,
+        "graph_coverage": graph_coverage,
+        "whole_replay_ms": whole,
+        "gdn_kernel_ms": gdn,
+        "gdn_provenance": gdn_provenance,
+        "gdn_share_of_whole_replay": share,
+        "replay_reconciled": bool(replay_reconciled),
+        "reasons": reasons,
+    }
+
+def _find_unitrace_trace(value: Path) -> Path:
+    value = value.resolve()
+    if value.is_file():
+        return value
+    if not value.is_dir():
+        raise SummaryError(f"unitrace input does not exist: {value}")
+    traces = sorted(
+        path for path in value.rglob("*.json")
+        if path.is_file() and path.name not in {"summary.json", "effective-config.json", "launch-metadata.json"}
+    )
+    if not traces:
+        raise SummaryError(f"no unitrace JSON trace under {value}")
+    if len(traces) > 1:
+        raise SummaryError(f"expected one bounded unitrace JSON trace, found {traces}")
+    return traces[0]
+
+
+def _unitrace_kernel_rows(events: Iterable[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    rows = []
+    for event in events:
+        category = str(event.get("cat", "")).lower()
+        name = str(event.get("name", "")).lower()
+        if "kernel" not in category and "kernel" not in name and "device" not in category:
+            continue
+        if not _finite(event.get("dur")) or float(event.get("dur", 0)) < 0:
+            continue
+        rows.append(event)
+    return rows
+
+
+def _is_gdn_kernel(event: Mapping[str, Any]) -> bool:
+    text = str(event.get("name", "")).lower().replace("_", "")
+    return any(marker in text for marker in ("gdn", "causalconv", "gateddelta", "deltarule"))
+
+
+def _unitrace_stage(event: Mapping[str, Any]) -> str:
+    args = event.get("args")
+    values: list[Any] = [event.get("name")]
+    if isinstance(args, Mapping):
+        values.extend(args.get(key) for key in ("stage", "provenance", "annotation", "module"))
+    for value in values:
+        stage = _annotation_stage(value)
+        if stage != "unknown":
+            return stage
+    return "unknown"
+
+def summarize_unitrace(
+    input_path: Path,
+    *,
+    graph_coverage: str = "unknown",
+    whole_replay_ms: Any = None,
+    replay_reconciled: bool = False,
+) -> dict[str, Any]:
+    path = _find_unitrace_trace(input_path)
+    document = _read_json(path)
+    events = document.get("traceEvents") if isinstance(document, Mapping) else None
+    if not isinstance(events, list):
+        raise SummaryError(f"unitrace trace has no traceEvents list: {path}")
+    rows = _unitrace_kernel_rows(event for event in events if isinstance(event, Mapping))
+    all_kernel_ms = sum(float(event["dur"]) for event in rows) / 1000.0
+    gdn_rows = [event for event in rows if _is_gdn_kernel(event)]
+    target_gdn_rows = [event for event in gdn_rows if _unitrace_stage(event) == "target"]
+    gdn_kernel_ms = sum(float(event["dur"]) for event in gdn_rows) / 1000.0
+    target_gdn_kernel_ms = sum(float(event["dur"]) for event in target_gdn_rows) / 1000.0
+    decision = fusion_decision(
+        evidence_mode="unitrace-profile",
+        graph_coverage=graph_coverage,
+        whole_replay_ms=whole_replay_ms,
+        replay_reconciled=replay_reconciled,
+        gdn_kernel_ms=target_gdn_kernel_ms if target_gdn_rows else None,
+        gdn_provenance="target" if target_gdn_rows else "unknown",
+    )
+    return {
+        "format": UNITRACE_FORMAT,
+        "status": "ok" if rows else "insufficient_unitrace_visibility",
+        "trace_path": str(path),
+        "trace_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "trace_event_count": len(events),
+        "kernel_count": len(rows),
+        "gdn_kernel_count": len(gdn_rows),
+        "target_gdn_kernel_count": len(target_gdn_rows),
+        "all_kernel_ms": all_kernel_ms,
+        "gdn_kernel_ms": gdn_kernel_ms if gdn_rows else None,
+        "target_gdn_kernel_ms": target_gdn_kernel_ms if target_gdn_rows else None,
+        "gdn_kernels": [
+            {
+                "name": event.get("name"),
+                "duration_us": event.get("dur"),
+                "ts": event.get("ts"),
+                "stage": _unitrace_stage(event),
+            }
+            for event in gdn_rows[:256]
+        ],
+        "fusion_decision": decision,
+        "attribution_status": decision["decision_status"],
+        "limitations": [
+            "Unitrace graph support is an evolving proof-of-concept and must be validated on this exact stack.",
+            "Partial or missing graph records are not evidence that the hidden work is absent.",
+            "Kernel names alone do not establish target/draft provenance; target-root evidence must be explicit.",
+            "Eager timing and torch XPU Event boundaries cannot establish this share.",
+        ],
+    }
+
+
+def summarize(input_path: Path, *, evidence_mode: str = "unknown", graph_coverage: str = "unknown", whole_replay_ms: Any = None, replay_reconciled: bool = False) -> dict[str, Any]:
+    result = summarize_trace(input_path)
+    result["fusion_decision"] = fusion_decision(
+        evidence_mode=evidence_mode,
+        graph_coverage=graph_coverage,
+        whole_replay_ms=whole_replay_ms,
+        replay_reconciled=replay_reconciled,
+        gdn_kernel_ms=None,
+    )
+    result["attribution_status"] = result["fusion_decision"]["decision_status"]
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", type=Path, help="one native trace file or completed profile directory")
+    parser.add_argument("input", type=Path, help="one native or unitrace trace file/directory")
+    parser.add_argument("--source", choices=("torch", "unitrace"), default="torch")
+    parser.add_argument("--evidence-mode", choices=("unknown", "profile", "eager-profile", "unitrace-profile"), default="unknown")
+    parser.add_argument("--graph-coverage", choices=("unknown", "partial", "complete"), default="unknown")
+    parser.add_argument("--whole-replay-ms", type=float)
+    parser.add_argument("--replay-reconciled", action="store_true")
     parser.add_argument("--out", type=Path, help="write JSON here as well as stdout")
     args = parser.parse_args(argv)
     try:
-        result = summarize(args.input)
+        if args.source == "unitrace":
+            result = summarize_unitrace(
+                args.input,
+                graph_coverage=args.graph_coverage,
+                whole_replay_ms=args.whole_replay_ms,
+                replay_reconciled=args.replay_reconciled,
+            )
+        else:
+            result = summarize(
+                args.input,
+                evidence_mode=args.evidence_mode,
+                graph_coverage=args.graph_coverage,
+                whole_replay_ms=args.whole_replay_ms,
+                replay_reconciled=args.replay_reconciled,
+            )
     except SummaryError as exc:
         parser.error(str(exc))
     rendered = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"

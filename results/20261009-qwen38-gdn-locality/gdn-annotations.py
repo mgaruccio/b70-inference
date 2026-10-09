@@ -4,8 +4,10 @@
 The module is imported only by the campaign's opt-in worker patch.  It does not
 import torch at module import time, so the selection/classification helpers stay
 usable by the CPU-only fixture.  During a native profile window it uses the
-public ``torch.profiler.record_function`` and ``torch.xpu.Event`` APIs.  It
-writes bounded metadata to the normal server log and leaves the native profiler
+public ``torch.profiler.record_function`` API; per-GDN ``torch.xpu.Event`` markers
+are disabled for unitrace graph capture.  The separate step-timing overlay keeps
+only external graph-replay event pairs.
+It writes bounded metadata to the normal server log and leaves the native profiler
 trace as the machine-readable attribution artifact; it does not create a
 second audit store or protocol.
 """
@@ -17,6 +19,7 @@ import functools
 import json
 import math
 import os
+import subprocess
 import threading
 import time
 from typing import Any, Mapping
@@ -25,6 +28,9 @@ from typing import Any, Mapping
 ENABLE_ENV = "B70_GDN_LOCALITY"
 MAX_SAMPLES_ENV = "B70_GDN_LOCALITY_MAX_SAMPLES"
 MAX_METADATA_ENV = "B70_GDN_LOCALITY_MAX_METADATA"
+UNITRACE_CONTROL_ENV = "B70_UNITRACE_CONTROL"
+UNITRACE_SESSION_ENV = "B70_UNITRACE_SESSION"
+XPU_EVENT_ENV = "B70_GDN_LOCALITY_XPU_EVENTS"
 FORMAT = "b70-gdn-locality-v1"
 
 
@@ -73,16 +79,19 @@ def classify_stage(*values: Any) -> str:
 
 def classify_operator(name: Any, annotation: Any = "") -> str:
     """Conservatively bucket a native trace operator for the report."""
-    text = f"{name or ''} {annotation or ''}".lower()
-    compact = text.replace("_", "").replace("-", "")
-    if any(marker in compact for marker in ("gdnattention", "gdnattn", "gateddelta")) or "gdn" in text:
+    name_text = str(name or "").lower()
+    annotation_text = str(annotation or "").lower()
+    if annotation_text.startswith("b70_gdn/"):
+        annotation_text = annotation_text.split("/", 2)[-1]
+    compact = f"{name_text} {annotation_text}".replace("_", "").replace("-", "")
+    if any(marker in compact for marker in ("gdnattention", "gdnattn", "gateddelta")) or "gdn" in compact:
         return "gdn"
-    if any(marker in text for marker in ("eagle", "spec_decode", "specdecode", "draft", "mtp")):
-        return "draft"
-    if any(marker in text for marker in ("flash_attn", "flashattention", "varlen_fwd", "self_attn", "attention")):
+    if any(marker in name_text for marker in ("flash_attn", "flashattention", "varlen_fwd", "self_attn", "attention")):
         return "attention"
-    if any(marker in text for marker in ("matmul", "mm.", "mm_", "::mm", "gemm", "addmm", "linear")):
+    if any(marker in name_text for marker in ("matmul", "mm.", "mm_", "::mm", "gemm", "addmm", "linear")):
         return "matmul"
+    if any(marker in name_text for marker in ("eagle", "spec_decode", "specdecode", "draft", "mtp")):
+        return "draft"
     return "other"
 
 
@@ -161,6 +170,7 @@ class GDNSession:
         self.samples: list[dict[str, Any]] = []
         self.metadata: list[dict[str, Any]] = []
         self.errors: list[str] = []
+        self.unitrace_control_events: list[dict[str, Any]] = []
         self._restorations: list[tuple[type[Any], str, Any]] = []
         self._hooks: list[Any] = []
         self._contexts: dict[int, list[dict[str, Any]]] = {}
@@ -213,6 +223,7 @@ class GDNSession:
             self.stopped_unix_ns = None
             self.samples = []
             self.metadata = []
+            self.unitrace_control_events = []
             self._contexts = {}
             self._object_stages = {}
             self._seen_metadata = set()
@@ -222,6 +233,46 @@ class GDNSession:
             except BaseException as exc:
                 self.errors.append(f"attach:{type(exc).__name__}:{exc}")
                 self._emit_summary(reason="attach_error")
+            if self.active:
+                self._unitrace_control("resume")
+
+
+    def _unitrace_control(self, action: str) -> None:
+        """Pause/resume an external unitrace session at profile boundaries."""
+        control = os.environ.get(UNITRACE_CONTROL_ENV, "").strip()
+        session = os.environ.get(UNITRACE_SESSION_ENV, "").strip()
+        if not control or not session:
+            return
+        row: dict[str, Any] = {
+            "action": action,
+            "control": control,
+            "session": session,
+            "started_unix_ns": time.time_ns(),
+        }
+        try:
+            completed = subprocess.run(
+                [control, f"--{action}", session],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            row.update(
+                returncode=completed.returncode,
+                stdout=completed.stdout[-512:],
+                stderr=completed.stderr[-512:],
+                finished_unix_ns=time.time_ns(),
+            )
+            if completed.returncode != 0:
+                self.errors.append(f"unitrace-{action}:returncode={completed.returncode}")
+        except Exception as exc:
+            row.update(
+                returncode=None,
+                error=f"{type(exc).__name__}:{exc}",
+                finished_unix_ns=time.time_ns(),
+            )
+            self.errors.append(f"unitrace-{action}:{type(exc).__name__}:{exc}")
+        self.unitrace_control_events.append(row)
 
     def _roots(self, worker: Any) -> list[tuple[str, Any]]:
         runner = getattr(worker, "model_runner", None)
@@ -310,7 +361,7 @@ class GDNSession:
             "host_start_ns": time.perf_counter_ns(),
             "sample_enabled": sample_enabled,
         }
-        if sample_enabled:
+        if sample_enabled and os.environ.get(XPU_EVENT_ENV, "1").strip().lower() not in {"0", "false", "no", "off"}:
             xpu = getattr(self.torch, "xpu", None)
             event_type = getattr(xpu, "Event", None)
             if callable(event_type):
@@ -416,6 +467,8 @@ class GDNSession:
                 except Exception as exc:
                     self.errors.append(f"restore:{type(exc).__name__}:{exc}")
             self._restorations.clear()
+            if self.active:
+                self._unitrace_control("pause")
             if self.active and self.torch is not None:
                 try:
                     xpu = getattr(self.torch, "xpu", None)
@@ -462,6 +515,9 @@ class GDNSession:
             "xpu_event_durations_ms": durations,
             "host_elapsed_durations_ms": host_durations,
             "max_samples": self.max_samples,
+            "unitrace_control_required": bool(os.environ.get(UNITRACE_CONTROL_ENV, "").strip()),
+            "per_gdn_xpu_event_markers_enabled": os.environ.get(XPU_EVENT_ENV, "1").strip().lower() not in {"0", "false", "no", "off"},
+            "unitrace_control_events": self.unitrace_control_events,
             "graph_inner_ops_may_be_hidden": True,
             "eager_profile_is_required_for_inner_operator_kernel_attribution": True,
             "errors": self.errors,

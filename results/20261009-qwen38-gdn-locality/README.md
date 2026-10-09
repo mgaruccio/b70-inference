@@ -1,103 +1,163 @@
 # Qwen 3.8 B70 GDN-locality Phase0
 
-**Development harness only.** This directory queues and measures attribution; it
+**Development harness only.** This directory queues graph-aware attribution; it
 contains no GDN kernel candidate and makes no speed claim. The lead owns all
 inference-host execution. Nothing here launches Docker or touches the remote
 host during CPU-only validation.
 
-## Scope
+## Scope and hard boundary
 
-Phase0 is deliberately finite:
+The accepted question is whether Lithos-metal's locality ideas justify a narrow
+Intel-native conv-to-GDN workgroup fusion for Qwen3.8 MTP4 on the Arc Pro B70.
+The native five-row MTP4 kernel already retains the recurrent state and
+convolution window on chip; only the conv-to-rule intermediate and one dispatch
+remain candidates. Rollback checkpoints and the existing XPU ABI must remain.
 
-1. run the pinned native MTP4 K4 golden configuration uninstrumented at 512 and
-   65,536 input tokens (one warmup plus six measured requests per point);
-2. run one separate 65,536-token graph-enabled native profile after the baseline;
-3. classify the native trace as far as the graph boundary permits; and
-4. run the explicitly labelled eager diagnostic only if graph replay hides the
-   GDN operator needed for attribution.
+The only candidate gate is **at least 5% of complete, reconciled target
+graph-replay device time**. Eager-only timing, a partial graph trace, a missing
+trace, an inferred eager-to-graph ratio, or a visible draft-only trace can
+neither select nor reject fusion. Such evidence is reported as
+`inconclusive`. No whole-engine port, production promotion, model/precision/
+acceptance change, Muse/DSpark expansion, or new persistent service/store is in
+scope.
 
-The full 512/8K/32K/64K three-arm campaign is **not** run by this harness. It is
-queued only after a candidate is warranted and parity/correctness gates pass.
-There is no whole-engine port, production promotion, model/dtype/acceptance
-change, or Muse/DSpark work.
+## Pinned serving contract
 
-## Pinned contract
-
-- one idle `inference-host` B70 at `275000000` microwatts (275 W);
-- no running containers, stopped Glimmer, and unchanged production launcher
-  SHA256 `63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4`;
-- image digest `f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f`
-  (vLLM `ac7509e2b`);
+- one idle `inference-host` Intel Arc Pro B70 at `275000000` microwatts (275 W);
+- no running containers, stopped Glimmer, unchanged production launcher SHA256
+  `63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4`;
+- image `vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f`;
 - native MTP K4, GPTQ symmetric G128 target, FP16 compute, FP8 KV, C1,
   `max-model-len=212992`, `max-num-batched-tokens=8192`, utilization `0.95`,
   graph capture sizes `[1,2,4,8]`, prefix cache off, thinking off;
-- the existing `/tokenize` and streaming `/v1/completions` journey, greedy
-  seed 42, temperature 0, EOS ignored, 128 forced output tokens;
-- all archived model/patch/runtime mounts and campaign source mounts are
-  read-only; only the new `/output` mount is writable.
+- existing `/tokenize` renderer and streaming `/v1/completions` journey,
+  greedy temperature 0, seed 42, EOS ignored, 128 forced output tokens.
 
-`run-step-profile.py` remains the lifecycle owner: it performs host ownership
-checks, the real HTTP gates, metrics/counter capture, runtime identity and
-cleanup of only its observed container. The wrapper refuses an existing output
-directory and assigns one mode-specific container name.
+The normal uninstrumented baseline was already queued by the lead through the
+unchanged four-way runner. Do **not** repeat it from this harness. Its fresh
+output is the lead-owned sibling:
 
-## Remote staging and execution
+```text
+/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality/baseline-original-01
+```
 
-Run these from the repository checkout. `--stage-only` requires that the remote
-campaign directory does not already exist and stages only the new scripts plus
-the canonical timing overlay/patch. It does not run Docker.
+## Stage, build, and run
+
+All commands below are issued by the lead, serially, on `inference-host`. The
+staging directory is intentionally separate from the results directory so the
+existing `20260911-qwen38-step-profile-64k/run-step-profile.py` sibling lookup
+continues to work. Staging creates no runtime container.
 
 ```bash
 CAMPAIGN=/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality
+HARNESS=/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-gdn-locality-harness
+
 python3 results/20261009-qwen38-gdn-locality/run-phase0.py \
-  --stage-only --remote-host inference-host --remote-dir "$CAMPAIGN"
+  --stage-only --remote-host inference-host --remote-dir "$HARNESS"
 
-ssh inference-host python3 -u "$CAMPAIGN/run-phase0.py" \
-  --mode baseline --out "$CAMPAIGN/baseline-01"
+ssh inference-host bash "$HARNESS/build-unitrace.sh"
+```
 
-ssh inference-host python3 -u "$CAMPAIGN/run-phase0.py" \
+`build-unitrace.sh` clones Intel PTI `pti-1.0.0` source at exact commit
+`887bba6e28ce84cc0d3813ef876e24add107c318`, then builds it in the pinned vLLM
+image with no GPU device, no package/driver mutation, bounded CPU/memory/time,
+and a read-only cached compiler mount. It writes only fresh
+`unitrace-src/`, `unitrace-build/`, and `unitrace-install/` children under the
+harness directory. The exact source's supported CMake switches disable MPI,
+XPTI, and OpenCL; it has no `BUILD_WITH_OMP` or `BUILD_WITH_PERFETTO` switch,
+so invented flags are not passed. Level Zero remains mandatory.
+
+After the build succeeds and the host is idle again, run the normal graph-enabled
+serving process under unitrace. The remote wrapper supplies the install root by
+default; the explicit form is shown for auditability:
+
+```bash
+ssh inference-host python3 -u "$HARNESS/run-phase0.py" \
+  --mode unitrace-profile \
+  --out "$CAMPAIGN/diagnostic-unitrace-01" \
+  --unitrace-install "$HARNESS/unitrace-install"
+```
+
+The disposable container launches:
+
+```text
+unitrace --start-paused --device-timing --chrome-kernel-logging \
+  --chrome-device-logging --session b70gdnlocality \
+  --output-dir-path /output/unitrace vllm serve ...
+```
+
+The original vLLM command remains unchanged beneath the wrapper. The worker's
+normal `/start_profile` hook resumes the unitrace session after the first
+non-empty streamed output; `/stop_profile` pauses it after the bounded profile
+window. Existing deferred XPU event pairs time complete graph replays. No
+unsupported in-graph PyTorch event markers are added. If the binary cannot
+start, session control fails, no trace is emitted, or graph records are partial,
+the run is a blocker/inconclusive result and no candidate phase is authorized.
+
+## Trace review and decision gate
+
+The unitrace artifact is checked after the owned container exits:
+
+```bash
+ssh inference-host python3 -u "$HARNESS/summarize-gdn.py" \
+  "$CAMPAIGN/diagnostic-unitrace-01/unitrace" \
+  --source unitrace \
+  --out "$CAMPAIGN/diagnostic-unitrace-01/unitrace-summary.json"
+```
+
+The default report deliberately remains inconclusive. Only after manually
+reviewing the trace against the `step-timing/` whole-replay events may the lead
+rerun the pure summarizer with explicit coverage and reconciliation facts:
+
+```bash
+ssh inference-host python3 -u "$HARNESS/summarize-gdn.py" \
+  "$CAMPAIGN/diagnostic-unitrace-01/unitrace" \
+  --source unitrace \
+  --graph-coverage complete \
+  --whole-replay-ms <measured-target-replay-ms> \
+  --replay-reconciled \
+  --out "$CAMPAIGN/diagnostic-unitrace-01/unitrace-summary-reconciled.json"
+```
+
+`fusion_decision.fusion_selection_allowed` can become true only for complete
+normal graph-enabled unitrace coverage with explicit target-root provenance, a
+positive whole-target replay measurement, explicit reconciliation, and a detected
+explicit-target GDN kernel share of at least 5%. Eager `--mode eager-profile`
+remains an operation-identification control only; it can never establish a share
+or select/reject fusion.
+
+The older graph torch profile remains available for visibility diagnostics:
+
+```bash
+ssh inference-host python3 -u "$HARNESS/run-phase0.py" \
   --mode profile --out "$CAMPAIGN/diagnostic-graph-01"
 ```
 
-The staging wrapper can combine the first two steps for a fresh campaign:
+Its summary is diagnostic only. The separate eager profile is likewise diagnostic
+only and must not be used as a throughput comparison.
+
+## CPU-only checks
 
 ```bash
-python3 results/20261009-qwen38-gdn-locality/run-phase0.py \
-  --stage --remote-host inference-host --remote-dir "$CAMPAIGN" \
-  --mode baseline --out-name baseline-01
+python3 -m py_compile \
+  results/20261009-qwen38-gdn-locality/{run-phase0.py,gdn-annotations.py,gdn-patch.py,summarize-gdn.py,test-phase0.py}
+python3 results/20261009-qwen38-gdn-locality/test-phase0.py
 ```
 
-If `diagnostic-graph-01` reports `insufficient_gdn_visibility`, run the separate
-explicitly non-baseline diagnostic:
+The fixture verifies explicit target-root provenance even when a target module
+contains `mtp`, recognizes `aten::mm`, rejects eager/partial fusion decisions,
+and validates the pinned unitrace build contract. It imports no torch/vLLM and
+uses no GPU.
 
-```bash
-ssh inference-host python3 -u "$CAMPAIGN/run-phase0.py" \
-  --mode eager-profile --out "$CAMPAIGN/diagnostic-eager-01"
-```
+## Fresh research record
 
-Summarize a retained native trace without importing vLLM:
+- <https://raw.githubusercontent.com/lithos-ai/lithos-metal/main/docs/design/mixers.md> — locality/task DAG ideas are useful, but Lithos's fixed row recipes do not transfer unchanged to five-row MTP4.
+- <https://docs.pytorch.org/docs/2.13/profiler.html> — CPU scopes and device timing are distinct; graph replay can hide inner work.
+- <https://github.com/pytorch/pytorch/blob/v2.13.0/c10/xpu/XPUEvent.h> — XPU events provide boundary timing; they are not supported per-node graph markers.
+- <https://github.com/intel/llvm/blob/sycl/sycl/doc/extensions/experimental/sycl_ext_oneapi_graph.asciidoc> — graph profiling is aggregate and can alter optimization behavior.
+- <https://github.com/intel/pti-gpu/blob/master/tools/unitrace/README.md> — unitrace documents `--start-paused`, session `--resume`/`--pause`, device timing, and Chrome kernel/device logging; the build pins the exact source commit separately.
+- <https://intel.github.io/pti-gpu/whatsnew.html> — SYCL graph tracing is evolving/initial proof-of-concept; exact-stack coverage must be validated.
 
-```bash
-ssh inference-host python3 -u "$CAMPAIGN/summarize-gdn.py" \
-  "$CAMPAIGN/diagnostic-graph-01/profile" \
-  --out "$CAMPAIGN/diagnostic-graph-01/gdn-summary.json"
-```
-
-The exact commands, environment, HTTP payloads, raw SSE, metrics counters,
-launch argv, runtime identity, profiler trace and cleanup/host checks remain in
-the remote output directory. Do not fabricate or copy results into this
-checkout.
-
-## Attribution interpretation
-
-`gdn-annotations.py` is active only after the native `/start_profile` boundary
-and uses `torch.profiler.record_function` plus deferred `torch.xpu.Event`
-pairs. It records bounded call metadata (including tensor shapes and GDN
-metadata fields) in the ordinary server log. `summarize-gdn.py` uses the native
-trace's CPU `External id` correlations and operator `Input Dims` to distinguish
-GDN, matmul, full attention, draft, and other device work.
-
-Graph replay can hide inner kernels. Graph replay timing is therefore
-attribution evidence, never a throughput number. If the GDN operator is not
-visible, the eager profile is the required diagnostic fallback; its extra
-instrumentation and `--enforce-eager` are never baseline settings.
+No result in this directory is publishable or a production recommendation until
+Benchmarking Standards' paired comparison, long-context, serving, quality,
+and environment requirements are separately completed.
