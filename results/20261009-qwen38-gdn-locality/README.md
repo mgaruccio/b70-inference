@@ -5,19 +5,22 @@ contains no GDN kernel candidate and makes no speed claim. The lead owns all
 inference-host execution. Nothing here launches Docker or touches the remote
 host during CPU-only validation.
 
-**Execution resumed:** calibrated public fill markers now bracket every observed
-native512 target replay; the predeclared64K profiling cell is in progress.
-Development runs use the explicitly authorized current-boot CPUFreq boost-off
-mitigation and full pre/post guards. The earlier MCA trigger and BIOS CO remain
-unresolved; this is not proof of complete host stability. See [`execution.md`](execution.md).
+**P0 complete — pinned64K/MTP4 GDN fusion gate not met:** GDN kernels occupy
+56.001976 / 1913.950520ms = **2.925989%**, below the predeclared5% threshold.
+All42 measured targets have complete public-marker/device linkage and work/gap
+accounting. P1/P2/P3 are not admitted; no fusion or speedup is claimed.
+Development runs used current-boot boost-off; BIOS CO−20/MCA cause remain
+unresolved. This is not complete host-stability proof. See [`execution.md`](execution.md)
+and raw [`native-public-fill64k-01.tar.gz`](native-public-fill64k-01.tar.gz).
 
 ## Scope and hard boundary
 
 The accepted question is whether Lithos-metal's locality ideas justify a narrow
 Intel-native conv-to-GDN workgroup fusion for Qwen3.8 MTP4 on the Arc Pro B70.
-The native five-row MTP4 kernel already retains the recurrent state and
-convolution window on chip; only the conv-to-rule intermediate and one dispatch
-remain candidates. Rollback checkpoints and the existing XPU ABI must remain.
+The inspected public five-row MTP4 source retains recurrent state and convolution
+windows on chip; exact installed-kernel source parity remains unproved. The narrow
+candidate was the conv-to-rule intermediate and one dispatch, preserving rollback
+checkpoints and the existing XPU ABI. The measured64K gate does not admit it.
 
 The only candidate gate is **at least 5% of complete, reconciled target
 graph-replay device time**. Eager-only timing, a partial graph trace, a missing

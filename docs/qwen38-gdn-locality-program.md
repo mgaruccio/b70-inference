@@ -1,6 +1,6 @@
 # Qwen 3.8 B70 GDN locality / megakernel program
 
-**Status: native baseline completed; graph attribution blocked, development-only.**
+**Status: P0 complete; pinned64K/MTP4 GDN kernel share2.925989% <5%, so conditional P1/P2/P3 are not admitted. Development-only; see [final execution evidence](../results/20261009-qwen38-gdn-locality/execution.md).**
 The second tracer attempt coincided with a fatal AMD execution-unit MCA/data-fabric
 reset signature. Its trigger is unresolved; GPU work remains paused. See
 `results/20261009-qwen38-gdn-locality/execution.md` for ordinary
