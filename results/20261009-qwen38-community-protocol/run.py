@@ -18,6 +18,8 @@ BLOBS = {'b70-realworld-context-harness.py': 'a4ca3c28c2d87436f80e93c42cb9f9712f
          'b70-generate-exact-prompts.py': '645c021089c82d671a0c332497cfe2ec503c3f57'}
 PREFILL_PROMPTS = None
 CHECK_BUILD = None
+CELLS = ((512, 128), (8192, 128), (8192, 1), (130944, 128))
+DECODE_PROMPTS = None
 
 
 def main():
@@ -74,7 +76,13 @@ def main():
             if CHECK_BUILD:
                 CHECK_BUILD(OUT, False)
             execute(['docker', 'cp', str(OUT / 'b70-generate-exact-prompts.py'), f'{cid}:/tmp/b70-community-prompts.py'], 'copy-generator.log', 30)
-            previous_prompts = OUT.parent / 'current-serving/prompts.json'
+            previous_prompts = DECODE_PROMPTS or OUT.parent / 'current-serving/prompts.json'
+            if DECODE_PROMPTS and not previous_prompts.exists():
+                targets = ','.join(str(p) for p in sorted({p for p, g in CELLS if g > 1}))
+                execute(['docker', 'exec', cid, '/opt/venv/bin/python', '/tmp/b70-community-prompts.py',
+                         '--model', '/model', '--output', '/tmp/b70-community-decode.json',
+                         '--targets', targets, '--per-target', '6'], 'generate-decode-prompts.log', 7200)
+                execute(['docker', 'cp', f'{cid}:/tmp/b70-community-decode.json', str(previous_prompts)], 'copy-decode-prompts.log', 60)
             (OUT / 'prompts.json').write_bytes(previous_prompts.read_bytes())
             # New entropy for the prefill cell: do not reuse the decode prompts
             # against the unchanged production setup's enabled prefix cache.
@@ -86,7 +94,7 @@ def main():
                          '--targets', '8192', '--per-target', '6'], 'generate-prompts.log')
                 execute(['docker', 'cp', f'{cid}:/tmp/b70-community-prefill.json', str(OUT / 'prefill-prompts.json')], 'copy-prompts.log', 30)
             summaries = []
-            for prompt, output in ((512, 128), (8192, 128), (8192, 1), (130944, 128)):
+            for prompt, output in CELLS:
                 label = f'p{prompt}-g{output}'
                 print('Starting ' + label, flush=True)
                 execute(['/usr/bin/python3', '-B', str(OUT / 'b70-realworld-context-harness.py'),

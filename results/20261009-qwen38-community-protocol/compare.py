@@ -107,8 +107,15 @@ def main():
     assert any(contract['candidate_library_sha256'] in line for line in evidence['eligible_dispatch_log'])
     cells = []
     all_hashes = set()
-    for prompt, output, published in ((512, 128, 112.65), (8192, 128, 103.63), (8192, 1, 1696), (130944, 128, 62.52)):
-        cell = f'p{prompt}-g{output}'
+    published_rates = {(512, 128): 112.65, (8192, 128): 103.63,
+                       (8192, 1): 1696, (130944, 128): 62.52}
+    labels = [entry['cell'] for entry in load(baseline / 'summary.json')]
+    assert labels and len(labels) == len(set(labels))
+    assert labels == [entry['cell'] for entry in load(candidate / 'summary.json')]
+    for cell in labels:
+        prompt, output = map(int, cell.removeprefix('p').split('-g'))
+        assert cell == f'p{prompt}-g{output}'
+        published = published_rates.get((prompt, output))
         br, bs = validate(baseline, cell, prompt, output)
         cr, cs = validate(candidate, cell, prompt, output)
         hashes = [r['messages_sha256'] for r in br]
@@ -122,7 +129,7 @@ def main():
         close(cm, cs[summary_key]['median'])
         cells.append({'cell': cell, 'metric': key, 'baseline': bs[summary_key], 'shared_kv': cs[summary_key],
                       'delta_percent': (cm / bm - 1) * 100, 'published_reference': published,
-                      'vs_published_descriptive_percent': (cm / published - 1) * 100,
+                      'vs_published_descriptive_percent': (cm / published - 1) * 100 if published is not None else None,
                       'identical_output_pairs': sum((x['reasoning_text'], x['content_text']) == (y['reasoning_text'], y['content_text']) for x, y in zip(br, cr)),
                       'baseline_request_seconds_median': statistics.median(r['total_s'] for r in br),
                       'shared_kv_request_seconds_median': statistics.median(r['total_s'] for r in cr),
@@ -130,7 +137,7 @@ def main():
                       'shared_kv_proposed_accepted': [sum(r[k] for r in cr) for k in ('mtp_proposed_tokens', 'mtp_accepted_tokens')],
                       'measured_prompt_hashes': hashes})
     print(json.dumps({'tier': 'development; not standard-publication or quality qualification',
-                      'validation': '40 measured HTTP records checked against archived raw SSE; inputs/config matched except candidate mounts/env/hook',
+                      'validation': f'{len(all_hashes) * 2} measured HTTP records checked against archived raw SSE; inputs/config matched except candidate mounts/env/hook',
                       'baseline_runner_exit': load(baseline / 'exit.json'),
                       'candidate_runner_exit': load(candidate / 'exit.json'),
                       'candidate_execution_evidence': evidence, 'cells': cells}, indent=2))

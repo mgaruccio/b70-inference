@@ -1,6 +1,83 @@
 # Shared-KV build: community-protocol development measurements
 
-## Latest: matched 230 W rerun — passed
+## Latest: full-context 230 W extension — passed
+
+The decode benefit extends beyond 128K: **+9.35% at 160K, +10.25% at 192K,
++10.08% at the full configured limit**. In this sample it levels off near 10%,
+rather than continuing to increase monotonically. Both builds completed all
+five maximum-length requests: **212864 input + 128 output = 212992 tokens**.
+
+| Input tokens | Native decode tok/s | Shared-KV decode tok/s | Difference |
+|---|---:|---:|---:|
+| 130944 (~128K, preceding run) | 61.18 | 66.03 | +7.92% |
+| 163840 (160K) | 50.36 | 55.07 | +9.35% |
+| 196608 (192K) | 49.24 | 54.29 | +10.25% |
+| 212864 (full window minus output) | 46.75 | 51.46 | +10.08% |
+
+These are post-first-token decode medians, excluding prefill. The 128K row is
+from the preceding matched 230 W run, not a newly rerun control. The three new
+points each used five measured requests after generic and full-output shape
+warmups. Native and candidate shared the same freshly generated prompt file,
+image, model and serving settings; no measured prefix-cache hits occurred.
+
+### Prefill/TTFT and whole-request latency
+
+TTFT includes prefill and first-token/endpoint overhead; it is not an isolated
+engine-prefill measurement. Each column below is a separately computed median.
+
+| Input tokens | Native TTFT (s) | Shared-KV TTFT (s) | Native total (s) | Shared-KV total (s) |
+|---|---:|---:|---:|---:|
+| 163840 | 254.816 | 254.871 | 257.338 | 257.174 |
+| 196608 | 357.288 | 357.356 | 359.778 | 359.681 |
+| 212864 | 452.989 | 453.081 | 455.763 | 455.549 |
+
+At the full limit, median post-first decode time fell from **2.717 s to 2.468 s**,
+but total latency fell by only **0.214 s (~0.047%)**. There is no measured prefill
+speedup: ingesting these cold long prompts dominates the 128-token requests.
+
+All 30 new measured SSE records validated, including exact token counts,
+first-generated timing, reconstructed text and formulas. Both arms exited
+successfully and passed graph/host checks (22 native and 21 candidate FULL
+runtime-statistics rows). The GPU cap was 230 W in both arms and the original
+275 W was restored with an idle host. Production and the kernel were unchanged.
+
+Output text matched on 3/5, 5/5 and 3/5 pairs at increasing lengths. Draft
+accepted/proposed counts were native 485/652, 492/616, 479/590 versus shared-KV
+479/656, 491/620, 476/602. Native decode ranges were 46.12–64.09, 47.67–52.70,
+45.58–57.95 tok/s; candidate ranges were 49.00–67.56, 54.22–58.04, 46.17–64.09.
+These are sequential five-prompt development measurements, not a confidence
+interval or proof of quality neutrality. Quality qualification remains unresolved.
+
+The [vLLM context-limit definition](https://docs.vllm.ai/en/latest/cli/serve/#--max-model-len)
+includes prompt plus output tokens; 128 output tokens were reserved at the last
+point. No published community reference was available for these new cells;
+`comparison-long-230w.json` records those reference fields as null.
+
+Executed on `inference-host`:
+
+```sh
+python3 -B /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/run-long-context.py
+```
+
+`benchmark-long-230w.tar.gz` retains `native-long-230w-01/`,
+`shared-kv-long-230w-01/` and `power-long-230w-01/`, including exact generated
+prompts, public sources, launchers, per-request timing/SSE, graph statistics,
+guards, runner sources and power restoration. `run-long-context.log` contains
+the original successful controller output. After extracting the archive:
+
+```sh
+python3 -B compare.py /tmp/b70-community-long-230w-verified/native-long-230w-01 \
+  /tmp/b70-community-long-230w-verified/shared-kv-long-230w-01 > comparison-long-230w.json
+sha256sum -c SHA256SUMS
+```
+
+`compare.py` now derives cells from the archived summaries and still reproduces
+the preceding 275 W and 230 W comparisons byte-for-byte. Raw `results.json`
+records contain `ttft_s`, `post_first_generation_s` and `total_s` for the timing
+medians above. Existing controller defaults are preserved; the long-context
+entry point selects only the new cells, shared prompt path and output names.
+
+## Earlier: matched 230 W short/128K rerun — passed
 
 Both native S+M1 and our shared-KV build completed all four cells at **230 W**.
 Five measured requests per cell followed generic and shape warmups. All 40 raw

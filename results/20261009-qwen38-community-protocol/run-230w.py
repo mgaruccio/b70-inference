@@ -21,6 +21,8 @@ SUITE = CAMPAIGN / 'power-230w-01'
 POWER = Path('/sys/class/drm/card0/device/hwmon/hwmon2/power1_cap')
 PRODUCTION = Path('/home/mike/inference/launchers/start-qwen38.sh')
 PRODUCTION_SHA = '63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4'
+RUN_SUFFIX = '230w-01'
+RUN_OPTIONS = {}
 
 
 def digest(path):
@@ -55,7 +57,7 @@ def main():
     original_guard = runpy.run_path(str(common['GUARD']))
     original_cap = POWER.read_text().strip()
     assert original_cap == '275000000', 'Unexpected initial power; do not overwrite another setting'
-    for name in ('native-230w-01', 'shared-kv-230w-01'):
+    for name in ('native-' + RUN_SUFFIX, 'shared-kv-' + RUN_SUFFIX):
         assert not (CAMPAIGN / name).exists(), f'Output already exists: {name}'
     SUITE.mkdir(exist_ok=False)
     (SUITE / 'run-230w.py').write_bytes(Path(__file__).read_bytes())
@@ -96,7 +98,7 @@ def main():
         set_power('230000000')
         print('Verified GPU cap: 230 W', flush=True)
         for arm in ('native', 'shared-kv'):
-            out = CAMPAIGN / (arm + '-230w-01')
+            out = CAMPAIGN / (arm + '-' + RUN_SUFFIX)
 
             def check_build(directory, final):
                 assert POWER.read_text().strip() == '230000000'
@@ -127,6 +129,7 @@ def main():
                 OUT=out, LAUNCHER=SUITE / (arm + '.sh'), GUARD=guard_path,
                 GUARD_SHA256=digest(guard_path), CHECK_BUILD=check_build,
                 PREFILL_PROMPTS=CAMPAIGN / 'current-serving-02/prefill-prompts.json')
+            run['main'].__globals__.update(RUN_OPTIONS)
             print('Starting ' + arm + ' arm', flush=True)
             run['main']()
             assert digest(PRODUCTION) == PRODUCTION_SHA
