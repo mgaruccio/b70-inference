@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import runpy
+import re
 import signal
 import subprocess
 import time
@@ -80,9 +81,19 @@ def prepare_client(out):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--budget', type=int, choices=(8192, 16384, 32768), required=True)
+    parser.add_argument('--budget', type=int, choices=(8192, 12288, 16384, 32768), required=True)
+    parser.add_argument('--tuned-memory', action='store_true',
+                        help='12288 screen only: .965 utilization, same 152 KV blocks')
+    parser.add_argument('--profile-prefill', action='store_true',
+                        help='Diagnostic unitrace capture of one cold 32K prefill on the original baseline')
     args = parser.parse_args()
-    out = OUT / f'batch-{args.budget}'
+    if args.tuned_memory and args.budget != 12288:
+        parser.error('--tuned-memory is restricted to the 12288-token screen')
+    if args.profile_prefill and (args.budget != 8192 or args.tuned_memory):
+        parser.error('prefill profiling requires the unchanged 8192/.95 baseline')
+    out = OUT / (f'batch-{args.budget}' + ('-util0965-blocks152' if args.tuned_memory else ''))
+    if args.profile_prefill:
+        out = OUT / 'profile-32k'
     out.mkdir(parents=True, exist_ok=False)
     assert sha(PRODUCTION) == PRODUCTION_SHA
     assert sha(LIBRARY) == LIBRARY_SHA
@@ -98,6 +109,20 @@ def main():
     assert launcher.count('--max-num-batched-tokens 8192') == 1
     launcher = launcher.replace('--max-num-batched-tokens 8192', f'--max-num-batched-tokens {args.budget}')
     launcher = launcher.replace('0.0.0.0:${PORT:-8000}:8000', '127.0.0.1:8000:8000')
+    if args.tuned_memory:
+        assert launcher.count('--gpu-memory-utilization 0.95') == 1
+        launcher = launcher.replace('--gpu-memory-utilization 0.95',
+                                    '--gpu-memory-utilization 0.965 --num-gpu-blocks-override 152')
+    if args.profile_prefill:
+        unitrace = ROOT / '20261009-qwen38-gdn-locality-harness-retry2/unitrace-install'
+        assert (unitrace / 'bin/unitrace').is_file()
+        (out / 'unitrace').mkdir()
+        assert launcher.count('  --entrypoint bash') == launcher.count('exec vllm serve') == 1
+        mounts = f'  -v {unitrace}:/unitrace:ro -v {out}/unitrace:/prefill-trace \\\n'
+        launcher = launcher.replace('  --entrypoint bash', mounts + '  --entrypoint bash')
+        launcher = launcher.replace('exec vllm serve',
+            'exec /unitrace/bin/unitrace --start-paused --device-timing --chrome-kernel-logging '
+            '--session b70prefill --output-dir-path /prefill-trace vllm serve')
     (out / 'launcher.sh').write_text(launcher)
     run(['bash', '-n', str(out / 'launcher.sh')], out / 'bash-check.txt')
     client = prepare_client(out)
@@ -107,6 +132,9 @@ def main():
     commands = []
     status = {'budget': args.budget, 'tier': 'development', 'success': False,
               'original_power_uw': original_power, 'experiment_power_uw': '230000000'}
+    status['gpu_memory_utilization'] = 0.965 if args.tuned_memory else 0.95
+    status['num_gpu_blocks_override'] = 152 if args.tuned_memory else None
+    status['profile_prefill'] = args.profile_prefill
     process = cid = None
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, interrupt)
@@ -140,6 +168,9 @@ def main():
         assert cid
         execute(['docker', 'inspect', cid], 'container.json', 30)
         log = (out / 'server.log').read_text(errors='replace')
+        if args.tuned_memory:
+            profiled = re.findall(r'Overriding num_gpu_blocks=(\d+) with num_gpu_blocks_override=152', log)
+            assert profiled and all(int(n) >= 152 for n in profiled), 'Reject allocation beyond the profiled budget'
         eligible = [s for s in log.splitlines() if '"event":"eligible-dispatch"' in s and LIBRARY_SHA in s]
         unsupported = [s for s in log.splitlines() if '"event":"unsupported-q5"' in s]
         put(out / 'dispatch.json', {'eligible': eligible, 'unsupported': unsupported})
@@ -152,7 +183,8 @@ def main():
             execute(['docker', 'cp', f'{cid}:/tmp/prefill-prompts.json', str(prompts)], 'copy-prompts.txt', 60)
         # A real 128-token request verifies that decode still exercises shared-KV.
         cells = [(512, 128, PRIOR / 'current-serving/prompts.json')]
-        cells.extend((n, 1, prompts) for n in TARGETS)
+        if not args.profile_prefill:
+            cells.extend((n, 1, prompts) for n in TARGETS)
         summary = []
         for n, output, prompt_path in cells:
             label = f'p{n}-g{output}'
@@ -164,6 +196,28 @@ def main():
             summary.append({'cell': label, 'summary': result['summary']})
             put(out / 'summary.json', summary)
             print(json.dumps(summary[-1]), flush=True)
+        if args.profile_prefill:
+            request = runpy.run_path(str(client))['request']
+            samples = [p for p in json.loads(prompts.read_text())['prompts'] if p['target_tokens'] == 32768]
+            def sample(index, name):
+                value = request('http://127.0.0.1:8000/v1/chat/completions',
+                                'http://127.0.0.1:8000', 'qwen38', samples[index]['messages'],
+                                1, str(out / (name + '.sse.jsonl')), 'cold',
+                                expected_prompt_tokens=32768, ignore_eos=True)
+                put(out / (name + '.json'), value)
+                assert value['prompt_tokens'] == 32768 and value['completion_tokens'] == 1
+                assert value['prefix_cache_hits_delta'] == 0
+                return value
+            sample(0, 'shape-warmup')
+            print('Resuming unitrace for one cold 32K prefill', flush=True)
+            execute(['docker', 'exec', cid, '/unitrace/bin/unitrace', '--resume', 'b70prefill'], 'trace-resume.txt', 30)
+            try:
+                measured = sample(1, 'profiled-prefill')
+            finally:
+                execute(['docker', 'exec', cid, '/unitrace/bin/unitrace', '--pause', 'b70prefill'], 'trace-pause.txt', 30)
+            print(json.dumps({'profiled_prompt_tokens': measured['prompt_tokens'],
+                              'completion_tokens': measured['completion_tokens'],
+                              'ttft_s_diagnostic_only': measured['ttft_s']}), flush=True)
         adapter = runpy.run_path(str(ROOT / '20260913-qwen38-native-grouped-verify/run-serving.py'))
         adapter['_candidate_execution_evidence'](out)
         assert '"event":"unsupported-q5"' not in (out / 'server.log').read_text(errors='replace')
