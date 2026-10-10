@@ -12,7 +12,7 @@ Our experimental shared-KV path for Qwen3.8-27B: 46.75 → 51.46 tok/s at a full
 
 Matched C1, n=5. Quality not yet cleared.
 
-https://github.com/mgaruccio/b70-inference/blob/main/docs/qwen38-shared-kv-long-context.md
+https://github.com/mgaruccio/b70-inference#experimental-shared-kv-recipe
 ```
 
 Image: [full-context PNG](images/qwen38-shared-kv-full-context.png)
@@ -44,6 +44,45 @@ matched native MTP4 at 230 W. At 130,944 input tokens: 61.18 to 66.03 tok/s,
 at 212,864: 46.75 to 51.46, +10.08%. All requests generate 128 tokens, with five
 measured samples per point. The ~128K result is from the preceding matched run.
 Experimental; quality not yet cleared.
+
+## Expanded post — Lithos attribution and try-it link
+
+Long-form draft; requires long-post support or splitting into a thread. The
+inspiration is the community's megakernel work, particularly **lithos-metal**,
+not the MLXFast challenge. No original X handle or post URL has been verified;
+credit the project rather than inventing a personal attribution.
+
+```text
+The community's megakernel work—particularly lithos-metal on Apple Silicon—got us looking at what similar data-locality ideas could do for inference on Intel's Arc Pro B70.
+
+We didn't port their engine or build a whole-model megakernel. We profiled our vLLM/XPU setup and pursued a narrower optimization: sharing KV-cache work across MTP verification positions.
+
+MTP4 verification processes five query positions. Our custom attention path groups those queries so the kernel can reuse K/V data across them, while preserving each position's causal mask.
+
+The result becomes more interesting as the context grows:
+• ~128K: +7.9% decode throughput
+• 160K: +9.3%
+• 192K: +10.3%
+• Full configured window: +10.1%
+
+At 212,864 input tokens + 128 generated tokens, Qwen3.8-27B went from 46.75 to 51.46 tok/s on one B70 at 230 W.
+
+Same machine, model, prompts and serving settings. Five measured prompts per point.
+
+This is why long-context optimization matters for agents: the accumulated code, conversation and tool history stays relevant while generating subsequent tokens. Faster decode with that large context is worth pursuing independently of initial prompt-ingestion time.
+
+Still experimental: quality qualification isn't cleared, and we haven't measured whole-agent task speedup.
+
+Credit to the lithos-metal community for the work that prompted this investigation:
+https://github.com/lithos-ai/lithos-metal
+
+Experimental recipe, setup checks and native fallback:
+https://github.com/mgaruccio/b70-inference#experimental-shared-kv-recipe
+```
+
+The recipe is an advanced, host-adapted integration guide, not a portable
+one-command installer. The [research update](qwen38-shared-kv-long-context.md)
+links the methodology and raw evidence. All drafts remain **unposted**.
 
 ## Posting notes
 
