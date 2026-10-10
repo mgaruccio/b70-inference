@@ -1,5 +1,71 @@
 # Shared-KV build: community-protocol development measurements
 
+## Latest: matched 230 W rerun — passed
+
+Both native S+M1 and our shared-KV build completed all four cells at **230 W**.
+Five measured requests per cell followed generic and shape warmups. All 40 raw
+SSE records validated; identical retained prompts and client were used in both
+arms. Both runner exits report success, FULL graph runtime statistics were
+recorded in both arms, and the candidate execution-evidence check passed.
+
+| Input / output tokens | Native at 230 W | Shared-KV at 230 W | vs native | Published 230 W reference |
+|---|---:|---:|---:|---:|
+| 512 / 128 decode | 115.42 tok/s | **115.38 tok/s** | −0.04% | 112.65 tok/s |
+| 8192 / 128 decode | 107.16 tok/s | **108.33 tok/s** | +1.09% | 103.63 tok/s |
+| 130944 / 128 decode | 61.18 tok/s | **66.03 tok/s** | +7.92% | 62.52 tok/s |
+| 8192 / 1 input tokens / TTFT | 1736.45 tok/s | **1736.55 tok/s** | +0.01% | 1696 tok/s |
+
+Shared-KV is numerically +2.42%, +4.54%, +5.61% and +2.39% versus the published
+figures. **Only our two local arms are matched-input/configuration comparisons.**
+We matched the published power cap, not the full published serving configuration:
+our runs retain context 212992, utilization .95, C1 and enabled prefix caching
+and thinking. Cache hits were zero. The candidate seam accepts specific KV
+shapes (including [152,1664,4,256]) and a [1,128] block table; changing context and
+memory settings would require separate compatibility work, not a silent native
+fallback. Historical community prompts also remain unavailable.
+
+The only changes versus the earlier local setup are the 230 W cap and
+`--cudagraph-metrics` in **both** arms. The vLLM
+[CLI documents this flag](https://docs.vllm.ai/en/latest/cli/serve/#--cudagraph-metrics)
+as recording graph dispatch modes and frequencies. Each arm retained 12 FULL
+runtime-statistics rows, including five-token decode rows. This closes the prior
+missing-table check for the **new run**, without changing the earlier failed
+record or claiming a per-kernel trace.
+
+Shared-KV decode ranges were 111.19–119.61, 69.93–112.75 and 63.85–73.40 tok/s.
+Native ranges were 107.57–119.57, 66.08–111.58 and 52.37–67.99. At 128K,
+whole-request medians were 174.529 s native and 174.393 s shared-KV, not a 7.92%
+whole-request improvement. Accepted/proposed draft counts were native
+508/552, 472/672, 496/616 versus shared-KV 509/548, 477/656, 501/600.
+Streamed outputs matched on 13/15 decode pairs and 4/5 prefill pairs. Quality
+qualification remains unresolved; sequential five-prompt arms are development
+evidence, not a statistically established community ranking.
+
+The original **275 W cap was restored and verified**, both owned containers
+stopped, production was unchanged, and no new guarded kernel errors appeared.
+The guard was copied privately with only its checked/reported power value and
+power-error message changed from 275 W to 230 W; other safeguards were retained.
+
+Executed on `inference-host`:
+
+```sh
+python3 -B /home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/run-230w.py
+```
+
+New artifacts: `benchmark-230w.tar.gz` contains `native-230w-01/`,
+`shared-kv-230w-01/` and `power-230w-01/` (private launchers/guard, initial and
+restored host checks, and `power.json`). `comparison-230w.json` contains the
+revalidated comparison; `run-230w.log` retains the original controller output.
+`run-230w.py` is the paired controller. After extracting the archive:
+
+```sh
+python3 -B compare.py /tmp/b70-community-230w-verified/native-230w-01 \
+  /tmp/b70-community-230w-verified/shared-kv-230w-01 > comparison-230w.json
+sha256sum -c SHA256SUMS
+```
+
+## Earlier 275 W run — retained below with its original failure
+
 Executed 2026-10-09. The first completed run mistakenly tested the existing native
 launcher. The corrected run tests **our experimental shared-KV build**, reusing
 that native run's exact measured prompts, public client and serving settings.

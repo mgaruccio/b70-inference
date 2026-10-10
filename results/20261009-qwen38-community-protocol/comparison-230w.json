@@ -1,0 +1,190 @@
+{
+  "tier": "development; not standard-publication or quality qualification",
+  "validation": "40 measured HTTP records checked against archived raw SSE; inputs/config matched except candidate mounts/env/hook",
+  "baseline_runner_exit": {
+    "new_guarded_error_lines": [],
+    "success": true
+  },
+  "candidate_runner_exit": {
+    "new_guarded_error_lines": [],
+    "success": true
+  },
+  "candidate_execution_evidence": {
+    "eligible_dispatch_log": [
+      "Capturing CUDA graphs (decode, FULL):   0%|          | 0/1 [00:00<?, ?it/s](EngineCore pid=269) [B70_GROUPED_SERVING] {\"capture_state\":\"not-capturing\",\"event\":\"eligible-dispatch\",\"graph_capture_state\":\"not-capturing\",\"k_device\":\"xpu:0\",\"k_dtype\":\"torch.float8_e4m3fn\",\"k_shape\":[152,1664,4,256],\"k_stride\":[3407872,2048,512,1],\"library_sha256\":\"e0c6f2a78a1a50eef9dcc11b9c378c2e94799a3f5ffa0c8971849f03b3c1ddec\",\"q_device\":\"xpu:0\",\"q_dtype\":\"torch.float16\",\"q_shape\":[5,24,256],\"q_stride\":[6144,256,1],\"v_device\":\"xpu:0\",\"v_dtype\":\"torch.float8_e4m3fn\",\"v_shape\":[152,1664,4,256],\"v_stride\":[3407872,2048,512,1]}"
+    ],
+    "eligible_dispatch_log_count": 1,
+    "full_graph_capture_seen": true,
+    "full_graph_run_seen": true,
+    "required_public_boundary": "real HTTP benchmark completed before this check",
+    "server_log": "/home/mike/b70-evals/qwen38-b70-gptq-int4-mtp4/20261009-qwen38-community-protocol/shared-kv-230w-01/server.log",
+    "unsupported_q5_log": [],
+    "unsupported_q5_log_count": 0
+  },
+  "cells": [
+    {
+      "cell": "p512-g128",
+      "metric": "client_post_first_tps",
+      "baseline": {
+        "n": 5,
+        "median": 115.42176892496606,
+        "mean": 114.69908561611405,
+        "min": 107.57272968961007,
+        "max": 119.56720557985014,
+        "pstdev": 4.68476248842997
+      },
+      "shared_kv": {
+        "n": 5,
+        "median": 115.37610396852881,
+        "mean": 115.4047478049702,
+        "min": 111.18927785439196,
+        "max": 119.61124217777204,
+        "pstdev": 3.715708809950017
+      },
+      "delta_percent": -0.039563556218702445,
+      "published_reference": 112.65,
+      "vs_published_descriptive_percent": 2.419976891725528,
+      "identical_output_pairs": 5,
+      "baseline_request_seconds_median": 1.403885976,
+      "shared_kv_request_seconds_median": 1.405669367,
+      "baseline_proposed_accepted": [
+        552.0,
+        508.0
+      ],
+      "shared_kv_proposed_accepted": [
+        548.0,
+        509.0
+      ],
+      "measured_prompt_hashes": [
+        "0534ed05d081001c5b4c8d64c573f52b5477e2029eecc167612e7a4f7a849cfd",
+        "2d3b1998f5220da5d5aeac896ac2fa66ab4d2ce3065b245d463248cb773022d5",
+        "6d6091de252216a62d49fd282a1518dd05cfd9ae8174f304d4594ad14fbae9c9",
+        "a5d5174084a08595b874fc97f3577b7e1fc71e450c2b23377337dda5c7dc32e1",
+        "1315d36c5370e1010c9e0e4b47a07bcd96c617c8f42b56d03564df14b42e0e84"
+      ]
+    },
+    {
+      "cell": "p8192-g128",
+      "metric": "client_post_first_tps",
+      "baseline": {
+        "n": 5,
+        "median": 107.1628043718131,
+        "mean": 92.32133346823463,
+        "min": 66.08342545423548,
+        "max": 111.58483099008292,
+        "pstdev": 20.194177713062842
+      },
+      "shared_kv": {
+        "n": 5,
+        "median": 108.33012219820326,
+        "mean": 94.21846664600564,
+        "min": 69.93034347511704,
+        "max": 112.74823601567293,
+        "pstdev": 19.221622202267916
+      },
+      "delta_percent": 1.0892938396237062,
+      "published_reference": 103.63,
+      "vs_published_descriptive_percent": 4.535484124484479,
+      "identical_output_pairs": 4,
+      "baseline_request_seconds_median": 5.904417937,
+      "shared_kv_request_seconds_median": 5.90062712,
+      "baseline_proposed_accepted": [
+        672.0,
+        472.0
+      ],
+      "shared_kv_proposed_accepted": [
+        656.0,
+        477.0
+      ],
+      "measured_prompt_hashes": [
+        "add705ca682fc15b6d81ff3313091707caa1b5f4284b8f1a719a616d99df8673",
+        "300efcb4c268aa202f3febe3c737a91b3d2edf93445a484edda243f004d83d3b",
+        "965ebe4480ad6763acfcbbfda3a5017cbc526921005d169cedb474b3d418f846",
+        "c69b897d69c534ad63e1e95fb58ab085ddb879fe8d696068afa3a0454bde4931",
+        "696d3b6346fe158421972e8a0e519781ef90805c3988993028da564c1e2cae07"
+      ]
+    },
+    {
+      "cell": "p8192-g1",
+      "metric": "input_tokens_per_ttft_s",
+      "baseline": {
+        "n": 5,
+        "median": 1736.4530180609167,
+        "mean": 1737.2925026761222,
+        "min": 1735.1851000243457,
+        "max": 1740.7263375965356,
+        "pstdev": 2.0893154857901184
+      },
+      "shared_kv": {
+        "n": 5,
+        "median": 1736.5481253425191,
+        "mean": 1735.7967627476312,
+        "min": 1732.5905462172275,
+        "max": 1737.86748504159,
+        "pstdev": 1.9965459117465234
+      },
+      "delta_percent": 0.005477100768813692,
+      "published_reference": 1696,
+      "vs_published_descriptive_percent": 2.3908092772711775,
+      "identical_output_pairs": 4,
+      "baseline_request_seconds_median": 4.717791133,
+      "shared_kv_request_seconds_median": 4.717538167,
+      "baseline_proposed_accepted": [
+        0.0,
+        0.0
+      ],
+      "shared_kv_proposed_accepted": [
+        0.0,
+        0.0
+      ],
+      "measured_prompt_hashes": [
+        "f9c69f223192a6386f0f326e85c6166280dc84097ec1e965eca8b962ab9704d8",
+        "5af8888a133e0e09f0cd1676625c97184e71b58a6baeb3c31a883f739ee69b90",
+        "523351bb37c0a31389d6e6b1e09e9d6ad2cdc78acc35c22b2f1f7bb630c8b75d",
+        "afd918f99b2fb6d5a2ce7588158f5f0e96b5d1b8af095523e08a7dea86e6030f",
+        "6f7f25f8ebe2baf921cef8d8ee84e4bcfeac3476bda239c277022e768170c2d7"
+      ]
+    },
+    {
+      "cell": "p130944-g128",
+      "metric": "client_post_first_tps",
+      "baseline": {
+        "n": 5,
+        "median": 61.18419274410511,
+        "mean": 60.874124118568886,
+        "min": 52.36944005819457,
+        "max": 67.9946355573384,
+        "pstdev": 5.604306864167497
+      },
+      "shared_kv": {
+        "n": 5,
+        "median": 66.02929544419297,
+        "mean": 67.58359821716482,
+        "min": 63.85405701754,
+        "max": 73.40476824126958,
+        "pstdev": 3.8409477722600087
+      },
+      "delta_percent": 7.918879832821957,
+      "published_reference": 62.52,
+      "vs_published_descriptive_percent": 5.613076526220362,
+      "identical_output_pairs": 4,
+      "baseline_request_seconds_median": 174.528976844,
+      "shared_kv_request_seconds_median": 174.393213791,
+      "baseline_proposed_accepted": [
+        616.0,
+        496.0
+      ],
+      "shared_kv_proposed_accepted": [
+        600.0,
+        501.0
+      ],
+      "measured_prompt_hashes": [
+        "d93c629ee6038481272bb5b18d420ad8baad6634d50230f4bca6c60b90d29237",
+        "5fb0e6c7877a0450f27a29b6f0007db31f4269c3b3fab02050e86886c49a6a14",
+        "0c8dfc7a14d50e44d7bc53cf0820fc5ea4404ca3297369bacc866f666496efbe",
+        "e0e80115aa288961bc7f759bdf6842026b562abc7391dc7b2f966bea332b665a",
+        "166c0bcba6c91cfaa86654dfcea6083eb5aa7b3ed24116575543a27264cf644a"
+      ]
+    }
+  ]
+}

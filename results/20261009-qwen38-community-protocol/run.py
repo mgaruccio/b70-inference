@@ -13,6 +13,7 @@ OUT = ROOT / '20261009-qwen38-community-protocol/current-serving-02'
 LAUNCHER = Path('/home/mike/inference/launchers/start-qwen38.sh')
 COOKBOOK = Path('/home/mike/inference/src/intel-arc-pro-b70-inference-cookbook')
 GUARD = ROOT / '20261009-qwen38-gdn-locality/native-boundary64k-assets-20261009-100052-ff9f86/registered-controller.py'
+GUARD_SHA256 = 'fafe61a614a8328f63f0a7af41fa90da46041aa6cec514a01fe47b485b669da5'
 BLOBS = {'b70-realworld-context-harness.py': 'a4ca3c28c2d87436f80e93c42cb9f9712f3765e7',
          'b70-generate-exact-prompts.py': '645c021089c82d671a0c332497cfe2ec503c3f57'}
 PREFILL_PROMPTS = None
@@ -20,7 +21,7 @@ CHECK_BUILD = None
 
 
 def main():
-    assert hashlib.sha256(GUARD.read_bytes()).hexdigest() == 'fafe61a614a8328f63f0a7af41fa90da46041aa6cec514a01fe47b485b669da5'
+    assert hashlib.sha256(GUARD.read_bytes()).hexdigest() == GUARD_SHA256
     guard = runpy.run_path(str(GUARD))
     OUT.mkdir(parents=True, exist_ok=False)
     guard['preconditions'](OUT, 'qwen38')
