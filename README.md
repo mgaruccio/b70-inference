@@ -35,6 +35,129 @@ unresolved, output differences exist, and production remains native MTP4.
 · [Exact measurements and raw evidence](results/20261009-qwen38-community-protocol/README.md)
 · [Twitter draft and two ready-to-use images](docs/qwen38-shared-kv-social.md)
 
+## Experimental shared-KV recipe
+
+**For advanced users reproducing the experiment; not a production default or a
+one-command installer.** Start with a working [native Qwen configuration](docs/qwen38-b70-golden-config.md).
+The shared-KV path is opt-in: earlier HumanEval+ results were **136/164 versus
+139/164 native**, and quality neutrality is still unresolved. Keep your native
+launcher intact and use a separate experimental copy.
+
+The locality investigation was motivated by the community's
+[lithos-metal megakernel work](https://github.com/lithos-ai/lithos-metal).
+This recipe is a narrower **vLLM/XPU shared-KV verification optimization**, not
+a port of that Metal engine or a whole-model megakernel.
+
+### Tested configuration
+
+| Component | Configuration |
+|---|---|
+| GPU | One Intel Arc Pro B70, 32 GB; matched benchmarks at **230 W** |
+| Model export | `SergiioB/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16` |
+| Target / KV | GPTQ symmetric G128, `--dtype float16`, `--kv-cache-dtype fp8` |
+| Speculation | Native MTP4; draft INT4 **S+M1**; mixed-GDN-v5 patches in both arms |
+| Serving | Context **212992**, utilization **0.95**, `--max-num-seqs 1`, batch-token budget **8192** |
+| Cache / reasoning | Prefix caching on, `--mamba-cache-mode align`, thinking on |
+| Execution | XPU graphs on; `--cudagraph-metrics` for runtime evidence |
+| Candidate | Unchanged **build-06** library and its accompanying serving adapter |
+
+Pinned image:
+
+```text
+vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f
+```
+
+The adapter checks exact layouts, including the measured FP8 cache shape
+`[152,1664,4,256]` and block-table shape `[1,128]`. Matching the headline model name
+is insufficient: different memory/context/batching settings can select the native
+fallback. Do not remove these checks just to make another configuration run.
+The launcher does not set GPU power; 230 W was an explicit benchmark setting,
+not a change to the persistent default.
+
+### Get the experimental build
+
+From the repository root, verify and extract the committed bundle into a separate
+directory. It includes the prebuilt library, source/build inputs and adapters:
+
+```bash
+set -euo pipefail
+printf '%s  %s\n' \
+  f72301b2e55166dc213f2e18501e79f17e0501f8330ec36bc1e33ec0de75a8f5 \
+  results/20261009-qwen38-native-shared-kv/reused-candidate.tar.gz | sha256sum -c -
+EXPERIMENT="$(mktemp -d "${TMPDIR:-/tmp}/qwen38-shared-kv.XXXXXX")"
+tar -xzf results/20261009-qwen38-native-shared-kv/reused-candidate.tar.gz -C "$EXPERIMENT"
+export CANDIDATE="$EXPERIMENT/reused-candidate/20260913-qwen38-native-grouped-verify"
+export WORKER_PATCH="$EXPERIMENT/reused-candidate/20260913-qwen38-mtp4-draft-attribution/timing/qwen38_step_timing_patch.py"
+printf '%s  %s\n' \
+  e0c6f2a78a1a50eef9dcc11b9c378c2e94799a3f5ffa0c8971849f03b3c1ddec \
+  "$CANDIDATE/build-06/build/libb70_grouped_verify.so" | sha256sum -c -
+cp scripts/start-qwen38.sh "$EXPERIMENT/start-experimental.sh"
+```
+
+### Apply the overlay to the private launcher
+
+First adapt `ROOT`, `MODEL_DIR` and `COOKBOOK` in the private copy to your existing
+native installation; the checked-in launcher contains our host paths. Use a
+separate container name and localhost port binding for the experiment. Preserve
+the native model patches, environment and serving arguments.
+
+Add these arguments to its `docker run` command **before `--entrypoint`**:
+
+```bash
+-v "$CANDIDATE/serving-overlay.py:/experiment/qwen38_step_timing_overlay.py:ro" \
+-v "$WORKER_PATCH:/experiment/qwen38_step_timing_patch.py:ro" \
+-v "$CANDIDATE/grouped_verify.py:/experiment/grouped_verify.py:ro" \
+-v "$CANDIDATE/build-06/build/libb70_grouped_verify.so:/candidate/libb70_grouped_verify.so:ro" \
+-e PYTHONPATH=/experiment \
+-e B70_STEP_TIMING=1 \
+-e B70_GROUPED_SERVING=1 \
+-e B70_GROUPED_SERVING_LIBRARY=/candidate/libb70_grouped_verify.so \
+```
+
+Inside the container's shell command, run
+`/opt/venv/bin/python -P /experiment/qwen38_step_timing_patch.py` after the existing
+patch commands and immediately before `exec vllm serve`. Add
+`--cudagraph-metrics` to the serving arguments. These are the additions used by
+the [tested private-launcher controller](results/20261009-qwen38-community-protocol/run-230w.py).
+The controller itself is **host-specific** (paths, boot/CPU/power guards); do not
+run it unchanged on another machine or bypass its guards to do so.
+
+After making those edits, launch from the same Bash session so the exported
+mount paths are available:
+
+```bash
+bash "$EXPERIMENT/start-experimental.sh" 2>&1 | tee "$EXPERIMENT/server.log"
+```
+
+In another terminal, send a generation request to your chosen localhost port
+(example uses 8000), then inspect the server log as described below:
+
+```bash
+curl --fail-with-body http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen38","messages":[{"role":"user","content":"Explain what a KV cache does."}],"max_tokens":128,"temperature":0,"ignore_eos":true}'
+```
+
+### Verify the backend before quoting a result
+
+- Confirm `[B70_GROUPED_SERVING]` reports installation and `eligible-dispatch`
+  with the build-06 SHA256 above. An unsupported-Q5 message means this configuration
+  did not establish the intended optimized path.
+- Confirm FULL graph capture completes, then exercise real generation requests
+  and retain the `FULL` runtime-statistics rows produced by `--cudagraph-metrics`.
+  Startup eligibility alone is not per-request proof; its diagnostic logging is
+  bounded and absence of a fallback message is not proof of no later fallback.
+- Use the same prompts, output lengths, cache policy and power cap for native and
+  candidate; check actual token counts and prefix-cache hits. Keep output/quality
+  checks separate from the throughput claim.
+- The [recorded benchmark protocol and artifacts](results/20261009-qwen38-community-protocol/README.md)
+  contain the working launch copies, exact requests, verification and cleanup.
+
+**Return to native:** stop only your experimental container and start your
+untouched native launcher. Do not retain the shared-KV mounts, environment or
+worker-import patch in that native launch. Remove the temporary extraction only
+after the experimental container has stopped. No production promotion is implied.
+
 ## Earlier Qwen four-way comparison — 2026-09-14
 
 One fresh forward/reverse campaign, identical workloads, twelve measured samples per configuration/context:
