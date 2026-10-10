@@ -12,11 +12,30 @@ Two models share the card. Only one is resident at a time.
 | Model | Engine | Spec | Current C1 decode | Notes |
 | --- | --- | --- | ---: | --- |
 | **Muse Glimmer 30B GPTQ** | vLLM XPU | DFlash n=20, GPTQ draft | **89.1 / 101.1 / 42.6** tok/s (GSM8K / HumanEval / MT-Bench, greedy, until stop) | Moved to [muse-glimmer-b70](https://github.com/mgaruccio/muse-glimmer-b70) |
-| Qwen3.8-27B GPTQ-Int4 | vLLM XPU | Native MTP-4, FP8 KV | **55.12** tok/s at 64K in the matched 2026-09-14 run | Default: 212,992-token C1, no KV offload; historical near-limit evidence in the golden-config doc |
+| Qwen3.8-27B GPTQ-Int4 | vLLM XPU | Native MTP-4, FP8 KV | **61.18 / 46.75** tok/s native at ~128K/full context (matched 230 W run) | Default: 212,992-token C1, no KV offload. Experimental shared-KV: **66.03 / 51.46** on the same inputs; not promoted. |
 
 Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM stack is a different path (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
 
-## Current Qwen results — 2026-09-14
+## Qwen update: ~10% faster long-context decode on one B70
+
+Our experimental **shared-KV MTP4** path improves median decode throughput by
+**9.35% at 160K, 10.25% at 192K and 10.08% at the full 212,992-token window**.
+At the limit: **46.75 → 51.46 tok/s**, on the same B70 at **230 W**, with the same
+model, prompts and serving settings. Five measured prompts per point; 128 output
+tokens; decode only.
+
+![Shared-KV full-context decode: 46.75 to 51.46 tok/s, +10.1%, on one B70 at 230 W. Experimental; quality not yet cleared.](docs/images/qwen38-shared-kv-full-context.png)
+
+This targets an important part of long-running agent workloads: generating new
+tokens while carrying a large history. **It is not a measured whole-agent
+speedup.** The candidate is still experimental: HumanEval+ qualification remains
+unresolved, output differences exist, and production remains native MTP4.
+
+[Public research update and context/gain chart](docs/qwen38-shared-kv-long-context.md)
+· [Exact measurements and raw evidence](results/20261009-qwen38-community-protocol/README.md)
+· [Twitter draft and two ready-to-use images](docs/qwen38-shared-kv-social.md)
+
+## Earlier Qwen four-way comparison — 2026-09-14
 
 One fresh forward/reverse campaign, identical workloads, twelve measured samples per configuration/context:
 
