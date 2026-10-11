@@ -1,0 +1,17 @@
+{
+  "tier": "development",
+  "decision": "retain guarded batch 8192; reject 8320 and 6656",
+  "source": "run.log",
+  "precision": "Derived from CLI timings printed to four decimal places; full responses/logs were written on inference-host, but local archive readback timed out.",
+  "rows": [
+    {"budget": 8192, "prompt_tokens": 16384, "n": 5, "median_ttft_s": 8.7315, "range_s": [8.7204, 8.7444], "latency_change_percent": 0.0},
+    {"budget": 8192, "prompt_tokens": 32768, "n": 5, "median_ttft_s": 19.9418, "range_s": [19.9391, 19.964], "latency_change_percent": 0.0},
+    {"budget": 8320, "prompt_tokens": 16384, "n": 5, "median_ttft_s": 8.8215, "range_s": [8.8085, 8.8361], "latency_change_percent": 1.030750730115093},
+    {"budget": 8320, "prompt_tokens": 32768, "n": 5, "median_ttft_s": 20.2012, "range_s": [20.1913, 20.224], "latency_change_percent": 1.300785285179873},
+    {"budget": 6656, "prompt_tokens": 16384, "n": 5, "median_ttft_s": 8.7905, "range_s": [8.7771, 8.802], "latency_change_percent": 0.6757143675198973},
+    {"budget": 6656, "prompt_tokens": 32768, "n": 5, "median_ttft_s": 20.0625, "range_s": [20.0518, 20.0888], "latency_change_percent": 0.6052613104132964}
+  ],
+  "skipped": ["baseline-after", "98k extension", "212991+1 capacity extension", "128-output decode extension"],
+  "skip_reason": "Neither candidate beat the first 8192 baseline at both primary lengths.",
+  "quality_limit": "Finite-logprob/usage checks and arithmetic/JSON/Python-AST canaries are not a full quality or agent-success evaluation."
+}

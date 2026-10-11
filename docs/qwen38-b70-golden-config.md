@@ -1,12 +1,12 @@
 # Qwen3.8-27B B70 default configuration
 
-Last full public-API semantics verification: 2026-08-31. Launcher rechecked 2026-10-11 after promoting the Xe2 head-256 K64 overlay. The service is running.
+Last full public-API semantics verification: 2026-08-31. Launcher rechecked 2026-10-11 after K64 promotion and prefill-guard deployment; boundary/canary validation is recorded below, not a repeat of the full semantics suite. The service is running.
 
-The 2026-10-11 default adds one library mount and nothing else: `libattn_kernels_xe_2-head256-k64.so` over the image's `libattn_kernels_xe_2.so`. Prefix caching, MTP-4, batch 8192, and `mamba-cache-mode align` are unchanged. The September custom grouped kernel is still not promoted. See [K64 result](../results/20261011-xe2-head256-k64/README.md).
+The 2026-10-11 K64 promotion added only one library mount (the subsequent guard deployment is recorded below): `libattn_kernels_xe_2-head256-k64.so` over the image's `libattn_kernels_xe_2.so`. Prefix caching, MTP-4, batch 8192, and `mamba-cache-mode align` are unchanged. The September custom grouped kernel is still not promoted. See [K64 result](../results/20261011-xe2-head256-k64/README.md).
 
 Latest [matched four-way speed results](../results/20260914-qwen38-four-way-speed/README.md) and [full quality evaluation](../results/20260913-qwen38-grouped-quality/README.md) do not change this default. The custom grouped kernel remains experimental: +5.11% matched64K decode, but three fewer HumanEval+ passes versus native; do not promote yet. See [current handoff](qwen38-b70-next-session.md).
 
-**Prefill-classification prerequisite — SOURCE PREPARED (not deployed):** The maintained guard at [`scripts/patch-vllm-qwen38-prefill-guard.py`](../scripts/patch-vllm-qwen38-prefill-guard.py) is wired in the launcher source after the existing five patches and preserves batch 8192, prefix caching, MTP-4, and the K64 overlay. The running host was not changed by this source-preparation slice; lead-owned deployment and public-API gates remain required before calling the service guarded.
+**Prefill-classification prerequisite — deployed and verified 2026-10-11:** The maintained guard at [`scripts/patch-vllm-qwen38-prefill-guard.py`](../scripts/patch-vllm-qwen38-prefill-guard.py) runs after the existing five patches. All 132 distinct-prefix boundary probes had finite logprobs and exact usage counts; arithmetic/JSON/Python-AST canaries passed. Guarded batch8192/prefix-on production was restored and an external LAN five-token probe returned HTTP200 with a finite logprob. The 8320/6656 cold chunk screen was slower at both16k/32k, so neither was promoted. [Commands, raw evidence and limits](../results/20261011-qwen38-chunk-alignment/README.md).
 
 ## Active default — 212,992-token C1, no KV offload
 
@@ -16,7 +16,7 @@ The persistent host launcher is `~/inference/launchers/start-qwen38.sh`, sourced
 - Image: `vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f`
 - API: `http://inference-host:8000/v1`, model ID `qwen38`; no API-key authentication is configured.
 - Context and scheduling: `max-model-len=212992`, `gpu-memory-utilization=0.95`, `max-num-seqs=1`, `max-num-batched-tokens=8192`, FP8 KV cache, prefix caching, and `mamba-cache-mode=align`.
-- Performance implementation: Xe2 head-256 K64 attention overlay; MTP-4; XPU graph; Draft-INT4 S+M1; v5 mixed split; the five patches run in this order: `patch_mtp_nightly.py`, `patch_mtp_boundary.py`, `patch_gdn_mixed_split_v5.py`, `patch_draft_lmhead_int4.py`, `patch_draft_mtp_int4.py`.
+- Performance implementation: Xe2 head-256 K64 attention overlay; MTP-4; XPU graph; Draft-INT4 S+M1; v5 mixed split; the six patches run in this order: `patch_mtp_nightly.py`, `patch_mtp_boundary.py`, `patch_gdn_mixed_split_v5.py`, `patch_draft_lmhead_int4.py`, `patch_draft_mtp_int4.py`, `patch_uniform_decode_prefill.py` (maintained guard copied to the cookbook mount path).
 - Environment: `B70_MTP_BF16_DRAFT=1`, `B70_DRAFT_LMHEAD_INT4=1`, `B70_DRAFT_MTP_INT4=1`, `VLLM_XPU_ENABLE_XPU_GRAPH=1`, `VLLM_TARGET_DEVICE=xpu`, `ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE`, `ZE_AFFINITY_MASK=0`, and `PYTORCH_ALLOC_CONF=expandable_segments:True`.
 - Power: observed Xe `power1_cap=275000000` at 2026-09-14 closeout (the 2026-08-31 verification used230W). The launcher itself does not set the power cap; no power setting was changed during these campaigns.
 - **No KV offload:** no offload mount, `KV_XFER_CONFIG`, or KV-offload CLI flag is present.
