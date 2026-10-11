@@ -86,14 +86,20 @@ def main():
                         help='12288 screen only: .965 utilization, same 152 KV blocks')
     parser.add_argument('--profile-prefill', action='store_true',
                         help='Diagnostic unitrace capture of one cold 32K prefill on the original baseline')
+    parser.add_argument('--gemm-diagnostic', action='store_true',
+                        help='Baseline-only oneDNN creation logging for prefill M/N/K; graph-safe, not timing')
     args = parser.parse_args()
     if args.tuned_memory and args.budget != 12288:
         parser.error('--tuned-memory is restricted to the 12288-token screen')
-    if args.profile_prefill and (args.budget != 8192 or args.tuned_memory):
-        parser.error('prefill profiling requires the unchanged 8192/.95 baseline')
+    if (args.profile_prefill or args.gemm_diagnostic) and (args.budget != 8192 or args.tuned_memory):
+        parser.error('prefill diagnostics require the unchanged 8192/.95 baseline')
+    if args.profile_prefill and args.gemm_diagnostic:
+        parser.error('choose one diagnostic mode')
     out = OUT / (f'batch-{args.budget}' + ('-util0965-blocks152' if args.tuned_memory else ''))
     if args.profile_prefill:
         out = OUT / 'profile-32k'
+    if args.gemm_diagnostic:
+        out = OUT / 'gemm-create-diagnostic-32k'
     out.mkdir(parents=True, exist_ok=False)
     assert sha(PRODUCTION) == PRODUCTION_SHA
     assert sha(LIBRARY) == LIBRARY_SHA
@@ -123,6 +129,10 @@ def main():
         launcher = launcher.replace('exec vllm serve',
             'exec /unitrace/bin/unitrace --start-paused --device-timing --chrome-kernel-logging '
             '--session b70prefill --output-dir-path /prefill-trace vllm serve')
+    if args.gemm_diagnostic:
+        assert launcher.count('  --entrypoint bash') == 1
+        launcher = launcher.replace('  --entrypoint bash',
+                                    '  -e ONEDNN_VERBOSE=profile_create \\\n  --entrypoint bash')
     (out / 'launcher.sh').write_text(launcher)
     run(['bash', '-n', str(out / 'launcher.sh')], out / 'bash-check.txt')
     client = prepare_client(out)
@@ -135,6 +145,7 @@ def main():
     status['gpu_memory_utilization'] = 0.965 if args.tuned_memory else 0.95
     status['num_gpu_blocks_override'] = 152 if args.tuned_memory else None
     status['profile_prefill'] = args.profile_prefill
+    status['gemm_diagnostic'] = args.gemm_diagnostic
     process = cid = None
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, interrupt)
@@ -183,7 +194,7 @@ def main():
             execute(['docker', 'cp', f'{cid}:/tmp/prefill-prompts.json', str(prompts)], 'copy-prompts.txt', 60)
         # A real 128-token request verifies that decode still exercises shared-KV.
         cells = [(512, 128, PRIOR / 'current-serving/prompts.json')]
-        if not args.profile_prefill:
+        if not (args.profile_prefill or args.gemm_diagnostic):
             cells.extend((n, 1, prompts) for n in TARGETS)
         summary = []
         for n, output, prompt_path in cells:
@@ -196,7 +207,7 @@ def main():
             summary.append({'cell': label, 'summary': result['summary']})
             put(out / 'summary.json', summary)
             print(json.dumps(summary[-1]), flush=True)
-        if args.profile_prefill:
+        if args.profile_prefill or args.gemm_diagnostic:
             request = runpy.run_path(str(client))['request']
             samples = [p for p in json.loads(prompts.read_text())['prompts'] if p['target_tokens'] == 32768]
             def sample(index, name):
@@ -209,12 +220,17 @@ def main():
                 assert value['prefix_cache_hits_delta'] == 0
                 return value
             sample(0, 'shape-warmup')
-            print('Resuming unitrace for one cold 32K prefill', flush=True)
-            execute(['docker', 'exec', cid, '/unitrace/bin/unitrace', '--resume', 'b70prefill'], 'trace-resume.txt', 30)
-            try:
-                measured = sample(1, 'profiled-prefill')
-            finally:
-                execute(['docker', 'exec', cid, '/unitrace/bin/unitrace', '--pause', 'b70prefill'], 'trace-pause.txt', 30)
+            if args.profile_prefill:
+                print('Resuming unitrace for one cold 32K prefill', flush=True)
+                execute(['docker', 'exec', cid, '/unitrace/bin/unitrace', '--resume', 'b70prefill'], 'trace-resume.txt', 30)
+                try:
+                    measured = sample(1, 'profiled-prefill')
+                finally:
+                    execute(['docker', 'exec', cid, '/unitrace/bin/unitrace', '--pause', 'b70prefill'], 'trace-pause.txt', 30)
+            else:
+                measured = sample(1, 'gemm-diagnostic-prefill')
+                log = (out / 'server.log').read_text(errors='replace')
+                assert 'onednn_verbose' in log and ',matmul,' in log, 'Missing oneDNN GEMM creation records'
             print(json.dumps({'profiled_prompt_tokens': measured['prompt_tokens'],
                               'completion_tokens': measured['completion_tokens'],
                               'ttft_s_diagnostic_only': measured['ttft_s']}), flush=True)

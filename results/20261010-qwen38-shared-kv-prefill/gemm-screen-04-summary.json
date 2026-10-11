@@ -1,0 +1,365 @@
+{
+  "note": "Supplemental real-weight full-call microbenchmark, not serving throughput. N-major transient FP16 tiles lose on all tested shapes. No serving integration/quality-neutrality/promotion claim.",
+  "rows": [
+    {
+      "projection": "model.language_model.layers.0.linear_attn.in_proj_qkv",
+      "M": 8192,
+      "N": 10240,
+      "K": 5120,
+      "native_median_ms": 5.440347013063729,
+      "tiled_fp16_N_major_median_ms": 5.92138699721545,
+      "candidate_over_native": 1.0884208273841016,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          8192,
+          10240
+        ],
+        "cosine": 1.0000001192092896,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          8192,
+          10240
+        ],
+        "max_abs": 0.0,
+        "max_relative": 0.0,
+        "normalized_rmse": 0.0,
+        "rtol": 0.01,
+        "torch_equal": true
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.in_proj_qkv",
+      "M": 6656,
+      "N": 10240,
+      "K": 5120,
+      "native_median_ms": 4.3702159891836345,
+      "tiled_fp16_N_major_median_ms": 4.9201970105059445,
+      "candidate_over_native": 1.125847560551589,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          6656,
+          10240
+        ],
+        "cosine": 1.0,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          6656,
+          10240
+        ],
+        "max_abs": 0.001953125,
+        "max_relative": 0.059604644775390625,
+        "normalized_rmse": 1.816493181650003e-06,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.in_proj_qkv",
+      "M": 32,
+      "N": 10240,
+      "K": 5120,
+      "native_median_ms": 0.12071200762875378,
+      "tiled_fp16_N_major_median_ms": 0.6432520167436451,
+      "candidate_over_native": 5.328815495488632,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          32,
+          10240
+        ],
+        "cosine": 1.0000001192092896,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          32,
+          10240
+        ],
+        "max_abs": 0.001953125,
+        "max_relative": 0.024390242993831635,
+        "normalized_rmse": 1.0368939911131747e-05,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.gate_proj",
+      "M": 8192,
+      "N": 17408,
+      "K": 5120,
+      "native_median_ms": 9.648500999901444,
+      "tiled_fp16_N_major_median_ms": 10.055577993625775,
+      "candidate_over_native": 1.0421906981953455,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          8192,
+          17408
+        ],
+        "cosine": 1.0,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          8192,
+          17408
+        ],
+        "max_abs": 0.0,
+        "max_relative": 0.0,
+        "normalized_rmse": 0.0,
+        "rtol": 0.01,
+        "torch_equal": true
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.gate_proj",
+      "M": 6656,
+      "N": 17408,
+      "K": 5120,
+      "native_median_ms": 7.475307997083291,
+      "tiled_fp16_N_major_median_ms": 8.453346992610022,
+      "candidate_over_native": 1.1308359462791822,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          6656,
+          17408
+        ],
+        "cosine": 1.0,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          6656,
+          17408
+        ],
+        "max_abs": 0.001953125,
+        "max_relative": 0.17881393432617188,
+        "normalized_rmse": 2.621541170810815e-06,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.gate_proj",
+      "M": 32,
+      "N": 17408,
+      "K": 5120,
+      "native_median_ms": 0.16215301002375782,
+      "tiled_fp16_N_major_median_ms": 1.0127999994438142,
+      "candidate_over_native": 6.245952506804677,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          32,
+          17408
+        ],
+        "cosine": 1.0000001192092896,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          32,
+          17408
+        ],
+        "max_abs": 0.0009765625,
+        "max_relative": 0.060975611209869385,
+        "normalized_rmse": 9.148337085207459e-06,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.down_proj",
+      "M": 8192,
+      "N": 5120,
+      "K": 17408,
+      "native_median_ms": 9.47643700055778,
+      "tiled_fp16_N_major_median_ms": 10.538047994486988,
+      "candidate_over_native": 1.1120263864854187,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          8192,
+          5120
+        ],
+        "cosine": 1.0,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          8192,
+          5120
+        ],
+        "max_abs": 0.0,
+        "max_relative": 0.0,
+        "normalized_rmse": 0.0,
+        "rtol": 0.01,
+        "torch_equal": true
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.down_proj",
+      "M": 6656,
+      "N": 5120,
+      "K": 17408,
+      "native_median_ms": 7.547329005319625,
+      "tiled_fp16_N_major_median_ms": 9.779202984645963,
+      "candidate_over_native": 1.2957170646401175,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          6656,
+          5120
+        ],
+        "cosine": 0.9999998807907104,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          6656,
+          5120
+        ],
+        "max_abs": 0.015625,
+        "max_relative": 0.476837158203125,
+        "normalized_rmse": 7.0062333179521374e-06,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.down_proj",
+      "M": 32,
+      "N": 5120,
+      "K": 17408,
+      "native_median_ms": 0.15529300435446203,
+      "tiled_fp16_N_major_median_ms": 0.979528995230794,
+      "candidate_over_native": 6.307618294221308,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          32,
+          5120
+        ],
+        "cosine": 1.0,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          32,
+          5120
+        ],
+        "max_abs": 0.001953125,
+        "max_relative": 0.476837158203125,
+        "normalized_rmse": 1.6570569641771726e-05,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.out_proj",
+      "M": 8192,
+      "N": 5120,
+      "K": 6144,
+      "native_median_ms": 3.810955007793382,
+      "tiled_fp16_N_major_median_ms": 4.071511008078232,
+      "candidate_over_native": 1.0683702640813169,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          8192,
+          5120
+        ],
+        "cosine": 1.0,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          8192,
+          5120
+        ],
+        "max_abs": 0.0,
+        "max_relative": 0.0,
+        "normalized_rmse": 0.0,
+        "rtol": 0.01,
+        "torch_equal": true
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.out_proj",
+      "M": 6656,
+      "N": 5120,
+      "K": 6144,
+      "native_median_ms": 2.7422640123404562,
+      "tiled_fp16_N_major_median_ms": 2.953489020001143,
+      "candidate_over_native": 1.0770257738533393,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          6656,
+          5120
+        ],
+        "cosine": 0.9999999403953552,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          6656,
+          5120
+        ],
+        "max_abs": 0.001953125,
+        "max_relative": 0.11920928955078125,
+        "normalized_rmse": 2.6928250917990226e-06,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.out_proj",
+      "M": 32,
+      "N": 5120,
+      "K": 6144,
+      "native_median_ms": 0.0921119935810566,
+      "tiled_fp16_N_major_median_ms": 0.44498799252323806,
+      "candidate_over_native": 4.830945192079228,
+      "numerical": {
+        "allclose": true,
+        "atol": 0.01,
+        "candidate_finite": true,
+        "candidate_shape": [
+          32,
+          5120
+        ],
+        "cosine": 1.0000001192092896,
+        "finite": true,
+        "installed_finite": true,
+        "installed_shape": [
+          32,
+          5120
+        ],
+        "max_abs": 0.001953125,
+        "max_relative": 0.019108280539512634,
+        "normalized_rmse": 1.077717934094835e-05,
+        "rtol": 0.01,
+        "torch_equal": false
+      }
+    }
+  ]
+}

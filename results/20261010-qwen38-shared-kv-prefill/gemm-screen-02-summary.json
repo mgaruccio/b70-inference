@@ -1,0 +1,953 @@
+{
+  "note": "Supplemental real-weight full-call microbenchmark, not serving throughput. Reject fused candidate: slower on every tested shape. M32 direct-candidate measurements do not change native serving decode.",
+  "rows": [
+    {
+      "projection": "model.language_model.layers.0.linear_attn.in_proj_qkv",
+      "M": 8192,
+      "N": 10240,
+      "K": 5120,
+      "native_median_ms": 5.4786590044386685,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 37.623473996063694,
+        "m128-n256-k64": 41.35241798940115,
+        "m64-n128-k128": 65.89541400899179
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 6.867277917019862,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            10240
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            10240
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            10240
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            10240
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            10240
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            10240
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.in_proj_qkv",
+      "M": 6656,
+      "N": 10240,
+      "K": 5120,
+      "native_median_ms": 4.4072440068703145,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 28.251560986973345,
+        "m128-n256-k64": 33.33082399331033,
+        "m64-n128-k128": 53.61841799458489
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 6.410255693338711,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            10240
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            10240
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            10240
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            10240
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            10240
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            10240
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.in_proj_qkv",
+      "M": 32,
+      "N": 10240,
+      "K": 5120,
+      "native_median_ms": 0.11561199789866805,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 0.740840972866863,
+        "m128-n256-k64": 1.212097005918622,
+        "m64-n128-k128": 0.803990988060832
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 6.407993861642263,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            10240
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            10240
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.016393441706895828,
+          "normalized_rmse": 1.2051905287080444e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            10240
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            10240
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.016393441706895828,
+          "normalized_rmse": 1.2051905287080444e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            10240
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            10240
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.016393441706895828,
+          "normalized_rmse": 1.2051905287080444e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.gate_proj",
+      "M": 8192,
+      "N": 17408,
+      "K": 5120,
+      "native_median_ms": 9.090923005715013,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 63.8460979971569,
+        "m128-n256-k64": 69.93537599919364,
+        "m64-n128-k128": 112.85970199969597
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 7.023060029990357,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            17408
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            17408
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            17408
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.gate_proj",
+      "M": 6656,
+      "N": 17408,
+      "K": 5120,
+      "native_median_ms": 7.435278006596491,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 48.280731978593394,
+        "m128-n256-k64": 56.61429397878237,
+        "m64-n128-k128": 91.25073000905104
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 6.493466947134902,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            17408
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            17408
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            17408
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.gate_proj",
+      "M": 32,
+      "N": 17408,
+      "K": 5120,
+      "native_median_ms": 0.16699201660230756,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 1.101826026570052,
+        "m128-n256-k64": 1.9320779829286039,
+        "m64-n128-k128": 1.1825370020233095
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 6.598076057695961,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            17408
+          ],
+          "max_abs": 0.0009765625,
+          "max_relative": 0.08888889104127884,
+          "normalized_rmse": 1.2500622688094154e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            17408
+          ],
+          "max_abs": 0.0009765625,
+          "max_relative": 0.08888889104127884,
+          "normalized_rmse": 1.2500622688094154e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            17408
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            17408
+          ],
+          "max_abs": 0.0009765625,
+          "max_relative": 0.08888889104127884,
+          "normalized_rmse": 1.2500622688094154e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.down_proj",
+      "M": 8192,
+      "N": 5120,
+      "K": 17408,
+      "native_median_ms": 8.649847004562616,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 65.3766640170943,
+        "m128-n256-k64": 71.18255799286999,
+        "m64-n128-k128": 116.43935900065117
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 7.558129523286302,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.down_proj",
+      "M": 6656,
+      "N": 5120,
+      "K": 17408,
+      "native_median_ms": 7.0177419984247535,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 52.014181012054905,
+        "m128-n256-k64": 57.839585992041975,
+        "m64-n128-k128": 94.59127398440614
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 7.41181152338321,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            5120
+          ],
+          "cosine": 0.9999998807907104,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            5120
+          ],
+          "max_abs": 0.00390625,
+          "max_relative": 0.2384185791015625,
+          "normalized_rmse": 3.741918362720753e-06,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            5120
+          ],
+          "cosine": 0.9999998807907104,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            5120
+          ],
+          "max_abs": 0.00390625,
+          "max_relative": 0.2384185791015625,
+          "normalized_rmse": 3.741918362720753e-06,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            5120
+          ],
+          "cosine": 0.9999998807907104,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            5120
+          ],
+          "max_abs": 0.00390625,
+          "max_relative": 0.2384185791015625,
+          "normalized_rmse": 3.741918362720753e-06,
+          "rtol": 0.01,
+          "torch_equal": false
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.mlp.down_proj",
+      "M": 32,
+      "N": 5120,
+      "K": 17408,
+      "native_median_ms": 0.16246200539171696,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 1.1882170219905674,
+        "m128-n256-k64": 2.905871981056407,
+        "m64-n128-k128": 1.3236090017016977
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 7.313814815504845,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            5120
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            5120
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.476837158203125,
+          "normalized_rmse": 1.7787670003599487e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            5120
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            5120
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.476837158203125,
+          "normalized_rmse": 1.7787670003599487e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            5120
+          ],
+          "cosine": 1.0000001192092896,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            5120
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.476837158203125,
+          "normalized_rmse": 1.7787670003599487e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.out_proj",
+      "M": 8192,
+      "N": 5120,
+      "K": 6144,
+      "native_median_ms": 3.3596790162846446,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 22.868805011967197,
+        "m128-n256-k64": 24.905234982725233,
+        "m64-n128-k128": 39.87813400453888
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 6.806842231391806,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            8192,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            8192,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.out_proj",
+      "M": 6656,
+      "N": 5120,
+      "K": 6144,
+      "native_median_ms": 2.7728309796657413,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 18.10635600122623,
+        "m128-n256-k64": 20.41579899378121,
+        "m64-n128-k128": 32.36612398177385
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 6.5299169455358985,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            5120
+          ],
+          "cosine": 0.9999999403953552,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            5120
+          ],
+          "cosine": 0.9999999403953552,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            6656,
+            5120
+          ],
+          "cosine": 0.9999999403953552,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            6656,
+            5120
+          ],
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "normalized_rmse": 0.0,
+          "rtol": 0.01,
+          "torch_equal": true
+        }
+      }
+    },
+    {
+      "projection": "model.language_model.layers.0.linear_attn.out_proj",
+      "M": 32,
+      "N": 5120,
+      "K": 6144,
+      "native_median_ms": 0.08710101246833801,
+      "candidate_medians_ms": {
+        "m128-n128-k128": 0.49693702021613717,
+        "m128-n256-k64": 1.123235997511074,
+        "m64-n128-k128": 0.5227679794188589
+      },
+      "best_config": "m128-n128-k128",
+      "best_candidate_over_native": 5.705295565844062,
+      "numerical": {
+        "m128-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            5120
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.029411764815449715,
+          "normalized_rmse": 1.4941060726414435e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m128-n256-k64_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            5120
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.029411764815449715,
+          "normalized_rmse": 1.4941060726414435e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        },
+        "m64-n128-k128_vs_installed": {
+          "allclose": true,
+          "atol": 0.01,
+          "candidate_finite": true,
+          "candidate_shape": [
+            32,
+            5120
+          ],
+          "cosine": 1.0,
+          "finite": true,
+          "installed_finite": true,
+          "installed_shape": [
+            32,
+            5120
+          ],
+          "max_abs": 0.001953125,
+          "max_relative": 0.029411764815449715,
+          "normalized_rmse": 1.4941060726414435e-05,
+          "rtol": 0.01,
+          "torch_equal": false
+        }
+      }
+    }
+  ]
+}

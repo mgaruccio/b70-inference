@@ -1,0 +1,25 @@
+2d5378fdb30cf21d21bd56b812e7e25f7c3fe2d03aa0fb172fb77cc3a4d445c6  gemm-screen-01.tar.gz
+{
+  "tier": "development",
+  "kind": "supplemental real-weight GEMM screen",
+  "original_power_uw": "275000000",
+  "experiment_power_uw": "230000000",
+  "executed": true,
+  "restored": true,
+  "benchmark_returncode": 1,
+  "benchmark_status": "failed",
+  "new_kernel_errors": []
+}
+qkv model.language_model.layers.0.linear_attn.in_proj_qkv M=8192 status=failed baseline_ms=8.978685014881194
+qkv model.language_model.layers.0.linear_attn.in_proj_qkv M=6656 status=failed baseline_ms=4.486797988647595
+qkv model.language_model.layers.0.linear_attn.in_proj_qkv M=32 status=failed baseline_ms=0.08867197902873158
+gate_up model.language_model.layers.0.mlp.gate_proj M=8192 status=failed baseline_ms=9.207151015289128
+gate_up model.language_model.layers.0.mlp.gate_proj M=6656 status=failed baseline_ms=7.743986003333703
+gate_up model.language_model.layers.0.mlp.gate_proj M=32 status=failed baseline_ms=0.1403230126015842
+down model.language_model.layers.0.mlp.down_proj M=8192 status=failed baseline_ms=8.655807003378868
+down model.language_model.layers.0.mlp.down_proj M=6656 status=failed baseline_ms=7.090469996910542
+down model.language_model.layers.0.mlp.down_proj M=32 status=failed baseline_ms=0.1399329921696335
+output model.language_model.layers.0.linear_attn.out_proj M=8192 status=failed baseline_ms=3.2744579948484898
+output model.language_model.layers.0.linear_attn.out_proj M=6656 status=failed baseline_ms=2.699603996006772
+output model.language_model.layers.0.linear_attn.out_proj M=32 status=failed baseline_ms=0.07459201151505113
+275000000

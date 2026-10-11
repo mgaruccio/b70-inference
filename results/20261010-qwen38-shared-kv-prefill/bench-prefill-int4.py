@@ -32,7 +32,7 @@ from typing import Any
 
 GROUP_SIZE = 128
 PACKING = 8
-M_VALUES = (8192, 32)
+M_VALUES = (8192, 6656, 32)
 DEFAULT_REPS = 5
 DEFAULT_WARMUP = 2
 DEFAULT_REFERENCE_COLUMNS = 32
@@ -308,12 +308,8 @@ def _discover_projections(
         except Exception as exc:
             errors.append({"key": qweight_key, "error": _safe_text(exc)})
 
-    act_order_records = [record.base_name for record in records if record.g_idx_key]
-    if act_order_records:
-        raise RuntimeError(
-            "act-order g_idx tensors are present; unsupported records: "
-            + ", ".join(act_order_records[:8])
-        )
+    # Stored g_idx does not imply act-order: the installed symmetric,
+    # desc_act=False path discards it. Config flags were checked above.
     if not records:
         raise RuntimeError("no shape-valid qweight/scales projection pairs found")
 
@@ -362,14 +358,10 @@ def _load_projection_tensors(
     if tuple(scales_cpu.shape) != record.scales_shape:
         raise RuntimeError("scales shape changed after discovery")
 
-    if record.qzeros_key is not None:
-        qzeros_cpu = _load_tensor(key_to_file, record.qzeros_key, torch)
-    else:
-        qzeros_cpu = torch.tensor([8], dtype=torch.int8)
-    if qzeros_cpu.dtype != torch.int8 or qzeros_cpu.numel() != 1:
-        raise RuntimeError(f"{record.base_name} qzeros must be one int8 scalar")
-    if int(qzeros_cpu.reshape(-1)[0].item()) != 8:
-        raise RuntimeError(f"{record.base_name} requires symmetric qzeros=[8]")
+    # Match XPUwNa16LinearKernel.process_weights_after_loading exactly for
+    # this explicitly symmetric/desc_act=False model: stored packed qzeros
+    # and stored g_idx are ignored, replaced by scalar 8 and None.
+    qzeros_cpu = torch.tensor([8], dtype=torch.int8)
 
     if record.disk_layout == "[K/8,N]":
         qweight_storage_cpu = qweight_disk.transpose(0, 1).contiguous()
@@ -396,7 +388,9 @@ def _load_projection_tensors(
             "scales": _tensor_meta(scales_device),
             "qzeros": _tensor_meta(qzeros_device),
         },
-        "qzeros_source": "model" if record.qzeros_key else "symmetric_scalar_created",
+        "qzeros_source": "symmetric_scalar_created_like_installed_XPUwNa16",
+        "stored_qzeros_ignored": record.qzeros_key,
+        "stored_g_idx_ignored": record.g_idx_key,
     }
     return {
         "qweight_candidate": qweight_device,
@@ -408,7 +402,7 @@ def _load_projection_tensors(
 
 def _ensure_native_operator(torch: Any) -> Any:
     errors: list[str] = []
-    for module_name in ("vllm._xpu_ops", "vllm._C", "vllm._xpu_ops.xpu_ops"):
+    for module_name in ("vllm_xpu_kernels._xpu_C", "vllm._xpu_ops", "vllm._C"):
         if hasattr(torch.ops._xpu_C, "int4_gemm_w4a16"):
             break
         try:
@@ -789,8 +783,8 @@ def _initial_report(args: argparse.Namespace) -> dict[str, Any]:
         "contract": {
             "scope": "supplemental direct GEMM microbenchmark; not a serving result",
             "baseline": "installed torch.ops._xpu_C.int4_gemm_w4a16",
-            "candidate": "Triton symmetric GPTQ INT4 G128, FP16 dequant and output, FP32 tl.dot accumulation",
-            "intentional_difference": "candidate unpacks [N,K/8] contiguous qweight in registers instead of native oneDNN",
+            "candidate": "FP16 GPTQ-G128: register-fused Triton tiles or opt-in <=64MiB dequant tiles plus native FP16 torch.mm",
+            "intentional_difference": "selected candidate replaces native fused W4A16; tiled-fp16 uses bounded transient dense weights, no persistent cache",
             "decode_policy": "future serving dispatcher preserves native op for M<=32 and unsupported layouts",
             "gpu_check": "not passed without observed host XPU results",
         },
@@ -817,7 +811,7 @@ def _initial_report(args: argparse.Namespace) -> dict[str, Any]:
 
 def _parse_config_names(value: str | None, available: tuple[str, ...]) -> tuple[str, ...]:
     if value is None:
-        return available
+        return tuple(name for name in available if name != "tiled-fp16")
     names = tuple(part.strip() for part in value.split(",") if part.strip())
     if not names:
         raise ValueError("--configs must name at least one candidate config")
@@ -933,7 +927,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--configs",
         default=None,
-        help="comma-separated candidate configs; default is all three static variants",
+        help="comma-separated configs; default three fused tiles, opt-in tiled-fp16 uses bounded native dense GEMM",
     )
     parser.add_argument(
         "--reference-columns",

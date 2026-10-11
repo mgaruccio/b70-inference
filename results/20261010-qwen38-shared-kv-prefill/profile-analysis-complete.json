@@ -1,0 +1,1221 @@
+{
+  "note": "Diagnostic GPU-work shares, not wall-time speedups. Chrome trace timestamps/durations are microseconds.",
+  "gpu_event_count": 10158,
+  "summed_gpu_work_ms": 23291.00950800001,
+  "gpu_interval_union_ms": 23290.80025,
+  "gpu_span_ms": 23369.65075,
+  "kernels": [
+    {
+      "name": "gemm_kernel[SIMD16 {128; 1; 1} {64; 2; 1}]",
+      "count": 1170,
+      "duration_ms": 9908.498377000005,
+      "gpu_work_percent": 42.542159340910615
+    },
+    {
+      "name": "compat::experimental::detail::KernelFunctor<&(void cutlass::device_kernel<cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false> >(cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params const&)), sycl::_V1::nd_range<3>, sycl::_V1::ext::oneapi::experimental::properties<sycl::_V1::ext::oneapi::experimental::detail::properties_type_list<sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::oneapi::experimental::sub_group_size_key, std::integral_constant<unsigned int, 16u> >, sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::intel::experimental::grf_size_key, std::integral_constant<unsigned int, 256u> > > >, false, cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params>[SIMD16 {1; 26; 24} {512; 1; 1}]",
+      "count": 68,
+      "duration_ms": 5093.6946609999995,
+      "gpu_work_percent": 21.869789110044433
+    },
+    {
+      "name": "gemm_kernel[SIMD16 {32; 1; 1} {128; 4; 1}]",
+      "count": 396,
+      "duration_ms": 3121.4974350000034,
+      "gpu_work_percent": 13.402156029036997
+    },
+    {
+      "name": "compat::experimental::detail::KernelFunctor<&(void cutlass::device_kernel<cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false> >(cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params const&)), sycl::_V1::nd_range<3>, sycl::_V1::ext::oneapi::experimental::properties<sycl::_V1::ext::oneapi::experimental::detail::properties_type_list<sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::oneapi::experimental::sub_group_size_key, std::integral_constant<unsigned int, 16u> >, sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::intel::experimental::grf_size_key, std::integral_constant<unsigned int, 256u> > > >, false, cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params>[SIMD16 {1; 13; 24} {512; 1; 1}]",
+      "count": 17,
+      "duration_ms": 1302.413015,
+      "gpu_work_percent": 5.591913113738787
+    },
+    {
+      "name": "compat::experimental::detail::KernelFunctor<&(void cutlass::device_kernel<cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false> >(cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params const&)), sycl::_V1::nd_range<3>, sycl::_V1::ext::oneapi::experimental::properties<sycl::_V1::ext::oneapi::experimental::detail::properties_type_list<sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::oneapi::experimental::sub_group_size_key, std::integral_constant<unsigned int, 16u> >, sycl::_V1::ext::oneapi::experimental::property_value<sycl::_V1::ext::intel::experimental::grf_size_key, std::integral_constant<unsigned int, 256u> > > >, false, cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<true>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<false, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, true, false, true, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::half_t, cutlass::half_t, float> >, cute::Layout<cute::tuple<cute::C<32>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::C<256>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 8, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::float_e4m3_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, int, int, int> > >, void, void, void>, cute::tuple<cute::C<256>, cute::C<256> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::half_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<int, cute::C<1>, int, int> > >, void>, cutlass::fmha::kernel::XeFHMAIndividualTileScheduler, false>::Params>[SIMD16 {1; 11; 24} {512; 1; 1}]",
+      "count": 17,
+      "duration_ms": 1260.4670760000001,
+      "gpu_work_percent": 5.41181813337483
+    },
+    {
+      "name": "gdn::tiled_kernel_launcher<sycl::_V1::detail::half_impl::half, 4, 8, true>(sycl::_V1::queue&, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, float*, float*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half*, int, sycl::_V1::detail::half_impl::half*, int*, int*, bool*, int const*, gdn::ActMode const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, bool)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<2>)#1}[SIMD32 {16; 2499; 1} {64; 1; 1}]",
+      "count": 192,
+      "duration_ms": 414.3981519999999,
+      "gpu_work_percent": 1.7792193672741503
+    },
+    {
+      "name": "gdn::ChunkFwdOKernel<cutlass::half_t, float>[SIMD16 {1; 48; 1} {128; 1; 1}]",
+      "count": 288,
+      "duration_ms": 412.39331499999986,
+      "gpu_work_percent": 1.7706115952524546
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_3[SIMD32 {226304; 1; 1} {256; 1; 1}]",
+      "count": 192,
+      "duration_ms": 253.39824999999996,
+      "gpu_work_percent": 1.0879659377278714
+    },
+    {
+      "name": "gdn::ChunkComputeWUKernel<cutlass::half_t, float>[SIMD16 {1; 512; 1} {32; 1; 1}]",
+      "count": 288,
+      "duration_ms": 219.88082300000005,
+      "gpu_work_percent": 0.944058791974969
+    },
+    {
+      "name": "gdn::ChunkComputeAKernel<cutlass::half_t, float>[SIMD16 {1; 256; 1} {64; 1; 1}]",
+      "count": 288,
+      "duration_ms": 107.53248400000015,
+      "gpu_work_percent": 0.4616909540269813
+    },
+    {
+      "name": "triton_poi_fused__to_copy_add_int4_gemm_w4a16_mean_mul_pow_rsqrt_silu_t_view_1[SIMD32 {39936; 1; 1} {128; 1; 1}]",
+      "count": 192,
+      "duration_ms": 85.58668899999996,
+      "gpu_work_percent": 0.3674666354440438
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_2[SIMD32 {226304; 1; 1} {256; 1; 1}]",
+      "count": 64,
+      "duration_ms": 83.92319899999997,
+      "gpu_work_percent": 0.3603244375095634
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_4[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 128,
+      "duration_ms": 83.11296399999996,
+      "gpu_work_percent": 0.35684569177412545
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {20157; 1; 1} {256; 1; 1}]",
+      "count": 576,
+      "duration_ms": 82.06038699999992,
+      "gpu_work_percent": 0.352326450134391
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_2[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 192,
+      "duration_ms": 73.00752499999994,
+      "gpu_work_percent": 0.31345796743985394
+    },
+    {
+      "name": "gdn::ChunkInverseOptKernel<cutlass::half_t, float>[SIMD16 {1; 1056; 1} {16; 1; 1}]",
+      "count": 288,
+      "duration_ms": 52.29311099999982,
+      "gpu_work_percent": 0.224520585859699
+    },
+    {
+      "name": "gdn::tiled_kernel_launcher<sycl::_V1::detail::half_impl::half, 4, 8, true>(sycl::_V1::queue&, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, float*, float*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half*, int, sycl::_V1::detail::half_impl::half*, int*, int*, bool*, int const*, gdn::ActMode const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, bool)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<2>)#1}[SIMD32 {16; 1251; 1} {64; 1; 1}]",
+      "count": 48,
+      "duration_ms": 51.185915999999985,
+      "gpu_work_percent": 0.2197668417181257
+    },
+    {
+      "name": "gdn::tiled_kernel_launcher<sycl::_V1::detail::half_impl::half, 4, 8, true>(sycl::_V1::queue&, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, float*, float*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half*, int, sycl::_V1::detail::half_impl::half*, int*, int*, bool*, int const*, gdn::ActMode const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, bool)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<2>)#1}[SIMD32 {16; 1059; 1} {64; 1; 1}]",
+      "count": 48,
+      "duration_ms": 43.212372999999985,
+      "gpu_work_percent": 0.1855324174985089
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_3[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 68,
+      "duration_ms": 43.172993,
+      "gpu_work_percent": 0.18536333938282457
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_4[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 64,
+      "duration_ms": 41.50757699999999,
+      "gpu_work_percent": 0.17821287216315354
+    },
+    {
+      "name": "gemm_kernel[SIMD16 {32; 1; 1} {64; 4; 2}]",
+      "count": 192,
+      "duration_ms": 36.46345699999999,
+      "gpu_work_percent": 0.1565559319679789
+    },
+    {
+      "name": "triton_per_fused__to_copy_mean_pow_view_0[SIMD32 {9984; 1; 1} {64; 1; 1}]",
+      "count": 192,
+      "duration_ms": 35.334917999999995,
+      "gpu_work_percent": 0.15171054731596387
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_3[SIMD32 {113152; 1; 1} {256; 1; 1}]",
+      "count": 48,
+      "duration_ms": 31.401753000000003,
+      "gpu_work_percent": 0.13482349483054443
+    },
+    {
+      "name": "triton_poi_fused_8[SIMD32 {93184; 1; 1} {256; 1; 1}]",
+      "count": 64,
+      "duration_ms": 31.250913000000004,
+      "gpu_work_percent": 0.13417586296234144
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_t_view_0[SIMD32 {39936; 1; 1} {128; 1; 1}]",
+      "count": 64,
+      "duration_ms": 30.287574000000003,
+      "gpu_work_percent": 0.13003976486977437
+    },
+    {
+      "name": "gemm_kernel[SIMD16 {128; 1; 1} {16; 2; 8}]",
+      "count": 24,
+      "duration_ms": 26.699051999999995,
+      "gpu_work_percent": 0.11463243785474131
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_3[SIMD32 {95744; 1; 1} {256; 1; 1}]",
+      "count": 48,
+      "duration_ms": 26.436019000000005,
+      "gpu_work_percent": 0.11350310509692482
+    },
+    {
+      "name": "gemm_kernel[SIMD16 {32; 1; 1} {32; 2; 8}]",
+      "count": 6,
+      "duration_ms": 26.073954999999998,
+      "gpu_work_percent": 0.11194858252513314
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_1[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 64,
+      "duration_ms": 24.225598,
+      "gpu_work_percent": 0.10401265772391265
+    },
+    {
+      "name": "triton_poi_fused_5[SIMD32 {79872; 1; 1} {256; 1; 1}]",
+      "count": 64,
+      "duration_ms": 19.17830100000001,
+      "gpu_work_percent": 0.08234207707232541
+    },
+    {
+      "name": "triton_poi_fused_zeros_5[SIMD32 {79872; 1; 1} {256; 1; 1}]",
+      "count": 128,
+      "duration_ms": 15.51358999999999,
+      "gpu_work_percent": 0.06660763242001758
+    },
+    {
+      "name": "triton_red_fused_6[SIMD32 {2912; 1; 1} {512; 1; 1}]",
+      "count": 64,
+      "duration_ms": 12.928310999999999,
+      "gpu_work_percent": 0.055507731408376164
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {6719; 1; 1} {256; 1; 1}]",
+      "count": 384,
+      "duration_ms": 11.805462999999992,
+      "gpu_work_percent": 0.05068678107724375
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_4[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 32,
+      "duration_ms": 10.483321,
+      "gpu_work_percent": 0.04501016152348048
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_2[SIMD32 {113152; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 10.384889999999999,
+      "gpu_work_percent": 0.044587547810810826
+    },
+    {
+      "name": "triton_poi_fused__to_copy_add_int4_gemm_w4a16_mean_mul_pow_rsqrt_silu_t_view_1[SIMD32 {19968; 1; 1} {128; 1; 1}]",
+      "count": 48,
+      "duration_ms": 10.380605000000003,
+      "gpu_work_percent": 0.04456915015398739
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {10173; 1; 1} {256; 1; 1}]",
+      "count": 144,
+      "duration_ms": 9.907232000000002,
+      "gpu_work_percent": 0.04253672214850567
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {10079; 1; 1} {256; 1; 1}]",
+      "count": 192,
+      "duration_ms": 9.889606000000002,
+      "gpu_work_percent": 0.0424610448791544
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_2[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 48,
+      "duration_ms": 9.146233000000002,
+      "gpu_work_percent": 0.03926937128619715
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_4[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 32,
+      "duration_ms": 8.78936,
+      "gpu_work_percent": 0.037737136284200244
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_2[SIMD32 {95744; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 8.779474,
+      "gpu_work_percent": 0.03769469072168994
+    },
+    {
+      "name": "triton_poi_fused__to_copy_add_int4_gemm_w4a16_mean_mul_pow_rsqrt_silu_t_view_1[SIMD32 {16896; 1; 1} {128; 1; 1}]",
+      "count": 48,
+      "duration_ms": 8.778622000000002,
+      "gpu_work_percent": 0.03769103265783613
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {8637; 1; 1} {256; 1; 1}]",
+      "count": 144,
+      "duration_ms": 7.999829000000008,
+      "gpu_work_percent": 0.03434728321781082
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_2[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 48,
+      "duration_ms": 7.641229000000002,
+      "gpu_work_percent": 0.03280763333755623
+    },
+    {
+      "name": "triton_poi_fused_zeros_4[SIMD32 {79872; 1; 1} {256; 1; 1}]",
+      "count": 60,
+      "duration_ms": 7.241228000000001,
+      "gpu_work_percent": 0.031090228173719904
+    },
+    {
+      "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::Half, unsigned char, (vllm::Fp8KVCacheDataType)1>[SIMD32 {6656; 1; 1} {128; 1; 1}]",
+      "count": 68,
+      "duration_ms": 6.343196000000002,
+      "gpu_work_percent": 0.027234525827750135
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_3[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 17,
+      "duration_ms": 5.520829,
+      "gpu_work_percent": 0.02370369132391493
+    },
+    {
+      "name": "triton_per_fused__to_copy_mean_pow_view_0[SIMD32 {4992; 1; 1} {64; 1; 1}]",
+      "count": 48,
+      "duration_ms": 5.250608000000001,
+      "gpu_work_percent": 0.02254349687245853
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_2[SIMD32 {226304; 1; 1} {256; 1; 1}]",
+      "count": 4,
+      "duration_ms": 5.249477,
+      "gpu_work_percent": 0.022538640921497655
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_4[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 16,
+      "duration_ms": 5.244889,
+      "gpu_work_percent": 0.022518942333514924
+    },
+    {
+      "name": "triton_per_fused__to_copy_mean_pow_view_0[SIMD32 {4224; 1; 1} {64; 1; 1}]",
+      "count": 48,
+      "duration_ms": 4.69904,
+      "gpu_work_percent": 0.02017533846433737
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_3[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 17,
+      "duration_ms": 4.579265000000001,
+      "gpu_work_percent": 0.019661084241226694
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_4[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 16,
+      "duration_ms": 4.442495,
+      "gpu_work_percent": 0.019073861948637687
+    },
+    {
+      "name": "gemm_kernel[SIMD16 {1; 26; 1} {64; 4; 2}]",
+      "count": 48,
+      "duration_ms": 4.300915,
+      "gpu_work_percent": 0.01846598791058292
+    },
+    {
+      "name": "gemm_kernel[SIMD16 {1; 22; 1} {64; 4; 2}]",
+      "count": 48,
+      "duration_ms": 4.174459,
+      "gpu_work_percent": 0.017923048799435484
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_t_view_0[SIMD32 {19968; 1; 1} {128; 1; 1}]",
+      "count": 16,
+      "duration_ms": 3.7273870000000002,
+      "gpu_work_percent": 0.01600354419468042
+    },
+    {
+      "name": "triton_poi_fused_8[SIMD32 {46592; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 3.697493,
+      "gpu_work_percent": 0.015875194240636
+    },
+    {
+      "name": "precopy_mamba_align_fused_kernel[SIMD32 {1; 96; 16} {128; 1; 1}]",
+      "count": 6,
+      "duration_ms": 3.3619760000000007,
+      "gpu_work_percent": 0.01443465127110625
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE[SIMD16 {1; 1; 128} {64; 1; 1}]",
+      "count": 15,
+      "duration_ms": 3.2029099999999997,
+      "gpu_work_percent": 0.01375170105400482
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_t_view_0[SIMD32 {16896; 1; 1} {128; 1; 1}]",
+      "count": 16,
+      "duration_ms": 3.176662,
+      "gpu_work_percent": 0.013639005208893494
+    },
+    {
+      "name": "triton_poi_fused_8[SIMD32 {39424; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 3.114472,
+      "gpu_work_percent": 0.013371992308578294
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_1[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 16,
+      "duration_ms": 3.028951,
+      "gpu_work_percent": 0.013004807708998678
+    },
+    {
+      "name": "gdn::ChunkPrepareKernel<cutlass::half_t, float>[SIMD16 {1; 32; 1} {512; 1; 1}]",
+      "count": 288,
+      "duration_ms": 2.7313389999999975,
+      "gpu_work_percent": 0.011727009939443957
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_1[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 16,
+      "duration_ms": 2.5431179999999993,
+      "gpu_work_percent": 0.010918882666406057
+    },
+    {
+      "name": "triton_poi_fused_5[SIMD32 {39936; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 2.319993,
+      "gpu_work_percent": 0.009960894993422797
+    },
+    {
+      "name": "triton_poi_fused_5[SIMD32 {33792; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 1.934057,
+      "gpu_work_percent": 0.0083038779376896
+    },
+    {
+      "name": "triton_poi_fused_6[SIMD32 {93184; 1; 1} {256; 1; 1}]",
+      "count": 4,
+      "duration_ms": 1.908124,
+      "gpu_work_percent": 0.008192534545763663
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_view_0[SIMD32 {39936; 1; 1} {128; 1; 1}]",
+      "count": 4,
+      "duration_ms": 1.8902070000000002,
+      "gpu_work_percent": 0.008115607867279221
+    },
+    {
+      "name": "triton_red_fused_6[SIMD32 {1456; 1; 1} {512; 1; 1}]",
+      "count": 16,
+      "duration_ms": 1.840411,
+      "gpu_work_percent": 0.007901808632931323
+    },
+    {
+      "name": "triton_red_fused_6[SIMD32 {1232; 1; 1} {512; 1; 1}]",
+      "count": 16,
+      "duration_ms": 1.6105139999999998,
+      "gpu_work_percent": 0.0069147453632133005
+    },
+    {
+      "name": "triton_poi_fused_zeros_5[SIMD32 {39936; 1; 1} {256; 1; 1}]",
+      "count": 32,
+      "duration_ms": 1.5629040000000005,
+      "gpu_work_percent": 0.0067103317246217835
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_1[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 4,
+      "duration_ms": 1.510207,
+      "gpu_work_percent": 0.006484077040461786
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_embedding_rms_norm_0[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 8,
+      "duration_ms": 1.4882270000000002,
+      "gpu_work_percent": 0.006389705862636925
+    },
+    {
+      "name": "triton_poi_fused_3[SIMD32 {79872; 1; 1} {256; 1; 1}]",
+      "count": 4,
+      "duration_ms": 1.219999,
+      "gpu_work_percent": 0.005238068361016959
+    },
+    {
+      "name": "triton_poi_fused_zeros_5[SIMD32 {33792; 1; 1} {256; 1; 1}]",
+      "count": 32,
+      "duration_ms": 1.2161329999999997,
+      "gpu_work_percent": 0.005221469681605177
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<c10::Half, at::native::xpu::ArgMaxOps<float>, unsigned int, long, 4> >[SIMD32 {1; 1; 1} {1024; 1; 1}]",
+      "count": 24,
+      "duration_ms": 1.1675950000000002,
+      "gpu_work_percent": 0.005013071672994483
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_rms_norm_1[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 4,
+      "duration_ms": 1.151039,
+      "gpu_work_percent": 0.004941988450971352
+    },
+    {
+      "name": "_zero_kv_blocks_kernel[SIMD32 {4; 17; 832} {128; 1; 1}]",
+      "count": 3,
+      "duration_ms": 1.125833,
+      "gpu_work_percent": 0.0048337664351272465
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_int4_gemm_w4a16_rms_norm_2[SIMD32 {6656; 1; 1} {512; 1; 1}]",
+      "count": 4,
+      "duration_ms": 1.057707,
+      "gpu_work_percent": 0.0045412673058962865
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {5087; 1; 1} {256; 1; 1}]",
+      "count": 48,
+      "duration_ms": 0.9616470000000003,
+      "gpu_work_percent": 0.004128833486885544
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[68157440]",
+      "count": 4,
+      "duration_ms": 0.9013519999999998,
+      "gpu_work_percent": 0.003869956773193549
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {3391; 1; 1} {256; 1; 1}]",
+      "count": 96,
+      "duration_ms": 0.8977740000000003,
+      "gpu_work_percent": 0.0038545946224084124
+    },
+    {
+      "name": "gdn::chunk_update_states_kernel<sycl::_V1::detail::half_impl::half>[SIMD32 {10; 3; 1} {256; 1; 1}]",
+      "count": 288,
+      "duration_ms": 0.893420000000002,
+      "gpu_work_percent": 0.003835900713934832
+    },
+    {
+      "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::Half, unsigned char, (vllm::Fp8KVCacheDataType)1>[SIMD32 {3328; 1; 1} {128; 1; 1}]",
+      "count": 17,
+      "duration_ms": 0.85541,
+      "gpu_work_percent": 0.003672704696231322
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {4319; 1; 1} {256; 1; 1}]",
+      "count": 48,
+      "duration_ms": 0.8543540000000002,
+      "gpu_work_percent": 0.00366817075793364
+    },
+    {
+      "name": "triton_red_fused_4[SIMD32 {2912; 1; 1} {512; 1; 1}]",
+      "count": 4,
+      "duration_ms": 0.8071860000000001,
+      "gpu_work_percent": 0.0034656548473038376
+    },
+    {
+      "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::Half, unsigned char, (vllm::Fp8KVCacheDataType)1>[SIMD32 {2816; 1; 1} {128; 1; 1}]",
+      "count": 17,
+      "duration_ms": 0.734888,
+      "gpu_work_percent": 0.003155243226995293
+    },
+    {
+      "name": "triton_poi_fused_zeros_4[SIMD32 {39936; 1; 1} {256; 1; 1}]",
+      "count": 15,
+      "duration_ms": 0.724263,
+      "gpu_work_percent": 0.0031096247663770426
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<float>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {315; 1; 1} {256; 1; 1}]",
+      "count": 384,
+      "duration_ms": 0.6918340000000012,
+      "gpu_work_percent": 0.002970390784316883
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {2879; 1; 1} {256; 1; 1}]",
+      "count": 96,
+      "duration_ms": 0.6843360000000002,
+      "gpu_work_percent": 0.0029381981050024646
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_27XeReduceSplitKTileSchedulerENS6_22XeFMHAFwdSplitKVKernelIS9_NS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSG_8MMA_AtomIJNSG_10XE_DPAS_TTILi8EfNS3_6half_tESK_fEEEEENSG_6LayoutINSG_5tupleIJNSG_1CILi1EEENSP_ILi4EEESQ_EEENSO_IJNSP_ILi0EEESQ_ST_EEEEEKNSO_IJNSN_INSP_ILi8EEESQ_EENSN_INSP_ILi64EEESQ_EESZ_EEEEENSH_ISM_NSN_INSO_IJSQ_SQ_SR_EEENSO_IJST_ST_SQ_EEEEEKNSO_IJSX_NSN_INSP_ILi32EEESQ_EESZ_EEEEELi8ENSG_6TensorINSG_10ViewEngineINSG_8gmem_ptrIPSK_EEEENSN_INSO_IJiiiiEEENSO_IJiSQ_iiEEEEEEENS1B_INS1C_INS1D_IPNS3_12float_e4m3_tEEEEES1J_EENS1B_IS1O_NSN_IS1H_NSO_IJSQ_iiiEEEEEEEvvvLb0EEENSC_17DecodeFwdEpilogueIS1T_NSO_IJSW_NSP_ILi256EEEEEES1K_NS1B_INS1C_INS1D_IPfEEEES1J_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS2A_3ext6oneapi12experimental10propertiesINS2F_6detail20properties_type_listIJNS2F_14property_valueINS2F_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2J_INS2D_5intel12experimental12grf_size_keyEJS2L_IjLj256EEEEEEEEEELb0EJNS24_6ParamsEEEE[SIMD16 {1; 24; 1} {64; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.6636390000000001,
+      "gpu_work_percent": 0.0028493354904692
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_2[SIMD32 {113152; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.640104,
+      "gpu_work_percent": 0.002748287916760915
+    },
+    {
+      "name": "triton_poi_fused_zeros_4[SIMD32 {33792; 1; 1} {256; 1; 1}]",
+      "count": 15,
+      "duration_ms": 0.563325,
+      "gpu_work_percent": 0.0024186371132024513
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_2[SIMD32 {95744; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.542708,
+      "gpu_work_percent": 0.002330117978843254
+    },
+    {
+      "name": "_zero_kv_blocks_kernel[SIMD32 {5; 17; 832} {128; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.473333,
+      "gpu_work_percent": 0.002032256265394677
+    },
+    {
+      "name": "triton_poi_fused_arange_bitwise_and_eq_index_lt_remainder_select_split_where_7[SIMD32 {416; 1; 1} {256; 1; 1}]",
+      "count": 64,
+      "duration_ms": 0.44215900000000036,
+      "gpu_work_percent": 0.0018984106285651866
+    },
+    {
+      "name": "triton_poi_fused_zeros_1[SIMD32 {39936; 1; 1} {128; 1; 1}]",
+      "count": 4,
+      "duration_ms": 0.42156099999999996,
+      "gpu_work_percent": 0.0018099730707473282
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE[SIMD16 {1; 1; 104} {64; 1; 1}]",
+      "count": 3,
+      "duration_ms": 0.375728,
+      "gpu_work_percent": 0.0016131889855222664
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<float, at::native::xpu::ArgMaxOps<float>, unsigned int, long, 4> >[SIMD32 {1; 1; 1} {1024; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.301248,
+      "gpu_work_percent": 0.0012934089434660494
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_view_0[SIMD32 {19968; 1; 1} {128; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.230625,
+      "gpu_work_percent": 0.0009901889393020289
+    },
+    {
+      "name": "triton_poi_fused_6[SIMD32 {46592; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.229166,
+      "gpu_work_percent": 0.0009839247196274852
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::CompareScalarFunctor<int, at::native::xpu::CompareFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 120,
+      "duration_ms": 0.22778500000000015,
+      "gpu_work_percent": 0.0009779953931226572
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 120,
+      "duration_ms": 0.21942800000000012,
+      "gpu_work_percent": 0.0009421145954392011
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE[SIMD16 {1; 1; 4} {64; 1; 1}]",
+      "count": 102,
+      "duration_ms": 0.20539500000000002,
+      "gpu_work_percent": 0.000881863879405703
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_view_0[SIMD32 {16896; 1; 1} {128; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.19218700000000002,
+      "gpu_work_percent": 0.0008251553026672696
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_1[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.19010400000000002,
+      "gpu_work_percent": 0.0008162119376350045
+    },
+    {
+      "name": "triton_poi_fused_6[SIMD32 {39424; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.18968700000000002,
+      "gpu_work_percent": 0.0008144215472276811
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_embedding_rms_norm_0[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.18489499999999998,
+      "gpu_work_percent": 0.000793847084801078
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_1[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.17614500000000002,
+      "gpu_work_percent": 0.0007562789407625189
+    },
+    {
+      "name": "_compute_slot_mapping_kernel[SIMD32 {2; 1; 1} {128; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.17281100000000002,
+      "gpu_work_percent": 0.0007419644045082837
+    },
+    {
+      "name": "_zero_kv_blocks_kernel[SIMD32 {2; 17; 832} {128; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.165,
+      "gpu_work_percent": 0.0007084278590128337
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_rms_norm_1[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.15135400000000002,
+      "gpu_work_percent": 0.0006498387283213846
+    },
+    {
+      "name": "triton_poi_fused_3[SIMD32 {39936; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.145416,
+      "gpu_work_percent": 0.0006243439124012742
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_embedding_rms_norm_0[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.143332,
+      "gpu_work_percent": 0.0006153962538668332
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_rms_norm_1[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.13093700000000003,
+      "gpu_work_percent": 0.000562178294397354
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<float>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {159; 1; 1} {256; 1; 1}]",
+      "count": 96,
+      "duration_ms": 0.1262079999999999,
+      "gpu_work_percent": 0.0005418743226078282
+    },
+    {
+      "name": "triton_poi_fused_3[SIMD32 {33792; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.122187,
+      "gpu_work_percent": 0.0005246101503587946
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_int4_gemm_w4a16_rms_norm_2[SIMD32 {3328; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.120833,
+      "gpu_work_percent": 0.0005187967484127136
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[53248]",
+      "count": 24,
+      "duration_ms": 0.12056,
+      "gpu_work_percent": 0.0005176246223187105
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<float>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {135; 1; 1} {256; 1; 1}]",
+      "count": 96,
+      "duration_ms": 0.11776799999999986,
+      "gpu_work_percent": 0.0005056371642437776
+    },
+    {
+      "name": "triton_red_fused_4[SIMD32 {1456; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.115312,
+      "gpu_work_percent": 0.0004950923228999266
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[4]",
+      "count": 72,
+      "duration_ms": 0.112731,
+      "gpu_work_percent": 0.00048401079378409547
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 48,
+      "duration_ms": 0.10831399999999995,
+      "gpu_work_percent": 0.00046504639467343054
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_int4_gemm_w4a16_rms_norm_2[SIMD32 {2816; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.107187,
+      "gpu_work_percent": 0.0004602076177212643
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[34078720]",
+      "count": 1,
+      "duration_ms": 0.10177,
+      "gpu_work_percent": 0.00043694971643476417
+    },
+    {
+      "name": "triton_red_fused_4[SIMD32 {1232; 1; 1} {512; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.10104099999999999,
+      "gpu_work_percent": 0.0004338197533485802
+    },
+    {
+      "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::Half, unsigned char, (vllm::Fp8KVCacheDataType)1>[SIMD32 {5; 1; 1} {128; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.09666099999999998,
+      "gpu_work_percent": 0.0004150142138184213
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<long>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 30,
+      "duration_ms": 0.09144599999999997,
+      "gpu_work_percent": 0.0003926235999714398
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<2> >, char*, OffsetCalculator<3, unsigned int, false> >[SIMD32 {5; 1; 1} {1024; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.08853299999999997,
+      "gpu_work_percent": 0.00038011662813323147
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[28835840]",
+      "count": 1,
+      "duration_ms": 0.079062,
+      "gpu_work_percent": 0.0003394528690258949
+    },
+    {
+      "name": "_zero_kv_blocks_kernel[SIMD32 {1; 17; 832} {128; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.064583,
+      "gpu_work_percent": 0.0002772872510219748
+    },
+    {
+      "name": "triton_poi_fused_arange_bitwise_and_eq_index_lt_remainder_select_split_where_7[SIMD32 {208; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 0.06312099999999998,
+      "gpu_work_percent": 0.00027101015084090343
+    },
+    {
+      "name": "triton_poi_fused_arange_bitwise_and_eq_index_lt_remainder_select_split_where_7[SIMD32 {176; 1; 1} {256; 1; 1}]",
+      "count": 16,
+      "duration_ms": 0.06134899999999999,
+      "gpu_work_percent": 0.0002634020649853232
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<long, at::native::xpu::func_wrapper_t<long, at::native::xpu::SumFunctor<long> >, unsigned int, long, 4> >[SIMD32 {1; 1; 1} {32; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.053956000000000004,
+      "gpu_work_percent": 0.00023166020339937247
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[4]",
+      "count": 30,
+      "duration_ms": 0.052953999999999994,
+      "gpu_work_percent": 0.0002273581142191854
+    },
+    {
+      "name": "triton_poi_fused_zeros_1[SIMD32 {19968; 1; 1} {128; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.052916,
+      "gpu_work_percent": 0.00022719496113650367
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::Half>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >[SIMD32 {243; 1; 1} {256; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.044893999999999996,
+      "gpu_work_percent": 0.00019275248668195247
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::DivFloorIntergerFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.04207899999999999,
+      "gpu_work_percent": 0.00018066627805697592
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[26624]",
+      "count": 10,
+      "duration_ms": 0.038279,
+      "gpu_work_percent": 0.0001643509697888016
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >[SIMD32 {7; 1; 1} {256; 1; 1}]",
+      "count": 8,
+      "duration_ms": 0.037183,
+      "gpu_work_percent": 0.00015964529140408604
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[3328]",
+      "count": 24,
+      "duration_ms": 0.035096,
+      "gpu_work_percent": 0.00015068475236311766
+    },
+    {
+      "name": "at::native::xpu::ScatterGatherElementwiseKernelFunctor<at::native::xpu::ScatterGatherInternalKernelLoopFunctor<false, at::native::xpu::OpaqueType<4>, OffsetCalculator<3, unsigned int, false>, at::native::xpu::TensorAssign, long> >[SIMD32 {1; 1; 1} {5; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.034471999999999996,
+      "gpu_work_percent": 0.00014800560700539638
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[528]",
+      "count": 18,
+      "duration_ms": 0.033583999999999996,
+      "gpu_work_percent": 0.00014419297707325457
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.03259600000000001,
+      "gpu_work_percent": 0.00013995099692352928
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >[SIMD32 {13; 1; 1} {512; 1; 1}]",
+      "count": 8,
+      "duration_ms": 0.030830000000000003,
+      "gpu_work_percent": 0.00013236867208100403
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 24,
+      "duration_ms": 0.029468,
+      "gpu_work_percent": 0.00012652092211751627
+    },
+    {
+      "name": "eagle_step_slot_mapping_metadata_kernel[SIMD32 {5; 1; 1} {128; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.028636,
+      "gpu_work_percent": 0.00012294872830722128
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2H)[4]",
+      "count": 18,
+      "duration_ms": 0.028117999999999994,
+      "gpu_work_percent": 0.00012072469418013852
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >[SIMD32 {2; 1; 1} {256; 1; 1}]",
+      "count": 36,
+      "duration_ms": 0.02790699999999999,
+      "gpu_work_percent": 0.00011981876522103724
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[16]",
+      "count": 19,
+      "duration_ms": 0.02785799999999999,
+      "gpu_work_percent": 0.0001196083836144213
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<int, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> > > >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.027807,
+      "gpu_work_percent": 0.00011938941500345374
+    },
+    {
+      "name": "triton_poi_fused_zeros_1[SIMD32 {16896; 1; 1} {128; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.02625,
+      "gpu_work_percent": 0.00011270443211567809
+    },
+    {
+      "name": "triton_poi_fused_arange_bitwise_and_eq_index_lt_remainder_select_split_where_5[SIMD32 {416; 1; 1} {256; 1; 1}]",
+      "count": 4,
+      "duration_ms": 0.025312,
+      "gpu_work_percent": 0.00010867712707474453
+    },
+    {
+      "name": "at::native::xpu::CatArrayBatchedCopy_contig<at::native::xpu::OpaqueType<8u>, unsigned int, 2, 64, 1>[SIMD32 {1; 4; 1} {256; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.025206,
+      "gpu_work_percent": 0.00010822201584410598
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[10240]",
+      "count": 18,
+      "duration_ms": 0.025098000000000002,
+      "gpu_work_percent": 0.00010775831760911577
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<8> >, char*, OffsetCalculator<3, unsigned int, false> >[SIMD32 {1; 1; 1} {3; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.024269,
+      "gpu_work_percent": 0.00010419900430534824
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ClampScalarFunctor<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.023219,
+      "gpu_work_percent": 9.969082702072114e-05
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexPutFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >[SIMD32 {1; 1; 1} {1; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.022393,
+      "gpu_work_percent": 9.614439422348112e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[22528]",
+      "count": 6,
+      "duration_ms": 0.022183,
+      "gpu_work_percent": 9.52427587665557e-05
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.020928000000000002,
+      "gpu_work_percent": 8.985441353588233e-05
+    },
+    {
+      "name": "at::native::xpu::ElementwiseKernelWithIndexFunctor<int, at::native::xpu::ArangeFunctor<int, long> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 18,
+      "duration_ms": 0.018741999999999998,
+      "gpu_work_percent": 8.046881777950622e-05
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<bool>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.017289,
+      "gpu_work_percent": 7.423035911801745e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[832]",
+      "count": 12,
+      "duration_ms": 0.017235,
+      "gpu_work_percent": 7.399851000052236e-05
+    },
+    {
+      "name": "postprocess_mamba_fused_kernel[SIMD32 {1; 96; 16} {128; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.016454999999999997,
+      "gpu_work_percent": 7.064957830337077e-05
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 12,
+      "duration_ms": 0.015099000000000001,
+      "gpu_work_percent": 6.482758935293804e-05
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >[SIMD32 {13; 1; 1} {256; 1; 1}]",
+      "count": 8,
+      "duration_ms": 0.012808,
+      "gpu_work_percent": 5.4991175868099234e-05
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >[SIMD32 {78; 1; 1} {256; 1; 1}]",
+      "count": 4,
+      "duration_ms": 0.012707000000000001,
+      "gpu_work_percent": 5.455753214833987e-05
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::AUnaryFunctor<int, int, bool, at::native::xpu::CompareEqFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {1; 1; 1} {256; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.011874,
+      "gpu_work_percent": 5.098104483586902e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[53248]",
+      "count": 8,
+      "duration_ms": 0.011663999999999997,
+      "gpu_work_percent": 5.0079409378943586e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[8]",
+      "count": 7,
+      "duration_ms": 0.011299000000000002,
+      "gpu_work_percent": 4.851228108476369e-05
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >[SIMD32 {4; 1; 1} {256; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.009582,
+      "gpu_work_percent": 4.1140337848854384e-05
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >[SIMD32 {3; 1; 1} {256; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.009269999999999999,
+      "gpu_work_percent": 3.980076516999375e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[1664]",
+      "count": 6,
+      "duration_ms": 0.009008,
+      "gpu_work_percent": 3.867586759992489e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[1]",
+      "count": 6,
+      "duration_ms": 0.008904,
+      "gpu_work_percent": 3.822934337363801e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[512]",
+      "count": 6,
+      "duration_ms": 0.008748,
+      "gpu_work_percent": 3.75595570342077e-05
+    },
+    {
+      "name": "eagle_prepare_next_token_padded_kernel[SIMD32 {1; 1; 1} {128; 1; 1}]",
+      "count": 6,
+      "duration_ms": 0.008747999999999999,
+      "gpu_work_percent": 3.755955703420769e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[1408]",
+      "count": 6,
+      "duration_ms": 0.008436,
+      "gpu_work_percent": 3.6219984355347064e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[26620]",
+      "count": 4,
+      "duration_ms": 0.008332,
+      "gpu_work_percent": 3.577346012906019e-05
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> > > >[SIMD32 {78; 1; 1} {256; 1; 1}]",
+      "count": 4,
+      "duration_ms": 0.008019,
+      "gpu_work_percent": 3.442959394802372e-05
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >[SIMD32 {13; 1; 1} {256; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.0075,
+      "gpu_work_percent": 3.220126631876517e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[32]",
+      "count": 3,
+      "duration_ms": 0.006508999999999999,
+      "gpu_work_percent": 2.7946405662512326e-05
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >[SIMD32 {11; 1; 1} {256; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.006458,
+      "gpu_work_percent": 2.772743705154473e-05
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >[SIMD32 {7; 1; 1} {256; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.005311,
+      "gpu_work_percent": 2.2802790055861576e-05
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ClampScalarFunctor<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {7; 1; 1} {256; 1; 1}]",
+      "count": 4,
+      "duration_ms": 0.005207,
+      "gpu_work_percent": 2.23562658295747e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[416]",
+      "count": 3,
+      "duration_ms": 0.004582,
+      "gpu_work_percent": 1.9672826969677602e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[352]",
+      "count": 3,
+      "duration_ms": 0.004477999999999999,
+      "gpu_work_percent": 1.9226302743390722e-05
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >[SIMD32 {6; 1; 1} {256; 1; 1}]",
+      "count": 2,
+      "duration_ms": 0.004166,
+      "gpu_work_percent": 1.7886730064530095e-05
+    },
+    {
+      "name": "triton_poi_fused_arange_bitwise_and_eq_index_lt_remainder_select_split_where_5[SIMD32 {208; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.00375,
+      "gpu_work_percent": 1.6100633159382585e-05
+    },
+    {
+      "name": "triton_poi_fused_arange_bitwise_and_eq_index_lt_remainder_select_split_where_5[SIMD32 {176; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.003645,
+      "gpu_work_percent": 1.5649815430919872e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[40]",
+      "count": 1,
+      "duration_ms": 0.00302,
+      "gpu_work_percent": 1.2966376571022773e-05
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >[SIMD32 {39; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.002812,
+      "gpu_work_percent": 1.207332811844902e-05
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >[SIMD32 {33; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.002812,
+      "gpu_work_percent": 1.207332811844902e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[26624]",
+      "count": 2,
+      "duration_ms": 0.0027080000000000003,
+      "gpu_work_percent": 1.1626803892162144e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[22528]",
+      "count": 2,
+      "duration_ms": 0.002499,
+      "gpu_work_percent": 1.0729461937412555e-05
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[13312]",
+      "count": 1,
+      "duration_ms": 0.0019790000000000003,
+      "gpu_work_percent": 8.49684080597817e-06
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> > > >[SIMD32 {33; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.0019790000000000003,
+      "gpu_work_percent": 8.49684080597817e-06
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> > > >[SIMD32 {39; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.001875,
+      "gpu_work_percent": 8.050316579691292e-06
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[13308]",
+      "count": 1,
+      "duration_ms": 0.001875,
+      "gpu_work_percent": 8.050316579691292e-06
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(H2D)[11264]",
+      "count": 1,
+      "duration_ms": 0.001875,
+      "gpu_work_percent": 8.050316579691292e-06
+    },
+    {
+      "name": "zeCommandListAppendMemoryCopy(D2D)[11260]",
+      "count": 1,
+      "duration_ms": 0.001666,
+      "gpu_work_percent": 7.152974624941703e-06
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ClampScalarFunctor<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {3; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.0013540000000000002,
+      "gpu_work_percent": 5.813401946081072e-06
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ClampScalarFunctor<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >[SIMD32 {4; 1; 1} {256; 1; 1}]",
+      "count": 1,
+      "duration_ms": 0.00125,
+      "gpu_work_percent": 5.366877719794195e-06
+    }
+  ]
+}

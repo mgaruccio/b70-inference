@@ -50,7 +50,7 @@ KERNEL_CONFIGS: Final[tuple[KernelConfig, ...]] = (
 def available_configs() -> tuple[str, ...]:
     """Return the bounded config names exposed to the microbenchmark."""
 
-    return tuple(config.name for config in KERNEL_CONFIGS)
+    return tuple(config.name for config in KERNEL_CONFIGS) + ("tiled-fp16",)
 
 
 def _find_config(name: str | None) -> KernelConfig:
@@ -183,6 +183,106 @@ def _torch_dtype(name: str) -> Any:
     return getattr(torch, name)
 
 
+# This GPU-only module has runtime imports; benchmark --help does not import it.
+# A stable JITFunction lets discarded warmup actually populate its launch cache.
+import triton
+import triton.language as tl
+
+
+@triton.jit
+def _int4_gemm_kernel(
+    x_ptr, qweight_ptr, scale_ptr, bias_ptr, output_ptr,
+    M, N, K, stride_xm, stride_xk, stride_qn, stride_qk,
+    stride_sg, stride_sn, stride_b, stride_om, stride_on,
+    BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
+    HAS_BIAS: tl.constexpr, PACKING: tl.constexpr, GROUP_SIZE: tl.constexpr,
+):
+    pid_m = tl.program_id(axis=0)
+    pid_n = tl.program_id(axis=1)
+    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
+    offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    offs_k = tl.arange(0, BLOCK_K)
+    offs_packed_k = tl.arange(0, BLOCK_K // PACKING)
+    offs_nibble = tl.arange(0, PACKING)
+    row_mask = offs_m < M
+    col_mask = offs_n < N
+    accumulator = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+    group_count = K // GROUP_SIZE
+    packed_per_group = GROUP_SIZE // PACKING
+    for group_index in range(0, group_count):
+        group_k = group_index * GROUP_SIZE
+        scale = tl.load(
+            scale_ptr + group_index * stride_sg + offs_n * stride_sn,
+            mask=col_mask, other=0.0,
+        ).to(tl.float32)
+        for k_offset in range(0, GROUP_SIZE, BLOCK_K):
+            x_ptrs = (x_ptr + offs_m[:, None] * stride_xm
+                      + (group_k + k_offset + offs_k[None, :]) * stride_xk)
+            activations = tl.load(
+                x_ptrs,
+                mask=row_mask[:, None] & ((group_k + k_offset + offs_k)[None, :] < K),
+                other=0.0,
+            )
+            packed_rows = group_index * packed_per_group + k_offset // PACKING + offs_packed_k
+            q_ptrs = (qweight_ptr + offs_n[None, :] * stride_qn
+                      + packed_rows[:, None] * stride_qk)
+            packed = tl.load(q_ptrs, mask=col_mask[None, :], other=0).to(tl.int32)
+            shifts = (offs_nibble[None, :, None] * 4).to(tl.int32)
+            codes = (packed[:, None, :] >> shifts) & 0xF
+            codes = tl.reshape(codes, (BLOCK_K, BLOCK_N), can_reorder=False)
+            weights = ((codes.to(tl.float32) - 8.0) * scale[None, :]).to(tl.float16)
+            accumulator = tl.dot(activations, weights, accumulator)
+    if HAS_BIAS:
+        bias_values = tl.load(bias_ptr + offs_n * stride_b, mask=col_mask, other=0.0).to(tl.float32)
+        accumulator += bias_values[None, :]
+    output_ptrs = output_ptr + offs_m[:, None] * stride_om + offs_n[None, :] * stride_on
+    tl.store(output_ptrs, accumulator.to(tl.float16), mask=row_mask[:, None] & col_mask[None, :])
+
+
+@triton.jit
+def _dequant_fp16_tile(q_ptr, s_ptr, w_ptr, K, N, START_N,
+                       TILE_N: tl.constexpr, BK: tl.constexpr, BN: tl.constexpr):
+    ks = tl.program_id(0) * BK + tl.arange(0, BK)
+    ns = tl.program_id(1) * BN + tl.arange(0, BN)
+    actual_n = START_N + ns
+    mask = (ks[:, None] < K) & (ns[None, :] < TILE_N)
+    packed = tl.load(q_ptr + actual_n[None, :] * (K // 8) + ks[:, None] // 8,
+                     mask=mask, other=0).to(tl.int32)
+    values = ((packed >> ((ks[:, None] % 8) * 4)) & 15).to(tl.float32) - 8.0
+    scales = tl.load(s_ptr + (ks[:, None] // 128) * N + actual_n[None, :],
+                     mask=mask, other=0).to(tl.float32)
+    tl.store(w_ptr + ns[None, :] * K + ks[:, None],
+             (values * scales).to(tl.float16), mask=mask)
+
+
+def _launch_tiled_fp16(x: Any, qweight: Any, scales: Any, output: Any) -> None:
+    """Dequantize <=64MiB at a time; dense FP16 GEMM writes into output slices.
+
+    This is an opt-in supplemental experiment, not the default dispatcher.
+    No tensor or dense weight survives the call. Native matmul may also allocate
+    a bounded output tile/scratchpad; report actual peak memory rather than
+    claiming the 64MiB weight limit is a total-memory limit.
+    """
+    import torch
+
+    k = int(x.shape[1])
+    n = int(qweight.shape[0])
+    cap = 64 * 1024 * 1024
+    width = min(n, (cap // (2 * k) // 32) * 32)
+    if width <= 0:
+        raise UnsupportedConfiguration("K exceeds the 64MiB dequant tile cap")
+    for start in range(0, n, width):
+        count = min(width, n - start)
+        dense = torch.empty((count, k), device=x.device, dtype=torch.float16)
+        assert dense.numel() * dense.element_size() <= cap
+        _dequant_fp16_tile[(triton.cdiv(k, 128), triton.cdiv(count, 32))](
+            qweight, scales, dense, k, n, start,
+            TILE_N=count, BK=128, BN=32, num_warps=4,
+        )
+        # Match the native packed weight's N-major physical orientation.
+        torch.mm(x, dense.transpose(0, 1), out=output[:, start:start + count])
+        del dense
+
 def _launch_kernel(
     x: Any,
     qweight: Any,
@@ -191,118 +291,7 @@ def _launch_kernel(
     output: Any,
     config: KernelConfig,
 ) -> None:
-    """Define and launch one statically configured Triton kernel.
-
-    The definition is local so importing this experiment file does not require a
-    torch/Triton installation (notably, ``bench-prefill-int4.py --help`` works on
-    a host).  Triton's own compilation cache is the only runtime cache involved;
-    no weight-dependent Python state or workspace is retained here.
-    """
-
-    import triton
-    import triton.language as tl
-
-    @triton.jit
-    def _int4_gemm_kernel(
-        x_ptr,
-        qweight_ptr,
-        scale_ptr,
-        bias_ptr,
-        output_ptr,
-        M,
-        N,
-        K,
-        stride_xm,
-        stride_xk,
-        stride_qn,
-        stride_qk,
-        stride_sg,
-        stride_sn,
-        stride_b,
-        stride_om,
-        stride_on,
-        BLOCK_M: tl.constexpr,
-        BLOCK_N: tl.constexpr,
-        BLOCK_K: tl.constexpr,
-        HAS_BIAS: tl.constexpr,
-    ):
-        pid_m = tl.program_id(axis=0)
-        pid_n = tl.program_id(axis=1)
-        offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
-        offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
-        offs_k = tl.arange(0, BLOCK_K)
-        offs_packed_k = tl.arange(0, BLOCK_K // PACKING)
-        offs_nibble = tl.arange(0, PACKING)
-        row_mask = offs_m < M
-        col_mask = offs_n < N
-        accumulator = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
-        group_count = K // GROUP_SIZE
-        packed_per_group = GROUP_SIZE // PACKING
-
-        # The runtime loop keeps K out of the compilation key.  Each iteration
-        # starts at a G128 scale boundary; BLOCK_K=64 simply visits each group
-        # twice without allocating a dequantized or split-K workspace.
-        for group_index in range(0, group_count):
-            group_k = group_index * GROUP_SIZE
-            scale = tl.load(
-                scale_ptr + group_index * stride_sg + offs_n * stride_sn,
-                mask=col_mask,
-                other=0.0,
-            ).to(tl.float32)
-            for k_offset in range(0, GROUP_SIZE, BLOCK_K):
-                x_ptrs = (
-                    x_ptr
-                    + offs_m[:, None] * stride_xm
-                    + (group_k + k_offset + offs_k[None, :]) * stride_xk
-                )
-                activations = tl.load(
-                    x_ptrs,
-                    mask=row_mask[:, None]
-                    & ((group_k + k_offset + offs_k)[None, :] < K),
-                    other=0.0,
-                )
-                packed_rows = (
-                    group_index * packed_per_group
-                    + (k_offset // PACKING)
-                    + offs_packed_k
-                )
-                q_ptrs = (
-                    qweight_ptr
-                    + offs_n[None, :] * stride_qn
-                    + packed_rows[:, None] * stride_qk
-                )
-                packed = tl.load(
-                    q_ptrs,
-                    mask=col_mask[None, :],
-                    other=0,
-                ).to(tl.int32)
-                shifts = (offs_nibble[None, :, None] * 4).to(tl.int32)
-                codes = (packed[:, None, :] >> shifts) & 0xF
-                codes = tl.reshape(
-                    codes, (BLOCK_K, BLOCK_N), can_reorder=False
-                )
-                weights = (
-                    (codes.to(tl.float32) - 8.0) * scale[None, :]
-                ).to(tl.float16)
-                accumulator = tl.dot(activations, weights, accumulator)
-
-        if HAS_BIAS:
-            bias_values = tl.load(
-                bias_ptr + offs_n * stride_b,
-                mask=col_mask,
-                other=0.0,
-            ).to(tl.float32)
-            accumulator += bias_values[None, :]
-        output_ptrs = (
-            output_ptr
-            + offs_m[:, None] * stride_om
-            + offs_n[None, :] * stride_on
-        )
-        tl.store(
-            output_ptrs,
-            accumulator.to(tl.float16),
-            mask=row_mask[:, None] & col_mask[None, :],
-        )
+    """Launch the stable kernel without a weight-dependent cache or workspace."""
 
     import torch
 
@@ -334,6 +323,8 @@ def _launch_kernel(
         BLOCK_N=config.block_n,
         BLOCK_K=config.block_k,
         HAS_BIAS=bias is not None,
+        PACKING=PACKING,
+        GROUP_SIZE=GROUP_SIZE,
         num_warps=config.num_warps,
         num_stages=config.num_stages,
         grf_mode=config.grf_mode,
@@ -362,14 +353,20 @@ def candidate_int4_gemm_w4a16(
     import torch
 
     flat_x, config = _validate_problem(
-        x, qweight, g_idx, scales, qzeros, group_size, bias, config_name
+        x, qweight, g_idx, scales, qzeros, group_size, bias,
+        None if config_name == "tiled-fp16" else config_name
     )
     output = torch.empty(
         (int(flat_x.shape[0]), int(qweight.shape[0])),
         device=x.device,
         dtype=torch.float16,
     )
-    _launch_kernel(flat_x, qweight, scales, bias, output, config)
+    if config_name == "tiled-fp16":
+        if bias is not None:
+            raise UnsupportedConfiguration("tiled-fp16 screen requires bias=None")
+        _launch_tiled_fp16(flat_x, qweight, scales, output)
+    else:
+        _launch_kernel(flat_x, qweight, scales, bias, output, config)
     return output
 
 
