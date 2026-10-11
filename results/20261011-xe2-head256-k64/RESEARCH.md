@@ -99,12 +99,17 @@ cleared that bar. Promotion still waits on the full-context sweep
 (512 through 212992) and text-prompt greedy parity, because a tile that wins
 at 98k can still miscompile or regress at the context ceiling.
 
-## Not promoted
+## Promoted
 
-The live launcher was left on the stock kernel. A passing full-range sweep
-promotes only the K64 library overlay. It does not turn production prefix
-caching off, because that forces Mamba cache mode `none` and is a separate
-serving-policy change from the tile.
+The full-range no-cache sweep passed: gain grows from about 1% at 16k to 8.37%
+at 212,991 tokens, ranges do not overlap from 16k up, decode did not regress,
+and admission succeeded. The overlay is mounted by the golden launcher. Prefix
+caching stays on there. The no-cache measurement remains the evidence; it is
+not the production cache policy.
+
+The 212,992-token request is not a valid one-token prefill. `max_model_len` is
+212,992, so the prompt plus one generated token does not fit. The ceiling row
+is 212,991.
 
 
 ## Next wave

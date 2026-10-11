@@ -1,63 +1,65 @@
-# Xe2 head-256 K64 prefill A/B — 2026-10-11
+# Xe2 head-256 K64 prefill — 2026-10-11
 
-Disposable measurement only. The golden launcher was not modified.
+Promoted the K64 attention overlay into the golden launcher after the
+no-cache full-context sweep. Production prefix caching stays on.
 
 ## Decision
 
-**Do not promote yet.** Under prefix caching disabled, the K64 tile clears the
-prefill stop bar: median 98,304-token TTFT improved 6.37% (96.034 s to 89.911 s).
-Decode did not regress, and 98,304+32,768 admission succeeded on both arms.
-Production still runs with prefix caching on. Disabling it made vLLM force
-Mamba cache mode to `none`, so this is not the production cache configuration.
+**Promoted the tile only.** Median cold TTFT is flat through 4k, then faster
+at every longer point, with non-overlapping ranges from 16k through the legal
+ceiling. The 98,304-token gain is 6.41%. Decode did not regress. A 98,304-prompt
+/ 32,768-generation request was accepted. The 212,992-token probe was illegal:
+one output token exceeds `max_model_len`. The legal ceiling is 212,991.
+
+The live launcher is `/home/mike/inference/launchers/start-qwen38.sh`, now
+sha256 `c2328b1be4a0b57eb4be25444df819338d7515d8e6d79f6f1d3b8ab1baefb6e2`.
+Previous script: `start-qwen38.sh.before-head256-k64-20261011T064649Z`.
+Overlay: `/home/mike/inference/launchers/libattn_kernels_xe_2-head256-k64.so`,
+sha256 `f5195ace0074610d266e38322060dc4b71bf39c30dd4b7ab984fa830fa05b019`.
+The service was started and answered `yes` to a greedy smoke prompt. Prefix
+caching remains enabled. Research and the next wave are in
+[RESEARCH.md](RESEARCH.md).
+
+## Full-range no-cache result
+
+Prefix caching off on both arms, because the measurement was not allowed to
+use token caching. vLLM then forces Mamba cache mode to `none`. That is not
+the production cache policy. Five reps through 98,304 tokens, three above that.
+TTFT is non-streaming time to one greedy token.
+
+| Prompt tokens | Stock median | K64 median | Change |
+|---:|---:|---:|---:|
+| 512 | 0.263 s / 1945 tok/s | 0.264 s / 1939 tok/s | -0.30% |
+| 2048 | 0.983 s / 2083 tok/s | 0.985 s / 2079 tok/s | -0.18% |
+| 4096 | 1.958 s / 2092 tok/s | 1.960 s / 2090 tok/s | -0.08% |
+| 8192 | 4.074 s / 2011 tok/s | 4.063 s / 2016 tok/s | +0.27% |
+| 16384 | 8.847 s / 1852 tok/s | 8.744 s / 1874 tok/s | +1.16% |
+| 32768 | 20.490 s / 1599 tok/s | 19.974 s / 1641 tok/s | +2.52% |
+| 65536 | 52.491 s / 1249 tok/s | 49.889 s / 1314 tok/s | +4.96% |
+| 98304 | 96.098 s / 1023 tok/s | 89.936 s / 1093 tok/s | +6.41% |
+| 131072 | 151.023 s / 868 tok/s | 140.213 s / 935 tok/s | +7.16% |
+| 196608 | 295.398 s / 666 tok/s | 271.008 s / 726 tok/s | +8.26% |
+| 212991 | 337.413 s / 631 tok/s | 309.186 s / 689 tok/s | +8.37% |
+
+Ranges do not overlap from 16,384 tokens up. Short-context deltas are inside
+the rep noise. K64 128-token decode was 1.825 s / 70.1 tok/s versus 1.846 s /
+69.3 tok/s on the earlier stock arm. Admission HTTP 200. K64 text prompts
+returned `yes`, `42`, and `Paris`. Synthetic length 5 on this later K64 start
+was `!` rather than the `0` both arms produced in the paired four-point run;
+that check was not re-paired, and this stack is already known to repeat short
+greedy tokens nondeterministically.
+
+Raw rows: `results-fullrange-nocache-stock.json`,
+`results-fullrange-nocache-stock-ceiling.json`,
+`results-fullrange-nocache-k64.json`. The earlier four-point files remain.
 
 ## What changed
 
-Only the Xe2 full-attention head-256 chunk-prefill tile, in a disposable
-overlay of `libattn_kernels_xe_2.so`:
+Only the Xe2 full-attention head-256 chunk-prefill tile:
 
 - `ShapeQK`: `<_256, _32, _32>` to `<_256, _64, _32>`
 - `ShapePV`: `<_256, _32, _32>` to `<_256, _32, _64>`
 - `ShapeOut` unchanged: `<_256, _256>`
 
-Built from `vllm-xpu-kernels` `2a6fcfc1` (the 0.1.12.3-era tree) with oneAPI
-2026.0 `icpx`, AOT `bmg-g31-a0`, and only the head-256 chunk-prefill config
-plus the decode companion `8,256,64`. Compiler log: 256 registers, about 5
-spills. Library sha256
-`f5195ace0074610d266e38322060dc4b71bf39c30dd4b7ab984fa830fa05b019`.
-
-## Protocol
-
-Host `inference-host`, one Arc Pro B70, power cap 275 W. Image
-`vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f`.
-Model `SergiioB/Qwen3.8-27B-GPTQ-Int4-sym-G128-MTP-BF16` as served by the
-golden launcher. Disposable container only, port 8001. Flags matched the
-golden launcher except `--no-enable-prefix-caching`. Confirmed in the K64
-server log: `enable_prefix_caching=False`, chunked prefill 8192, FlashAttention
-block size 64, attention page 1664 (divisible by 64), MTP-4, FP8 KV, util 0.95,
-`max-num-seqs 1`. Golden launcher hash remains
-`63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4`.
-
-TTFT is non-streaming time to finish one greedy token (`temperature=0`) on an
-exact token-id prompt. Five reps after one unmeasured warmup at each length.
-No prefix cache, so there are no cached prompt tokens to report. Prompt token
-counts matched the requested lengths.
-
-## Results
-
-Median TTFT, K64 versus stock. Positive is faster.
-
-| Prompt tokens | Stock | K64 | Change |
-|---:|---:|---:|---:|
-| 2048 | 0.986 s / 2077 tok/s | 0.986 s / 2076 tok/s | -0.04% |
-| 8192 | 4.075 s / 2010 tok/s | 4.057 s / 2019 tok/s | +0.45% |
-| 32768 | 20.534 s / 1596 tok/s | 19.949 s / 1643 tok/s | +2.85% |
-| 98304 | 96.034 s / 1024 tok/s | 89.911 s / 1093 tok/s | +6.37% |
-
-The 98,304-token reps were 95.993–96.101 s stock and 89.741–89.993 s K64.
-Whole-request 128-token decode after a 128-token prompt was 69.35 tok/s stock
-and 69.04 tok/s K64 (-0.45%, inside noise). Both arms accepted a 98,304-prompt
-/ 32,768-generation request with HTTP 200. Greedy one-token outputs matched on
-synthetic lengths 5, 68, 69, 70, and 133. That is a parity check, not a
-quality certificate.
-
-Raw rows: `results-nocache-stock.json`, `results-nocache-k64.json`.
+Built from `vllm-xpu-kernels` `2a6fcfc1` with oneAPI 2026.0 `icpx`, AOT
+`bmg-g31-a0`. Compiler log: 256 registers, about five spills.

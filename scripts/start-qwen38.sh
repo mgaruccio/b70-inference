@@ -12,6 +12,7 @@ exec docker run --rm --name qwen38 --ipc=host \
   -p "0.0.0.0:${PORT:-8000}:8000" \
   --device /dev/dri --group-add "$RENDER_GID" -v /dev/dri:/dev/dri:ro \
   -v "$MODEL_DIR:/model:ro" \
+  -v "$ROOT/launchers/libattn_kernels_xe_2-head256-k64.so:/opt/venv/lib/python3.12/site-packages/vllm_xpu_kernels/libattn_kernels_xe_2.so:ro" \
   -v "$COOKBOOK/patches/patch_mtp_nightly.py:/patch_mtp.py:ro" \
   -v "$COOKBOOK/patches/patch_mtp_boundary.py:/patch_boundary.py:ro" \
   -v "$COOKBOOK/patches/patch_gdn_mixed_split_v5.py:/patch_v5.py:ro" \
