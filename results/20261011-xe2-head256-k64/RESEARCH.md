@@ -105,3 +105,16 @@ The live launcher was left on the stock kernel. A passing full-range sweep
 promotes only the K64 library overlay. It does not turn production prefix
 caching off, because that forces Mamba cache mode `none` and is a separate
 serving-policy change from the tile.
+
+
+## Next wave
+
+Confirmed after the stock no-cache ladder. Do not start until the K64 full-range arm is scored. The 8k-to-16k rate drop is attention compute on the second 8192-token chunk, not a weight-bandwidth cliff. K64 stays. Do not widen the tile; it already spills about five registers.
+
+Unstacked, in order:
+
+1. Page-align the chunk budget to 8320 (1664×5) or 6656 (1664×4). Not 16384. Kill if cold 16k and 32k are not faster than 8192.
+2. `VLLM_XPU_FA_REVERSE_ODD_HEADS` / `XeFHMAIndividualReverseOrderTileScheduler` (vllm-xpu-kernels `ba5fc73`), alone, not stacked on K64. Kill if the request never enters Xe2 FA2 `chunk_prefill` or kernel time does not move.
+3. Overlap the next chunk's QKV GEMM with the current chunk's attention, keeping GDN state in order. This is the lever that can push the 8k–32k knee. Falsify with a trace if that overlap already exists.
+
+Do not spend that wave on more GDN kernels, a 16384 chunk budget, or FP8 query MMA. Cold-prefill measurements stay prefix-cache off. Production prefix caching remains a separate policy from the tile.
