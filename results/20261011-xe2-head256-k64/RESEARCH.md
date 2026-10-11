@@ -95,9 +95,8 @@ for a 98,304-prompt / 32,768-generation admission. Synthetic greedy lengths
 
 Stop bar used for this wave: kill on admission failure, non-finite output,
 decode drop over 5%, or 98k median TTFT gain under 2%. The four-point run
-cleared that bar. Promotion still waits on the full-context sweep
-(512 through 212992) and text-prompt greedy parity, because a tile that wins
-at 98k can still miscompile or regress at the context ceiling.
+cleared that bar. The later full-context sweep also cleared it; see the
+Promoted section and the result README.
 
 ## Promoted
 

@@ -1,6 +1,16 @@
 # Qwen B70 — next session
 
-Updated 2026-09-14. Session work is complete; no benchmark or evaluator is left running. Production was not promoted or modified.
+Updated 2026-10-11. The Xe2 head-256 K64 attention overlay is the production default. The September custom-kernel decision below is historical and does not apply to this tile.
+
+> **Current prefill result:** [K64 full-range sweep](../results/20261011-xe2-head256-k64/README.md) and [research record](../results/20261011-xe2-head256-k64/RESEARCH.md), commit `c429527f`. No-cache TTFT is flat through 4k and faster from 16k to 212,991 tokens, up to +8.37%. Production prefix caching stays on.
+
+## Closeout
+
+- Host: `inference-host`. Service `qwen38` is running with the overlay mounted.
+- Launcher: `/home/mike/inference/launchers/start-qwen38.sh`, SHA256 `c2328b1be4a0b57eb4be25444df819338d7515d8e6d79f6f1d3b8ab1baefb6e2`. Backup: `start-qwen38.sh.before-head256-k64-20261011T064649Z` (old hash `63b61b16bfcdb44bb5df9e0a7b1ee0b2666101951d9229b8b263c2c42fb38de4`).
+- Overlay: `/home/mike/inference/launchers/libattn_kernels_xe_2-head256-k64.so`, SHA256 `f5195ace0074610d266e38322060dc4b71bf39c30dd4b7ab984fa830fa05b019`. Repo source: [`scripts/start-qwen38.sh`](../scripts/start-qwen38.sh).
+- Unchanged serving policy: 212992 context, util 0.95, batch 8192, MTP-4, FP8 KV, prefix caching, `mamba-cache-mode align`, C1, 275 W. A 212,992-token prompt plus one output token does not fit; the legal ceiling is 212,991.
+- Next wave, not started: page-align the chunk to 8320 or 6656, then `VLLM_XPU_FA_REVERSE_ODD_HEADS` alone, then overlap the next chunk's QKV GEMM with the current chunk's attention. Do not widen K64, reopen GDN, raise the chunk budget to 16384, or try FP8 query MMA. Details are in the research record.
 
 > **Newer MTP-tuning follow-up:** [Acceptance-aligned validation plan](qwen38-mtp-acceptance-next-session.md) covers the completed million-position experiment, cached checkpoints, and the bounded dev-only diagnostic for the next session. The older speed/kernel results below remain historical context.
 
@@ -25,7 +35,10 @@ Median post-first streaming decode tok/s, B70/275W/C1. Same workloads; selected 
 
 If explicitly requested next: repeat/investigate those three code-task transitions across target/native/custom, distinguish formatting/runtime variation from semantic failures, and only then decide on further qualification or promotion. This is follow-up work, not a hidden unfinished implementation task. Full standard-publishable performance coverage (BetterBench20-pass, vLLM bench serve, concurrency/near-limit sweep) remains outside these development campaigns.
 
-## Host and production closeout
+## Host and production closeout — 2026-09-14, historical
+
+The launcher hash and stopped-service note in this section were superseded on 2026-10-11. Use the closeout at the top.
+
 
 - Host: `inference-host`; all ML/compiler/evaluator execution stays there, not in Pi.
 - Final check: no running Docker containers or render-device holders; power cap275000000 microwatts. The service is **stopped**, not secretly restarted for closeout.
