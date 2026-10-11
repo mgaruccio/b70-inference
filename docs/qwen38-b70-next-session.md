@@ -3,7 +3,9 @@
 Updated 2026-10-11. The Xe2 head-256 K64 attention overlay is the production default. The September custom-kernel decision below is historical and does not apply to this tile.
 
 > **Current prefill result:** [K64 full-range sweep](../results/20261011-xe2-head256-k64/README.md) and [research record](../results/20261011-xe2-head256-k64/RESEARCH.md), commit `c429527f`. No-cache TTFT is flat through 4k and faster from 16k to 212,991 tokens, up to +8.37%. Production prefix caching stays on.
-
+>
+> **Prefill-classification prerequisite — SOURCE PREPARED (not deployed):** Maintained source now includes the validated legacy prefill guard and the launcher runs it after the existing five patches; batch 8192, prefix caching, MTP-4, and the K64 overlay remain unchanged. No host deployment or public-API guard validation is claimed here; the lead must perform the defined E2E gates before treating the service as guarded.
+>
 ## Closeout
 
 - Host: `inference-host`. Service `qwen38` is running with the overlay mounted.

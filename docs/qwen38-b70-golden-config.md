@@ -6,6 +6,8 @@ The 2026-10-11 default adds one library mount and nothing else: `libattn_kernels
 
 Latest [matched four-way speed results](../results/20260914-qwen38-four-way-speed/README.md) and [full quality evaluation](../results/20260913-qwen38-grouped-quality/README.md) do not change this default. The custom grouped kernel remains experimental: +5.11% matched64K decode, but three fewer HumanEval+ passes versus native; do not promote yet. See [current handoff](qwen38-b70-next-session.md).
 
+**Prefill-classification prerequisite — SOURCE PREPARED (not deployed):** The maintained guard at [`scripts/patch-vllm-qwen38-prefill-guard.py`](../scripts/patch-vllm-qwen38-prefill-guard.py) is wired in the launcher source after the existing five patches and preserves batch 8192, prefix caching, MTP-4, and the K64 overlay. The running host was not changed by this source-preparation slice; lead-owned deployment and public-API gates remain required before calling the service guarded.
+
 ## Active default — 212,992-token C1, no KV offload
 
 The persistent host launcher is `~/inference/launchers/start-qwen38.sh`, sourced from [`scripts/start-qwen38.sh`](../scripts/start-qwen38.sh). It is the default Qwen service—not a temporary experiment.
