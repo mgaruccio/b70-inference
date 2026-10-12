@@ -1,0 +1,2130 @@
+[
+  {
+    "cell": "00-8192-off-16384",
+    "budget": 8192,
+    "prefix_cache": "off",
+    "length": 16384,
+    "chunks": [
+      8192,
+      8192
+    ],
+    "unprofiled_s": [
+      8.641325638000126,
+      8.662222435999865,
+      8.717025053000725,
+      8.736787761999949,
+      8.73653215899958
+    ],
+    "median_s": 8.717025053000725,
+    "range_s": [
+      8.641325638000126,
+      8.736787761999949
+    ],
+    "profiled_s": 8.745547456000168,
+    "profile_overhead_pct": 0.3272034074242258,
+    "device_groups": {
+      "other kernels": {
+        "calls": 1918,
+        "device_ms": 592.7031730000017
+      },
+      "INT4 GEMM": {
+        "calls": 530,
+        "device_ms": 5908.115400999996
+      },
+      "dense GEMM": {
+        "calls": 98,
+        "device_ms": 26.845069999999996
+      },
+      "GDN": {
+        "calls": 672,
+        "device_ms": 610.696380000001
+      },
+      "K64 attention": {
+        "calls": 34,
+        "device_ms": 1561.172695
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8192,
+        "cpu_start": 928335424852.573,
+        "cpu_end": 928335556572.219,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 290.0110850000005
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2935.6192619999993
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.474150999999997
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 306.43091000000015
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 402.42426400000005
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 928339477562.65,
+        "cpu_end": 928339604883.647,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 289.8316190000001
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2865.947291000001
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.370919
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 304.26546999999977
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1070.142495
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 148,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "01-8320-on-32768",
+    "budget": 8320,
+    "prefix_cache": "on",
+    "length": 32768,
+    "chunks": [
+      8320,
+      8320,
+      8320,
+      4992,
+      2816
+    ],
+    "unprofiled_s": [
+      20.117620514999544,
+      20.160595950999777,
+      20.255158036000466,
+      20.281814367999687,
+      20.270856002999608
+    ],
+    "median_s": 20.255158036000466,
+    "range_s": [
+      20.117620514999544,
+      20.281814367999687
+    ],
+    "profiled_s": 20.290358522000133,
+    "profile_overhead_pct": 0.17378529427962697,
+    "device_groups": {
+      "INT4 GEMM": {
+        "calls": 1325,
+        "device_ms": 11696.838617999976
+      },
+      "other kernels": {
+        "calls": 4905,
+        "device_ms": 1192.5287690000052
+      },
+      "K64 attention": {
+        "calls": 85,
+        "device_ms": 5999.903815999999
+      },
+      "dense GEMM": {
+        "calls": 245,
+        "device_ms": 59.51959199999997
+      },
+      "GDN": {
+        "calls": 1680,
+        "device_ms": 1229.535407999998
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8320,
+        "cpu_start": 928960400441.868,
+        "cpu_end": 928960535098.765,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 296.175141
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 3010.5658310000017
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.666025000000001
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 312.7637040000002
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 426.6578059999999
+          }
+        }
+      },
+      {
+        "context_tokens": 8320,
+        "cpu_start": 928964570778.097,
+        "cpu_end": 928964701140.546,
+        "groups": {
+          "other kernels": {
+            "calls": 913,
+            "device_ms": 295.1977550000001
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2941.655099999998
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.627689
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 310.8377680000001
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1124.883118
+          }
+        }
+      },
+      {
+        "context_tokens": 8320,
+        "cpu_start": 928969405307.699,
+        "cpu_end": 928969536238.1119,
+        "groups": {
+          "other kernels": {
+            "calls": 921,
+            "device_ms": 296.17722100000015
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2895.367499000001
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.611544
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 308.8697400000001
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1782.3959310000002
+          }
+        }
+      },
+      {
+        "context_tokens": 4992,
+        "cpu_start": 928974885804.947,
+        "cpu_end": 928975016082.673,
+        "groups": {
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1700.6235450000006
+          },
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 177.1826230000001
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1409.0434289999998
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 10.439977000000003
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 185.96611199999998
+          }
+        }
+      },
+      {
+        "context_tokens": 2816,
+        "cpu_start": 928978509489.378,
+        "cpu_end": 928978641788.0851,
+        "groups": {
+          "other kernels": {
+            "calls": 924,
+            "device_ms": 100.06825400000022
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 934.1391650000004
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.174357
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 111.09808400000007
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 917.2299920000002
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 365,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "02-8192-off-32768",
+    "budget": 8192,
+    "prefix_cache": "off",
+    "length": 32768,
+    "chunks": [
+      8192,
+      8192,
+      8192,
+      8192
+    ],
+    "unprofiled_s": [
+      19.832246840999687,
+      19.870020147000105,
+      19.966985963999832,
+      20.00083884600008,
+      19.982368280000628
+    ],
+    "median_s": 19.966985963999832,
+    "range_s": [
+      19.832246840999687,
+      20.00083884600008
+    ],
+    "profiled_s": 19.98644415400031,
+    "profile_overhead_pct": 0.09745181388698398,
+    "device_groups": {
+      "other kernels": {
+        "calls": 3836,
+        "device_ms": 1186.9606149999977
+      },
+      "INT4 GEMM": {
+        "calls": 1060,
+        "device_ms": 11624.019878999996
+      },
+      "dense GEMM": {
+        "calls": 196,
+        "device_ms": 53.300543999999995
+      },
+      "GDN": {
+        "calls": 1344,
+        "device_ms": 1213.4642939999999
+      },
+      "K64 attention": {
+        "calls": 68,
+        "device_ms": 5821.886534000001
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8192,
+        "cpu_start": 929595656224.6,
+        "cpu_end": 929595787829.506,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 290.45816400000024
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2936.7738509999986
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.469562
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 306.6217320000001
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 402.894993
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 929599712213.539,
+        "cpu_end": 929599838633.492,
+        "groups": {
+          "other kernels": {
+            "calls": 893,
+            "device_ms": 289.78182300000066
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2868.3849999999984
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.333004000000003
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 304.1224539999999
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1071.576869
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 929604401182.652,
+        "cpu_end": 929604528667.708,
+        "groups": {
+          "other kernels": {
+            "calls": 901,
+            "device_ms": 290.4282940000003
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2823.7254210000006
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.287582
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 302.2965140000002
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1704.3089530000004
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 929609711319.92,
+        "cpu_end": 929609838006.208,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 290.0399480000001
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2787.438537999998
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.210395999999998
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 300.423594
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 2314.494472
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 292,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "03-8192-on-32768",
+    "budget": 8192,
+    "prefix_cache": "on",
+    "length": 32768,
+    "chunks": [
+      6656,
+      6656,
+      6656,
+      6656,
+      3328,
+      2816
+    ],
+    "unprofiled_s": [
+      20.025102800999775,
+      20.064931611999782,
+      20.154967321000186,
+      20.187228171999777,
+      20.16858240900001
+    ],
+    "median_s": 20.154967321000186,
+    "range_s": [
+      20.025102800999775,
+      20.187228171999777
+    ],
+    "profiled_s": 20.201021603999834,
+    "profile_overhead_pct": 0.22850090633321773,
+    "device_groups": {
+      "other kernels": {
+        "calls": 5886,
+        "device_ms": 1192.4718089999913
+      },
+      "INT4 GEMM": {
+        "calls": 1590,
+        "device_ms": 11635.00674199999
+      },
+      "dense GEMM": {
+        "calls": 294,
+        "device_ms": 66.37133399999992
+      },
+      "GDN": {
+        "calls": 2016,
+        "device_ms": 1231.1373479999986
+      },
+      "K64 attention": {
+        "calls": 102,
+        "device_ms": 5942.525066999999
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 6656,
+        "cpu_start": 930231717198.517,
+        "cpu_end": 930231854003.629,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 236.39075799999995
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2400.4884369999995
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.615810999999997
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 250.49870700000008
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 275.35343299999994
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 930234983658.807,
+        "cpu_end": 930235115500.866,
+        "groups": {
+          "other kernels": {
+            "calls": 913,
+            "device_ms": 235.94087299999995
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2356.55656
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.502897
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 249.17099600000006
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 729.557599
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 930238681988.714,
+        "cpu_end": 930238813740.041,
+        "groups": {
+          "other kernels": {
+            "calls": 921,
+            "device_ms": 236.80898000000005
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2308.9821819999997
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.383834000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 247.25505800000005
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1158.069263
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 930242782730.138,
+        "cpu_end": 930242914242.0879,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 236.91148999999993
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2289.1079189999996
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.383004
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 246.37599599999993
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1578.0482240000001
+          }
+        }
+      },
+      {
+        "context_tokens": 3328,
+        "cpu_start": 930247306669.973,
+        "cpu_end": 930247440736.656,
+        "groups": {
+          "other kernels": {
+            "calls": 924,
+            "device_ms": 118.64971299999996
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1126.8659370000003
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.296435
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 127.232771
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 946.5355140000001
+          }
+        }
+      },
+      {
+        "context_tokens": 2816,
+        "cpu_start": 930249736426.778,
+        "cpu_end": 930249871221.6019,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 98.95318600000017
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 934.1830219999999
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.189353
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 110.60382000000007
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 918.1899940000001
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 440,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "04-8320-off-32768",
+    "budget": 8320,
+    "prefix_cache": "off",
+    "length": 32768,
+    "chunks": [
+      8320,
+      8320,
+      8320,
+      7808
+    ],
+    "unprofiled_s": [
+      20.079669029000797,
+      20.121473185000468,
+      20.217640699000185,
+      20.239595466000537,
+      20.227300182999898
+    ],
+    "median_s": 20.217640699000185,
+    "range_s": [
+      20.079669029000797,
+      20.239595466000537
+    ],
+    "profiled_s": 20.23915297900021,
+    "profile_overhead_pct": 0.10640351325013064,
+    "device_groups": {
+      "other kernels": {
+        "calls": 3836,
+        "device_ms": 1189.3931680000003
+      },
+      "INT4 GEMM": {
+        "calls": 1060,
+        "device_ms": 11737.447883000004
+      },
+      "dense GEMM": {
+        "calls": 196,
+        "device_ms": 53.438155999999985
+      },
+      "GDN": {
+        "calls": 1344,
+        "device_ms": 1222.162641999999
+      },
+      "K64 attention": {
+        "calls": 68,
+        "device_ms": 5950.066537000001
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8320,
+        "cpu_start": 930869207536.019,
+        "cpu_end": 930869339514.2001,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 295.9065990000003
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 3013.349064000002
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.618628000000003
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 313.4656730000002
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 426.84562
+          }
+        }
+      },
+      {
+        "context_tokens": 8320,
+        "cpu_start": 930873379605.057,
+        "cpu_end": 930873507318.396,
+        "groups": {
+          "other kernels": {
+            "calls": 893,
+            "device_ms": 294.68305600000025
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2940.966761
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.631438999999997
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 311.185582
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1125.1855130000001
+          }
+        }
+      },
+      {
+        "context_tokens": 8320,
+        "cpu_start": 930878210681.909,
+        "cpu_end": 930878337100.437,
+        "groups": {
+          "other kernels": {
+            "calls": 901,
+            "device_ms": 295.9309799999999
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2894.803948999999
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.548418000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 309.06267100000053
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1783.3489539999998
+          }
+        }
+      },
+      {
+        "context_tokens": 7808,
+        "cpu_start": 930883689314.781,
+        "cpu_end": 930883816341.614,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 276.53024700000014
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2678.8122909999965
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.639671
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 288.44871599999993
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 2279.2862429999996
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 292,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "05-6656-off-32768",
+    "budget": 6656,
+    "prefix_cache": "off",
+    "length": 32768,
+    "chunks": [
+      6656,
+      6656,
+      6656,
+      6656,
+      6144
+    ],
+    "unprofiled_s": [
+      19.94726474500021,
+      19.986411667999164,
+      20.076221352000175,
+      20.106936507000682,
+      20.089398741999503
+    ],
+    "median_s": 20.076221352000175,
+    "range_s": [
+      19.94726474500021,
+      20.106936507000682
+    ],
+    "profiled_s": 20.105445508999765,
+    "profile_overhead_pct": 0.1455660230438527,
+    "device_groups": {
+      "GDN": {
+        "calls": 1680,
+        "device_ms": 1221.4308079999971
+      },
+      "other kernels": {
+        "calls": 4795,
+        "device_ms": 1189.4445319999902
+      },
+      "INT4 GEMM": {
+        "calls": 1325,
+        "device_ms": 11636.081116999994
+      },
+      "dense GEMM": {
+        "calls": 245,
+        "device_ms": 61.60969199999995
+      },
+      "K64 attention": {
+        "calls": 85,
+        "device_ms": 5893.134234999997
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 6656,
+        "cpu_start": 931504480929.386,
+        "cpu_end": 931504613722.4869,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 236.85305900000003
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2400.275517
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.651437999999999
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 250.55506300000008
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 275.344055
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 931507744706.5,
+        "cpu_end": 931507872441.926,
+        "groups": {
+          "other kernels": {
+            "calls": 893,
+            "device_ms": 236.04420400000024
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2355.793437999999
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.543627
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 249.14879999999997
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 729.8668690000001
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 931511439775.346,
+        "cpu_end": 931511567902.662,
+        "groups": {
+          "other kernels": {
+            "calls": 899,
+            "device_ms": 236.17786299999995
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2307.7503149999984
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.457270000000001
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 247.36891500000027
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1158.1190570000003
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 931515536856.386,
+        "cpu_end": 931515663981.519,
+        "groups": {
+          "GDN": {
+            "calls": 336,
+            "device_ms": 246.64995800000014
+          },
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 235.75835599999988
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2290.034996999998
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.372478999999998
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1579.880202
+          }
+        }
+      },
+      {
+        "context_tokens": 6144,
+        "cpu_start": 931520060955.833,
+        "cpu_end": 931520188790.472,
+        "groups": {
+          "other kernels": {
+            "calls": 901,
+            "device_ms": 217.2027479999998
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2068.8905149999996
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 11.584878
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 227.70807200000002
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1817.7778039999998
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 362,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "06-8320-on-16384",
+    "budget": 8320,
+    "prefix_cache": "on",
+    "length": 16384,
+    "chunks": [
+      8320,
+      4992,
+      3072
+    ],
+    "unprofiled_s": [
+      8.747502686000189,
+      8.770517484000266,
+      8.814440027999808,
+      8.839819542000441,
+      8.846128452000812
+    ],
+    "median_s": 8.814440027999808,
+    "range_s": [
+      8.747502686000189,
+      8.846128452000812
+    ],
+    "profiled_s": 8.861002455000744,
+    "profile_overhead_pct": 0.528251673992064,
+    "device_groups": {
+      "other kernels": {
+        "calls": 2943,
+        "device_ms": 595.3072839999996
+      },
+      "INT4 GEMM": {
+        "calls": 795,
+        "device_ms": 5935.081847000002
+      },
+      "dense GEMM": {
+        "calls": 147,
+        "device_ms": 32.51629799999999
+      },
+      "GDN": {
+        "calls": 1008,
+        "device_ms": 623.2288180000007
+      },
+      "K64 attention": {
+        "calls": 51,
+        "device_ms": 1607.074768
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8320,
+        "cpu_start": 932072996495.43,
+        "cpu_end": 932073133512.8451,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 295.9224160000003
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 3011.0987450000002
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.658004000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 312.94297200000017
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 426.3611369999999
+          }
+        }
+      },
+      {
+        "context_tokens": 4992,
+        "cpu_start": 932077165419.598,
+        "cpu_end": 932077297030.734,
+        "groups": {
+          "other kernels": {
+            "calls": 913,
+            "device_ms": 176.60388200000003
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1760.564265000001
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 10.506023
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 188.956936
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 605.3658259999999
+          }
+        }
+      },
+      {
+        "context_tokens": 3072,
+        "cpu_start": 932080002569.292,
+        "cpu_end": 932080136004.529,
+        "groups": {
+          "other kernels": {
+            "calls": 924,
+            "device_ms": 108.73658500000013
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1050.9549929999994
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.352271
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 121.32891000000004
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 483.30030600000003
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 220,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "07-6656-on-16384",
+    "budget": 6656,
+    "prefix_cache": "on",
+    "length": 16384,
+    "chunks": [
+      6656,
+      6656,
+      3072
+    ],
+    "unprofiled_s": [
+      8.696792750000895,
+      8.7266955340001,
+      8.764711330000864,
+      8.796080205998805,
+      8.7978763659994
+    ],
+    "median_s": 8.764711330000864,
+    "range_s": [
+      8.696792750000895,
+      8.7978763659994
+    ],
+    "profiled_s": 8.809885624001254,
+    "profile_overhead_pct": 0.5154110877076068,
+    "device_groups": {
+      "other kernels": {
+        "calls": 2943,
+        "device_ms": 594.8528429999997
+      },
+      "INT4 GEMM": {
+        "calls": 795,
+        "device_ms": 5916.101849999993
+      },
+      "dense GEMM": {
+        "calls": 147,
+        "device_ms": 33.65858299999998
+      },
+      "GDN": {
+        "calls": 1008,
+        "device_ms": 621.3085149999989
+      },
+      "K64 attention": {
+        "calls": 51,
+        "device_ms": 1576.78977
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 6656,
+        "cpu_start": 932627619718.175,
+        "cpu_end": 932627754043.464,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 236.4373349999999
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2402.1104060000016
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.771231
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 250.84350600000013
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 275.330826
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 932630886302.073,
+        "cpu_end": 932631015779.855,
+        "groups": {
+          "other kernels": {
+            "calls": 913,
+            "device_ms": 235.82169600000017
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2350.9201010000024
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.594875000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 249.07682599999995
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 727.663952
+          }
+        }
+      },
+      {
+        "context_tokens": 3072,
+        "cpu_start": 932634575648.015,
+        "cpu_end": 932634707763.395,
+        "groups": {
+          "other kernels": {
+            "calls": 924,
+            "device_ms": 108.63378600000006
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1050.986663999999
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.292476999999998
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 121.388183
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 483.70197299999995
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 220,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "08-6656-on-32768",
+    "budget": 6656,
+    "prefix_cache": "on",
+    "length": 32768,
+    "chunks": [
+      6656,
+      6656,
+      6656,
+      6656,
+      3328,
+      2816
+    ],
+    "unprofiled_s": [
+      20.021736377000707,
+      20.059001474999604,
+      20.15543323900056,
+      20.17479019700113,
+      20.169108841999332
+    ],
+    "median_s": 20.15543323900056,
+    "range_s": [
+      20.021736377000707,
+      20.17479019700113
+    ],
+    "profiled_s": 20.198581909000495,
+    "profile_overhead_pct": 0.21407959575110436,
+    "device_groups": {
+      "other kernels": {
+        "calls": 5886,
+        "device_ms": 1192.9434209999897
+      },
+      "GDN": {
+        "calls": 2016,
+        "device_ms": 1231.9421029999967
+      },
+      "INT4 GEMM": {
+        "calls": 1590,
+        "device_ms": 11632.82402699999
+      },
+      "dense GEMM": {
+        "calls": 294,
+        "device_ms": 66.68310099999997
+      },
+      "K64 attention": {
+        "calls": 102,
+        "device_ms": 5941.964542000001
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 6656,
+        "cpu_start": 933250614035.099,
+        "cpu_end": 933250749358.451,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 236.61034399999966
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2399.878231
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.708206999999998
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 250.87559400000015
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 274.980204
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 933253879892.056,
+        "cpu_end": 933254009842.589,
+        "groups": {
+          "other kernels": {
+            "calls": 913,
+            "device_ms": 236.06229800000023
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2355.5499990000008
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.553835
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 249.11776300000034
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 729.6428040000001
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 933257576577.151,
+        "cpu_end": 933257706462.003,
+        "groups": {
+          "other kernels": {
+            "calls": 921,
+            "device_ms": 236.85000199999996
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2307.9716659999995
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.508418
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 247.33275800000018
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1157.3194720000001
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 933261675578.929,
+        "cpu_end": 933261805996.9719,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 236.71961400000012
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 246.6403550000001
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2289.2785329999997
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.394976000000005
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1578.243536
+          }
+        }
+      },
+      {
+        "context_tokens": 3328,
+        "cpu_start": 933266200232.83,
+        "cpu_end": 933266333520.3009,
+        "groups": {
+          "other kernels": {
+            "calls": 924,
+            "device_ms": 119.04429800000004
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1126.6162440000005
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.346225
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 127.24848800000004
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 946.883848
+          }
+        }
+      },
+      {
+        "context_tokens": 2816,
+        "cpu_start": 933268630530.827,
+        "cpu_end": 933268763110.134,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 99.02692600000032
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 934.5602100000004
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.17144
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 110.72714500000006
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 917.7877020000001
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 440,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "09-6656-off-16384",
+    "budget": 6656,
+    "prefix_cache": "off",
+    "length": 16384,
+    "chunks": [
+      6656,
+      6656,
+      3072
+    ],
+    "unprofiled_s": [
+      8.693545176000043,
+      8.722635658999934,
+      8.762147157000072,
+      8.790450483000313,
+      8.79226211599962
+    ],
+    "median_s": 8.762147157000072,
+    "range_s": [
+      8.693545176000043,
+      8.79226211599962
+    ],
+    "profiled_s": 8.806490487999326,
+    "profile_overhead_pct": 0.5060783641807287,
+    "device_groups": {
+      "other kernels": {
+        "calls": 2877,
+        "device_ms": 594.0568079999978
+      },
+      "INT4 GEMM": {
+        "calls": 795,
+        "device_ms": 5917.600194999996
+      },
+      "dense GEMM": {
+        "calls": 147,
+        "device_ms": 33.61473399999998
+      },
+      "GDN": {
+        "calls": 1008,
+        "device_ms": 621.7730860000011
+      },
+      "K64 attention": {
+        "calls": 51,
+        "device_ms": 1577.227579
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 6656,
+        "cpu_start": 933820568961.323,
+        "cpu_end": 933820701041.729,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 236.48628500000012
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2401.1329140000007
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.645605
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 250.95902200000015
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 275.031867
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 933823832539.138,
+        "cpu_end": 933823960289.7549,
+        "groups": {
+          "other kernels": {
+            "calls": 893,
+            "device_ms": 236.05149299999988
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2352.479063999997
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.635816000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 249.33432800000006
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 728.468221
+          }
+        }
+      },
+      {
+        "context_tokens": 3072,
+        "cpu_start": 933827522290.595,
+        "cpu_end": 933827651941.661,
+        "groups": {
+          "other kernels": {
+            "calls": 901,
+            "device_ms": 107.4942060000001
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1051.930726
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.333313
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 121.47973600000002
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 483.51374300000003
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 218,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "10-8192-on-16384",
+    "budget": 8192,
+    "prefix_cache": "on",
+    "length": 16384,
+    "chunks": [
+      6656,
+      6656,
+      3072
+    ],
+    "unprofiled_s": [
+      8.695837651999682,
+      8.725815284000419,
+      8.76333422299831,
+      8.798426056999233,
+      8.796859510001013
+    ],
+    "median_s": 8.76333422299831,
+    "range_s": [
+      8.695837651999682,
+      8.798426056999233
+    ],
+    "profiled_s": 8.81457203500031,
+    "profile_overhead_pct": 0.5846839878311805,
+    "device_groups": {
+      "other kernels": {
+        "calls": 2943,
+        "device_ms": 595.8288419999998
+      },
+      "INT4 GEMM": {
+        "calls": 795,
+        "device_ms": 5919.4262279999975
+      },
+      "dense GEMM": {
+        "calls": 147,
+        "device_ms": 33.466078999999986
+      },
+      "GDN": {
+        "calls": 1008,
+        "device_ms": 620.9660059999991
+      },
+      "K64 attention": {
+        "calls": 51,
+        "device_ms": 1577.5212259999994
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 6656,
+        "cpu_start": 934375588741.378,
+        "cpu_end": 934375723100.342,
+        "groups": {
+          "other kernels": {
+            "calls": 916,
+            "device_ms": 236.94647099999992
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2402.877389000001
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.625393999999996
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 250.5323500000004
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 275.157596
+          }
+        }
+      },
+      {
+        "context_tokens": 6656,
+        "cpu_start": 934378856252.114,
+        "cpu_end": 934378985388.7471,
+        "groups": {
+          "other kernels": {
+            "calls": 913,
+            "device_ms": 235.99981999999991
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2352.293851999998
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.459147000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 249.01162200000005
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 728.3062439999999
+          }
+        }
+      },
+      {
+        "context_tokens": 3072,
+        "cpu_start": 934382547453.386,
+        "cpu_end": 934382679093.601,
+        "groups": {
+          "other kernels": {
+            "calls": 924,
+            "device_ms": 108.89523600000001
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 1051.8851029999992
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 8.381537999999999
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 121.4220340000001
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 483.6728040000001
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 220,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "11-8320-off-16384",
+    "budget": 8320,
+    "prefix_cache": "off",
+    "length": 16384,
+    "chunks": [
+      8320,
+      8064
+    ],
+    "unprofiled_s": [
+      8.72806733499965,
+      8.75458636499934,
+      8.794642216000284,
+      8.821055661001083,
+      8.825551259000349
+    ],
+    "median_s": 8.794642216000284,
+    "range_s": [
+      8.72806733499965,
+      8.825551259000349
+    ],
+    "profiled_s": 8.833077700999638,
+    "profile_overhead_pct": 0.43703295774133455,
+    "device_groups": {
+      "other kernels": {
+        "calls": 1918,
+        "device_ms": 594.336814000002
+      },
+      "INT4 GEMM": {
+        "calls": 530,
+        "device_ms": 5955.080108000003
+      },
+      "dense GEMM": {
+        "calls": 98,
+        "device_ms": 26.532980999999992
+      },
+      "GDN": {
+        "calls": 672,
+        "device_ms": 613.2833299999998
+      },
+      "K64 attention": {
+        "calls": 34,
+        "device_ms": 1598.7326959999996
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8320,
+        "cpu_start": 934929206533.86,
+        "cpu_end": 934929339941.009,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 295.8872420000002
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 3012.282508000001
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.610607000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 313.2990159999998
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 426.462078
+          }
+        }
+      },
+      {
+        "context_tokens": 8064,
+        "cpu_start": 934933375608.945,
+        "cpu_end": 934933501130.268,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 285.5037919999999
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2835.3819820000012
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 12.922374000000001
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 299.9843140000003
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1081.515098
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 148,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "12-8192-off-16384",
+    "budget": 8192,
+    "prefix_cache": "off",
+    "length": 16384,
+    "chunks": [
+      8192,
+      8192
+    ],
+    "unprofiled_s": [
+      8.639583748001314,
+      8.664658566000071,
+      8.712457769001048,
+      8.740102538999054,
+      8.735711329998594
+    ],
+    "median_s": 8.712457769001048,
+    "range_s": [
+      8.639583748001314,
+      8.740102538999054
+    ],
+    "profiled_s": 8.74753405499905,
+    "profile_overhead_pct": 0.40259920826020146,
+    "device_groups": {
+      "other kernels": {
+        "calls": 1920,
+        "device_ms": 593.3422240000011
+      },
+      "INT4 GEMM": {
+        "calls": 530,
+        "device_ms": 5909.718749000001
+      },
+      "dense GEMM": {
+        "calls": 98,
+        "device_ms": 26.835791000000004
+      },
+      "GDN": {
+        "calls": 672,
+        "device_ms": 610.7060679999996
+      },
+      "K64 attention": {
+        "calls": 34,
+        "device_ms": 1561.5302980000001
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8192,
+        "cpu_start": 935481073267.542,
+        "cpu_end": 935481204087.97,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 290.2002520000006
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2935.334794000001
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.505812
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 306.2420539999999
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 402.403222
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 935485126299.781,
+        "cpu_end": 935485252698.394,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 290.3054580000001
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2867.5921919999996
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.329979000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 304.4640139999999
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1070.253743
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 150,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  },
+  {
+    "cell": "13-8192-off-32768",
+    "budget": 8192,
+    "prefix_cache": "off",
+    "length": 32768,
+    "chunks": [
+      8192,
+      8192,
+      8192,
+      8192
+    ],
+    "unprofiled_s": [
+      19.833461342999726,
+      19.871728333000647,
+      19.96545898399927,
+      20.002801510001518,
+      19.975920659999247
+    ],
+    "median_s": 19.96545898399927,
+    "range_s": [
+      19.833461342999726,
+      20.002801510001518
+    ],
+    "profiled_s": 19.98877699500008,
+    "profile_overhead_pct": 0.11679176030712224,
+    "device_groups": {
+      "INT4 GEMM": {
+        "calls": 1060,
+        "device_ms": 11623.672564999995
+      },
+      "other kernels": {
+        "calls": 3836,
+        "device_ms": 1186.9212090000015
+      },
+      "dense GEMM": {
+        "calls": 196,
+        "device_ms": 53.65429099999999
+      },
+      "GDN": {
+        "calls": 1344,
+        "device_ms": 1213.8547279999989
+      },
+      "K64 attention": {
+        "calls": 68,
+        "device_ms": 5820.987265
+      }
+    },
+    "phases": [
+      {
+        "context_tokens": 8192,
+        "cpu_start": 936099906928.614,
+        "cpu_end": 936100040538.06,
+        "groups": {
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 290.53493100000077
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2935.121448
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.509771999999998
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 306.5166349999998
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 402.924057
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 936103962180.953,
+        "cpu_end": 936104090029.657,
+        "groups": {
+          "other kernels": {
+            "calls": 893,
+            "device_ms": 289.9017039999998
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2870.750621999998
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.370811000000002
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 304.2008900000002
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1071.696556
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 936108654590.714,
+        "cpu_end": 936108782995.27,
+        "groups": {
+          "other kernels": {
+            "calls": 901,
+            "device_ms": 290.5043080000003
+          },
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2823.395304999997
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.391544000000001
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 302.28078600000003
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 1703.764681
+          }
+        }
+      },
+      {
+        "context_tokens": 8192,
+        "cpu_start": 936113964571.023,
+        "cpu_end": 936114092185.0609,
+        "groups": {
+          "INT4 GEMM": {
+            "calls": 256,
+            "device_ms": 2786.706976999997
+          },
+          "other kernels": {
+            "calls": 895,
+            "device_ms": 289.71912200000065
+          },
+          "dense GEMM": {
+            "calls": 49,
+            "device_ms": 13.382163999999998
+          },
+          "GDN": {
+            "calls": 336,
+            "device_ms": 300.856417
+          },
+          "K64 attention": {
+            "calls": 16,
+            "device_ms": 2314.518431
+          }
+        }
+      }
+    ],
+    "unmatched_phase_kernel_count": 292,
+    "caveat": "Kernel durations are device activity, not CPU scope time or elapsed latency. No tensor shapes were recorded; generic GEMMs are identified by external/correlation IDs."
+  }
+]

@@ -1,0 +1,432 @@
+{
+  "trace_files": [
+    "/home/mike/b70-evals/20261012-qwen38-prefill-profiling/matrix-01/07-6656-on-16384/torch/rank0.1791789662542013703.pt.trace.json.gz"
+  ],
+  "categories": {
+    "": 66,
+    "user_annotation": 5,
+    "cpu_op": 17924,
+    "xpu_driver": 20290,
+    "ac2g": 30514,
+    "xpu_runtime": 5112,
+    "gpu_memcpy": 168,
+    "kernel": 4944,
+    "trace": 2
+  },
+  "device_event_count": 4944,
+  "sum_device_activity_ms": 8742.711560999998,
+  "device_first_to_last_span_ms": 8800.502395996094,
+  "kernels": [
+    {
+      "name": "gemm_kernel",
+      "calls": 942,
+      "device_ms": 5949.760432999998
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel15XeFMHAFwdKernelINS6_16FMHAProblemShapeILb1EEENS5_10collective15FMHAFwdMainloopINS5_9XeDefaultILi2EEELb1ELb0ELb1EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi32EEENSN_ILi1EEESP_EEENSM_IJSP_NSN_ILi0EEESR_EEEEEKNSM_IJNSL_INSN_ILi256EEESP_EENSL_INSN_ILi64EEESP_EENSL_ISO_SP_EEEEEEENSF_ISK_ST_KNSM_IJSV_SY_SX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSP_iiEEEEEEENS15_INS16_INS17_IPNS3_12float_e4m3_tEEEEES1D_EENS15_IS1I_NSL_IS1B_NSM_IJSP_iiiEEEEEEEvvvEENSA_15FMHAFwdEpilogueILb0ES1N_NSM_IJSU_SU_EEES1E_vEENS6_29XeFHMAIndividualTileSchedulerELb0EEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS1Y_3ext6oneapi12experimental10propertiesINS23_6detail20properties_type_listIJNS23_14property_valueINS23_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS27_INS21_5intel12experimental12grf_size_keyEJS29_IjLj256EEEEEEEEEELb0EJNS1S_6ParamsEEEE",
+      "calls": 51,
+      "device_ms": 1576.78977
+    },
+    {
+      "name": "gdn::tiled_kernel_launcher<sycl::_V1::detail::half_impl::half, 4, 8, true>(sycl::_V1::queue&, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, float*, float*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half*, int, sycl::_V1::detail::half_impl::half*, int*, int*, bool*, int const*, gdn::ActMode const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, bool)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<2>)#1}",
+      "calls": 144,
+      "device_ms": 245.50129199999984
+    },
+    {
+      "name": "gdn::ChunkFwdOKernel<cutlass::half_t, float>",
+      "calls": 144,
+      "device_ms": 190.59285300000008
+    },
+    {
+      "name": "gdn::ChunkComputeWUKernel<cutlass::half_t, float>",
+      "calls": 144,
+      "device_ms": 108.80097899999998
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_3",
+      "calls": 96,
+      "device_ms": 102.43485299999998
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "calls": 864,
+      "device_ms": 62.11798500000003
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_4",
+      "calls": 48,
+      "device_ms": 51.27560600000002
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_2",
+      "calls": 48,
+      "device_ms": 51.125396000000016
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_4",
+      "calls": 96,
+      "device_ms": 50.73819500000002
+    },
+    {
+      "name": "gdn::ChunkComputeAKernel<cutlass::half_t, float>",
+      "calls": 144,
+      "device_ms": 50.68609299999997
+    },
+    {
+      "name": "triton_poi_fused__to_copy_add_int4_gemm_w4a16_mean_mul_pow_rsqrt_silu_t_view_1",
+      "calls": 96,
+      "device_ms": 34.98142100000001
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_2",
+      "calls": 96,
+      "device_ms": 29.857564000000004
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_3",
+      "calls": 51,
+      "device_ms": 26.348522000000013
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_5",
+      "calls": 48,
+      "device_ms": 25.40341699999999
+    },
+    {
+      "name": "gdn::ChunkInverseOptKernel<cutlass::half_t, float>",
+      "calls": 144,
+      "device_ms": 24.005979999999987
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_t_view_0",
+      "calls": 48,
+      "device_ms": 18.792897999999994
+    },
+    {
+      "name": "triton_poi_fused_8",
+      "calls": 48,
+      "device_ms": 18.370710000000006
+    },
+    {
+      "name": "triton_poi_fused__to_copy_add_int4_gemm_w4a16_mean_mul_pow_rsqrt_silu_t_view_2",
+      "calls": 48,
+      "device_ms": 17.411544
+    },
+    {
+      "name": "triton_per_fused__to_copy_mean_pow_view_0",
+      "calls": 96,
+      "device_ms": 15.119860999999998
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_1",
+      "calls": 48,
+      "device_ms": 14.976020000000004
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_3",
+      "calls": 48,
+      "device_ms": 14.959876000000005
+    },
+    {
+      "name": "triton_poi_fused_6",
+      "calls": 48,
+      "device_ms": 11.695920000000005
+    },
+    {
+      "name": "triton_poi_fused_zeros_5",
+      "calls": 96,
+      "device_ms": 8.693496000000003
+    },
+    {
+      "name": "triton_red_fused_7",
+      "calls": 48,
+      "device_ms": 8.087165
+    },
+    {
+      "name": "triton_per_fused_1",
+      "calls": 48,
+      "device_ms": 7.578418
+    },
+    {
+      "name": "triton_poi_fused_zeros_4",
+      "calls": 45,
+      "device_ms": 4.206853000000001
+    },
+    {
+      "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::Half, unsigned char, (vllm::Fp8KVCacheDataType)1>",
+      "calls": 60,
+      "device_ms": 3.9027919999999994
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_2",
+      "calls": 3,
+      "device_ms": 3.2195820000000004
+    },
+    {
+      "name": "precopy_mamba_align_fused_kernel",
+      "calls": 3,
+      "device_ms": 1.346353
+    },
+    {
+      "name": "gdn::ChunkPrepareKernel<cutlass::half_t, float>",
+      "calls": 144,
+      "device_ms": 1.2910829999999995
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE",
+      "calls": 60,
+      "device_ms": 1.250397
+    },
+    {
+      "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_view_0",
+      "calls": 3,
+      "device_ms": 1.15552
+    },
+    {
+      "name": "triton_poi_fused_5",
+      "calls": 3,
+      "device_ms": 1.131561
+    },
+    {
+      "name": "triton_red_fused_1",
+      "calls": 3,
+      "device_ms": 1.080415
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_1",
+      "calls": 3,
+      "device_ms": 0.929373
+    },
+    {
+      "name": "_zero_kv_blocks_kernel",
+      "calls": 3,
+      "device_ms": 0.9027069999999999
+    },
+    {
+      "name": "triton_poi_fused_3",
+      "calls": 3,
+      "device_ms": 0.753436
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_int4_gemm_w4a16_rms_norm_2",
+      "calls": 3,
+      "device_ms": 0.6144780000000001
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<c10::Half, at::native::xpu::ArgMaxOps<float>, unsigned int, long, 4> >",
+      "calls": 12,
+      "device_ms": 0.5555140000000001
+    },
+    {
+      "name": "triton_red_fused__to_copy_add_embedding_rms_norm_0",
+      "calls": 3,
+      "device_ms": 0.552187
+    },
+    {
+      "name": "triton_red_fused_4",
+      "calls": 3,
+      "device_ms": 0.505728
+    },
+    {
+      "name": "gdn::chunk_update_states_kernel<sycl::_V1::detail::half_impl::half>",
+      "calls": 144,
+      "device_ms": 0.4302349999999993
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<float>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "calls": 288,
+      "device_ms": 0.4240399999999992
+    },
+    {
+      "name": "at::native::xpu::SbtopkGatherFunctor<float, 4, 32, 32, int>",
+      "calls": 3,
+      "device_ms": 0.310728
+    },
+    {
+      "name": "triton_poi_fused_0",
+      "calls": 51,
+      "device_ms": 0.29924800000000007
+    },
+    {
+      "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_27XeReduceSplitKTileSchedulerENS6_22XeFMHAFwdSplitKVKernelIS9_NS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSG_8MMA_AtomIJNSG_10XE_DPAS_TTILi8EfNS3_6half_tESK_fEEEEENSG_6LayoutINSG_5tupleIJNSG_1CILi1EEENSP_ILi4EEESQ_EEENSO_IJNSP_ILi0EEESQ_ST_EEEEEKNSO_IJNSN_INSP_ILi8EEESQ_EENSN_INSP_ILi64EEESQ_EESZ_EEEEENSH_ISM_NSN_INSO_IJSQ_SQ_SR_EEENSO_IJST_ST_SQ_EEEEEKNSO_IJSX_NSN_INSP_ILi32EEESQ_EESZ_EEEEELi8ENSG_6TensorINSG_10ViewEngineINSG_8gmem_ptrIPSK_EEEENSN_INSO_IJiiiiEEENSO_IJiSQ_iiEEEEEEENS1B_INS1C_INS1D_IPNS3_12float_e4m3_tEEEEES1J_EENS1B_IS1O_NSN_IS1H_NSO_IJSQ_iiiEEEEEEEvvvLb0EEENSC_17DecodeFwdEpilogueIS1T_NSO_IJSW_NSP_ILi256EEEEEES1K_NS1B_INS1C_INS1D_IPfEEEES1J_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS2A_3ext6oneapi12experimental10propertiesINS2F_6detail20properties_type_listIJNS2F_14property_valueINS2F_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2J_INS2D_5intel12experimental12grf_size_keyEJS2L_IjLj256EEEEEEEEEELb0EJNS24_6ParamsEEEE",
+      "calls": 9,
+      "device_ms": 0.255935
+    },
+    {
+      "name": "triton_poi_fused_zeros_1",
+      "calls": 3,
+      "device_ms": 0.23843599999999998
+    },
+    {
+      "name": "at::native::xpu::impl::SoftmaxForwardKernelFunctor<4, float, float, float, unsigned int, true, at::native::memory::aligned_vector<float, 4>, 16, false>",
+      "calls": 3,
+      "device_ms": 0.19374800000000003
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<float, at::native::xpu::ArgMaxOps<float>, unsigned int, long, 4> >",
+      "calls": 3,
+      "device_ms": 0.131457
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::CompareScalarFunctor<int, at::native::xpu::CompareFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "calls": 60,
+      "device_ms": 0.10642899999999995
+    },
+    {
+      "name": "triton_red_fused_ge_sum_0",
+      "calls": 3,
+      "device_ms": 0.105416
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>",
+      "calls": 60,
+      "device_ms": 0.09590199999999997
+    },
+    {
+      "name": "_compute_slot_mapping_kernel",
+      "calls": 3,
+      "device_ms": 0.078228
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "calls": 30,
+      "device_ms": 0.077491
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<long>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "calls": 18,
+      "device_ms": 0.05103600000000001
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<2> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "calls": 9,
+      "device_ms": 0.04228699999999999
+    },
+    {
+      "name": "at::native::xpu::SegmentedGroupRadixSortPairsFunctor<at::native::xpu::GroupRadixSort<float, 64, 32, 4, true, long, unsigned short, unsigned int, 4>, float, long>",
+      "calls": 3,
+      "device_ms": 0.042083
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::Half>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "calls": 6,
+      "device_ms": 0.028954999999999998
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "calls": 6,
+      "device_ms": 0.024163999999999998
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >",
+      "calls": 12,
+      "device_ms": 0.023744
+    },
+    {
+      "name": "at::native::xpu::ScatterGatherElementwiseKernelFunctor<at::native::xpu::ScatterGatherInternalKernelLoopFunctor<false, at::native::xpu::OpaqueType<4>, OffsetCalculator<3, unsigned int, false>, at::native::xpu::TensorAssign, long> >",
+      "calls": 12,
+      "device_ms": 0.022078
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::DivFloorIntergerFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "calls": 9,
+      "device_ms": 0.019372
+    },
+    {
+      "name": "at::native::xpu::CatArrayBatchedCopy_contig<at::native::xpu::OpaqueType<8u>, unsigned int, 2, 64, 1>",
+      "calls": 6,
+      "device_ms": 0.019267999999999997
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<long, at::native::xpu::func_wrapper_t<long, at::native::xpu::SumFunctor<long> >, unsigned int, long, 4> >",
+      "calls": 3,
+      "device_ms": 0.016457
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "calls": 12,
+      "device_ms": 0.015307000000000001
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ClampScalarFunctor<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "calls": 12,
+      "device_ms": 0.014784999999999998
+    },
+    {
+      "name": "eagle_step_slot_mapping_metadata_kernel",
+      "calls": 9,
+      "device_ms": 0.014474999999999998
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "calls": 18,
+      "device_ms": 0.014058000000000001
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<int, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> > > >",
+      "calls": 9,
+      "device_ms": 0.012811
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<8> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "calls": 3,
+      "device_ms": 0.012289999999999999
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexPutFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "calls": 3,
+      "device_ms": 0.011040000000000001
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "calls": 9,
+      "device_ms": 0.010308000000000001
+    },
+    {
+      "name": "at::native::xpu::CatArrayBatchedCopy_contig<at::native::xpu::OpaqueType<4u>, unsigned int, 2, 64, 1>",
+      "calls": 3,
+      "device_ms": 0.009583000000000001
+    },
+    {
+      "name": "at::native::xpu::ElementwiseKernelWithIndexFunctor<int, at::native::xpu::ArangeFunctor<int, long> >",
+      "calls": 9,
+      "device_ms": 0.008851999999999999
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "calls": 6,
+      "device_ms": 0.008748
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>",
+      "calls": 6,
+      "device_ms": 0.008225
+    },
+    {
+      "name": "postprocess_mamba_fused_kernel",
+      "calls": 3,
+      "device_ms": 0.008124000000000001
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<bool>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "calls": 3,
+      "device_ms": 0.006977
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> > > >",
+      "calls": 3,
+      "device_ms": 0.005311
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::AUnaryFunctor<int, int, bool, at::native::xpu::CompareEqFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "calls": 3,
+      "device_ms": 0.0052060000000000006
+    },
+    {
+      "name": "eagle_prepare_next_token_padded_kernel",
+      "calls": 3,
+      "device_ms": 0.004477999999999999
+    }
+  ],
+  "caveat": "Device activity sum is not elapsed time; overlap and graph opacity require review. CPU scopes are not GPU durations."
+}

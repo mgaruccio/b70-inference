@@ -1,0 +1,90 @@
+366:     def _mamba_block_aligned_split(
+367:         self,
+368:         request: Request,
+369:         num_new_tokens: int,
+370:         num_new_local_computed_tokens: int = 0,
+371:         num_external_computed_tokens: int = 0,
+372:     ) -> int:
+373:         """Clip a prefill chunk so it ends where Mamba state must be cached.
+374: 
+375:         In "align" cache mode reusable SSM states are materialized at block
+376:         boundaries, plus mandatory early stops (the prompt's partial-tail hash
+377:         boundary, a detected shared-prefix junction). If a block is larger
+378:         than the configured prefill chunk limit, intermediate chunks keep
+379:         private running state until they reach the next cacheable position.
+380:         """
+381:         start = (
+382:             request.num_computed_tokens
+383:             + num_new_local_computed_tokens
+384:             + num_external_computed_tokens
+385:         )
+386:         # Split only during prefill: `request.num_tokens - 1` extends this to
+387:         # resumed requests replaying their output tokens.
+388:         prefill_end = max(request.num_prompt_tokens, request.num_tokens - 1)
+389:         if start >= prefill_end:
+390:             return num_new_tokens
+391: 
+392:         block_size = self.cache_config.block_size
+393:         # The last block-aligned position whose state can be cached. With
+394:         # Eagle, FullAttn prunes the last matching block, so back off one
+395:         # block to avoid a Mamba cache miss.
+396:         last_cache_position = request.num_tokens - request.num_tokens % block_size
+397:         if self.use_eagle:
+398:             last_cache_position = max(last_cache_position - block_size, 0)
+399: 
+400:         end = start + num_new_tokens
+401:         # Invariant: slot p holds the state after exactly (p + 1) * block_size
+402:         # tokens. State is written at chunk ends, so chunk ends must be block
+403:         # aligned. Exempt: the prompt's last chunk, whose slot decode advances
+404:         # to the boundary. A block too wide for one chunk advances sub-block
+405:         # and re-aligns at the next boundary.
+406:         if end < prefill_end:
+407:             max_prefill_tokens = self.max_num_scheduled_tokens
+408:             long_prefill_threshold = self.scheduler_config.long_prefill_token_threshold
+409:             if long_prefill_threshold > 0:
+410:                 max_prefill_tokens = min(max_prefill_tokens, long_prefill_threshold)
+411:             aligned_end = end // block_size * block_size
+412:             if aligned_end > start or block_size <= max_prefill_tokens:
+413:                 end = aligned_end
+414: 
+415:         next_block_boundary = (start // block_size + 1) * block_size
+416:         tail_boundary = (
+417:             request.num_prompt_tokens // self.hash_block_size * self.hash_block_size
+418:             if self.mamba_partial_cache_hit
+419:             else 0
+420:         )
+421:         stops = (
+422:             # Same invariant: a chunk starting mid-block stops at the boundary
+423:             # rather than running past it.
+424:             next_block_boundary if start % block_size != 0 else 0,
+425:             # Never run past the last cacheable block boundary mid-chunk.
+426:             last_cache_position,
+427:             # Fine-grained hits: the prompt's partial-tail entry can only be
+428:             # registered by a chunk ending exactly at its last hash boundary.
+429:             tail_boundary
+430:             if last_cache_position < tail_boundary < request.num_prompt_tokens
+431:             else 0,
+432:             # Marconi shared-prefix junction, block-floored (a sub-block
+433:             # junction's state is not separately cacheable): cache its state
+434:             # so sibling requests sharing the prefix can reuse it.
+435:             start + (request.shared_prefix_boundary - start) // block_size * block_size
+436:             if start < request.shared_prefix_boundary < end
+437:             else 0,
+438:         )
+439:         # Stop at the earliest mandatory position strictly inside the chunk.
+440:         end = min((s for s in stops if start < s < end), default=end)
+441:         return max(end - start, 0)
+442: 
+443:     def _get_local_prefix_cache_hit(
+444:         self, request: Request
+445:     ) -> tuple[KVCacheBlocks, int, int, bool]:
+446:         connector = self.connector
+447:         if connector is not None and connector.supports_divergent_local_hybrid_hits:
+448:             return self.kv_cache_manager.get_computed_blocks_for_connector(request)
+449: 
+1477:     def use_eagle(self) -> bool:
+1478:         # NOTE: This method is usually a stand-in for "speculative decoding using
+1479:         # target model hidden states"
+1480:         # TODO(ben): Refactor this so the naming is clearer
+1481:         return self.method in ("eagle", "eagle3", "mtp", "dflash", "dspark")
+1482: 
