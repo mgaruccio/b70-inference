@@ -1,0 +1,97 @@
+{
+  "base": "http://inference-host:8000",
+  "/health": {
+    "status": 200,
+    "body": null
+  },
+  "/v1/models": {
+    "status": 200,
+    "body": {
+      "object": "list",
+      "data": [
+        {
+          "id": "qwen38",
+          "object": "model",
+          "created": 1791866047,
+          "owned_by": "vllm",
+          "root": "/model",
+          "parent": null,
+          "max_model_len": 212992,
+          "permission": [
+            {
+              "id": "modelperm-931fa4adb1bfd4fa",
+              "object": "model_permission",
+              "created": 1791866047,
+              "allow_create_engine": false,
+              "allow_sampling": true,
+              "allow_logprobs": true,
+              "allow_search_indices": false,
+              "allow_view": true,
+              "allow_fine_tuning": false,
+              "organization": "*",
+              "group": null,
+              "is_blocking": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "completion": {
+    "status": 200,
+    "elapsed_s": 0.08419813300133683,
+    "request": {
+      "model": "qwen38",
+      "prompt": "The sum of two and three is",
+      "max_tokens": 1,
+      "temperature": 0,
+      "logprobs": 1
+    },
+    "response": {
+      "id": "cmpl-a41b58ed6cbe1b59",
+      "object": "text_completion",
+      "created": 1791866047,
+      "model": "qwen38",
+      "choices": [
+        {
+          "index": 0,
+          "text": " five",
+          "logprobs": {
+            "text_offset": [
+              0
+            ],
+            "token_logprobs": [
+              -1.2177563905715942
+            ],
+            "tokens": [
+              " five"
+            ],
+            "top_logprobs": [
+              {
+                " five": -1.2177563905715942
+              }
+            ]
+          },
+          "finish_reason": "length",
+          "stop_reason": null,
+          "token_ids": null,
+          "prompt_logprobs": null,
+          "prompt_token_ids": null,
+          "routed_experts": null
+        }
+      ],
+      "service_tier": null,
+      "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6",
+      "usage": {
+        "prompt_tokens": 7,
+        "total_tokens": 8,
+        "completion_tokens": 1,
+        "prompt_tokens_details": null
+      },
+      "kv_transfer_params": null,
+      "ec_transfer_params": null,
+      "metrics": null
+    }
+  },
+  "pass": true
+}

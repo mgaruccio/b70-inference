@@ -1,0 +1,53 @@
+{
+  "pass": true,
+  "tier": "development compatibility only",
+  "synthetic_weights": true,
+  "torch": "2.13.0+xpu",
+  "schema": "_xpu_C::int4_gemm_w4a16(Tensor A, Tensor B, Tensor? bias, Tensor B_scale, Tensor B_zp, int group_size, Tensor? g_idx) -> Tensor",
+  "graphs_enabled": true,
+  "finite_and_equal": true,
+  "native_op_count": 2,
+  "kernel_count": 4,
+  "input_dims": [
+    [
+      [
+        32,
+        128
+      ],
+      [
+        16,
+        128
+      ],
+      [],
+      [
+        1,
+        128
+      ],
+      [
+        1
+      ],
+      [],
+      []
+    ],
+    [
+      [
+        32,
+        128
+      ],
+      [
+        16,
+        128
+      ],
+      [],
+      [
+        1,
+        128
+      ],
+      [
+        1
+      ],
+      [],
+      []
+    ]
+  ]
+}

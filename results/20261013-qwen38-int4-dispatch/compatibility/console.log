@@ -1,0 +1,16 @@
+onednn_verbose,v1,info,oneDNN v3.12.0 (commit 80afa71049cd69a3df32adcccb623b12cd7baa22)
+onednn_verbose,v1,info,gpu,runtime:SYCL
+onednn_verbose,v1,info,gpu,engine,sycl gpu device count:1 
+onednn_verbose,v1,info,gpu,engine,0,backend:Level Zero,name:Intel(R) Arc(TM) Pro B70 Graphics,driver_version:1.15.39122,binary_kernels:enabled
+onednn_verbose,v1,info,graph,backend,0:dnnl_backend
+onednn_verbose,v1,info,experimental features are enabled
+onednn_verbose,v1,info,use batch_normalization stats one pass is enabled
+onednn_verbose,v1,info,GPU convolution v2 is disabled
+onednn_verbose,v1,primitive,info,template:timestamp,operation,engine,primitive,implementation,prop_kind,memory_descriptors,attributes,auxiliary,problem_desc,exec_time
+onednn_verbose,v1,graph,info,template:timestamp,operation,engine,partition_id,partition_kind,op_names,data_formats,logical_tensors,fpmath_mode,implementation,backend,exec_time
+onednn_verbose,v1,1791864400072.474121,primitive,create:dispatch,gemm,gpu,gemm,jit:xe_hp:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,32x128:128x128,unsupported datatype combination,src/gpu/intel/gemm/jit_xe_hp_systolic.cpp:106
+onednn_verbose,v1,1791864400074.761963,primitive,create:cache_miss,gpu,gemm,jit:gemm:any,undef,src_a:f16::blocked:ab::f0 src_b:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,32x128:128x128,11.863
+onednn_verbose,v1,1791864400086.655029,primitive,create:nested_primitive_cache_hit,gpu,matmul,jit:gemm:any,undef,src:f16::blocked:ab::f0 wei:u4::blocked:ba::f0 dst:f16::blocked:ab::f0,attr-scratchpad:user attr-fpmath:f16:true attr-scales:wei:3:f16:128x1 attr-zero-points:wei:0:s8,,32x128:128x128,0.0300293
+USDT:2026-10-13 04:06:43 1:1 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-10-13 04:06:43 1:1 SyncActivityProfilerHandler.cpp:59] profiler_stop
+{"pass": true, "tier": "development compatibility only", "synthetic_weights": true, "torch": "2.13.0+xpu", "schema": "_xpu_C::int4_gemm_w4a16(Tensor A, Tensor B, Tensor? bias, Tensor B_scale, Tensor B_zp, int group_size, Tensor? g_idx) -> Tensor", "graphs_enabled": true, "finite_and_equal": true, "native_op_count": 2, "kernel_count": 4, "input_dims": [[[32, 128], [16, 128], [], [1, 128], [1], [], []], [[32, 128], [16, 128], [], [1, 128], [1], [], []]]}

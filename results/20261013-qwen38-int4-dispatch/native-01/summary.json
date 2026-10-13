@@ -1,0 +1,670 @@
+{
+  "tier": "development diagnostic, not a performance comparison",
+  "length": 32768,
+  "budget": 8192,
+  "prefix_cache": "on / Mamba align",
+  "changes": [
+    "record_shapes",
+    "create/dispatch verbosity",
+    "iteration logging"
+  ],
+  "status": "captured-needs-shape-analysis",
+  "compatibility": {
+    "pass": true,
+    "tier": "development compatibility only",
+    "synthetic_weights": true,
+    "torch": "2.13.0+xpu",
+    "schema": "_xpu_C::int4_gemm_w4a16(Tensor A, Tensor B, Tensor? bias, Tensor B_scale, Tensor B_zp, int group_size, Tensor? g_idx) -> Tensor",
+    "graphs_enabled": true,
+    "finite_and_equal": true,
+    "native_op_count": 2,
+    "kernel_count": 4,
+    "input_dims": [
+      [
+        [
+          32,
+          128
+        ],
+        [
+          16,
+          128
+        ],
+        [],
+        [
+          1,
+          128
+        ],
+        [
+          1
+        ],
+        [],
+        []
+      ],
+      [
+        [
+          32,
+          128
+        ],
+        [
+          16,
+          128
+        ],
+        [],
+        [
+          1,
+          128
+        ],
+        [
+          1
+        ],
+        [],
+        []
+      ]
+    ]
+  },
+  "warmup": {
+    "http_status": 200,
+    "elapsed_s": 78.2603920630063,
+    "body": {
+      "id": "cmpl-80089550d5272d97",
+      "object": "text_completion",
+      "created": 1791865643,
+      "model": "qwen38",
+      "choices": [
+        {
+          "index": 0,
+          "text": "0",
+          "logprobs": {
+            "text_offset": [
+              0
+            ],
+            "token_logprobs": [
+              -0.00011121608258690685
+            ],
+            "tokens": [
+              "0"
+            ],
+            "top_logprobs": [
+              {
+                "0": -0.00011121608258690685
+              }
+            ]
+          },
+          "finish_reason": "length",
+          "stop_reason": null,
+          "token_ids": null,
+          "prompt_logprobs": null,
+          "prompt_token_ids": null,
+          "routed_experts": null
+        }
+      ],
+      "service_tier": null,
+      "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6",
+      "usage": {
+        "prompt_tokens": 32768,
+        "total_tokens": 32769,
+        "completion_tokens": 1,
+        "prompt_tokens_details": null
+      },
+      "kv_transfer_params": null,
+      "ec_transfer_params": null,
+      "metrics": null
+    },
+    "raw_text": "{\"id\":\"cmpl-80089550d5272d97\",\"object\":\"text_completion\",\"created\":1791865643,\"model\":\"qwen38\",\"choices\":[{\"index\":0,\"text\":\"0\",\"logprobs\":{\"text_offset\":[0],\"token_logprobs\":[-0.00011121608258690685],\"tokens\":[\"0\"],\"top_logprobs\":[{\"0\":-0.00011121608258690685}]},\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6\",\"usage\":{\"prompt_tokens\":32768,\"total_tokens\":32769,\"completion_tokens\":1,\"prompt_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}",
+    "length": 32768,
+    "first_token": 13100
+  },
+  "start_profile": {
+    "http_status": 200,
+    "elapsed_s": 0.00422211399563821,
+    "body": null,
+    "raw_text": ""
+  },
+  "profiled": {
+    "http_status": 200,
+    "elapsed_s": 20.073991279001348,
+    "body": {
+      "id": "cmpl-847a6ac5fcc1c121",
+      "object": "text_completion",
+      "created": 1791865722,
+      "model": "qwen38",
+      "choices": [
+        {
+          "index": 0,
+          "text": "0",
+          "logprobs": {
+            "text_offset": [
+              0
+            ],
+            "token_logprobs": [
+              -8.964136941358447e-05
+            ],
+            "tokens": [
+              "0"
+            ],
+            "top_logprobs": [
+              {
+                "0": -8.964136941358447e-05
+              }
+            ]
+          },
+          "finish_reason": "length",
+          "stop_reason": null,
+          "token_ids": null,
+          "prompt_logprobs": null,
+          "prompt_token_ids": null,
+          "routed_experts": null
+        }
+      ],
+      "service_tier": null,
+      "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6",
+      "usage": {
+        "prompt_tokens": 32768,
+        "total_tokens": 32769,
+        "completion_tokens": 1,
+        "prompt_tokens_details": null
+      },
+      "kv_transfer_params": null,
+      "ec_transfer_params": null,
+      "metrics": null
+    },
+    "raw_text": "{\"id\":\"cmpl-847a6ac5fcc1c121\",\"object\":\"text_completion\",\"created\":1791865722,\"model\":\"qwen38\",\"choices\":[{\"index\":0,\"text\":\"0\",\"logprobs\":{\"text_offset\":[0],\"token_logprobs\":[-8.964136941358447e-05],\"tokens\":[\"0\"],\"top_logprobs\":[{\"0\":-8.964136941358447e-05}]},\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6\",\"usage\":{\"prompt_tokens\":32768,\"total_tokens\":32769,\"completion_tokens\":1,\"prompt_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}",
+    "length": 32768,
+    "first_token": 13101
+  },
+  "stop_profile": {
+    "http_status": 200,
+    "elapsed_s": 8.298078118998092,
+    "body": null,
+    "raw_text": ""
+  },
+  "device_analysis": {
+    "trace_files": [
+      "/home/mike/b70-evals/20261013-qwen38-int4-dispatch/native-01/torch/rank0.1791865742632955073.pt.trace.json.gz"
+    ],
+    "categories": {
+      "": 66,
+      "user_annotation": 416,
+      "cpu_op": 35443,
+      "kernel": 9888,
+      "ac2g": 61310,
+      "gpu_memcpy": 336,
+      "xpu_driver": 40862,
+      "xpu_runtime": 10224,
+      "trace": 2
+    },
+    "device_event_count": 9888,
+    "sum_device_activity_ms": 19935.51759099998,
+    "device_first_to_last_span_ms": 20058.140739990235,
+    "kernels": [
+      {
+        "name": "gemm_kernel",
+        "calls": 1884,
+        "device_ms": 11618.513281999984
+      },
+      {
+        "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel15XeFMHAFwdKernelINS6_16FMHAProblemShapeILb1EEENS5_10collective15FMHAFwdMainloopINS5_9XeDefaultILi2EEELb1ELb0ELb1EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi32EEENSN_ILi1EEESP_EEENSM_IJSP_NSN_ILi0EEESR_EEEEEKNSM_IJNSL_INSN_ILi256EEESP_EENSL_INSN_ILi64EEESP_EENSL_ISO_SP_EEEEEEENSF_ISK_ST_KNSM_IJSV_SY_SX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSP_iiEEEEEEENS15_INS16_INS17_IPNS3_12float_e4m3_tEEEEES1D_EENS15_IS1I_NSL_IS1B_NSM_IJSP_iiiEEEEEEEvvvEENSA_15FMHAFwdEpilogueILb0ES1N_NSM_IJSU_SU_EEES1E_vEENS6_29XeFHMAIndividualTileSchedulerELb0EEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS1Y_3ext6oneapi12experimental10propertiesINS23_6detail20properties_type_listIJNS23_14property_valueINS23_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS27_INS21_5intel12experimental12grf_size_keyEJS29_IjLj256EEEEEEEEEELb0EJNS1S_6ParamsEEEE",
+        "calls": 102,
+        "device_ms": 5897.376627000001
+      },
+      {
+        "name": "gdn::tiled_kernel_launcher<sycl::_V1::detail::half_impl::half, 4, 8, true>(sycl::_V1::queue&, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, sycl::_V1::detail::half_impl::half*, float*, float*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half const*, sycl::_V1::detail::half_impl::half*, int, sycl::_V1::detail::half_impl::half*, int*, int*, bool*, int const*, gdn::ActMode const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, int const&, bool)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<2>)#1}",
+        "calls": 288,
+        "device_ms": 486.2475849999999
+      },
+      {
+        "name": "gdn::ChunkFwdOKernel<cutlass::half_t, float>",
+        "calls": 288,
+        "device_ms": 374.2868609999999
+      },
+      {
+        "name": "gdn::ChunkComputeWUKernel<cutlass::half_t, float>",
+        "calls": 288,
+        "device_ms": 217.34310000000005
+      },
+      {
+        "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_3",
+        "calls": 192,
+        "device_ms": 204.5383499999998
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::Half>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+        "calls": 1728,
+        "device_ms": 124.38063799999946
+      },
+      {
+        "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_4",
+        "calls": 96,
+        "device_ms": 102.558086
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_4",
+        "calls": 192,
+        "device_ms": 102.30762900000005
+      },
+      {
+        "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_t_2",
+        "calls": 96,
+        "device_ms": 102.16297900000002
+      },
+      {
+        "name": "gdn::ChunkComputeAKernel<cutlass::half_t, float>",
+        "calls": 288,
+        "device_ms": 99.01530099999997
+      },
+      {
+        "name": "triton_poi_fused__to_copy_add_int4_gemm_w4a16_mean_mul_pow_rsqrt_silu_t_view_1",
+        "calls": 192,
+        "device_ms": 69.64159399999993
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_2",
+        "calls": 192,
+        "device_ms": 60.137623999999974
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_3",
+        "calls": 102,
+        "device_ms": 53.142354999999995
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_5",
+        "calls": 96,
+        "device_ms": 51.20339300000001
+      },
+      {
+        "name": "gdn::ChunkInverseOptKernel<cutlass::half_t, float>",
+        "calls": 288,
+        "device_ms": 47.013837000000024
+      },
+      {
+        "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_t_view_0",
+        "calls": 96,
+        "device_ms": 36.98204699999998
+      },
+      {
+        "name": "triton_poi_fused_8",
+        "calls": 96,
+        "device_ms": 36.71359900000001
+      },
+      {
+        "name": "triton_poi_fused__to_copy_add_int4_gemm_w4a16_mean_mul_pow_rsqrt_silu_t_view_2",
+        "calls": 96,
+        "device_ms": 34.83902200000001
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_3",
+        "calls": 96,
+        "device_ms": 30.21433600000001
+      },
+      {
+        "name": "triton_per_fused__to_copy_mean_pow_view_0",
+        "calls": 192,
+        "device_ms": 30.109289999999994
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_t_1",
+        "calls": 96,
+        "device_ms": 30.071006999999994
+      },
+      {
+        "name": "triton_poi_fused_6",
+        "calls": 96,
+        "device_ms": 23.419233000000002
+      },
+      {
+        "name": "triton_poi_fused_zeros_5",
+        "calls": 192,
+        "device_ms": 17.666175000000003
+      },
+      {
+        "name": "triton_red_fused_7",
+        "calls": 96,
+        "device_ms": 16.242042999999995
+      },
+      {
+        "name": "triton_per_fused_1",
+        "calls": 96,
+        "device_ms": 14.966732999999994
+      },
+      {
+        "name": "triton_poi_fused_zeros_4",
+        "calls": 90,
+        "device_ms": 8.269445999999999
+      },
+      {
+        "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::Half, unsigned char, (vllm::Fp8KVCacheDataType)1>",
+        "calls": 120,
+        "device_ms": 7.743284000000001
+      },
+      {
+        "name": "triton_poi_fused_int4_gemm_w4a16_mul_silu_slice_2",
+        "calls": 6,
+        "device_ms": 6.387497
+      },
+      {
+        "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeILb1EEENS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSE_8MMA_AtomIJNSE_10XE_DPAS_TTILi8EfNS3_6half_tESI_fEEEEENSE_6LayoutINSE_5tupleIJNSE_1CILi1EEENSN_ILi4EEESO_EEENSM_IJNSN_ILi0EEESO_SR_EEEEEKNSM_IJNSL_INSN_ILi8EEESO_EENSL_INSN_ILi64EEESO_EESX_EEEEENSF_ISK_NSL_INSM_IJSO_SO_SP_EEENSM_IJSR_SR_SO_EEEEEKNSM_IJSV_NSL_INSN_ILi32EEESO_EESX_EEEEELi8ENSE_6TensorINSE_10ViewEngineINSE_8gmem_ptrIPSI_EEEENSL_INSM_IJiiiiEEENSM_IJiSO_iiEEEEEEENS19_INS1A_INS1B_IPNS3_12float_e4m3_tEEEEES1H_EENS19_IS1M_NSL_IS1F_NSM_IJSO_iiiEEEEEEEvvvLb0EEENSA_17DecodeFwdEpilogueIS1R_NSM_IJSU_NSN_ILi256EEEEEES1I_NS19_INS1A_INS1B_IPfEEEES1H_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS27_3ext6oneapi12experimental10propertiesINS2C_6detail20properties_type_listIJNS2C_14property_valueINS2C_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2G_INS2A_5intel12experimental12grf_size_keyEJS2I_IjLj256EEEEEEEEEELb0EJNS21_6ParamsEEEE",
+        "calls": 120,
+        "device_ms": 3.3502829999999957
+      },
+      {
+        "name": "precopy_mamba_align_fused_kernel",
+        "calls": 6,
+        "device_ms": 3.34406
+      },
+      {
+        "name": "gdn::ChunkPrepareKernel<cutlass::half_t, float>",
+        "calls": 288,
+        "device_ms": 2.457269999999995
+      },
+      {
+        "name": "triton_poi_fused_int4_gemm_w4a16_mul_sigmoid_view_0",
+        "calls": 6,
+        "device_ms": 2.347185
+      },
+      {
+        "name": "triton_poi_fused_5",
+        "calls": 6,
+        "device_ms": 2.289372
+      },
+      {
+        "name": "triton_red_fused_1",
+        "calls": 6,
+        "device_ms": 2.110831
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_fused_add_rms_norm_int4_gemm_w4a16_1",
+        "calls": 6,
+        "device_ms": 1.877499
+      },
+      {
+        "name": "_zero_kv_blocks_kernel",
+        "calls": 6,
+        "device_ms": 1.8267689999999999
+      },
+      {
+        "name": "triton_poi_fused_3",
+        "calls": 6,
+        "device_ms": 1.465623
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_int4_gemm_w4a16_rms_norm_2",
+        "calls": 6,
+        "device_ms": 1.2769779999999997
+      },
+      {
+        "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<c10::Half, at::native::xpu::ArgMaxOps<float>, unsigned int, long, 4> >",
+        "calls": 24,
+        "device_ms": 1.082282
+      },
+      {
+        "name": "triton_red_fused__to_copy_add_embedding_rms_norm_0",
+        "calls": 6,
+        "device_ms": 1.081144
+      },
+      {
+        "name": "triton_red_fused_4",
+        "calls": 6,
+        "device_ms": 1.009061
+      },
+      {
+        "name": "gdn::chunk_update_states_kernel<sycl::_V1::detail::half_impl::half>",
+        "calls": 288,
+        "device_ms": 0.850888000000003
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<float>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+        "calls": 576,
+        "device_ms": 0.8363049999999914
+      },
+      {
+        "name": "at::native::xpu::SbtopkGatherFunctor<float, 4, 32, 32, int>",
+        "calls": 6,
+        "device_ms": 0.636977
+      },
+      {
+        "name": "triton_poi_fused_0",
+        "calls": 102,
+        "device_ms": 0.6268339999999997
+      },
+      {
+        "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_27XeReduceSplitKTileSchedulerENS6_22XeFMHAFwdSplitKVKernelIS9_NS5_10collective17DecodeFwdMainloopINS5_9XeDefaultILi1EEELb1ELb0EN4cute8TiledMMAINSG_8MMA_AtomIJNSG_10XE_DPAS_TTILi8EfNS3_6half_tESK_fEEEEENSG_6LayoutINSG_5tupleIJNSG_1CILi1EEENSP_ILi4EEESQ_EEENSO_IJNSP_ILi0EEESQ_ST_EEEEEKNSO_IJNSN_INSP_ILi8EEESQ_EENSN_INSP_ILi64EEESQ_EESZ_EEEEENSH_ISM_NSN_INSO_IJSQ_SQ_SR_EEENSO_IJST_ST_SQ_EEEEEKNSO_IJSX_NSN_INSP_ILi32EEESQ_EESZ_EEEEELi8ENSG_6TensorINSG_10ViewEngineINSG_8gmem_ptrIPSK_EEEENSN_INSO_IJiiiiEEENSO_IJiSQ_iiEEEEEEENS1B_INS1C_INS1D_IPNS3_12float_e4m3_tEEEEES1J_EENS1B_IS1O_NSN_IS1H_NSO_IJSQ_iiiEEEEEEEvvvLb0EEENSC_17DecodeFwdEpilogueIS1T_NSO_IJSW_NSP_ILi256EEEEEES1K_NS1B_INS1C_INS1D_IPfEEEES1J_EEvLb0EEENS6_19DecodeTileSchedulerEEEEEEEvRKNT_6ParamsEEEN4sycl3_V18nd_rangeILi3EEENS2A_3ext6oneapi12experimental10propertiesINS2F_6detail20properties_type_listIJNS2F_14property_valueINS2F_18sub_group_size_keyEJSt17integral_constantIjLj16EEEEENS2J_INS2D_5intel12experimental12grf_size_keyEJS2L_IjLj256EEEEEEEEEELb0EJNS24_6ParamsEEEE",
+        "calls": 18,
+        "device_ms": 0.5685339999999999
+      },
+      {
+        "name": "triton_poi_fused_zeros_1",
+        "calls": 6,
+        "device_ms": 0.513539
+      },
+      {
+        "name": "at::native::xpu::impl::SoftmaxForwardKernelFunctor<4, float, float, float, unsigned int, true, at::native::memory::aligned_vector<float, 4>, 16, false>",
+        "calls": 6,
+        "device_ms": 0.373435
+      },
+      {
+        "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<float, at::native::xpu::ArgMaxOps<float>, unsigned int, long, 4> >",
+        "calls": 6,
+        "device_ms": 0.254164
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::CompareScalarFunctor<int, at::native::xpu::CompareFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+        "calls": 120,
+        "device_ms": 0.22879899999999956
+      },
+      {
+        "name": "triton_red_fused_ge_sum_0",
+        "calls": 6,
+        "device_ms": 0.201768
+      },
+      {
+        "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>",
+        "calls": 120,
+        "device_ms": 0.19190699999999997
+      },
+      {
+        "name": "_compute_slot_mapping_kernel",
+        "calls": 6,
+        "device_ms": 0.166248
+      },
+      {
+        "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+        "calls": 60,
+        "device_ms": 0.15758299999999997
+      },
+      {
+        "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<long>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+        "calls": 36,
+        "device_ms": 0.094985
+      },
+      {
+        "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<2> >, char*, OffsetCalculator<3, unsigned int, false> >",
+        "calls": 18,
+        "device_ms": 0.08248999999999998
+      },
+      {
+        "name": "at::native::xpu::SegmentedGroupRadixSortPairsFunctor<at::native::xpu::GroupRadixSort<float, 64, 32, 4, true, long, unsigned short, unsigned int, 4>, float, long>",
+        "calls": 6,
+        "device_ms": 0.080206
+      },
+      {
+        "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::Half>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+        "calls": 12,
+        "device_ms": 0.054576
+      },
+      {
+        "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >",
+        "calls": 24,
+        "device_ms": 0.04592500000000001
+      },
+      {
+        "name": "at::native::xpu::ScatterGatherElementwiseKernelFunctor<at::native::xpu::ScatterGatherInternalKernelLoopFunctor<false, at::native::xpu::OpaqueType<4>, OffsetCalculator<3, unsigned int, false>, at::native::xpu::TensorAssign, long> >",
+        "calls": 24,
+        "device_ms": 0.04540500000000001
+      },
+      {
+        "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >",
+        "calls": 12,
+        "device_ms": 0.04270500000000001
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::DivFloorIntergerFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+        "calls": 18,
+        "device_ms": 0.038637000000000005
+      },
+      {
+        "name": "at::native::xpu::CatArrayBatchedCopy_contig<at::native::xpu::OpaqueType<8u>, unsigned int, 2, 64, 1>",
+        "calls": 12,
+        "device_ms": 0.036662
+      },
+      {
+        "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<long, at::native::xpu::func_wrapper_t<long, at::native::xpu::SumFunctor<long> >, unsigned int, long, 4> >",
+        "calls": 6,
+        "device_ms": 0.033122
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+        "calls": 24,
+        "device_ms": 0.03113400000000001
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ClampScalarFunctor<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+        "calls": 24,
+        "device_ms": 0.030508000000000007
+      },
+      {
+        "name": "eagle_step_slot_mapping_metadata_kernel",
+        "calls": 18,
+        "device_ms": 0.028844000000000005
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+        "calls": 36,
+        "device_ms": 0.028635000000000008
+      },
+      {
+        "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<int, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> > > >",
+        "calls": 18,
+        "device_ms": 0.028328000000000006
+      },
+      {
+        "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<8> >, char*, OffsetCalculator<3, unsigned int, false> >",
+        "calls": 6,
+        "device_ms": 0.023644000000000002
+      },
+      {
+        "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexPutFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >",
+        "calls": 6,
+        "device_ms": 0.021559
+      },
+      {
+        "name": "at::native::xpu::ElementwiseKernelWithIndexFunctor<int, at::native::xpu::ArangeFunctor<int, long> >",
+        "calls": 18,
+        "device_ms": 0.021032000000000002
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+        "calls": 12,
+        "device_ms": 0.02041
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+        "calls": 18,
+        "device_ms": 0.020097000000000004
+      },
+      {
+        "name": "at::native::xpu::CatArrayBatchedCopy_contig<at::native::xpu::OpaqueType<4u>, unsigned int, 2, 64, 1>",
+        "calls": 6,
+        "device_ms": 0.016872
+      },
+      {
+        "name": "postprocess_mamba_fused_kernel",
+        "calls": 6,
+        "device_ms": 0.016039
+      },
+      {
+        "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BUnaryFunctor<int, int, int, at::native::xpu::AddFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>",
+        "calls": 12,
+        "device_ms": 0.014474999999999998
+      },
+      {
+        "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<bool>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+        "calls": 6,
+        "device_ms": 0.013746999999999999
+      },
+      {
+        "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<long, long, long, at::native::xpu::AddFunctor<long> > > >",
+        "calls": 6,
+        "device_ms": 0.010935
+      },
+      {
+        "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::AUnaryFunctor<int, int, bool, at::native::xpu::CompareEqFunctor<int> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+        "calls": 6,
+        "device_ms": 0.009788000000000002
+      },
+      {
+        "name": "eagle_prepare_next_token_padded_kernel",
+        "calls": 6,
+        "device_ms": 0.00854
+      }
+    ],
+    "caveat": "Device activity sum is not elapsed time; overlap and graph opacity require review. CPU scopes are not GPU durations."
+  },
+  "cleanup": {
+    "restoration": "original-restarted",
+    "probe": {
+      "http_status": 200,
+      "elapsed_s": 60.9227164660042,
+      "body": {
+        "id": "cmpl-829a8659cc6b84fd",
+        "object": "text_completion",
+        "created": 1791865937,
+        "model": "qwen38",
+        "choices": [
+          {
+            "index": 0,
+            "text": "0",
+            "logprobs": {
+              "text_offset": [
+                0
+              ],
+              "token_logprobs": [
+                -0.4495670199394226
+              ],
+              "tokens": [
+                "0"
+              ],
+              "top_logprobs": [
+                {
+                  "0": -0.4495670199394226
+                }
+              ]
+            },
+            "finish_reason": "length",
+            "stop_reason": null,
+            "token_ids": null,
+            "prompt_logprobs": null,
+            "prompt_token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6",
+        "usage": {
+          "prompt_tokens": 5,
+          "total_tokens": 6,
+          "completion_tokens": 1,
+          "prompt_tokens_details": null
+        },
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "raw_text": "{\"id\":\"cmpl-829a8659cc6b84fd\",\"object\":\"text_completion\",\"created\":1791865937,\"model\":\"qwen38\",\"choices\":[{\"index\":0,\"text\":\"0\",\"logprobs\":{\"text_offset\":[0],\"token_logprobs\":[-0.4495670199394226],\"tokens\":[\"0\"],\"top_logprobs\":[{\"0\":-0.4495670199394226}]},\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6\",\"usage\":{\"prompt_tokens\":5,\"total_tokens\":6,\"completion_tokens\":1,\"prompt_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}",
+      "length": 5,
+      "first_token": 13102
+    },
+    "production_running": true,
+    "invariants_pass": true
+  }
+}

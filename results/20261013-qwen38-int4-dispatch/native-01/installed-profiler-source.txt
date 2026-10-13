@@ -1,0 +1,1150 @@
+DIST vllm 0.27.2rc1.dev77+gac7509e2b.xpu
+FILE vllm/config/profiler.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+import os
+from typing import Any, Literal
+
+from pydantic import Field, model_validator
+from typing_extensions import Self
+
+from vllm.config.utils import config
+from vllm.logger import init_logger
+from vllm.utils.hashing import safe_hash
+
+logger = init_logger(__name__)
+
+ProfilerKind = Literal["torch", "cuda", "proton"]
+ProtonBackend = Literal["cupti"]
+ProtonContext = Literal["shadow", "python"]
+ProtonData = Literal["tree", "trace"]
+ProtonHook = Literal["triton"]
+ProtonOutputFormat = Literal["hatchet", "hatchet_msgpack", "chrome_trace"]
+
+
+def _is_uri_path(path: str) -> bool:
+    """Check if path is a URI (scheme://...), excluding Windows drive letters.
+
+    Supports custom URI schemes like gs://, s3://, hdfs://, etc.
+    These paths should not be converted to absolute paths.
+    """
+    if "://" in path:
+        scheme = path.split("://")[0]
+        # Windows drive letters are single characters (e.g., C://)
+        # Valid URI schemes have more than one character
+        return len(scheme) > 1
+    return False
+
+
+@config
+class ProfilerConfig:
+    """Dataclass which contains profiler config for the engine."""
+
+    profiler: ProfilerKind | None = None
+    """Which profiler to use. Defaults to None. Options are:
+
+    - 'torch': Use PyTorch profiler.
+    - 'cuda': Use CUDA profiler.
+    - 'proton': Use Triton Proton profiler."""
+
+    torch_profiler_dir: str = ""
+    """Directory to save torch profiler traces. Both AsyncLLM's CPU traces and
+    worker's traces (CPU & GPU) will be saved under this directory. Note that
+    it must be an absolute path."""
+
+    proton_profiler_dir: str = ""
+    """Directory to save Triton Proton profiles. Each worker writes a
+    separate rank-qualified file."""
+
+    proton_context: ProtonContext = "shadow"
+    """Proton context source. ``shadow`` records explicit scopes with low
+    overhead; ``python`` records Python call stacks."""
+
+    proton_data: ProtonData = "tree"
+    """Proton output type. ``tree`` produces Hatchet data and ``trace``
+    produces a Chrome trace."""
+
+    proton_backend: ProtonBackend | None = None
+    """Proton GPU backend. ``None`` lets Proton select CUPTI automatically."""
+
+    proton_mode: str | None = None
+    """Optional backend-specific Proton mode string, such as ``pcsampling``."""
+
+    proton_hook: ProtonHook | None = None
+    """Optional Proton hook. Use ``triton`` to add Triton launch metadata."""
+
+    proton_output_format: ProtonOutputFormat | None = None
+    """Optional format passed to Proton when finalizing a profile. ``None``
+    uses the default format for ``proton_data``."""
+
+    torch_profiler_with_stack: bool = True
+    """If `True`, enables stack tracing in the torch profiler. Enabled by default
+    as it is useful for debugging. Can be disabled via 
+    --profiler-config.torch_profiler_with_stack=false CLI flag."""
+
+    torch_profiler_with_flops: bool = False
+    """If `True`, enables FLOPS counting in the torch profiler. Disabled by default."""
+
+    torch_profiler_use_gzip: bool = True
+    """If `True`, saves torch profiler traces in gzip format. Enabled by default"""
+
+    torch_profiler_dump_cuda_time_total: bool = True
+    """If `True`, dumps total CUDA time in torch profiler traces. Enabled by default."""
+
+    torch_profiler_record_shapes: bool = False
+    """If `True`, records tensor shapes in the torch profiler. Disabled by default."""
+
+    torch_profiler_with_memory: bool = False
+    """If `True`, enables memory profiling in the torch profiler.
+    Disabled by default."""
+
+    capture_torch_profiler: bool = False
+    """If `True`, enables a torch profiler during CUDA graph capture on rank 0.
+    Traces are saved to a `capture_traces` subdirectory under `torch_profiler_dir`.
+    Requires `profiler` to be set to 'torch'."""
+
+    detailed_trace_annotation: bool = False
+    """If `True`, uses detailed annotations with roofline metrics (sk, sqsq,
+    sqsk) in profiler trace events. If `False`, uses simple annotations with
+    only context/generation request counts and token counts.
+    Disabled by default."""
+
+    ignore_frontend: bool = False
+    """If `True`, disables the front-end profiling of AsyncLLM when using the
+    'torch' profiler. This is needed to reduce overhead when using delay/limit options,
+    since the front-end profiling does not track iterations and will capture the
+    entire range.
+    """
+
+    delay_iterations: int = Field(default=0, ge=0)
+    """Number of engine iterations to skip before starting profiling.
+    Defaults to 0, meaning profiling starts immediately after receiving /start_profile.
+    """
+
+    max_iterations: int = Field(default=0, ge=0)
+    """Maximum number of engine iterations to profile after starting profiling.
+    Defaults to 0, meaning no limit.
+    """
+
+    warmup_iterations: int = Field(default=0, ge=0)
+    """Number of warmup iterations for PyTorch profiler schedule.
+    During warmup, the profiler runs but data is discarded. This helps reduce
+    noise from JIT compilation and other one-time costs in the profiled trace.
+    Defaults to 0 (schedule-based profiling disabled, recording all iterations).
+    Set to a positive value (e.g., 2) to enable schedule-based profiling.
+    """
+
+    active_iterations: int = Field(default=5, ge=1)
+    """Number of active iterations for PyTorch profiler schedule.
+    This is the number of iterations where profiling data is actually collected.
+    Defaults to 5 active iterations.
+    """
+
+    wait_iterations: int = Field(default=0, ge=0)
+    """Number of wait iterations for PyTorch profiler schedule.
+    During wait, the profiler is completely off with zero overhead.
+    This allows skipping initial iterations before warmup begins.
+    Defaults to 0 (no wait period).
+    """
+
+    def compute_hash(self) -> str:
+        """
+        WARNING: Whenever a new field is added to this config,
+        ensure that it is included in the factors list if
+        it affects the computation graph.
+
+        Provide a hash that uniquely identifies all the configs
+        that affect the structure of the computation
+        graph from input ids/embeddings to the final hidden states,
+        excluding anything before input ids/embeddings and after
+        the final hidden states.
+        """
+        # no factors to consider.
+        # this config will not affect the computation graph.
+        factors: list[Any] = []
+        hash_str = safe_hash(str(factors).encode(), usedforsecurity=False).hexdigest()
+        return hash_str
+
+    @model_validator(mode="after")
+    def _validate_profiler_config(self) -> Self:
+        has_delay_or_limit = self.delay_iterations > 0 or self.max_iterations > 0
+        if self.profiler == "torch" and has_delay_or_limit and not self.ignore_frontend:
+            logger.warning_once(
+                "Using 'torch' profiler with delay_iterations or max_iterations "
+                "while ignore_frontend is False may result in high overhead."
+            )
+
+        torch_profiler_dir = self.torch_profiler_dir
+        if torch_profiler_dir and self.profiler != "torch":
+            raise ValueError(
+                "torch_profiler_dir is only applicable when profiler is set to 'torch'"
+            )
+        if self.profiler == "torch" and not torch_profiler_dir:
+            raise ValueError("torch_profiler_dir must be set when profiler is 'torch'")
+
+        # Support any URI scheme (gs://, s3://, hdfs://, etc.)
+        # These paths should not be converted to absolute paths
+        if torch_profiler_dir and not _is_uri_path(torch_profiler_dir):
+            self.torch_profiler_dir = os.path.abspath(
+                os.path.expanduser(torch_profiler_dir)
+            )
+
+        proton_profiler_dir = self.proton_profiler_dir
+        non_default_proton_options = [
+            name
+            for name, value, default in (
+                ("proton_profiler_dir", proton_profiler_dir, ""),
+                ("proton_context", self.proton_context, "shadow"),
+                ("proton_data", self.proton_data, "tree"),
+                ("proton_backend", self.proton_backend, None),
+                ("proton_mode", self.proton_mode, None),
+                ("proton_hook", self.proton_hook, None),
+                ("proton_output_format", self.proton_output_format, None),
+            )
+            if value != default
+        ]
+        if self.profiler != "proton" and non_default_proton_options:
+            options = ", ".join(non_default_proton_options)
+            raise ValueError(
+                f"{options} only applicable when profiler is set to 'proton'"
+            )
+        if self.profiler == "proton" and not proton_profiler_dir:
+            raise ValueError(
+                "proton_profiler_dir must be set when profiler is 'proton'"
+            )
+        if proton_profiler_dir:
+            if _is_uri_path(proton_profiler_dir):
+                raise ValueError("proton_profiler_dir must be a local directory")
+            self.proton_profiler_dir = os.path.abspath(
+                os.path.expanduser(proton_profiler_dir)
+            )
+
+        if self.profiler == "proton":
+            output_format = self.proton_output_format
+            if output_format == "chrome_trace" and self.proton_data != "trace":
+                raise ValueError("chrome_trace output requires proton_data='trace'")
+            if (
+                output_format in ("hatchet", "hatchet_msgpack")
+                and self.proton_data != "tree"
+            ):
+                raise ValueError(f"{output_format} output requires proton_data='tree'")
+
+        if self.capture_torch_profiler and self.profiler != "torch":
+            raise ValueError(
+                "capture_torch_profiler is only applicable when profiler is "
+                "set to 'torch'"
+            )
+
+        return self
+
+FILE vllm/profiler/wrapper.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+import importlib
+import inspect
+import json
+import os
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from contextlib import nullcontext
+from typing import Literal
+from uuid import uuid4
+
+import torch
+from packaging.version import InvalidVersion, Version
+from typing_extensions import override
+
+import vllm.version
+from vllm.config import ProfilerConfig
+from vllm.config.profiler import _is_uri_path
+from vllm.logger import init_logger
+
+logger = init_logger(__name__)
+
+_TRITON_PROTON_3_7_VERSION = Version("3.7.0")
+
+
+class WorkerProfiler(ABC):
+    def __init__(self, profiler_config: ProfilerConfig) -> None:
+        self._delay_iters = profiler_config.delay_iterations
+        if self._delay_iters > 0:
+            logger.info_once(
+                "GPU profiling will start "
+                f"{self._delay_iters} steps after start_profile."
+            )
+
+        self._max_iters = profiler_config.max_iterations
+        if self._max_iters > 0:
+            logger.info_once(
+                "GPU profiling will stop "
+                f"after {self._max_iters} worker steps, "
+                "or when stop_profile is received."
+            )
+
+        # Track when the profiler gets triggered by start_profile
+        self._active_iteration_count = 0
+        self._active = False
+
+        # Track when the profiler is actually running
+        self._profiling_for_iters = 0
+        self._running = False
+
+    @property
+    def is_running(self) -> bool:
+        """Whether the underlying profiler is currently collecting data."""
+        return self._running
+
+    @abstractmethod
+    def _start(self) -> None:
+        """Start the profiler."""
+        pass
+
+    @abstractmethod
+    def _stop(self) -> None:
+        """Stop the profiler."""
+        pass
+
+    def _call_start(self) -> None:
+        """Call _start with error handling but no safeguards."""
+        try:
+            self._start()
+            self._running = True  # Only mark as running if start succeeds
+        except Exception as e:
+            logger.warning("Failed to start profiler: %s", e)
+
+    def _call_stop(self) -> None:
+        """Call _stop with error handling but no safeguards."""
+        try:
+            self._stop()
+            logger.info_once("Profiler stopped successfully.")
+        except Exception as e:
+            logger.warning("Failed to stop profiler: %s", e)
+        self._running = False  # Always mark as not running, assume stop worked
+
+    def start(self) -> None:
+        """Attempt to start the profiler, accounting for delayed starts."""
+        if self._active:
+            logger.debug(
+                "start_profile received when profiler is already active. "
+                "Ignoring request."
+            )
+            return
+        self._active = True
+        if self._delay_iters == 0:
+            self._call_start()
+
+    def step(self) -> None:
+        """Update the profiler state at each worker step,
+        to handle delayed starts and max iteration limits."""
+        if not self._active:
+            return
+
+        self._active_iteration_count += 1
+
+        if (
+            not self._running
+            and self._delay_iters > 0
+            and self._active_iteration_count == self._delay_iters
+        ):
+            logger.info_once("Starting profiler after delay...")
+            self._call_start()
+
+        # Call profiler step for schedule-based profiling
+        # Only count iterations where data is actually recorded (not warmup)
+        if self._running and self._profiler_step():
+            self._profiling_for_iters += 1
+
+        if (
+            self._max_iters > 0
+            and self._running
+            and self._profiling_for_iters > self._max_iters
+        ):
+            # Automatically stop the profiler after max iters
+            # will be marked as not running, but leave as active so that stop
+            # can clean up properly
+            logger.info_once("Max profiling iterations reached. Stopping profiler...")
+            self._call_stop()
+            return
+
+    def _profiler_step(self) -> bool:
+        """Called each step when profiler is running.
+        Override in subclasses to handle schedule-based profiling.
+
+        Returns:
+            True if the step was an active profiling step (data recorded),
+            False if the step was a warmup step (data discarded).
+        """
+        return True
+
+    def stop(self) -> None:
+        """Attempt to stop the profiler, accounting for overlapped calls."""
+        if not self._active:
+            logger.debug(
+                "stop_profile received when profiler is not active. Ignoring request."
+            )
+            return
+        self._active = False
+        self._active_iteration_count = 0
+        self._profiling_for_iters = 0
+
+        if self._running:
+            self._call_stop()
+
+    def shutdown(self) -> None:
+        """Ensure profiler is stopped when shutting down."""
+        logger.info_once("Shutting down profiler")
+        if self._running:
+            self.stop()
+
+    def annotate_context_manager(self, name: str):
+        """Return a context manager to annotate profiler traces."""
+        return nullcontext()
+
+
+TorchProfilerActivity = Literal["CPU", "CUDA", "PrivateUse1", "XPU"]
+TorchProfilerActivityMap = {
+    "CPU": torch.profiler.ProfilerActivity.CPU,
+    "CUDA": torch.profiler.ProfilerActivity.CUDA,
+    "PrivateUse1": torch.profiler.ProfilerActivity.PrivateUse1,
+    "XPU": torch.profiler.ProfilerActivity.XPU,
+}
+
+
+class TorchProfilerWrapper(WorkerProfiler):
+    def __init__(
+        self,
+        profiler_config: ProfilerConfig,
+        worker_name: str,
+        local_rank: int,
+        activities: list[TorchProfilerActivity],
+        on_trace_ready: Callable[[torch.profiler.profile], None] | None = None,
+    ) -> None:
+        super().__init__(profiler_config)
+
+        self.local_rank = local_rank
+        self.profiler_config = profiler_config
+        torch_profiler_trace_dir = profiler_config.torch_profiler_dir
+        if local_rank in (None, 0):
+            logger.info_once(
+                "Torch profiling enabled. Traces will be saved to: %s",
+                torch_profiler_trace_dir,
+            )
+            logger.debug(
+                "Profiler config: record_shapes=%s,"
+                "profile_memory=%s,with_stack=%s,with_flops=%s",
+                profiler_config.torch_profiler_record_shapes,
+                profiler_config.torch_profiler_with_memory,
+                profiler_config.torch_profiler_with_stack,
+                profiler_config.torch_profiler_with_flops,
+            )
+
+        # Determine trace handler: use custom handler if provided,
+        # otherwise default to tensorboard trace handler
+        if on_trace_ready is not None:
+            trace_handler = on_trace_ready
+        else:
+            trace_handler = torch.profiler.tensorboard_trace_handler(
+                torch_profiler_trace_dir,
+                worker_name=worker_name,
+                use_gzip=profiler_config.torch_profiler_use_gzip,
+            )
+
+        self.dump_cpu_time_total = "CPU" in activities and len(activities) == 1
+
+        # Create profiler schedule if warmup or wait iterations are configured
+        profiler_schedule = None
+        if profiler_config.warmup_iterations > 0 or profiler_config.wait_iterations > 0:
+            profiler_schedule = torch.profiler.schedule(
+                skip_first=0,
+                wait=profiler_config.wait_iterations,
+                warmup=profiler_config.warmup_iterations,
+                active=profiler_config.active_iterations,
+                repeat=1,
+            )
+            if local_rank in (None, 0):
+                logger.info_once(
+                    "Profiler schedule configured: wait=%d, warmup=%d, active=%d",
+                    profiler_config.wait_iterations,
+                    profiler_config.warmup_iterations,
+                    profiler_config.active_iterations,
+                )
+
+        self.profiler = torch.profiler.profile(
+            activities=[TorchProfilerActivityMap[activity] for activity in activities],
+            schedule=profiler_schedule,
+            record_shapes=profiler_config.torch_profiler_record_shapes,
+            profile_memory=profiler_config.torch_profiler_with_memory,
+            with_stack=profiler_config.torch_profiler_with_stack,
+            with_flops=profiler_config.torch_profiler_with_flops,
+            on_trace_ready=trace_handler,
+        )
+
+        # Track if we're using a schedule (need to call step())
+        self._uses_schedule = profiler_schedule is not None
+        self._warmup_iterations = profiler_config.warmup_iterations
+        # Subtract 1 because profiler.start() already consumes step 0
+        # (WAIT or WARMUP), so only wait + warmup - 1 non-active steps
+        # remain to be advanced through via profiler.step() calls.
+        self._warmup_steps_remaining = max(
+            profiler_config.wait_iterations + profiler_config.warmup_iterations - 1,
+            0,
+        )
+        self._version_metadata_added = False
+
+    def _build_profiler_table(
+        self,
+        sort_key: str,
+        row_limit: int | None = None,
+    ) -> str:
+        if row_limit is None:  # use profiler default row limit of 100
+            return self.profiler.key_averages().table(sort_by=sort_key)
+        return self.profiler.key_averages().table(
+            sort_by=sort_key,
+            row_limit=row_limit,
+        )
+
+    def _write_profiler_table(self, rank: int, table: str) -> None:
+        profiler_dir = self.profiler_config.torch_profiler_dir
+
+        # Skip file write for URI paths (gs://, s3://, etc.)
+        # as standard file I/O doesn't work with URI schemes
+        if not _is_uri_path(profiler_dir):
+            profiler_out_file = f"{profiler_dir}/profiler_out_{rank}.txt"
+            with open(profiler_out_file, "w") as f:
+                print(table, file=f)
+
+    def _maybe_add_version_metadata(self) -> None:
+        """Stamp the vLLM version (which embeds the git commit) into the trace.
+
+        add_metadata_json is a no-op until Kineto is initialized, which with a
+        schedule only happens after the WAIT phase, so stamp once it's live.
+        """
+        if self._version_metadata_added:
+            return
+        # None while the schedule is still in the WAIT phase.
+        if self.profiler.profiler is None:
+            return
+        try:
+            self.profiler.add_metadata_json(
+                "vllm_version", json.dumps(vllm.version.__version__)
+            )
+            self.profiler.add_metadata_json(
+                "vllm_version_tuple",
+                json.dumps([str(p) for p in vllm.version.__version_tuple__]),
+            )
+        except Exception as e:
+            logger.warning("Failed to add vLLM version to profiler metadata: %s", e)
+        # Mark done even on failure, to avoid retrying every step.
+        self._version_metadata_added = True
+
+    @override
+    def _start(self) -> None:
+        self.profiler.start()
+        # No-schedule case: Kineto is live immediately. With a schedule this
+        # no-ops and _profiler_step stamps it once WAIT ends.
+        self._maybe_add_version_metadata()
+
+    @override
+    def _stop(self) -> None:
+        self.profiler.stop()
+
+        profiler_config = self.profiler_config
+        rank = self.local_rank
+        if profiler_config.torch_profiler_dump_cuda_time_total:
+            table = self._build_profiler_table(sort_key="self_cuda_time_total")
+            self._write_profiler_table(rank, table)
+
+            # only print profiler results on rank 0
+            if rank == 0:
+                print(table)
+
+        if self.dump_cpu_time_total:
+            table = self._build_profiler_table(
+                sort_key="self_cpu_time_total", row_limit=50
+            )
+            self._write_profiler_table(rank, table)
+
+            # only print profiler results on rank 0
+            if rank == 0:
+                print(table)
+
+    @override
+    def _profiler_step(self) -> bool:
+        """Call profiler.step() when using schedule-based profiling.
+
+        Returns:
+            True if the step was an active profiling step (data recorded),
+            False if the step was a warmup step (data discarded).
+        """
+        if self._uses_schedule:
+            self.profiler.step()
+            # Stamp once the schedule leaves WAIT and Kineto is live.
+            self._maybe_add_version_metadata()
+            # Track warmup steps - only count active steps toward max_iterations
+            if self._warmup_steps_remaining > 0:
+                self._warmup_steps_remaining -= 1
+                return False
+        return True
+
+    @override
+    def annotate_context_manager(self, name: str):
+        return torch.profiler.record_function(name)
+
+
+class ProtonProfilerWrapper(WorkerProfiler):
+    """Worker profiler backed by :mod:`triton.profiler` (Proton)."""
+
+    def __init__(
+        self,
+        profiler_config: ProfilerConfig,
+        worker_name: str,
+    ) -> None:
+        super().__init__(profiler_config)
+
+        try:
+            self._proton = importlib.import_module("triton.profiler")
+            triton = importlib.import_module("triton")
+        except ImportError as exc:
+            raise RuntimeError(
+                "The Proton profiler requires a Triton installation with "
+                "triton.profiler support."
+            ) from exc
+
+        self._output_dir = profiler_config.proton_profiler_dir
+        self._output_path = os.path.join(self._output_dir, f"proton_{worker_name}")
+        self._context = profiler_config.proton_context
+        self._data = profiler_config.proton_data
+        self._backend = profiler_config.proton_backend
+        self._mode = profiler_config.proton_mode
+        self._hook = profiler_config.proton_hook
+        self._output_format = profiler_config.proton_output_format
+        self._triton_version_string = getattr(triton, "__version__", "unknown")
+        try:
+            self._triton_version = Version(self._triton_version_string)
+        except InvalidVersion:
+            self._triton_version = None
+        self._validate_capabilities()
+        self._session_id: int | None = None
+        # Qualify output names by process and wrapper instance so a new
+        # worker cannot overwrite profiles left by an earlier server process.
+        self._instance_id = f"pid{os.getpid()}_{uuid4().hex}"
+        self._run_id = 0
+
+        logger.info_once(
+            "Proton profiling enabled. Output will be saved under: %s",
+            self._output_dir,
+        )
+
+    def _require_triton_version(self, feature: str, minimum: Version) -> None:
+        if self._triton_version is None or self._triton_version < minimum:
+            raise RuntimeError(
+                f"Proton {feature} requires Triton >= {minimum}; found "
+                f"{self._triton_version_string}."
+            )
+
+    def _validate_capabilities(self) -> None:
+        if self._output_format is not None:
+            parameters = inspect.signature(self._proton.finalize).parameters
+            supports_output_format = "output_format" in parameters or any(
+                parameter.kind == inspect.Parameter.VAR_KEYWORD
+                for parameter in parameters.values()
+            )
+            if not supports_output_format:
+                raise RuntimeError(
+                    "The installed Triton Proton does not support selecting "
+                    "an output format during finalize."
+                )
+
+        if self._output_format == "hatchet_msgpack":
+            self._require_triton_version(
+                "hatchet_msgpack output", _TRITON_PROTON_3_7_VERSION
+            )
+        if self._mode and self._mode.split(":", 1)[0] == "periodic_flushing":
+            self._require_triton_version(
+                "periodic flushing", _TRITON_PROTON_3_7_VERSION
+            )
+
+    def _create_session(self, output_path: str) -> int:
+        os.makedirs(self._output_dir, exist_ok=True)
+        session_id = self._proton.start(
+            name=output_path,
+            context=self._context,
+            data=self._data,
+            backend=self._backend,
+            mode=self._mode,
+            hook=self._hook,
+        )
+        if session_id is None:
+            raise RuntimeError("Proton did not create a profiling session")
+        return session_id
+
+    @override
+    def _start(self) -> None:
+        output_path = f"{self._output_path}_{self._instance_id}_run{self._run_id}"
+        self._session_id = self._create_session(output_path)
+        self._run_id += 1
+
+    @override
+    def _stop(self) -> None:
+        assert self._session_id is not None
+        session_id = self._session_id
+        try:
+            self._proton.deactivate(session=session_id)
+        finally:
+            try:
+                if self._output_format is None:
+                    self._proton.finalize(session=session_id)
+                else:
+                    self._proton.finalize(
+                        session=session_id, output_format=self._output_format
+                    )
+            finally:
+                self._session_id = None
+
+    @override
+    def annotate_context_manager(self, name: str):
+        if not self._running:
+            return nullcontext()
+        return self._proton.scope(name)
+
+
+class CudaProfilerWrapper(WorkerProfiler):
+    def __init__(self, profiler_config: ProfilerConfig) -> None:
+        super().__init__(profiler_config)
+        # Note: lazy import to avoid dependency issues if CUDA is not available.
+        import torch.cuda.profiler as cuda_profiler
+
+        self._cuda_profiler = cuda_profiler
+
+    @override
+    def _start(self) -> None:
+        self._cuda_profiler.start()
+
+    @override
+    def _stop(self) -> None:
+        self._cuda_profiler.stop()
+
+    @override
+    def annotate_context_manager(self, name: str):
+        return torch.cuda.nvtx.range(name)
+
+FILE vllm/v1/worker/xpu_worker.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+import gc
+import os
+
+import torch
+
+from vllm.config import VllmConfig
+from vllm.logger import init_logger
+from vllm.platforms import current_platform
+from vllm.profiler.wrapper import TorchProfilerWrapper
+from vllm.utils.mem_utils import MemorySnapshot, format_gib
+from vllm.utils.torch_utils import set_random_seed
+from vllm.v1.utils import report_usage_stats
+from vllm.v1.worker.gpu_worker import Worker, init_worker_distributed_environment
+from vllm.v1.worker.workspace import init_workspace_manager
+from vllm.v1.worker.xpu_model_runner import XPUModelRunner, XPUModelRunnerV2
+
+from .utils import request_memory
+
+logger = init_logger(__name__)
+
+
+class XPUWorker(Worker):
+    """A XPU worker class."""
+
+    def __init__(
+        self,
+        vllm_config: VllmConfig,
+        local_rank: int,
+        rank: int,
+        distributed_init_method: str,
+        is_driver_worker: bool = False,
+    ):
+        super().__init__(
+            vllm_config, local_rank, rank, distributed_init_method, is_driver_worker
+        )
+        device_config = self.device_config
+        assert device_config.device_type == "xpu"
+        assert current_platform.is_xpu()
+
+    def init_device(self):
+        # In DP mode, XPU workers see all visible devices.
+        # Offset local_rank by the local DP shard.
+        parallel_config = self.parallel_config
+        if (
+            parallel_config.distributed_executor_backend
+            not in ("ray", "external_launcher")
+            and parallel_config.data_parallel_backend != "ray"
+            and parallel_config.nnodes_within_dp == 1
+        ):
+            dp_local_rank = parallel_config.data_parallel_rank_local
+            if dp_local_rank is None:
+                dp_local_rank = parallel_config.data_parallel_index
+            tp_pp_world_size = (
+                parallel_config.pipeline_parallel_size
+                * parallel_config.tensor_parallel_size
+            )
+            self.local_rank += dp_local_rank * tp_pp_world_size
+
+            visible_device_count = torch.accelerator.device_count()
+            assert self.local_rank < visible_device_count, (
+                f"DP adjusted local rank {self.local_rank} is out of bounds. "
+            )
+            assert parallel_config.local_world_size <= visible_device_count, (
+                f"local_world_size ({parallel_config.local_world_size}) must "
+                f"be less than or equal to the number of visible devices "
+                f"({visible_device_count})."
+            )
+
+        device = self.device_config.device
+        if (
+            isinstance(device, torch.device)
+            and device.type == "xpu"
+            and current_platform.is_xpu()
+        ):
+            self.device = torch.device(f"xpu:{self.local_rank}")
+            torch.accelerator.set_device_index(self.device)
+            current_platform.check_if_supports_dtype(self.model_config.dtype)
+            torch.accelerator.empty_cache()
+            self.init_gpu_memory = torch.xpu.get_device_properties(
+                self.local_rank
+            ).total_memory
+        else:
+            raise RuntimeError(f"Unsupported device type: {self.device_config.device}")
+
+        ENV_CCL_ATL_TRANSPORT = os.getenv("CCL_ATL_TRANSPORT", "ofi")
+        ENV_LOCAL_WORLD_SIZE = os.getenv(
+            "LOCAL_WORLD_SIZE", str(self.parallel_config.world_size)
+        )
+        os.environ["CCL_ATL_TRANSPORT"] = ENV_CCL_ATL_TRANSPORT
+        os.environ["LOCAL_WORLD_SIZE"] = ENV_LOCAL_WORLD_SIZE
+        os.environ["LOCAL_RANK"] = str(self.local_rank)
+
+        init_worker_distributed_environment(
+            self.vllm_config,
+            self.rank,
+            self.distributed_init_method,
+            self.local_rank,
+            current_platform.dist_backend,
+        )
+
+        # global all_reduce needed for overall oneccl warm up
+        if torch.distributed.is_xccl_available():
+            torch.distributed.all_reduce(torch.zeros(1).xpu())
+
+        if self.use_v2_model_runner:
+            logger.info_once("Using V2 Model Runner")
+
+        # Set random seed.
+        set_random_seed(self.model_config.seed)
+
+        # Now take memory snapshot after NCCL is initialized
+        gc.collect()
+        torch.accelerator.empty_cache()
+
+        # take current memory snapshot
+        self.init_snapshot = init_snapshot = MemorySnapshot(device=self.device)
+        self.requested_memory = request_memory(init_snapshot, self.cache_config)
+        logger.debug("worker init memory snapshot: %r", self.init_snapshot)
+        logger.debug(
+            "worker requested memory: %sGiB", format_gib(self.requested_memory)
+        )
+
+        # Initialize workspace manager
+        num_ubatches = 2 if self.vllm_config.parallel_config.enable_dbo else 1
+        init_workspace_manager(self.device, num_ubatches)
+
+        # Construct the model runner
+        model_runner = XPUModelRunnerV2 if self.use_v2_model_runner else XPUModelRunner
+        self.model_runner = model_runner(  # type: ignore
+            self.vllm_config, self.device
+        )
+
+        if self.rank == 0:
+            # If usage stat is enabled, collect relevant info.
+            report_usage_stats(self.vllm_config)
+
+    def profile(self, is_start: bool = True, profile_prefix: str | None = None):
+        if self.profiler_config is None or self.profiler_config.profiler is None:
+            raise RuntimeError(
+                "Profiling is not enabled. Please set --profiler-config to enable "
+                "profiling. Example: "
+                "'--profiler-config.profiler=torch --profiler-config.torch_profiler_dir"
+                "=YOUR_DIR_PATH_TO_DUMP_TRACE'"
+            )
+
+        if is_start and self.profiler is None:
+            from vllm.distributed.utils import get_worker_rank_suffix
+
+            rank_suffix = get_worker_rank_suffix(global_rank=self.rank)
+            trace_name = (
+                f"{profile_prefix}_{rank_suffix}" if profile_prefix else rank_suffix
+            )
+
+            self.profiler = TorchProfilerWrapper(
+                self.profiler_config,
+                worker_name=trace_name,
+                local_rank=self.local_rank,
+                activities=["CPU", "XPU"],
+            )
+            logger.debug("Starting torch profiler with trace name: %s", trace_name)
+
+        super().profile(is_start=is_start, profile_prefix=profile_prefix)
+
+    def shutdown(self) -> None:
+        logger.info(
+            "XPUWorker shutdown: cleaning up (rank=%d, local_rank=%d)",
+            self.rank,
+            self.local_rank,
+        )
+        super().shutdown()
+        from vllm.device_allocator.xpumem import XpuMemAllocator
+
+        if XpuMemAllocator.instance is not None:
+            XpuMemAllocator.instance.release_pools()
+        logger.info(
+            "XPUWorker shutdown: done (rank=%d, local_rank=%d)",
+            self.rank,
+            self.local_rank,
+        )
+
+FILE vllm/model_executor/kernels/linear/mixed_precision/xpu.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+
+import torch
+from torch.nn.parameter import Parameter
+
+from vllm.logger import init_logger
+from vllm.model_executor.layers.quantization.utils import replace_parameter
+from vllm.platforms import current_platform
+from vllm.scalar_type import scalar_types
+
+from .MPLinearKernel import MPLinearKernel, MPLinearLayerConfig
+
+_XPUWNA16_SUPPORTED_QUANT_TYPES = (scalar_types.uint4, scalar_types.uint4b8)
+
+logger = init_logger(__name__)
+
+
+class XPUwNa16LinearKernel(MPLinearKernel):
+    @classmethod
+    def get_min_capability(cls) -> int:
+        return -1
+
+    @classmethod
+    def can_implement(cls, c: MPLinearLayerConfig) -> tuple[bool, str | None]:
+        if not current_platform.is_xpu():
+            return False, "XPUwNa16 only supported on XPU"
+
+        if c.act_type != torch.bfloat16 and c.act_type != torch.float16:
+            return False, "XPUwNa16 only supports BF16/FP16 activations"
+
+        if c.weight_type not in _XPUWNA16_SUPPORTED_QUANT_TYPES:
+            return (
+                False,
+                f"Quant type ({c.weight_type}) not supported by "
+                "XPUwNa16, supported types are: "
+                f"{_XPUWNA16_SUPPORTED_QUANT_TYPES}",
+            )
+        if c.group_size != -1 and c.group_size % 32 != 0:
+            return (
+                False,
+                f"Group size ({c.group_size}) not supported by "
+                "XPUwNa16, supported group sizes are multiples of 32",
+            )
+
+        if c.partition_weight_shape[0] % 32 != 0:
+            return (
+                False,
+                f"Input size ({c.partition_weight_shape[0]}) not supported by "
+                "XPUwNa16, supported sizes are multiples of 32",
+            )
+
+        return True, None
+
+    def process_weights_after_loading(self, layer: torch.nn.Module):
+        # Default names since marlin requires empty parameters for these,
+        # TODO: remove this requirement from marlin (allow optional tensors)
+        if self.w_gidx_name is None:
+            self.w_gidx_name = "g_idx"
+        if self.w_zp_name is None:
+            self.w_zp_name = "w_zp"
+
+        need_transpose = False
+        qweight_shape = getattr(layer, self.w_q_name).shape
+        scale_shape = getattr(layer, self.w_s_name).shape
+        # gptq marlin and compressed tensors wna16 expect different default
+        # layouts for weight and scale, so we check the shapes to determine
+        # if we need to transpose
+        if qweight_shape[0] != scale_shape[0]:
+            need_transpose = True
+
+        if need_transpose:
+            getattr(layer, self.w_q_name).data = (
+                getattr(layer, self.w_q_name).data.t().contiguous()
+            )
+            getattr(layer, self.w_s_name).data = getattr(layer, self.w_s_name).data
+        else:
+            getattr(layer, self.w_s_name).data = (
+                getattr(layer, self.w_s_name).data.t().contiguous()
+            )
+
+        if self.config.zero_points:
+            # (FIXME): maybe zero points should also be transposed.
+            getattr(layer, self.w_zp_name).data = (
+                getattr(layer, self.w_zp_name).data.t().contiguous()
+            )
+        else:
+            weight_zero_point = torch.Tensor([8]).to(torch.int8).to("xpu")
+            setattr(
+                layer, self.w_zp_name, Parameter(weight_zero_point, requires_grad=False)
+            )
+        if self.config.has_g_idx:
+            setattr(
+                layer,
+                self.w_gidx_name,
+                Parameter(
+                    getattr(layer, self.w_gidx_name).data.t().contiguous(),
+                    requires_grad=False,
+                ),
+            )
+        else:
+            setattr(layer, self.w_gidx_name, None)
+
+    def apply_weights(
+        self,
+        layer: torch.nn.Module,
+        x: torch.Tensor,
+        bias: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        reshaped_x = x.reshape(-1, x.shape[-1])
+        w_q, w_s, w_zp, w_gidx = self._get_weight_params(layer)
+        out = torch.ops._xpu_C.int4_gemm_w4a16(
+            reshaped_x,
+            w_q.t(),
+            bias if bias is not None else None,
+            w_s,
+            w_zp,
+            self.config.group_size,
+            w_gidx,
+        )
+        return out
+
+
+class XPUW4A8IntLinearKernel(MPLinearKernel):
+    """XPU kernel for W4A8 integer quantization using oneDNN int4_gemm_w4a8.
+
+    Weights are symmetric group-quantized int4 packed as uint4.
+    Activations are dynamically quantized per-token to symmetric int8.
+    """
+
+    @classmethod
+    def get_min_capability(cls) -> int:
+        return -1
+
+    @classmethod
+    def can_implement(cls, c: MPLinearLayerConfig) -> tuple[bool, str | None]:
+        if not current_platform.is_xpu():
+            return False, "XPUW4A8Int only supported on XPU"
+        if c.act_type not in (torch.bfloat16, torch.float16):
+            return False, "XPUW4A8Int requires BF16/FP16 activations"
+        if c.weight_type != scalar_types.int4:
+            return (
+                False,
+                f"XPUW4A8Int requires int4 weights, got {c.weight_type}",
+            )
+        if c.zero_points:
+            return False, "XPUW4A8Int only supports symmetric weight quantization"
+        if c.group_size != -1 and c.group_size % 32 != 0:
+            return (
+                False,
+                f"Group size ({c.group_size}) not supported by XPUW4A8Int, "
+                "must be a multiple of 32",
+            )
+        in_size, out_size = c.partition_weight_shape
+        if in_size % 8 != 0 or out_size % 8 != 0:
+            return (
+                False,
+                f"in/out sizes ({in_size}, {out_size}) must be multiples of 8",
+            )
+
+        if c.act_type != torch.float16:
+            logger.warning_once(
+                "XPUW4A8IntLinearKernel is running with model dtype %s, "
+                "but int4_gemm_w4a8 produces float16 output. Recommend "
+                "setting --dtype float16 for best performance.",
+                c.act_type,
+            )
+
+        return True, None
+
+    def _pack_int4_weight(self, w: torch.Tensor) -> torch.Tensor:
+        # w is [N, K] int8 with values in [-8, 7]
+        w_u4 = w.to(torch.int32) + 8  # shift to [0, 15]
+        w_u4 = w_u4.reshape(w.shape[0], w.shape[1] // 8, 8)  # [N, K/8, 8]
+        shifts = torch.arange(0, 32, 4, dtype=torch.int32, device=w.device)
+        packed = ((w_u4 & 0xF) << shifts[None, None, :]).sum(dim=2).to(torch.int32)
+        return packed
+
+    def process_weights_after_loading(self, layer: torch.nn.Module) -> None:
+        layer.weight_scale.data = layer.weight_scale.data.t().contiguous()
+
+        device = layer.weight_packed.device
+        # TODO: support asymmetric quantization
+        weight_zero_point = torch.tensor([8], dtype=torch.int8, device=device)
+        layer.weight_zero_point = Parameter(weight_zero_point, requires_grad=False)
+
+        # weight_packed is [out, in] int8, signed int4 values in [-8, 7]
+        w = layer.weight_packed.data  # [out, in]
+
+        # TODO: implement asym case
+        packed = self._pack_int4_weight(w)  # [out, in/8] packed uint4
+
+        replace_parameter(
+            layer,
+            self.w_q_name,
+            torch.nn.Parameter(packed, requires_grad=False),
+        )
+
+        # Free the original unpacked int8 weight (still registered as "weight")
+        # to avoid double-storing both int8 [N, K] and int32 [N, K/8] in memory.
+        layer.register_parameter("weight", None)
+
+    def apply_weights(
+        self,
+        layer: torch.nn.Module,
+        x: torch.Tensor,
+        bias: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        reshaped_x = x.reshape(-1, x.shape[-1])  # [M, K]
+        from vllm._xpu_ops import xpu_ops as ops
+
+        # TODO: static and asymmetric quantization case
+        # Common code for CompressedTensorsW4A8Int does not read act symmetry data
+        quant_x, x_scale, x_zero = ops.dynamic_per_token_int8_quant_ref(
+            reshaped_x, True, 8
+        )
+
+        out = torch.ops._xpu_C.int4_gemm_w4a8(
+            quant_x,
+            x_scale,
+            x_zero,
+            layer.weight_packed.t(),
+            layer.weight_scale,
+            layer.weight_zero_point,
+            self.config.group_size,
+            None,  # g_idx not currently supported
+            bias,
+        )
+
+        return out.to(x.dtype)
+
+DIST torch 2.13.0+xpu
+DIST vllm-xpu-kernels 0.1.12.3
