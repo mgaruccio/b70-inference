@@ -30,6 +30,8 @@ Pinned upstream is `b6334e37e6ef286fc5091a41b6561b2113d915fb`; accepted R1 sourc
 - Two eligible external probability/biased-view consumers.
 - 15 fallbacks: width 239; 1025 tokens; extra dimension; strided logits/bias; row-varying bias; ascending sort; intervening executable copy; inplace ADD; repeated bias aliasing the first/second probability row; wrong unary; index reuse of output-marked, externally consumed, or viewed logits.
 
+Index-alias cases mark only the I32 tensor OUTPUT: `ggml_set_output` recursively marks `view_src` owners and would otherwise make positive dead-logit reuse fall back. Both graphs assert that the logit owner is OUTPUT only for `indices_logits_output`, so consumer/view cases exercise their intended guards. Production visibility checks and the 82/67 gate are unchanged.
+
 Each case uses independent deterministic inputs and an unfused same-backend control, separated by an executable output-marked CONT. Complete probability/biased arrays must match bitwise; complete original I32 tensors and both index arrays must match exactly. CPU F32 NMSE remains **1e-7**. CPU index checking follows existing `test_top_k(ties)` convention: full permutations and identical ranked values, not an unspecified CPU tie order; same-backend tie indices are never relaxed. Sentinels and extra consumers remain checked. No NaN cases or tolerance changes. Shifted output aliases and indices/biased aliases are rejected but not executed as native graphs: their unfused parallel kernels lack a safe reference contract.
 
 On a disposable isolated **R1+MoE** source/build, with absolute `SRC`, `BUILD`, `PATCH`, `RUN`:

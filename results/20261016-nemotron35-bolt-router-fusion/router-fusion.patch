@@ -191,7 +191,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 --- a/tests/test-backend-ops.cpp
 +++ b/tests/test-backend-ops.cpp
-@@ -7134,6 +7134,242 @@
+@@ -7134,6 +7134,248 @@
      }
  };
  
@@ -285,7 +285,9 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +            // Materialized values and external consumers must remain supported.
 +            ggml_set_output(probs[side]);
 +            ggml_set_output(biased[side]);
-+            ggml_set_output(indices[side]);
++            // ggml_set_output walks view_src and would also mark dead logits
++            // OUTPUT, masking both positive reuse and the consumer/view guards.
++            indices[side]->flags |= GGML_TENSOR_FLAG_OUTPUT;
 +            ggml_tensor * observed = nullptr;
 +            if (weight_view) {
 +                observed = ggml_scale(ctx, ggml_cont(ctx, weight_view), 0.5f);
@@ -308,6 +310,10 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +                ggml_set_output(observed);
 +                expand(observed);
 +                checked.push_back(observed);
++            }
++            if (indices[side]->view_src == logits[side]) {
++                GGML_ASSERT(((logits[side]->flags & GGML_TENSOR_FLAG_OUTPUT) != 0) ==
++                            (guard == "indices_logits_output"));
 +            }
 +        }
 +        const int64_t n = experts * rows();
@@ -434,7 +440,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
  // GGML_OP_TOP_K
  struct test_top_k : public test_case {
      const ggml_type type;
-@@ -12190,6 +12426,30 @@
+@@ -12190,6 +12432,30 @@
          }
      }
  
