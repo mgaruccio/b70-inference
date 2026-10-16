@@ -1,0 +1,320 @@
+diff --git a/ggml/src/ggml-sycl/topk-moe.cpp b/ggml/src/ggml-sycl/topk-moe.cpp
+--- a/ggml/src/ggml-sycl/topk-moe.cpp
++++ b/ggml/src/ggml-sycl/topk-moe.cpp
+@@ -539,11 +539,113 @@
+     return is_ok;
+ }
+ 
++// Only the nine-expert, all-views-before-adds graph emitted by build_moe_ffn.
++// A preceding expert-scale MUL, if present, remains a separate operation.
++static int ggml_sycl_fuse_moe_weighted_reduce(ggml_backend_sycl_context & ctx, ggml_cgraph * cgraph, int i) {
++    constexpr int n_experts = 9;
++    constexpr int node_count = 2 * n_experts; // MUL, nine VIEWs, eight ordered ADDs
++    const ggml_tensor * weighted = cgraph->nodes[i];
++    if (weighted->op != GGML_OP_MUL || weighted->type != GGML_TYPE_F32 || weighted->view_src ||
++        !ggml_is_contiguous(weighted) || weighted->ne[0] <= 0 || weighted->ne[1] != n_experts ||
++        weighted->ne[2] <= 0 || weighted->ne[3] != 1 || cgraph->n_nodes - i < node_count) {
++        return 0;
++    }
++
++    const ggml_tensor * experts = weighted->src[0];
++    const ggml_tensor * weights = weighted->src[1];
++    if (!experts || !weights || experts->type != GGML_TYPE_F32 || weights->type != GGML_TYPE_F32 ||
++        !ggml_is_contiguous(experts) || !ggml_is_contiguous(weights) ||
++        !ggml_are_same_shape(experts, weighted) || weights->ne[0] != 1 ||
++        weights->ne[1] != n_experts || weights->ne[2] != weighted->ne[2] || weights->ne[3] != 1) {
++        return 0;
++    }
++
++    ggml_op ops[node_count];
++    ops[0] = GGML_OP_MUL;
++    for (int expert = 0; expert < n_experts; ++expert) {
++        const ggml_tensor * view = cgraph->nodes[i + 1 + expert];
++        ops[1 + expert] = GGML_OP_VIEW;
++        if (view->op != GGML_OP_VIEW || view->src[0] != weighted || view->view_src != weighted ||
++            view->type != GGML_TYPE_F32 || view->ne[0] != weighted->ne[0] ||
++            view->ne[1] != weighted->ne[2] || view->ne[2] != 1 || view->ne[3] != 1 ||
++            view->nb[0] != sizeof(float) || view->nb[1] != weighted->nb[2] ||
++            view->view_offs != (size_t) expert * weighted->nb[1]) {
++            return 0;
++        }
++    }
++
++    const ggml_tensor * previous = cgraph->nodes[i + 1];
++    for (int expert = 1; expert < n_experts; ++expert) {
++        const int offset = n_experts + expert;
++        const ggml_tensor * add = cgraph->nodes[i + offset];
++        ops[offset] = GGML_OP_ADD;
++        if (add->op != GGML_OP_ADD || add->src[0] != previous ||
++            add->src[1] != cgraph->nodes[i + 1 + expert] || add->type != GGML_TYPE_F32 ||
++            add->view_src || !ggml_is_contiguous(add) || add->ne[0] != weighted->ne[0] ||
++            add->ne[1] != weighted->ne[2] || add->ne[2] != 1 || add->ne[3] != 1) {
++            return 0;
++        }
++        previous = add;
++    }
++
++    const int output_idx = i + node_count - 1;
++    ggml_tensor * dst = cgraph->nodes[output_idx];
++    // The shared graph helper checks compute/output flags, external consumers,
++    // and external view sources for every elided node, including the nine views.
++    if (!ggml_can_fuse_subgraph(cgraph, i, node_count, ops, &output_idx, 1) ||
++        !experts->data || !weights->data || !dst->data) {
++        return 0;
++    }
++    // Unlike the top-k helper above, include GGML_OP_NONE inputs: a leaf can
++    // alias the destination too. Only these two contiguous tensors are read.
++    const auto overlaps_dst = [dst](const ggml_tensor * src) {
++        const uintptr_t a = (uintptr_t) dst->data;
++        const uintptr_t b = (uintptr_t) src->data;
++        return a <= b ? b - a < ggml_nbytes(dst) : a - b < ggml_nbytes(src);
++    };
++    if (overlaps_dst(experts) || overlaps_dst(weights)) {
++        return 0;
++    }
++
++    const scope_op_debug_print log("ggml_sycl_op_moe_weighted_reduce", dst, 0);
++    const float * expert_data = (const float *) experts->data;
++    const float * weight_data = (const float *) weights->data;
++    float * out = (float *) dst->data;
++    const size_t width = (size_t) experts->ne[0];
++    const size_t tokens = (size_t) experts->ne[2];
++    constexpr size_t threads = 256;
++    ctx.stream()->parallel_for(
++        sycl::nd_range<2>(sycl::range<2>(tokens, ((width + threads - 1) / threads) * threads),
++                          sycl::range<2>(1, threads)),
++        [=](sycl::nd_item<2> item) {
++            // Preserve the standalone F32 MUL rounding and left-to-right ADDs.
++            // Scoped to this kernel, not the translation unit or other fusions.
++#pragma clang fp contract(off) reassociate(off)
++            const size_t token = item.get_global_id(0);
++            const size_t col = item.get_global_id(1);
++            if (col >= width) {
++                return;
++            }
++            const size_t first_row = token * n_experts;
++            float sum = expert_data[first_row * width + col] * weight_data[first_row];
++            for (int expert = 1; expert < n_experts; ++expert) {
++                const size_t row = first_row + expert;
++                const float product = expert_data[row * width + col] * weight_data[row];
++                sum = sum + product;
++            }
++            out[token * width + col] = sum;
++        });
++    return node_count - 1;
++}
++
+ int ggml_sycl_fuse(ggml_backend_sycl_context & ctx, ggml_cgraph * cgraph, int i) {
+     if (!g_ggml_sycl_enable_fusion) {
+         return 0;
+     }
+ 
++    if (const int skip = ggml_sycl_fuse_moe_weighted_reduce(ctx, cgraph, i)) {
++        return skip;
++    }
+     return ggml_sycl_fuse_topk_moe(ctx, cgraph, i);
+ }
+ 
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -7555,6 +7555,180 @@
+     }
+ };
+ 
++// Nine-expert SYCL reduction: CPU tolerance stays at test_case's 1e-7.
++// Each case also compares its entire result bit-for-bit with a same-backend
++// control whose MUL and ADD intermediates are outputs (and cannot be elided).
++struct test_moe_reduce_9 : public test_case {
++    const int64_t n_embd;
++    const int64_t n_tokens;
++    const bool sensitive;
++    const std::string guard;
++    ggml_tensor * expert_storage = nullptr;
++    ggml_tensor * weight_storage = nullptr;
++    std::vector<ggml_tensor *> verified;
++
++    test_moe_reduce_9(int64_t n_embd, int64_t n_tokens, bool sensitive, const char * guard = "none") :
++        n_embd(n_embd), n_tokens(n_tokens), sensitive(sensitive), guard(guard) {}
++
++    std::string vars() override { return VARS_TO_STR4(n_embd, n_tokens, sensitive, guard); }
++    std::string op_desc(ggml_tensor *) override { return "MOE_REDUCE_9"; }
++    bool run_whole_graph() override { return true; }
++    std::vector<ggml_tensor *> fusion_test_nodes() override {
++        auto nodes = verified;
++        nodes.insert(nodes.end(), sentinels.begin(), sentinels.end());
++        return nodes;
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        verified.clear();
++        const int n_experts = guard == "eight" ? 8 : 9;
++        expert_storage = ggml_new_tensor_3d(ctx, GGML_TYPE_F32,
++            n_embd + (guard == "strided_experts"), n_experts, n_tokens);
++        weight_storage = ggml_new_tensor_3d(ctx, GGML_TYPE_F32,
++            guard == "strided_weights" ? 2 : 1, n_experts, n_tokens);
++        ggml_tensor * experts = expert_storage;
++        ggml_tensor * weights = weight_storage;
++        if (guard == "strided_experts") {
++            experts = ggml_view_3d(ctx, expert_storage, n_embd, n_experts, n_tokens,
++                expert_storage->nb[1], expert_storage->nb[2], 0);
++        }
++        if (guard == "strided_weights") {
++            weights = ggml_view_3d(ctx, weight_storage, 1, n_experts, n_tokens,
++                weight_storage->nb[1], weight_storage->nb[2], 0);
++        }
++
++        const auto expand = [this](ggml_tensor * t) {
++            if (mode == MODE_TEST) {
++                ggml_build_forward_expand(gf, t);
++            }
++        };
++        const auto reduction = [&](bool control) {
++            ggml_tensor * weighted = ggml_mul(ctx, experts, weights);
++            ggml_format_name(weighted, "%s_weighted", control ? "control" : "candidate");
++            if (control) {
++                ggml_set_output(weighted);
++            }
++            expand(weighted);
++            std::vector<ggml_tensor *> views;
++            for (int expert = 0; expert < n_experts; ++expert) {
++                int row = expert;
++                if (guard == "shuffled_views" && (expert == 3 || expert == 4)) {
++                    row = 7 - expert;
++                }
++                views.push_back(ggml_view_2d(ctx, weighted, n_embd, n_tokens,
++                    weighted->nb[2], row * weighted->nb[1]));
++                expand(views.back());
++            }
++            ggml_tensor * out = guard == "right_associated" ? views.back() : views.front();
++            ggml_tensor * middle = nullptr;
++            for (int step = 1; step < n_experts; ++step) {
++                if (guard == "right_associated") {
++                    out = ggml_add(ctx, views[n_experts - 1 - step], out);
++                } else if (!control && guard == "inplace" && step == n_experts - 1) {
++                    out = ggml_add_inplace(ctx, out, views[step]);
++                } else {
++                    out = ggml_add(ctx, out, views[step]);
++                }
++                if (control) {
++                    ggml_set_output(out);
++                }
++                if (step == 4) {
++                    middle = out;
++                }
++                expand(out);
++            }
++            ggml_format_name(out, "%s_reduce", control ? "control" : "candidate");
++            // Consumers are deliberately appended AFTER the complete candidate
++            // window, so use-count/output checks, not an op-sequence mismatch,
++            // have to protect the elided values.
++            if (!control) {
++                ggml_tensor * observed = nullptr;
++                if (guard == "consumer_mul" || guard == "output_mul") {
++                    observed = weighted;
++                } else if (guard == "consumer_view" || guard == "output_view") {
++                    observed = views[3];
++                } else if (guard == "consumer_add" || guard == "output_add") {
++                    observed = middle;
++                }
++                if (observed) {
++                    if (guard.find("consumer_") == 0) {
++                        observed = ggml_scale(ctx, observed, 0.5f);
++                    } else {
++                        ggml_set_output(observed);
++                    }
++                    expand(observed);
++                    verified.push_back(observed);
++                }
++            }
++            return out;
++        };
++        ggml_tensor * candidate = reduction(false);
++        ggml_tensor * control = reduction(true);
++        ggml_tensor * out = ggml_concat(ctx, candidate, control, 1);
++        ggml_set_name(out, "candidate_and_unfused_control");
++        verified.push_back(out);
++        return out;
++    }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++            if (t->view_src) {
++                continue;
++            }
++            GGML_ASSERT(t->type == GGML_TYPE_F32);
++            std::vector<float> data(ggml_nelements(t), 0.25f);
++            for (size_t i = 0; i < data.size(); ++i) {
++                const uint32_t bits = (uint32_t) i * 1664525u + 1013904223u;
++                if (t == weight_storage) {
++                    const int expert = (i / t->ne[0]) % t->ne[1];
++                    data[i] = sensitive ? (expert == 1 ? 1.0f - 0x1p-13f : 1.0f) :
++                        (float) (1 + (bits >> 16)) / (65536.0f * 9.0f);
++                } else if (t == expert_storage) {
++                    const int expert = (i / t->ne[0]) % t->ne[1];
++                    const size_t col = i % t->ne[0];
++                    data[i] = (float) ((int32_t) (bits >> 8) - 8388608) / 8388608.0f;
++                    if (sensitive) {
++                        switch (col % 4) {
++                            case 0:
++                                // Separate MUL rounds (1+2^-13)*(1-2^-13) to 1;
++                                // contraction with the initial -1 instead gives -2^-26.
++                                data[i] = expert == 0 ? -1.0f : expert == 1 ? 1.0f + 0x1p-13f : 0.0f;
++                                break;
++                            case 1:
++                                data[i] = expert == 2 ? 16777216.0f : expert == 3 ? -16777216.0f :
++                                          expert == 4 ? 1.0f : 0.0f;
++                                break;
++                            case 2:
++                                data[i] = expert == 0 ? 1.0e8f : expert == 1 ? 1.0f :
++                                          expert == 2 ? -1.0e8f : 0.0f;
++                                break;
++                            default: break;
++                        }
++                    }
++                }
++            }
++            ggml_backend_tensor_set(t, data.data(), 0, ggml_nbytes(t));
++        }
++    }
++
++    double err(const float * a, const float * b, size_t n) override {
++        const size_t half = (size_t) n_embd * n_tokens;
++        if (n == 2 * half) {
++            size_t mismatches = 0;
++            float max_abs = 0.0f;
++            for (size_t i = 0; i < half; ++i) {
++                mismatches += memcmp(a + i, a + half + i, sizeof(float)) != 0;
++                max_abs = std::max(max_abs, std::abs(a[i] - a[half + i]));
++            }
++            printf("MOE_REDUCE_9 full-array: mismatches=%zu max_abs=%.9g ", mismatches, max_abs);
++            if (mismatches != 0) {
++                return INFINITY;
++            }
++        }
++        return test_case::err(a, b, n);
++    }
++};
++
+ // mul_mat with src1 in [0, 1]: a zero-mean src1 hides errors in the zero point or the min of a quantized src0
+ struct test_mul_mat_pos : public test_mul_mat {
+     using test_mul_mat::test_mul_mat;
+@@ -12016,6 +12190,18 @@
+         }
+     }
+ 
++    // Exactly 20 MOE_REDUCE_9 cases: eight eligible, twelve conservative fallbacks.
++    for (const auto & shape : { std::array<int64_t, 2>{1024, 1}, {1024, 128}, {1024, 1024}, {1031, 3} }) {
++        for (bool sensitive : {false, true}) {
++            test_cases.emplace_back(new test_moe_reduce_9(shape[0], shape[1], sensitive));
++        }
++    }
++    for (const char * guard : { "consumer_mul", "consumer_view", "consumer_add", "output_mul", "output_view",
++                               "output_add", "strided_experts", "strided_weights", "inplace", "shuffled_views",
++                               "right_associated", "eight" }) {
++        test_cases.emplace_back(new test_moe_reduce_9(1024, 17, true, guard));
++    }
++
+     // Cover the supported boundaries, common k = 8 shapes, interleaved views and adds, and k = 16 fallback.
+     test_cases.emplace_back(new test_moe_reduce(63,  2, 17));
+     test_cases.emplace_back(new test_moe_reduce(2048, 8, 128));
