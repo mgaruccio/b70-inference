@@ -1,0 +1,173 @@
+{
+  "tier": "development-diagnostic",
+  "source": "unitrace.1.txt.gz + llama-server.1.json.gz",
+  "request": {
+    "prompt_tokens": 8270,
+    "output_tokens": 1,
+    "cache_n": 0
+  },
+  "device_events": 53364,
+  "summed_device_time_ns": 8587582762,
+  "device_span_s": 9.31341225,
+  "device_busy_union_s": 8.389287,
+  "device_gap_sum_s": 0.92412525,
+  "largest_device_gap_ms": 12.53175,
+  "top_kernels": [
+    {
+      "kernel": "grouped_dequant_gemm_launch<fg_combo<sycl::_V1::detail::half_impl::half, sycl::_V1::detail::half_impl::half, 8, 16, 16, 16>, block_iq2_xxs, false>(char const*, unsigned long, ggml_sycl_gg_tile const*, fg_combo<sycl::_V1::detail::half_impl::half, sycl::_V1::detail::half_impl::half, 8, 16, 16, 16>::tsb const*, float*, int, int, int, long, long, sycl::_V1::queue*)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<2>)#1}",
+      "calls": 808,
+      "time_ns": 1887362574,
+      "device_time_percent": 21.97781
+    },
+    {
+      "kernel": "ssm_scan_f32_sycl(float const*, float const*, float const*, float const*, float const*, float const*, int const*, float*, int, int, int, int, int, int, int, int, int, int, int, long, long, long, long, long, long, long, long, sycl::_V1::queue*)::{lambda(sycl::_V1::nd_item<2>)#1}",
+      "calls": 440,
+      "time_ns": 1497785554,
+      "device_time_percent": 17.441294
+    },
+    {
+      "kernel": "gemm_kernel",
+      "calls": 5284,
+      "time_ns": 1199328852,
+      "device_time_percent": 13.965849
+    },
+    {
+      "kernel": "dequantize_row_nvfp4_sycl<float, false>(void const*, float*, long, sycl::_V1::queue*)::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 720,
+      "time_ns": 784816779,
+      "device_time_percent": 9.138971
+    },
+    {
+      "kernel": "dequantize_row_iq2_xxs_sycl<sycl::_V1::detail::half_impl::half>(void const*, sycl::_V1::detail::half_impl::half*, long, sycl::_V1::queue*)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 3196,
+      "time_ns": 617841379,
+      "device_time_percent": 7.194591
+    },
+    {
+      "kernel": "bin_bcast_sycl<&(op_mul(float, float))>::operator()<float, float, float>(float const*, float const*, float*, long, long, long, long, long, long, long, long, long, long, long, long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, bool, bool, bool, bool, sycl::_V1::queue*)::{lambda(sycl::_V1::nd_item<3>)#2}",
+      "calls": 1632,
+      "time_ns": 209679003,
+      "device_time_percent": 2.441653
+    },
+    {
+      "kernel": "rms_norm_mul_f32_sycl(float const*, float const*, float*, int, int, int, int, long, long, long, long, long, long, long, long, long, long, long, int, int, int, float, sycl::_V1::queue*, int)::{lambda(sycl::_V1::handler&)#2}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 1409,
+      "time_ns": 204430014,
+      "device_time_percent": 2.38053
+    },
+    {
+      "kernel": "grouped_gemm_pack_b<fg_combo<sycl::_V1::detail::half_impl::half, sycl::_V1::detail::half_impl::half, 8, 16, 16, 16> >(float const*, fg_combo<sycl::_V1::detail::half_impl::half, sycl::_V1::detail::half_impl::half, 8, 16, 16, 16>::tsb*, ggml_sycl_gg_tile const*, int, int, sycl::_V1::queue*)::{lambda(sycl::_V1::id<1>)#1}",
+      "calls": 808,
+      "time_ns": 186156531,
+      "device_time_percent": 2.167741
+    },
+    {
+      "kernel": "zeCommandListAppendMemoryCopy(D2M)",
+      "calls": 1120,
+      "time_ns": 168382669,
+      "device_time_percent": 1.960769
+    },
+    {
+      "kernel": "ggml_sycl_mul_mat_id(ggml_backend_sycl_context&, ggml_tensor*)::{lambda(sycl::_V1::handler&)#2}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 880,
+      "time_ns": 155598802,
+      "device_time_percent": 1.811904
+    },
+    {
+      "kernel": "dequantize_row_q8_0_sycl_reorder<sycl::_V1::detail::half_impl::half>(void const*, sycl::_V1::detail::half_impl::half*, long, sycl::_V1::queue*)::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 1008,
+      "time_ns": 141140611,
+      "device_time_percent": 1.643543
+    },
+    {
+      "kernel": "ggml_sycl_detail::ggml_sycl_op_unary<ggml_sycl_op_relu(ggml_backend_sycl_context&, ggml_tensor*)::{lambda(auto:1)#1}>(ggml_backend_sycl_context&, ggml_tensor*, ggml_sycl_op_relu(ggml_backend_sycl_context&, ggml_tensor*)::{lambda(auto:1)#1})::{lambda(auto:1 const*, auto:2*, int, sycl::_V1::queue*)#1}::operator()<float, float>(float const*, float*, int, sycl::_V1::queue*) const::{lambda(sycl::_V1::nd_item<1>)#1}",
+      "calls": 880,
+      "time_ns": 122040185,
+      "device_time_percent": 1.421124
+    },
+    {
+      "kernel": "mul_mat_vec_iq2_xxs_q8_1_sycl(void const*, void const*, float*, int, int, sycl::_V1::queue*)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 8566,
+      "time_ns": 119735918,
+      "device_time_percent": 1.394291
+    },
+    {
+      "kernel": "micro_sdpa",
+      "calls": 72,
+      "time_ns": 116219345,
+      "device_time_percent": 1.353342
+    },
+    {
+      "kernel": "ggml_sycl_mul_mat_id(ggml_backend_sycl_context&, ggml_tensor*)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 880,
+      "time_ns": 109675690,
+      "device_time_percent": 1.277143
+    },
+    {
+      "kernel": "ggml_sycl_op_sqr(ggml_backend_sycl_context&, ggml_tensor*)::{lambda(auto:1 const*, auto:2*, int, sycl::_V1::queue*)#1}::operator()<float, float>(float const*, float*, int, sycl::_V1::queue*) const::{lambda(sycl::_V1::nd_item<1>)#1}",
+      "calls": 880,
+      "time_ns": 107957364,
+      "device_time_percent": 1.257133
+    },
+    {
+      "kernel": "ggml_cpy_f32_f32_sycl(char const*, char*, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, sycl::_V1::queue*)::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 1320,
+      "time_ns": 105875019,
+      "device_time_percent": 1.232885
+    },
+    {
+      "kernel": "bin_bcast_sycl<&(op_add(float, float))>::operator()<float, float, float>(float const*, float const*, float*, long, long, long, long, long, long, long, long, long, long, long, long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, bool, bool, bool, bool, sycl::_V1::queue*)::{lambda(sycl::_V1::nd_item<3>)#2}",
+      "calls": 1420,
+      "time_ns": 93559639,
+      "device_time_percent": 1.089476
+    },
+    {
+      "kernel": "convert_unary_nc_sycl<float, sycl::_V1::detail::half_impl::half>(void const*, sycl::_V1::detail::half_impl::half*, long, long, long, long, long, long, long, sycl::_V1::queue*)::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 4204,
+      "time_ns": 92725740,
+      "device_time_percent": 1.079765
+    },
+    {
+      "kernel": "zeCommandListAppendMemoryCopy(M2D)",
+      "calls": 1688,
+      "time_ns": 89626277,
+      "device_time_percent": 1.043673
+    },
+    {
+      "kernel": "concat_T_sycl_non_cont<float>(sycl::_V1::queue*, char const*, char const*, char*, long, long, long, long, unsigned long, unsigned long, unsigned long, unsigned long, long, long, long, long, unsigned long, unsigned long, unsigned long, unsigned long, long, long, long, long, unsigned long, unsigned long, unsigned long, unsigned long, int)::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 440,
+      "time_ns": 87759795,
+      "device_time_percent": 1.021938
+    },
+    {
+      "kernel": "launch_bin_bcast3<&(op_add(float, float)), float, float, float, float>(ggml_backend_sycl_context&, ggml_tensor const*, ggml_tensor const*, ggml_tensor const*, ggml_tensor*)::{lambda(sycl::_V1::nd_item<3>)#2}",
+      "calls": 1677,
+      "time_ns": 82138489,
+      "device_time_percent": 0.95648
+    },
+    {
+      "kernel": "mul_mat_vec_nvfp4_q8_1_sycl_ncols<5>(void const*, void const*, float*, int, int, int, int, sycl::_V1::queue*)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<3>)#1}",
+      "calls": 80,
+      "time_ns": 71846113,
+      "device_time_percent": 0.836628
+    },
+    {
+      "kernel": "ggml_sycl_detail::ggml_sycl_op_unary_gated<ggml_sycl_op_swiglu(ggml_backend_sycl_context&, ggml_tensor*)::{lambda(auto:1)#1}>(ggml_backend_sycl_context&, ggml_tensor*, ggml_sycl_op_swiglu(ggml_backend_sycl_context&, ggml_tensor*)::{lambda(auto:1)#1})::{lambda(auto:1 const*, auto:2 const*, auto:3*, unsigned long, unsigned long, unsigned long, unsigned long, sycl::_V1::queue*)#1}::operator()<float, float, float>(float const*, float const*, float*, unsigned long, unsigned long, unsigned long, unsigned long, sycl::_V1::queue*) const::{lambda(sycl::_V1::nd_item<1>)#1}",
+      "calls": 440,
+      "time_ns": 65332317,
+      "device_time_percent": 0.760777
+    },
+    {
+      "kernel": "kernel_ssm_conv_tiled<4, true>(sycl::_V1::queue&, float const*, float const*, float*, int, int, int, int, int, int, int, bool, float const*)::{lambda(sycl::_V1::handler&)#1}::operator()(sycl::_V1::handler&) const::{lambda(sycl::_V1::nd_item<1>)#1}",
+      "calls": 360,
+      "time_ns": 62801931,
+      "device_time_percent": 0.731311
+    }
+  ],
+  "caveats": [
+    "One instrumented prefill only; attribution, not a performance comparison.",
+    "Summed device durations include overlapping events; union/span are reported separately.",
+    "Host memory-copy API duration includes waiting for earlier device work. Do not add it to device time or interpret it as PCIe transfer time.",
+    "Kernel names identify implementations, not necessarily individual model layers."
+  ]
+}
