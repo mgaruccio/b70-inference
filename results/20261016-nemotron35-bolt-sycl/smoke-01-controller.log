@@ -1,0 +1,13 @@
+{"tier": "development", "configuration": {"name": "smoke-01", "context": 2048, "batch": 512, "ubatch": 128, "bench": true}, "status": "failed", "container_id": "a47ede7d21a21843663846b90de891571a70d2b3646c895d277154bcbb549187", "error": "RuntimeError('Bolt stopped before readiness')", "cleanup": {"warnings": [], "canary": {"http_status": 200, "elapsed_s": 61.108409043052234, "body": {"id": "cmpl-a8ae1b9b926d89d5", "object": "text_completion", "created": 1792121629, "model": "qwen38", "choices": [{"index": 0, "text": " five", "logprobs": {"text_offset": [0], "token_logprobs": [-1.2084071636199951], "tokens": [" five"], "top_logprobs": [{" five": -1.2084071636199951}]}, "finish_reason": "length", "stop_reason": null, "token_ids": null, "prompt_logprobs": null, "prompt_token_ids": null, "routed_experts": null}], "service_tier": null, "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6", "usage": {"prompt_tokens": 7, "total_tokens": 8, "completion_tokens": 1, "prompt_tokens_details": null}, "kv_transfer_params": null, "ec_transfer_params": null, "metrics": null}, "raw_text": "{\"id\":\"cmpl-a8ae1b9b926d89d5\",\"object\":\"text_completion\",\"created\":1792121629,\"model\":\"qwen38\",\"choices\":[{\"index\":0,\"text\":\" five\",\"logprobs\":{\"text_offset\":[0],\"token_logprobs\":[-1.2084071636199951],\"tokens\":[\" five\"],\"top_logprobs\":[{\" five\":-1.2084071636199951}]},\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6\",\"usage\":{\"prompt_tokens\":7,\"total_tokens\":8,\"completion_tokens\":1,\"prompt_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}"}, "restore_attempts": 1, "production_restored": true}}
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/run-cell.py", line 198, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/run-cell.py", line 194, in main
+    raise error
+  File "/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/run-cell.py", line 126, in main
+    summary['models'] = wait_api()
+                        ~~~~~~~~^^
+  File "/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/run-cell.py", line 110, in wait_api
+    raise RuntimeError('Bolt stopped before readiness')
+RuntimeError: Bolt stopped before readiness

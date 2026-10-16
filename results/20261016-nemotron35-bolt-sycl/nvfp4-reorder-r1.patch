@@ -1,0 +1,373 @@
+diff --git a/ggml/src/ggml-sycl/convert.cpp b/ggml/src/ggml-sycl/convert.cpp
+--- a/ggml/src/ggml-sycl/convert.cpp
++++ b/ggml/src/ggml-sycl/convert.cpp
+@@ -574,14 +574,14 @@
+         });
+ }
+ 
+-template <typename dst_t>
++template <typename dst_t, bool reordered = false>
+ static void dequantize_row_nvfp4_sycl(const void * vx, dst_t * y, const int64_t k, dpct::queue_ptr stream) {
+     GGML_ASSERT(k % QK_NVFP4 == 0);
+     const int nb = k / QK_NVFP4;
+     stream->parallel_for(
+         sycl::nd_range<3>(sycl::range<3>(1, 1, nb) * sycl::range<3>(1, 1, 32), sycl::range<3>(1, 1, 32)),
+         [=](sycl::nd_item<3> /*item_ct1*/) {
+-            dequantize_block_nvfp4(vx, y, k);
++            dequantize_block_nvfp4<dst_t, reordered>(vx, y, k);
+         });
+ }
+ 
+@@ -780,6 +780,9 @@
+             }
+             return dequantize_row_mxfp4_sycl;
+         case GGML_TYPE_NVFP4:
++            if (dst->src[0]->extra && ((ggml_tensor_extra_gpu *) dst->src[0]->extra)->optimized_feature.reorder) {
++                return dequantize_row_nvfp4_sycl<sycl::half, true>;
++            }
+             return dequantize_row_nvfp4_sycl;
+         case GGML_TYPE_F32:
+             return convert_unary_sycl<float>;
+@@ -884,6 +887,9 @@
+             }
+             return dequantize_row_mxfp4_sycl;
+         case GGML_TYPE_NVFP4:
++            if (dst->src[0]->extra && ((ggml_tensor_extra_gpu *) dst->src[0]->extra)->optimized_feature.reorder) {
++                return dequantize_row_nvfp4_sycl<float, true>;
++            }
+             return dequantize_row_nvfp4_sycl;
+         case GGML_TYPE_F16:
+             return convert_unary_sycl<sycl::half>;
+diff --git a/ggml/src/ggml-sycl/dequantize.hpp b/ggml/src/ggml-sycl/dequantize.hpp
+--- a/ggml/src/ggml-sycl/dequantize.hpp
++++ b/ggml/src/ggml-sycl/dequantize.hpp
+@@ -1748,7 +1748,7 @@
+ }
+ 
+ 
+-template <typename dst_t>
++template <typename dst_t, bool reordered = false>
+ static void dequantize_block_nvfp4(
+         const void * __restrict__ vx,
+         dst_t * __restrict__ yy,
+@@ -1762,14 +1762,20 @@
+         return;
+     }
+ 
+-    const block_nvfp4 * x = (const block_nvfp4 *) vx;
+-    const block_nvfp4 & xb = x[i];
+-
+     const int sub = tid / (QK_NVFP4_SUB / 2);
+     const int j = tid % (QK_NVFP4_SUB / 2);
+ 
+-    const float d = ggml_sycl_ue4m3_to_fp32(xb.d[sub]);
+-    const uint8_t q = xb.qs[sub * (QK_NVFP4_SUB / 2) + j];
++    float d;
++    uint8_t q;
++    if constexpr (reordered) {
++        const uint8_t * x = static_cast<const uint8_t *>(vx);
++        d = ggml_sycl_ue4m3_to_fp32(x[ne / 2 + i * (QK_NVFP4 / QK_NVFP4_SUB) + sub]);
++        q = x[i * (QK_NVFP4 / 2) + sub * (QK_NVFP4_SUB / 2) + j];
++    } else {
++        const block_nvfp4 & xb = static_cast<const block_nvfp4 *>(vx)[i];
++        d = ggml_sycl_ue4m3_to_fp32(xb.d[sub]);
++        q = xb.qs[sub * (QK_NVFP4_SUB / 2) + j];
++    }
+ 
+     const int64_t y0 = base + sub * QK_NVFP4_SUB + j;
+     const int64_t y1 = y0 + QK_NVFP4_SUB / 2;
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -776,7 +776,8 @@
+             case GGML_TYPE_Q6_K:
+             case GGML_TYPE_IQ3_XXS:
+             case GGML_TYPE_IQ3_S:
+-            case GGML_TYPE_MXFP4:{
++            case GGML_TYPE_MXFP4:
++            case GGML_TYPE_NVFP4:{
+                 ggml_tensor_extra_gpu * extra = new ggml_tensor_extra_gpu{};
+                 tensor->extra                 = extra;
+                 ctx->tensor_extras.push_back(extra);
+@@ -4246,6 +4247,7 @@
+         case GGML_TYPE_Q6_K:
+         case GGML_TYPE_IQ3_XXS:
+         case GGML_TYPE_IQ3_S:
++        case GGML_TYPE_NVFP4:
+             return true;
+         default:
+             return false;
+@@ -4989,6 +4991,40 @@
+             qs_ptr[ib * (3 * QK_K / 8) + j] = x[ib].qs[j];
+         }
+         d_ptr[ib] = x[ib].d;
++    });
++    if (!g_ggml_sycl_use_async_mem_op) {
++        reorder_event.wait_and_throw();
++    }
++    return true;
++}
++
++// Experimental dense NVFP4 layout: [all 32-byte qs blocks][all four-byte d blocks].
++// Keep the four UE4M3 subblock scales intact; this is not MXFP4's E8M0 layout.
++static bool reorder_qw_nvfp4(uint8_t * data_device, size_t size, dpct::queue_ptr stream) {
++    GGML_ASSERT(size % sizeof(block_nvfp4) == 0);
++    const size_t nblocks = size / sizeof(block_nvfp4);
++    sycl_reorder_temp_buffer tmp(stream, size);
++    if (!tmp) {
++        GGML_LOG_WARN("%s: failed to allocate %zu bytes, skipping reorder\n", __func__, size);
++        return false;
++    }
++    auto * tmp_buf = static_cast<uint8_t *>(tmp.ptr);
++    sycl::event copy_event;
++    SYCL_CHECK(CHECK_TRY_ERROR(copy_event = stream->memcpy(tmp_buf, data_device, size)));
++    if (!g_ggml_sycl_use_async_mem_op) {
++        copy_event.wait();
++    }
++    auto * qs = data_device;
++    auto * d  = qs + nblocks * (QK_NVFP4 / 2);
++    auto reorder_event = stream->parallel_for(nblocks, [=](auto i) {
++        const block_nvfp4 * x = reinterpret_cast<const block_nvfp4 *>(tmp_buf);
++        const size_t ib = i;
++        for (int j = 0; j < QK_NVFP4 / 2; ++j) {
++            qs[ib * (QK_NVFP4 / 2) + j] = x[ib].qs[j];
++        }
++        for (int j = 0; j < QK_NVFP4 / QK_NVFP4_SUB; ++j) {
++            d[ib * (QK_NVFP4 / QK_NVFP4_SUB) + j] = x[ib].d[j];
++        }
+     });
+     if (!g_ggml_sycl_use_async_mem_op) {
+         reorder_event.wait_and_throw();
+@@ -5041,12 +5077,27 @@
+             return reorder_qw_iq3_xxs(data_device, size, stream);
+         case GGML_TYPE_IQ3_S:
+             return reorder_qw_iq3_s(data_device, size, stream);
++        case GGML_TYPE_NVFP4:
++            return reorder_qw_nvfp4(data_device, size, stream);
+         default:
+             return false;
+     }
+ }
+ 
+ static bool should_reorder_tensor(ggml_backend_sycl_context& ctx, const ggml_tensor * dst) {
++    const ggml_tensor * w = dst->src[0];
++    if (w->type == GGML_TYPE_NVFP4) {
++        // Bounded experiment: only immutable Mamba projection weights, whose consumers
++        // use the whole matrix. Do not expose this layout to GET_ROWS, views or MoE.
++        const char * suffix = strstr(w->name, ".ssm_");
++        if (!suffix || (strcmp(suffix, ".ssm_in.weight") != 0 && strcmp(suffix, ".ssm_out.weight") != 0) ||
++            w->view_src || !ggml_is_contiguous(w) || w->ne[2] != 1 || w->ne[3] != 1 ||
++            !w->buffer || !ggml_backend_buffer_is_sycl(w->buffer) ||
++            w->ne[0] % QK_NVFP4 != 0 || ggml_nelements(w) > INT_MAX ||
++            (uintptr_t) w->data % 16 != 0 || dst->src[1]->ne[1] != 1) {
++            return false;
++        }
++    }
+     return g_ggml_sycl_enable_optimize && //allow optimize, controlled by $GGML_SYCL_ENABLE_OPT
+            ctx.opt_feature.reorder &&      //allow this device due to good perf, skip the devices with bad perf.
+            dst->op == GGML_OP_MUL_MAT &&   //limit to some supported cases of Q4_0, to do for more cases.
+diff --git a/ggml/src/ggml-sycl/mmvq.cpp b/ggml/src/ggml-sycl/mmvq.cpp
+--- a/ggml/src/ggml-sycl/mmvq.cpp
++++ b/ggml/src/ggml-sycl/mmvq.cpp
+@@ -1288,6 +1288,23 @@
+         case 8: reorder_mul_mat_vec_q8_0_q8_1_sycl_ncols<8>(vx, vy, dst, ncols, nrows, stride_col_y_bytes, stride_col_dst, stream); break;
+         default: GGML_ABORT("unsupported ncols_dst=%d for Q8_0 reorder multi-col MMVQ", ncols_dst);
+     }
++}
++
++// NVFP4 uses the same one-subgroup-per-row machinery as the existing reorder GEMVs.
++static void reorder_mul_mat_vec_nvfp4_q8_1_sycl(const void * vx, const void * vy, float * dst, const int ncols,
++                                                const int nrows, dpct::queue_ptr stream) {
++    GGML_ASSERT(ncols % QK_NVFP4 == 0);
++    constexpr size_t     num_subgroups = WARP_SIZE;
++    const int            block_num_y   = ceil_div(nrows, GGML_SYCL_MMV_Y * (int) num_subgroups);
++    const sycl::range<3> block_nums(1, 1, block_num_y);
++    const sycl::range<3> block_dims(1, GGML_SYCL_MMV_Y, num_subgroups * WARP_SIZE);
++    stream->submit([&](sycl::handler & cgh) {
++        cgh.parallel_for(sycl::nd_range<3>(block_nums * block_dims, block_dims),
++                         [=](sycl::nd_item<3> nd_item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
++                             mul_mat_vec_q_reorder<reorder_vec_dot_q_sycl<GGML_TYPE_NVFP4>>(vx, vy, dst, ncols, nrows,
++                                                                                            nd_item);
++                         });
++    });
+ }
+ 
+ // MXFP4 reorder GEMV. Only MoE expert slices are reordered (opt_for_reorder_id); these dense entry
+@@ -2951,7 +2968,12 @@
+                 }
+                 break;
+             case GGML_TYPE_NVFP4:
+-                if (i == 0 && src1_ncols > 1 && src1_ncols <= 8) {
++                if (src0->extra && ((ggml_tensor_extra_gpu *) src0->extra)->optimized_feature.reorder) {
++                    // Reorder is bootstrapped by decode only, but remains in effect on later
++                    // multi-token calls. Reuse the GEMV for every column (including i > 0).
++                    GGML_SYCL_DEBUG("Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl\n");
++                    reorder_mul_mat_vec_nvfp4_q8_1_sycl(src0_dd_i, src1_ddq_i_bs, dst_dd_i_bs, ne00, row_diff, stream);
++                } else if (i == 0 && src1_ncols > 1 && src1_ncols <= 8) {
+                     const int stride_col_y   = src1_padded_col_size / QK8_1;
+                     const int stride_col_dst = dst->ne[0];
+                     GGML_SYCL_DEBUG("Calling mul_mat_vec_nvfp4_q8_1_sycl_switch_ncols ncols=%d\n", (int)src1_ncols);
+diff --git a/ggml/src/ggml-sycl/quants.hpp b/ggml/src/ggml-sycl/quants.hpp
+--- a/ggml/src/ggml-sycl/quants.hpp
++++ b/ggml/src/ggml-sycl/quants.hpp
+@@ -267,6 +267,26 @@
+     static constexpr int block_to_q8_1_ratio() { return traits::qk / QK8_1; }  // 1
+ };
+ 
++template <> struct block_q_t<GGML_TYPE_NVFP4> {
++    struct traits {
++        static constexpr uint32_t qk       = QK_NVFP4;
++        static constexpr uint32_t qi       = QI_NVFP4;
++        static constexpr uint32_t qr       = QR_NVFP4;
++        static constexpr uint32_t vdr_mmvq = 4;
++    };
++
++    // [qs0|qs1|...|qsN][d0[4]|d1[4]|...|dN[4]], with UE4M3 scales.
++    static constexpr std::pair<int, int> get_block_offset(const int block_index, const int /* nblocks */) {
++        return { block_index * (QK_NVFP4 / 2), 0 };
++    }
++
++    static constexpr std::pair<int, int> get_d_offset(int nrows, int ncols, const int block_index) {
++        return { (ncols / 2 * nrows) + block_index * (QK_NVFP4 / QK_NVFP4_SUB), 0 };
++    }
++
++    static constexpr int block_to_q8_1_ratio() { return traits::qk / QK8_1; }  // 2
++};
++
+ }  // namespace ggml_sycl_reordered
+ 
+ #endif  // GGML_SYCL_QUANTS_HPP
+diff --git a/ggml/src/ggml-sycl/vecdotq.hpp b/ggml/src/ggml-sycl/vecdotq.hpp
+--- a/ggml/src/ggml-sycl/vecdotq.hpp
++++ b/ggml/src/ggml-sycl/vecdotq.hpp
+@@ -853,6 +853,36 @@
+         return d * sumi;
+     }
+ };
++template <> struct reorder_vec_dot_q_sycl<GGML_TYPE_NVFP4> {
++    static constexpr ggml_type gtype = GGML_TYPE_NVFP4;
++
++    __dpct_inline__ float operator()(const void * __restrict__ vbq, const std::pair<int, int> ibx_offset,
++                                     const std::pair<int, int> d_offset, const int8_t * q8_1_quant_ptr,
++                                     const sycl::half2 * q8_1_ds, const int iqs) {
++        // Two lanes per 64-value block, iqs = 0 or 4. Each lane covers two
++        // independently scaled 16-value subblocks, not one MXFP4 block.
++        const uint8_t * base = static_cast<const uint8_t *>(vbq);
++        const sycl::int4 q4 = *reinterpret_cast<const sycl::int4 *>(base + ibx_offset.first + sizeof(int) * iqs);
++        const uint8_t * scales = base + d_offset.first;
++        float sum = 0.0f;
++#pragma unroll
++        for (int i = 0; i < 2; ++i) {
++            const int sub = iqs / 2 + i;
++            const sycl::int2 v0 = get_int_from_mxfp4(q4[2 * i]);
++            const sycl::int2 v1 = get_int_from_mxfp4(q4[2 * i + 1]);
++            const sycl::int4 u = *reinterpret_cast<const sycl::int4 *>(q8_1_quant_ptr + sub * QK_NVFP4_SUB);
++            int sumi = ggml_sycl_dp4a(v0.x(), u.x(), 0);
++            sumi     = ggml_sycl_dp4a(v0.y(), u.z(), sumi);
++            sumi     = ggml_sycl_dp4a(v1.x(), u.y(), sumi);
++            sumi     = ggml_sycl_dp4a(v1.y(), u.w(), sumi);
++            // ue4m3_to_fp32 already includes the 0.5 factor for the integer E2M1 table.
++            const float d = ggml_sycl_ue4m3_to_fp32(scales[sub]) * static_cast<float>(q8_1_ds[sub / 2][0]);
++            sum += d * float(sumi);
++        }
++        return sum;
++    }
++};
++
+ #define VDR_Q4_0_Q8_1_MMVQ 2
+ #define VDR_Q4_0_Q8_1_MMQ  4
+ 
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5334,6 +5334,68 @@
+     }
+ };
+ 
++// Exercise the actual lazy NVFP4 SYCL reorder followed by both MMVQ and library-GEMM
++// fallbacks on the SAME allocation. Ordinary test_mul_mat names its weights "a",
++// which deliberately does not opt into this experimental Mamba-only path.
++struct test_mul_mat_nvfp4_reorder : public test_mul_mat {
++    const bool f32;
++    const bool eligible;
++    std::vector<ggml_tensor *> checked;
++
++    test_mul_mat_nvfp4_reorder(int64_t m, int64_t n, int64_t k, bool f32, bool eligible = true) :
++        test_mul_mat(GGML_TYPE_NVFP4, GGML_TYPE_F32, m, n, k, {1, 1}, {1, 1}), f32(f32), eligible(eligible) {}
++
++    std::string vars() override {
++        return "nvfp4_reorder=1," + test_mul_mat::vars() + "," + VARS_TO_STR2(f32, eligible);
++    }
++
++    bool run_whole_graph() override { return true; }
++    std::vector<ggml_tensor *> fusion_test_nodes() override { return checked; }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * a = ggml_new_tensor_2d(ctx, GGML_TYPE_NVFP4, k, m);
++        ggml_set_name(a, !eligible ? "blk.0.attn_q.weight" :
++                         k == 8192 ? "blk.0.ssm_out.weight" : "blk.0.ssm_in.weight");
++        ggml_tensor * b = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, n);
++        ggml_tensor * v = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, 1);
++        ggml_tensor * before = ggml_mul_mat(ctx, a, b);
++        // A zero-valued data dependency enforces prefill -> decode -> later call.
++        ggml_tensor * v_ready = ggml_add(ctx, v, ggml_scale(ctx, ggml_sum(ctx, before), 0.0f));
++        ggml_tensor * decode = ggml_mul_mat(ctx, a, v_ready);
++        ggml_tensor * b_ready = ggml_add(ctx, b, ggml_scale(ctx, ggml_sum(ctx, decode), 0.0f));
++        ggml_tensor * after = ggml_mul_mat(ctx, a, b_ready);
++        checked = {before, decode, after};
++        for (ggml_tensor * t : checked) {
++            GGML_ASSERT(ggml_prec_set_acc(t, f32 ? GGML_PREC_F32 : GGML_PREC_DEFAULT));
++        }
++        return after;
++    }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++            if (t->type != GGML_TYPE_NVFP4) {
++                init_tensor_uniform(t);
++                continue;
++            }
++            // Raw blocks cover all 128 UE4M3 codes (including zero, subnormals,
++            // maximum exponent and the 0x7f sentinel) and all E2M1 nibbles.
++            constexpr size_t block_size = 36;
++            GGML_ASSERT(ggml_blck_size(t->type) == 64 && ggml_type_size(t->type) == block_size);
++            std::vector<uint8_t> data(ggml_nbytes(t));
++            for (size_t ib = 0; ib < data.size() / block_size; ++ib) {
++                uint8_t * block = data.data() + ib * block_size;
++                for (int s = 0; s < 4; ++s) {
++                    block[s] = (ib + 29 * s) & 127;
++                }
++                for (int j = 0; j < 32; ++j) {
++                    block[4 + j] = (17 * ib + 29 * j) & 255;
++                }
++            }
++            ggml_backend_tensor_set(t, data.data(), 0, ggml_nbytes(t));
++        }
++    }
++};
++
+ // GGML_HINT_SRC0_IS_HADAMARD
+ struct test_mul_mat_hadamard : public test_mul_mat {
+     test_mul_mat_hadamard(ggml_type type_a = GGML_TYPE_F32, ggml_type type_b = GGML_TYPE_F32,
+@@ -10711,6 +10773,21 @@
+         test_cases.emplace_back(new test_mul_mat(type_a,    GGML_TYPE_F32, 16,  8, 16*256, { 1,  1}, {1, 1}));
+     }
+ 
++    // Experimental NVFP4 reorder lifetime/scale regressions. Filter with -p nvfp4_reorder=1.
++    for (bool f32 : {false, true}) {
++        for (int64_t k : {64, 192}) {
++            for (int64_t n : {1, 2, 3, 4, 5, 6, 7, 8, 9, 128}) {
++                test_cases.emplace_back(new test_mul_mat_nvfp4_reorder(37, n, k, f32));
++            }
++        }
++        for (int64_t n : {1, 8, 9}) {
++            test_cases.emplace_back(new test_mul_mat_nvfp4_reorder(18560, n, 4096, f32));
++            test_cases.emplace_back(new test_mul_mat_nvfp4_reorder(4096, n, 8192, f32));
++        }
++        test_cases.emplace_back(new test_mul_mat_nvfp4_reorder(37, 8, 192, f32, false));
++        test_cases.emplace_back(new test_mul_mat_nvfp4_reorder(37, 9, 192, f32, false));
++    }
++
+     // Multi-column MMVQ coverage for the Q4_K weight-reuse path and a Q5_K control.
+     for (ggml_type type_a : { GGML_TYPE_Q4_K, GGML_TYPE_Q5_K }) {
+         for (int n = 1; n <= 8; ++n) {

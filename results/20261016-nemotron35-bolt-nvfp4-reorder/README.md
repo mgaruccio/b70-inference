@@ -174,3 +174,12 @@ staging lifetime, first-decode cost, and small multi-column/performance regressi
 These require the native tests and real API run, not the scalar model checks.
 The repository publication checklist remains incomplete until the parent runs
 and records the required benchmark/quality process; no speedup is asserted.
+
+
+## Subsequent parent development validation
+
+The parent completed host SYCL compilation and dependency checks, then executed **56/56 native cases with OPT=1 and 56/56 with OPT=0**, at the unchanged NMSE gate. Reordered dispatch was observed only in OPT=1. Two independent real API launches with original weights, 65,536 configured context and batch/microbatch 1024 each passed **20/20 fixed checks plus exact 8K retrieval**, then restored unchanged Qwen.
+
+Measured short decode was **39.4662 / 39.4535 tok/s**, versus **28.5548** on the unmodified explicit-default baseline; after 8K it was **38.1589 / 38.1335**, versus **27.8931**. The ~38% short / ~37% long decode gain repeats. Cold prefill remained approximately955–956 tok/s. Short TTFT varied; no general TTFT improvement is asserted. Raw commands, frozen controllers, responses, timing samples, library/source hashes, failures and limitations are in [`../20261016-nemotron35-bolt-sycl/execution.md`](../20261016-nemotron35-bolt-sycl/execution.md) and its adjacent cell directories.
+
+These observations supersede the initial pending-device handoff status above, **not** the publication caveats: development only, actual prompts up to8K, no full-context/BetterBench/comprehensive quality result and no persistent service promotion.

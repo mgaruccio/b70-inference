@@ -1,0 +1,13 @@
+diff --git a/src/llama-quant.cpp b/src/llama-quant.cpp
+--- a/src/llama-quant.cpp
++++ b/src/llama-quant.cpp
+@@ -1156,7 +1156,8 @@
+ 
+         if (params->imatrix) {
+             metadata[i].remapped_imatrix_name = remap_imatrix(tensor->name, mapped);
+-        } else if (metadata[i].allows_quantization && metadata[i].requires_imatrix) {
++        } else if (metadata[i].allows_quantization && metadata[i].requires_imatrix &&
++                   metadata[i].target_type != tensor->type) {
+             if (params->dry_run) {
+                 will_require_imatrix = true;
+             } else {

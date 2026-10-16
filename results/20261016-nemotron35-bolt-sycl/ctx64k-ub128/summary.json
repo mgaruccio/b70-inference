@@ -1,0 +1,499 @@
+{
+  "tier": "development",
+  "configuration": {
+    "name": "ctx64k-ub128",
+    "context": 65536,
+    "batch": 512,
+    "ubatch": 128,
+    "bench": true,
+    "long_bench": true
+  },
+  "status": "passed",
+  "container_id": "96aba574008b0cd035e83c5794ab0af40ffd7d0811f8304d05c61f357dd73373",
+  "models": {
+    "models": [
+      {
+        "name": "nemotron-bolt",
+        "model": "nemotron-bolt",
+        "modified_at": "",
+        "size": "",
+        "digest": "",
+        "type": "model",
+        "description": "",
+        "tags": [
+          ""
+        ],
+        "capabilities": [
+          "completion"
+        ],
+        "parameters": "",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "",
+          "families": [
+            ""
+          ],
+          "parameter_size": "",
+          "quantization_level": ""
+        }
+      }
+    ],
+    "object": "list",
+    "data": [
+      {
+        "id": "nemotron-bolt",
+        "aliases": [
+          "nemotron-bolt"
+        ],
+        "tags": [],
+        "object": "model",
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "created": 1792122273,
+        "owned_by": "llamacpp",
+        "meta": {
+          "vocab_type": 2,
+          "n_vocab": 131072,
+          "n_ctx": 65536,
+          "n_ctx_train": 262144,
+          "n_embd": 4096,
+          "n_params": 74042720848,
+          "size": 22010399040,
+          "ftype": "IQ2_XXS - 2.0625 bpw"
+        }
+      }
+    ]
+  },
+  "smoke": {
+    "pass": true,
+    "checks": [
+      {
+        "name": "literal",
+        "pass": true,
+        "result": {
+          "text": "READY",
+          "elapsed_s": 0.9771212239866145,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 27,
+            "total_tokens": 30,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 27,
+            "prompt_ms": 901.291,
+            "prompt_per_token_ms": 33.38114814814815,
+            "prompt_per_second": 29.95702830717271,
+            "predicted_n": 3,
+            "predicted_ms": 73.479,
+            "predicted_per_token_ms": 36.7395,
+            "predicted_per_second": 27.2186611140598
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 3.0702434113140264,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic",
+        "pass": true,
+        "result": {
+          "text": "323",
+          "elapsed_s": 0.685135446023196,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 33,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 513.73,
+            "prompt_per_token_ms": 15.567575757575758,
+            "prompt_per_second": 64.23607731687851,
+            "predicted_n": 4,
+            "predicted_ms": 105.967,
+            "predicted_per_token_ms": 35.32233333333333,
+            "predicted_per_second": 28.3107005010994
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 5.838261650623424,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "code",
+        "pass": true,
+        "result": {
+          "text": "```python\ndef add(a, b):\n    return a + b\n```",
+          "elapsed_s": 1.1523773450171575,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 17,
+            "prompt_tokens": 35,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 35,
+            "prompt_ms": 517.5840000000001,
+            "prompt_per_token_ms": 14.788114285714288,
+            "prompt_per_second": 67.62187393737054,
+            "predicted_n": 17,
+            "predicted_ms": 560.3290000000001,
+            "predicted_per_token_ms": 35.020562500000004,
+            "predicted_per_second": 28.554652712959705
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 14.752112295080645,
+          "full_output_budget": false
+        }
+      }
+    ]
+  },
+  "bench": {
+    "tier": "development",
+    "anchor": null,
+    "warmup": {
+      "text": "Designing a reliable file backup system is not merely about copying data from one disk to another; it is about building a **resilience strategy**. A backup is only reliable if it can be verified, restored quickly, and protected from the same threats that endanger the primary data.\n\nHere is a detailed guide on designing a reliable file backup system.\n\n---\n\n### 1. Backup Strategies: Full vs. Incremental\nA hybrid approach is generally the most efficient and reliable.\n\n#### Full Backups\nA full backup copies every selected file and folder, regardless of whether they have changed.\n*   **Pros:** Simplest to restore",
+      "elapsed_s": 5.105793327034917,
+      "ttft_s": 0.6591095530311577,
+      "usage": {
+        "completion_tokens": 128,
+        "prompt_tokens": 54,
+        "total_tokens": 182,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 54,
+        "prompt_ms": 585.569,
+        "prompt_per_token_ms": 10.84387037037037,
+        "prompt_per_second": 92.21799651279355,
+        "predicted_n": 128,
+        "predicted_ms": 4446.61,
+        "predicted_per_token_ms": 35.012677165354326,
+        "predicted_per_second": 28.56108361201005
+      },
+      "finish_reason": "length",
+      "decode_tps_client": 28.56060976102427,
+      "end_to_end_output_tps": 25.069561535569115,
+      "full_output_budget": true
+    },
+    "measured": [
+      {
+        "text": "Designing a reliable file backup system is not merely about copying data from one drive to another; it is about building a **resilience strategy**. A backup is only reliable if it can be restored. \n\nBelow is a comprehensive guide to designing a professional-grade backup system.\n\n---\n\n### 1. The Core Strategy: The 3-2-1 Rule\nBefore diving into technical details, adhere to the industry standard **3-2-1 Rule**:\n*   **3** copies of your data (the original and two backups).\n*   **2** different media types (e.g., an internal SSD and an external HD",
+        "elapsed_s": 5.077418152010068,
+        "ttft_s": 0.6238767370232381,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 55,
+          "total_tokens": 183,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 55,
+          "prompt_ms": 553.431,
+          "prompt_per_token_ms": 10.06238181818182,
+          "prompt_per_second": 99.38004918408978,
+          "predicted_n": 128,
+          "predicted_ms": 4453.588,
+          "predicted_per_token_ms": 35.06762204724409,
+          "predicted_per_second": 28.516333347404387
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 28.516631634461977,
+        "end_to_end_output_tps": 25.209662897141307,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system is not merely about copying data from one drive to another; it is about building a **resilience strategy**. A backup is only reliable if it can be restored quickly and accurately when a disaster occurs.\n\nBelow is a comprehensive guide to designing a professional-grade file backup system.\n\n---\n\n### 1. The Core Strategy: The 3-2-1 Rule\nBefore diving into technical details, adhere to the industry-standard **3-2-1 Backup Rule**:\n*   **3** copies of your data (the original and two backups).\n*   **2** different media types (e.g.,",
+        "elapsed_s": 5.082783410965931,
+        "ttft_s": 0.625356059987098,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 55,
+          "total_tokens": 183,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 55,
+          "prompt_ms": 552.654,
+          "prompt_per_token_ms": 10.048254545454546,
+          "prompt_per_second": 99.51977186449388,
+          "predicted_n": 128,
+          "predicted_ms": 4457.445,
+          "predicted_per_token_ms": 35.09799212598425,
+          "predicted_per_second": 28.49165833790434
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 28.49177114958729,
+        "end_to_end_output_tps": 25.183052207938744,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system is not merely about copying data from one drive to another; it is about building a **resilience strategy**. A backup is only reliable if it can be verified, restored quickly, and protected from the same threats that affect the primary data.\n\nBelow is a comprehensive guide to designing a professional-grade file backup system.\n\n---\n\n### 1. The Foundation: The 3-2-1 Backup Rule\nBefore diving into specific methods, adhere to the industry standard **3-2-1 Rule**:\n*   **3** copies of your data (the original and two backups).\n*   **2**",
+        "elapsed_s": 5.077248679008335,
+        "ttft_s": 0.6253730700118467,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 55,
+          "total_tokens": 183,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 55,
+          "prompt_ms": 552.529,
+          "prompt_per_token_ms": 10.045981818181819,
+          "prompt_per_second": 99.54228646822158,
+          "predicted_n": 128,
+          "predicted_ms": 4452.006,
+          "predicted_per_token_ms": 35.05516535433071,
+          "predicted_per_second": 28.526466496226643
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 28.527302008024318,
+        "end_to_end_output_tps": 25.210504368086294,
+        "full_output_budget": true
+      }
+    ],
+    "decode_tps_client_median": 28.516631634461977,
+    "ttft_s_median": 0.625356059987098,
+    "pass": true
+  },
+  "long": {
+    "tier": "development",
+    "anchor": {
+      "text": "BOLT-7319-CEDAR",
+      "elapsed_s": 24.441399914037902,
+      "ttft_s": null,
+      "usage": {
+        "completion_tokens": 11,
+        "prompt_tokens": 8238,
+        "total_tokens": 8249,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 8238,
+        "prompt_ms": 23989.593,
+        "prompt_per_token_ms": 2.9120651857246904,
+        "prompt_per_second": 343.39890635076637,
+        "predicted_n": 11,
+        "predicted_ms": 358.99,
+        "predicted_per_token_ms": 35.899,
+        "predicted_per_second": 27.85592913451628
+      },
+      "finish_reason": "stop",
+      "decode_tps_client": null,
+      "end_to_end_output_tps": 0.45005605401849985,
+      "full_output_budget": false
+    },
+    "warmup": {
+      "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that you can recover that data quickly and completely regardless of the failure scenario (hardware crash, ransomware, or natural disaster).\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Foundation: The 3-2-1 Backup Rule\nBefore diving into technical details, adhere to the industry gold standard: the **3-2-1 Rule**.\n*   **3",
+      "elapsed_s": 26.58504349400755,
+      "ttft_s": 22.03487827902427,
+      "usage": {
+        "completion_tokens": 128,
+        "prompt_tokens": 8269,
+        "total_tokens": 8397,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 8269,
+        "prompt_ms": 21928.695,
+        "prompt_per_token_ms": 2.6519161930100377,
+        "prompt_per_second": 377.0858229365678,
+        "predicted_n": 128,
+        "predicted_ms": 4549.974,
+        "predicted_per_token_ms": 35.82656692913386,
+        "predicted_per_second": 27.912247410644543
+      },
+      "finish_reason": "length",
+      "decode_tps_client": 27.911074433473434,
+      "end_to_end_output_tps": 4.814737279961648,
+      "full_output_budget": true
+    },
+    "measured": [
+      {
+        "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that you can recover that data quickly and completely regardless of the failure scenario (hardware crash, ransomware, or natural disaster).\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Core Strategy: The 3-2-1 Rule\nBefore diving into technical details, adhere to the industry-standard **3-2-1 Backup Rule**:\n*   **3** copies",
+        "elapsed_s": 26.587953764013946,
+        "ttft_s": 22.038122244994156,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 8270,
+          "total_tokens": 8398,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 8270,
+          "prompt_ms": 21885.571,
+          "prompt_per_token_ms": 2.646381015719468,
+          "prompt_per_second": 377.87453660678995,
+          "predicted_n": 128,
+          "predicted_ms": 4549.688,
+          "predicted_per_token_ms": 35.82431496062992,
+          "predicted_per_second": 27.91400201508323
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 27.913121501114556,
+        "end_to_end_output_tps": 4.814210267404799,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that copy is recoverable, secure, and independent of the primary system's failures.\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Core Strategy: The 3-2-1 Rule\nBefore diving into technical details, adhere to the industry-standard **3-2-1 Backup Rule**:\n*   **3** copies of your data (the original and two backups).\n",
+        "elapsed_s": 26.63793192000594,
+        "ttft_s": 22.087980407988653,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 8270,
+          "total_tokens": 8398,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 8270,
+          "prompt_ms": 21937.955,
+          "prompt_per_token_ms": 2.6527152357920194,
+          "prompt_per_second": 376.972238296596,
+          "predicted_n": 128,
+          "predicted_ms": 4549.783,
+          "predicted_per_token_ms": 35.825062992125986,
+          "predicted_per_second": 27.913419167463587
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 27.91238536599101,
+        "end_to_end_output_tps": 4.805177833789263,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that you can recover that data quickly and completely regardless of the disaster (hardware failure, ransomware, or natural catastrophe).\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Foundation: The 3-2-1 Backup Rule\nBefore diving into technical details, adhere to the industry standard **3-2-1 Rule**:\n*   **3** copies of your",
+        "elapsed_s": 26.584417748032138,
+        "ttft_s": 22.033755198004656,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 8270,
+          "total_tokens": 8398,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 8270,
+          "prompt_ms": 21935.025,
+          "prompt_per_token_ms": 2.6523609431680777,
+          "prompt_per_second": 377.0225928623286,
+          "predicted_n": 128,
+          "predicted_ms": 4550.428,
+          "predicted_per_token_ms": 35.830141732283465,
+          "predicted_per_second": 27.90946258242082
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 27.908024074259917,
+        "end_to_end_output_tps": 4.8148506096009935,
+        "full_output_budget": true
+      }
+    ],
+    "decode_tps_client_median": 27.91238536599101,
+    "ttft_s_median": 22.038122244994156,
+    "pass": true
+  },
+  "cleanup": {
+    "warnings": [],
+    "canary": {
+      "http_status": 200,
+      "elapsed_s": 61.05002899398096,
+      "body": {
+        "id": "cmpl-b288eedeaf8d5421",
+        "object": "text_completion",
+        "created": 1792122620,
+        "model": "qwen38",
+        "choices": [
+          {
+            "index": 0,
+            "text": " five",
+            "logprobs": {
+              "text_offset": [
+                0
+              ],
+              "token_logprobs": [
+                -1.2177563905715942
+              ],
+              "tokens": [
+                " five"
+              ],
+              "top_logprobs": [
+                {
+                  " five": -1.2177563905715942
+                }
+              ]
+            },
+            "finish_reason": "length",
+            "stop_reason": null,
+            "token_ids": null,
+            "prompt_logprobs": null,
+            "prompt_token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6",
+        "usage": {
+          "prompt_tokens": 7,
+          "total_tokens": 8,
+          "completion_tokens": 1,
+          "prompt_tokens_details": null
+        },
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "raw_text": "{\"id\":\"cmpl-b288eedeaf8d5421\",\"object\":\"text_completion\",\"created\":1792122620,\"model\":\"qwen38\",\"choices\":[{\"index\":0,\"text\":\" five\",\"logprobs\":{\"text_offset\":[0],\"token_logprobs\":[-1.2177563905715942],\"tokens\":[\" five\"],\"top_logprobs\":[{\" five\":-1.2177563905715942}]},\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6\",\"usage\":{\"prompt_tokens\":7,\"total_tokens\":8,\"completion_tokens\":1,\"prompt_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}"
+    },
+    "restore_attempts": 1,
+    "production_restored": true
+  }
+}
