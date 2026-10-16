@@ -1,0 +1,310 @@
+diff --git a/ggml/src/ggml-sycl/convert.cpp b/ggml/src/ggml-sycl/convert.cpp
+--- a/ggml/src/ggml-sycl/convert.cpp
++++ b/ggml/src/ggml-sycl/convert.cpp
+@@ -905,7 +905,7 @@
+ 
+ 
+ #ifdef GGML_SYCL_HAS_BF16
+-to_bf16_sycl_t ggml_get_to_bf16_sycl(ggml_type type, ggml_tensor * /*dst*/) {
++to_bf16_sycl_t ggml_get_to_bf16_sycl(ggml_type type, ggml_tensor * dst) {
+     switch (type) {
+         case GGML_TYPE_F32:
+             return convert_unary_sycl<float>;
+@@ -913,6 +913,11 @@
+             return convert_unary_sycl<sycl::half>;
+         case GGML_TYPE_BF16:
+             return convert_unary_sycl<sycl::ext::oneapi::bfloat16>;
++        case GGML_TYPE_NVFP4:
++            if (dst->src[0]->extra && ((ggml_tensor_extra_gpu *) dst->src[0]->extra)->optimized_feature.reorder) {
++                return dequantize_row_nvfp4_sycl<sycl::ext::oneapi::bfloat16, true>;
++            }
++            return dequantize_row_nvfp4_sycl<sycl::ext::oneapi::bfloat16>;
+         default:
+             GGML_ABORT("fatal error: unsupport data type=%s\n", ggml_type_name(type));
+             return nullptr;
+diff --git a/ggml/src/ggml-sycl/gemm.hpp b/ggml/src/ggml-sycl/gemm.hpp
+--- a/ggml/src/ggml-sycl/gemm.hpp
++++ b/ggml/src/ggml-sycl/gemm.hpp
+@@ -57,8 +57,15 @@
+         dnnl::primitive_attr primitive_attr;
+         primitive_attr.set_scratchpad_mode(dnnl::scratchpad_mode::user);
+ 
++        // Explicit BF16 operands must not inherit the legacy F16 permission.
++        // Leave accumulation mode at oneDNN's default strict (F32 for BF16).
++        if (at == dt::bf16 || bt == dt::bf16) {
++            primitive_attr.set_fpmath_mode(dnnl::fpmath_mode::strict);
++        }
+ #ifdef GGML_SYCL_F16
+-        primitive_attr.set_fpmath_mode(dnnl::fpmath_mode::f16);
++        else {
++            primitive_attr.set_fpmath_mode(dnnl::fpmath_mode::f16);
++        }
+ #endif
+ 
+         auto a_mem = dnnl::memory(a_in_md, eng, const_cast<void*>(a));
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -3074,6 +3074,17 @@
+   std::exit(1);
+ }
+ 
++// Same immutable, whole-matrix weight contract as the R1 lazy reorder.
++static bool ggml_sycl_is_nvfp4_ssm_weight(const ggml_tensor * w) {
++    const char * suffix = strstr(w->name, ".ssm_");
++    return w->type == GGML_TYPE_NVFP4 && suffix &&
++           (strcmp(suffix, ".ssm_in.weight") == 0 || strcmp(suffix, ".ssm_out.weight") == 0) &&
++           !w->view_src && ggml_is_contiguous(w) && w->ne[2] == 1 && w->ne[3] == 1 &&
++           w->buffer && ggml_backend_buffer_is_sycl(w->buffer) &&
++           w->ne[0] % QK_NVFP4 == 0 && ggml_nelements(w) <= INT_MAX &&
++           (uintptr_t) w->data % 16 == 0;
++}
++
+ inline void ggml_sycl_op_mul_mat_sycl(
+     ggml_backend_sycl_context & ctx,
+     const ggml_tensor *src0, const ggml_tensor *src1, ggml_tensor *dst,
+@@ -3108,6 +3119,54 @@
+ #endif
+ 
+ #if GGML_SYCL_DNNL && defined(GGML_SYCL_HAS_BF16)
++    // Candidate-only NVFP4 SSM prefill; leave all unrelated dispatch unchanged.
++    // Read raw source requests, never the global precision-relaxation override.
++    const int32_t src0_prec = dst->op_params[2];
++    const int32_t src1_prec = dst->op_params[3];
++    if (g_ggml_sycl_enable_optimize && g_ggml_sycl_enable_dnn &&
++        ggml_sycl_dnnl_has_optimized_gemm(id) && ggml_sycl_is_nvfp4_ssm_weight(src0) &&
++        dst->op == GGML_OP_MUL_MAT && dst->op_params[0] == GGML_PREC_BF16 &&
++        (src0_prec == GGML_PREC_UNDEFINED || src0_prec >= GGML_PREC_BF16) &&
++        (src1_prec == GGML_PREC_UNDEFINED || src1_prec >= GGML_PREC_BF16) &&
++        g_ggml_sycl_dynamic_precision != GGML_SYCL_DYNAMIC_PRECISION_F32 &&
++        src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32 &&
++        !src1->view_src && !dst->view_src && ggml_is_contiguous(src1) && ggml_is_contiguous(dst) &&
++        src1->ne[2] == 1 && src1->ne[3] == 1 && dst->ne[2] == 1 && dst->ne[3] == 1 &&
++        src1->buffer && ggml_backend_buffer_is_sycl(src1->buffer) &&
++        dst->buffer && ggml_backend_buffer_is_sycl(dst->buffer) &&
++        row_low == 0 && row_diff == src0->ne[1] && src1_ncols == src1->ne[1] &&
++        src1_ncols > MMVQ_MAX_BATCH_SIZE && ggml_nelements(src1) <= INT_MAX &&
++        ggml_nelements(dst) <= INT_MAX && id == ctx.device && stream == ctx.stream() && stream->is_in_order()) {
++        const auto * extra = static_cast<const ggml_tensor_extra_gpu *>(src0->extra);
++        const bool reordered = extra && extra->optimized_feature.reorder;
++        scope_op_debug_print scope_dbg_print(__func__, "/nvfp4_bf16", dst, /*num_src=*/2,
++            reordered ? " : BF16 operands, strict F32 accumulation, layout=SoA" :
++                        " : BF16 operands, strict F32 accumulation, layout=AoS");
++        using bf16_t = sycl::ext::oneapi::bfloat16;
++        ggml_sycl_pool_alloc<bf16_t> src0_as_bf16(ctx.pool(), row_diff*ne00);
++        ggml_sycl_pool_alloc<bf16_t> src1_as_bf16(ctx.pool(), src1_ncols*ne10);
++        const to_bf16_sycl_t to_bf16_src0 = ggml_get_to_bf16_sycl(src0->type, dst);
++        const to_bf16_sycl_t to_bf16_src1 = ggml_get_to_bf16_sycl(src1->type, dst);
++        GGML_ASSERT(to_bf16_src0 && to_bf16_src1);
++        to_bf16_src0(src0_dd_i, src0_as_bf16.get(), row_diff*ne00, stream);
++        to_bf16_src1(src1_ddf_i, src1_as_bf16.get(), src1_ncols*ne10, stream);
++        // Conversion, oneDNN execution and later pool reuse share the same in-order
++        // queue, just as in the existing F16 path. No detached buffers/events.
++        try {
++            DnnlGemmWrapper::row_gemm(ctx, row_diff, src1_ncols, ne10,
++                                      src0_as_bf16.get(), DnnlGemmWrapper::to_dt<bf16_t>(),
++                                      src1_as_bf16.get(), DnnlGemmWrapper::to_dt<bf16_t>(),
++                                      dst_dd_i, DnnlGemmWrapper::to_dt<float>(), stream);
++            return;
++        } catch (const dnnl::error & e) {
++            // An unsupported primitive keeps the existing path. Do not hide
++            // invalid arguments, allocation failures or execution errors.
++            if (e.status != dnnl_unimplemented) {
++                throw;
++            }
++        }
++    }
++
+     // Fast path for bf16 src0
+     if (src0->type == GGML_TYPE_BF16 && g_ggml_sycl_enable_dnn &&
+         ggml_sycl_dnnl_has_optimized_gemm(ggml_sycl_get_device()) && ggml_is_contiguous(src0) &&
+@@ -5086,17 +5145,9 @@
+ 
+ static bool should_reorder_tensor(ggml_backend_sycl_context& ctx, const ggml_tensor * dst) {
+     const ggml_tensor * w = dst->src[0];
+-    if (w->type == GGML_TYPE_NVFP4) {
+-        // Bounded experiment: only immutable Mamba projection weights, whose consumers
+-        // use the whole matrix. Do not expose this layout to GET_ROWS, views or MoE.
+-        const char * suffix = strstr(w->name, ".ssm_");
+-        if (!suffix || (strcmp(suffix, ".ssm_in.weight") != 0 && strcmp(suffix, ".ssm_out.weight") != 0) ||
+-            w->view_src || !ggml_is_contiguous(w) || w->ne[2] != 1 || w->ne[3] != 1 ||
+-            !w->buffer || !ggml_backend_buffer_is_sycl(w->buffer) ||
+-            w->ne[0] % QK_NVFP4 != 0 || ggml_nelements(w) > INT_MAX ||
+-            (uintptr_t) w->data % 16 != 0 || dst->src[1]->ne[1] != 1) {
+-            return false;
+-        }
++    if (w->type == GGML_TYPE_NVFP4 &&
++        (!ggml_sycl_is_nvfp4_ssm_weight(w) || dst->src[1]->ne[1] != 1)) {
++        return false;
+     }
+     return g_ggml_sycl_enable_optimize && //allow optimize, controlled by $GGML_SYCL_ENABLE_OPT
+            ctx.opt_feature.reorder &&      //allow this device due to good perf, skip the devices with bad perf.
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5396,6 +5396,138 @@
+     }
+ };
+ 
++// Separate selector: never add BF16 cases to the accepted nvfp4_reorder=1 suite.
++struct test_mul_mat_nvfp4_bf16 : public test_mul_mat_nvfp4_reorder {
++    const bool src1_f32;
++
++    test_mul_mat_nvfp4_bf16(int64_t m, int64_t n, int64_t k,
++                           bool f32 = false, bool eligible = true, bool src1_f32 = false) :
++        test_mul_mat_nvfp4_reorder(m, n, k, f32, eligible), src1_f32(src1_f32) {}
++
++    std::string vars() override {
++        return "nvfp4_bf16_lifetime=1," + test_mul_mat::vars() + "," + VARS_TO_STR3(f32, eligible, src1_f32);
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * out = test_mul_mat_nvfp4_reorder::build_graph(ctx);
++        for (ggml_tensor * t : checked) {
++            GGML_ASSERT(ggml_prec_set_acc(t, f32 ? GGML_PREC_F32 : GGML_PREC_BF16));
++            if (src1_f32) {
++                GGML_ASSERT(ggml_prec_set_src(t, GGML_PREC_F32, 1));
++            }
++        }
++        return out;
++    }
++};
++
++// Exercise the actual NVFP4 -> BF16 and F32 -> BF16 converters through MUL_MAT,
++// not a CPY implementation or a host-only emulation of the new dispatch.
++struct test_mul_mat_nvfp4_bf16_reference : public test_mul_mat_nvfp4_reorder {
++    const bool rne;
++    const bool reordered;
++    ggml_tensor * weights = nullptr;
++    ggml_tensor * input = nullptr;
++    std::vector<float> reference;
++
++    test_mul_mat_nvfp4_bf16_reference(bool rne, bool reordered) :
++        test_mul_mat_nvfp4_reorder(37, 9, 192, false), rne(rne), reordered(reordered) {}
++
++    std::string vars() override {
++        return "nvfp4_bf16_reference=1," + test_mul_mat::vars() + "," + VARS_TO_STR2(rne, reordered);
++    }
++
++    double max_nmse_err() override { return rne ? 0.0 : 5e-4; }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        weights = ggml_new_tensor_2d(ctx, GGML_TYPE_NVFP4, k, m);
++        ggml_set_name(weights, "blk.0.ssm_in.weight");
++        input = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, n);
++        ggml_tensor * ready = input;
++        if (reordered) {
++            ggml_tensor * v = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, 1);
++            ggml_tensor * decode = ggml_mul_mat(ctx, weights, v);
++            GGML_ASSERT(ggml_prec_set_acc(decode, GGML_PREC_BF16));
++            ready = ggml_add(ctx, input, ggml_scale(ctx, ggml_sum(ctx, decode), 0.0f));
++        }
++        ggml_tensor * out = ggml_mul_mat(ctx, weights, ready);
++        GGML_ASSERT(ggml_prec_set_acc(out, GGML_PREC_BF16));
++        checked = {out};
++        return out;
++    }
++
++    static float from_bits(uint32_t bits) {
++        float value;
++        memcpy(&value, &bits, sizeof(value));
++        return value;
++    }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        test_mul_mat_nvfp4_reorder::initialize_tensors(ctx);
++        // Positive/negative halfway-even/odd, just below/above a tie, exponent carry.
++        static const uint32_t bits[] = {
++            0x3f808000, 0x3f818000, 0x3f807fff, 0x3f808001, 0x3fff8000,
++            0xbf808000, 0xbf818000, 0xbf807fff, 0xbf808001, 0xbfff8000,
++        };
++        static const uint32_t rounded[] = {
++            0x3f800000, 0x3f820000, 0x3f800000, 0x3f810000, 0x40000000,
++            0xbf800000, 0xbf820000, 0xbf800000, 0xbf810000, 0xc0000000,
++        };
++        std::vector<float> values(k*n);
++        for (size_t i = 0; i < values.size(); ++i) {
++            values[i] = from_bits(bits[i % 10]);
++        }
++        ggml_backend_tensor_set(input, values.data(), 0, ggml_nbytes(input));
++        reference.assign(m*n, 0.0f);
++        if (rne) {
++            // Each row selects a different input: the product by exactly 1 makes
++            // the observable result the actual activation converter's BF16 bits.
++            std::vector<uint8_t> data(ggml_nbytes(weights), 0);
++            for (size_t ib = 0; ib < data.size() / 36; ++ib) {
++                std::fill_n(data.data() + ib*36, 4, uint8_t(0x38)); // UE4M3 scale 1
++            }
++            for (int64_t row = 0; row < m; ++row) {
++                const int64_t j = row % 64;
++                const size_t block = row*(k/64) + row/64;
++                // NVFP4 packs the low/high halves of each 16-value subblock.
++                data[block*36 + 4 + (j/16)*8 + j%8] = uint8_t(2 << ((j%16 >= 8) ? 4 : 0));
++                for (int64_t col = 0; col < n; ++col) {
++                    reference[col*m + row] = from_bits(rounded[(col*k + row) % 10]);
++                }
++            }
++            ggml_backend_tensor_set(weights, data.data(), 0, ggml_nbytes(weights));
++        } else {
++            // Independent host reference: dequantize original NVFP4, round BOTH
++            // operands to BF16, then accumulate in F32 (no CPU quantized dot).
++            std::vector<float> a = tensor_to_float(weights);
++            for (float & x : a) {
++                x = ggml_bf16_to_fp32(ggml_fp32_to_bf16(x));
++            }
++            for (float & x : values) {
++                x = ggml_bf16_to_fp32(ggml_fp32_to_bf16(x));
++            }
++            for (int64_t col = 0; col < n; ++col) {
++                for (int64_t row = 0; row < m; ++row) {
++                    float sum = 0.0f;
++                    for (int64_t p = 0; p < k; ++p) {
++                        sum = std::fma(a[row*k + p], values[col*k + p], sum);
++                    }
++                    reference[col*m + row] = sum;
++                }
++            }
++        }
++    }
++
++    double err(const float * a, const float * b, size_t size) override {
++        GGML_ASSERT(size == reference.size());
++        if (rne) {
++            // The ordinary CPU NVFP4 dot need not round activations to BF16.
++            // Compare GPU output to fixed expected bits, not to that CPU output.
++            return memcmp(a, reference.data(), size*sizeof(float)) == 0 ? 0.0 : 1.0;
++        }
++        return std::max(nmse(a, b, size), nmse(a, reference.data(), size));
++    }
++};
++
+ // GGML_HINT_SRC0_IS_HADAMARD
+ struct test_mul_mat_hadamard : public test_mul_mat {
+     test_mul_mat_hadamard(ggml_type type_a = GGML_TYPE_F32, ggml_type type_b = GGML_TYPE_F32,
+@@ -10788,6 +10920,26 @@
+         test_cases.emplace_back(new test_mul_mat_nvfp4_reorder(37, 9, 192, f32, false));
+     }
+ 
++    // 20 separately selected BF16 lifetime/control cases; R1's 56 above are unchanged.
++    for (int64_t k : {64, 192}) {
++        for (int64_t n : {1, 8, 9, 17, 128}) {
++            test_cases.emplace_back(new test_mul_mat_nvfp4_bf16(37, n, k));
++        }
++    }
++    for (int64_t n : {9, 128}) {
++        test_cases.emplace_back(new test_mul_mat_nvfp4_bf16(18560, n, 4096));
++        test_cases.emplace_back(new test_mul_mat_nvfp4_bf16(4096, n, 8192));
++        test_cases.emplace_back(new test_mul_mat_nvfp4_bf16(37, n, 192, true));        // F32 accumulator
++        test_cases.emplace_back(new test_mul_mat_nvfp4_bf16(37, n, 192, false, false)); // non-SSM
++        test_cases.emplace_back(new test_mul_mat_nvfp4_bf16(37, n, 192, false, true, true)); // F32 src1
++    }
++    // Four path-sensitive references: original/reordered, exact RNE/dense F32 accumulation.
++    for (bool rne : {false, true}) {
++        for (bool reordered : {false, true}) {
++            test_cases.emplace_back(new test_mul_mat_nvfp4_bf16_reference(rne, reordered));
++        }
++    }
++
+     // Multi-column MMVQ coverage for the Q4_K weight-reuse path and a Q5_K control.
+     for (ggml_type type_a : { GGML_TYPE_Q4_K, GGML_TYPE_Q5_K }) {
+         for (int n = 1; n <= 8; ++n) {
