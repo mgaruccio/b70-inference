@@ -1,0 +1,241 @@
+{
+  "tier": "development",
+  "configuration": {
+    "name": "relu-sqr-r1-quality",
+    "context": 65536,
+    "batch": 1024,
+    "ubatch": 1024,
+    "bench": true,
+    "long_bench": true,
+    "repeatability": false,
+    "esimd": 1,
+    "quality": true,
+    "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-relu-sqr-r1",
+    "test_nvfp4": true,
+    "dnnl_verbose": false,
+    "sycl_debug": false,
+    "test_bf16": false,
+    "test_relu_sqr": true,
+    "weights": "original"
+  },
+  "status": "failed",
+  "container_id": "89cda0e43ae17d2677a580c15eb184928ce234c037c2a52bac9066b6a88c4dfa",
+  "models": {
+    "models": [
+      {
+        "name": "nemotron-bolt",
+        "model": "nemotron-bolt",
+        "modified_at": "",
+        "size": "",
+        "digest": "",
+        "type": "model",
+        "description": "",
+        "tags": [
+          ""
+        ],
+        "capabilities": [
+          "completion"
+        ],
+        "parameters": "",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "",
+          "families": [
+            ""
+          ],
+          "parameter_size": "",
+          "quantization_level": ""
+        }
+      }
+    ],
+    "object": "list",
+    "data": [
+      {
+        "id": "nemotron-bolt",
+        "aliases": [
+          "nemotron-bolt"
+        ],
+        "tags": [],
+        "object": "model",
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "created": 1792165202,
+        "owned_by": "llamacpp",
+        "meta": {
+          "vocab_type": 2,
+          "n_vocab": 131072,
+          "n_ctx": 65536,
+          "n_ctx_train": 262144,
+          "n_embd": 4096,
+          "n_params": 74042720848,
+          "size": 22010399040,
+          "ftype": "IQ2_XXS - 2.0625 bpw"
+        }
+      }
+    ]
+  },
+  "smoke": {
+    "pass": true,
+    "checks": [
+      {
+        "name": "literal",
+        "pass": true,
+        "result": {
+          "text": "READY",
+          "elapsed_s": 1.1254955640179105,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 27,
+            "total_tokens": 30,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 27,
+            "prompt_ms": 1030.09,
+            "prompt_per_token_ms": 38.151481481481476,
+            "prompt_per_second": 26.211301925074512,
+            "predicted_n": 3,
+            "predicted_ms": 92.776,
+            "predicted_per_token_ms": 46.388,
+            "predicted_per_second": 21.557299301543505
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 2.665492513617992,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic",
+        "pass": true,
+        "result": {
+          "text": "323",
+          "elapsed_s": 0.5753034320077859,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 33,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 433.67400000000004,
+            "prompt_per_token_ms": 13.141636363636366,
+            "prompt_per_second": 76.09402454378173,
+            "predicted_n": 4,
+            "predicted_ms": 77.205,
+            "predicted_per_token_ms": 25.735,
+            "predicted_per_second": 38.85758694385079
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 6.952852664271723,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "code",
+        "pass": true,
+        "result": {
+          "text": "```python\ndef add(a, b):\n    return a + b\n```",
+          "elapsed_s": 0.910678482032381,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 17,
+            "prompt_tokens": 35,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 35,
+            "prompt_ms": 437.152,
+            "prompt_per_token_ms": 12.490057142857143,
+            "prompt_per_second": 80.06368494253715,
+            "predicted_n": 17,
+            "predicted_ms": 403.962,
+            "predicted_per_token_ms": 25.247625,
+            "predicted_per_second": 39.60768587144335
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 18.667400553992152,
+          "full_output_budget": false
+        }
+      }
+    ]
+  },
+  "error": "CalledProcessError(1, ('python3', '-B', '/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/probe-api.py', '--out', '/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/relu-sqr-r1-quality/quality', '--mode', 'quality'))",
+  "cleanup": {
+    "warnings": [],
+    "canary": {
+      "http_status": 200,
+      "elapsed_s": 61.063608498021495,
+      "body": {
+        "id": "cmpl-96b79065769437da",
+        "object": "text_completion",
+        "created": 1792165409,
+        "model": "qwen38",
+        "choices": [
+          {
+            "index": 0,
+            "text": " five",
+            "logprobs": {
+              "text_offset": [
+                0
+              ],
+              "token_logprobs": [
+                -1.2177563905715942
+              ],
+              "tokens": [
+                " five"
+              ],
+              "top_logprobs": [
+                {
+                  " five": -1.2177563905715942
+                }
+              ]
+            },
+            "finish_reason": "length",
+            "stop_reason": null,
+            "token_ids": null,
+            "prompt_logprobs": null,
+            "prompt_token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6",
+        "usage": {
+          "prompt_tokens": 7,
+          "total_tokens": 8,
+          "completion_tokens": 1,
+          "prompt_tokens_details": null
+        },
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "raw_text": "{\"id\":\"cmpl-96b79065769437da\",\"object\":\"text_completion\",\"created\":1792165409,\"model\":\"qwen38\",\"choices\":[{\"index\":0,\"text\":\" five\",\"logprobs\":{\"text_offset\":[0],\"token_logprobs\":[-1.2177563905715942],\"tokens\":[\" five\"],\"top_logprobs\":[{\" five\":-1.2177563905715942}]},\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6\",\"usage\":{\"prompt_tokens\":7,\"total_tokens\":8,\"completion_tokens\":1,\"prompt_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}"
+    },
+    "restore_attempts": 1,
+    "production_restored": true
+  }
+}

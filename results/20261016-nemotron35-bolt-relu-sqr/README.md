@@ -1,9 +1,16 @@
 # Experimental Bolt F32 RELU → SQR fusion
 
-Patch artifact only. This is one bounded, precision-preserving SYCL increment
-against accepted Bolt NVFP4 R1. It does not change MoE scheduling, SSMs, graphs,
-precision policy, launchers, models, or persistent inference configuration. The
-worker performed no compiler, GPU, profiler, or inference-host workload.
+**Experimental, not accepted:** the corrected fusion builds and passes all154 native
+GPU cases (112 legacy +21 fusion-on +21 fusion-off), but the model API gate fails
+19/20 on `drawer` → `rewrad`. Timing and retrieval were blocked. The unchanged R1
+baseline also showed this failure on one launch and passed on the next; this is
+not evidence that fusion caused it. No speed improvement is claimed.
+
+This bounded F32 SYCL patch leaves weights, precision policy, production launchers,
+and host configuration unchanged. Full evidence: [execution record](../20261016-nemotron35-bolt-sycl/execution.md#bounded-kernel-fusion-experiment).
+Actual-model debug traces confirm **80 fewer kernel launches per decode evaluation**:
+all80 RELU→SQR pairs use the fused path, including every observed routed width.
+This is dispatch verification, not a throughput measurement. Qwen was restored.
 
 Target source: `llama.cpp-bolt-b6334e37-nvfp4-r1`, source revision
 `b6334e37e6ef286fc5091a41b6561b2113d915fb` plus the accepted NVFP4 R1 patch.

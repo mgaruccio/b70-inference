@@ -17,7 +17,7 @@ spec.loader.exec_module(cell)
 
 
 class Lifecycle(unittest.TestCase):
-    def exercise(self, fault=None, prototype=False, weights='original', dnnl_verbose=False, bf16=False):
+    def exercise(self, fault=None, prototype=False, weights='original', dnnl_verbose=False, bf16=False, sycl_debug=False, relu_sqr=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             src = root / 'src'
@@ -28,16 +28,22 @@ class Lifecycle(unittest.TestCase):
             argv = ['run-cell.py', '--name', 'test']
             if dnnl_verbose:
                 argv += ['--dnnl-verbose']
-            if prototype or bf16:
-                candidate = src.with_name(src.name + ('-nvfp4-bf16-r1' if bf16 else '-nvfp4-r1'))
+            if sycl_debug:
+                argv += ['--sycl-debug']
+            if prototype or bf16 or relu_sqr:
+                suffix = '-nvfp4-relu-sqr-r1' if relu_sqr else ('-nvfp4-bf16-r1' if bf16 else '-nvfp4-r1')
+                candidate = src.with_name(src.name + suffix)
                 (candidate / 'build-sycl/bin').mkdir(parents=True)
                 for binary in ('llama-server', 'test-backend-ops'):
                     (candidate / 'build-sycl/bin' / binary).touch()
                 (candidate / 'UPSTREAM_COMMIT').write_text((src / 'UPSTREAM_COMMIT').read_text())
-                (root / ('bf16-r1-runtime-precheck.log' if bf16 else 'nvfp4-r1-runtime-precheck.log')).write_text('no missing libraries')
+                precheck = 'relu-sqr-r1-runtime-precheck.log' if relu_sqr else ('bf16-r1-runtime-precheck.log' if bf16 else 'nvfp4-r1-runtime-precheck.log')
+                (root / precheck).write_text('no missing libraries')
                 argv += ['--source', str(candidate), '--test-nvfp4']
                 if bf16:
                     argv += ['--test-bf16']
+                if relu_sqr:
+                    argv += ['--test-relu-sqr']
             model_root = root / 'models'
             selected_model = model_root if weights == 'original' else model_root.with_name(model_root.name + '-' + weights)
             selected_model.mkdir()
@@ -134,6 +140,54 @@ class Lifecycle(unittest.TestCase):
                 self.assertIn(((cell.signal.SIGHUP, cell.signal.SIG_IGN), {}), signals.call_args_list)
             summary = json.loads((root / 'test/summary.json').read_text())
             return state, summary, error
+
+    def test_relu_sqr_native_gates_precede_server(self):
+        state, summary, error = self.exercise(relu_sqr=True)
+        self.assertIsNone(error)
+        shell = state['create_argv'][-1]
+        self.assertEqual(shell.count("grep -Fx '  21/21 tests passed'"), 2)
+        self.assertEqual(shell.count("grep -Fx '  56/56 tests passed'"), 2)
+        for gate in ('GGML_SYCL_ENABLE_FUSION=1', 'GGML_SYCL_ENABLE_FUSION=0',
+                     'fused RELU_SQR', 'relu_sqr=1', 'RELU_SQR_NUMERICAL_PASSED'):
+            self.assertIn(gate, shell)
+        self.assertLess(shell.index('RELU_SQR_NUMERICAL_PASSED'), shell.index('exec /src/'))
+        self.assertNotIn('GGML_SYCL_DEBUG=1', state['create_argv'])
+        self.assertTrue(summary['cleanup']['production_restored'])
+
+    def test_relu_sqr_native_failure_restores_without_api(self):
+        state, summary, error = self.exercise('native', relu_sqr=True)
+        self.assertIsNotNone(error)
+        self.assertNotIn('smoke', summary)
+        self.assertTrue(summary['cleanup']['production_restored'])
+
+    def test_relu_sqr_requires_exact_source_and_legacy_suite(self):
+        for suffix, flag, legacy in (('', True, True), ('-nvfp4-r1', True, True),
+                                     ('-nvfp4-relu-sqr-r1', False, True),
+                                     ('-nvfp4-relu-sqr-r1', True, False)):
+            argv = ['run-cell.py', '--name', 'bad', '--source', str(cell.SRC.with_name(cell.SRC.name + suffix))]
+            if flag:
+                argv += ['--test-relu-sqr']
+            if legacy:
+                argv += ['--test-nvfp4']
+            with self.subTest(suffix=suffix, flag=flag, legacy=legacy), patch.object(sys, 'argv', argv), \
+                 patch.object(cell.runpy, 'run_path') as host:
+                with self.assertRaises(AssertionError):
+                    cell.main()
+                host.assert_not_called()
+
+    def test_sycl_debug_is_explicit_and_not_timing(self):
+        state, summary, error = self.exercise(sycl_debug=True)
+        self.assertIsNone(error)
+        self.assertIn('GGML_SYCL_DEBUG=1', state['create_argv'])
+        self.assertTrue(summary['cleanup']['production_restored'])
+
+    def test_sycl_debug_rejects_timing_before_host_reads(self):
+        for mode in ('--bench', '--long-bench', '--repeatability'):
+            with self.subTest(mode=mode), patch.object(sys, 'argv', ['run-cell.py', '--name', 'bad', '--sycl-debug', mode]), \
+                 patch.object(cell.runpy, 'run_path') as host:
+                with self.assertRaisesRegex(AssertionError, 'Debug traces are not timing runs'):
+                    cell.main()
+                host.assert_not_called()
 
     def test_success_restores(self):
         state, summary, error = self.exercise()

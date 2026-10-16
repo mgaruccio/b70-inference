@@ -57,13 +57,19 @@ def main():
     parser.add_argument('--source', type=Path, default=SRC)
     parser.add_argument('--test-nvfp4', action='store_true')
     parser.add_argument('--dnnl-verbose', action='store_true', help='Diagnostic dispatch logs; not a comparable timing run.')
+    parser.add_argument('--sycl-debug', action='store_true', help='Diagnostic op/shape logging; forbids timing modes.')
     parser.add_argument('--test-bf16', action='store_true')
+    parser.add_argument('--test-relu-sqr', action='store_true')
     parser.add_argument('--weights', choices=('original', 'ssm-q8_0', 'ssm-q6_k'), default='original')
     args = parser.parse_args()
+    assert not args.sycl_debug or not (args.bench or args.long_bench or args.repeatability), 'Debug traces are not timing runs'
     source = args.source.resolve()
     bf16_source = SRC.with_name(SRC.name + '-nvfp4-bf16-r1')
-    assert source in (SRC, SRC.with_name(SRC.name + '-nvfp4-r1'), bf16_source)
+    relu_source = SRC.with_name(SRC.name + '-nvfp4-relu-sqr-r1')
+    assert source in (SRC, SRC.with_name(SRC.name + '-nvfp4-r1'), bf16_source, relu_source)
     assert not args.test_bf16 or (source == bf16_source and args.test_nvfp4)
+    assert args.test_relu_sqr == (source == relu_source), 'Fusion source requires its native suite'
+    assert not args.test_relu_sqr or args.test_nvfp4
     assert not args.test_nvfp4 or source != SRC
     assert args.weights == 'original' or source == SRC
     model_dir = MODEL if args.weights == 'original' else MODEL.with_name(MODEL.name + '-' + args.weights)
@@ -90,6 +96,8 @@ def main():
     assert (ROOT / 'runtime-precheck.log').is_file()
     if source != SRC:
         precheck = 'bf16-r1-runtime-precheck.log' if source == bf16_source else 'nvfp4-r1-runtime-precheck.log'
+        if source == relu_source:
+            precheck = 'relu-sqr-r1-runtime-precheck.log'
         assert (ROOT / precheck).is_file()
     if args.test_nvfp4:
         assert (source / 'build-sycl/bin/test-backend-ops').is_file()
@@ -144,6 +152,20 @@ def main():
             else:
                 numerical += f"if grep -F '/nvfp4_bf16' {log}; then exit 1; fi; "
         numerical += 'echo BF16_NUMERICAL_PASSED; '
+    if args.test_relu_sqr:
+        test = shlex.join(['/src/build-sycl/bin/test-backend-ops', 'test', '-b', 'SYCL0',
+                           '-o', 'RELU_SQR', '-p', 'relu_sqr=1'])
+        for fusion in (1, 0):
+            log = f'/tmp/relu-sqr-fusion{fusion}.log'
+            numerical += (f'echo RELU_SQR_NATIVE_FUSION{fusion}; GGML_SYCL_DEBUG=1 '
+                          f'GGML_SYCL_ENABLE_FUSION={fusion} ' + test + f' 2>&1 | tee {log}; '
+                          f"grep -Fx '  21/21 tests passed' {log}; "
+                          f"if grep -Ei 'not supported|skipping large tensors' {log}; then exit 1; fi; ")
+            if fusion:
+                numerical += f"grep -F 'fused RELU_SQR' {log} > /dev/null; "
+            else:
+                numerical += f"if grep -F 'fused RELU_SQR' {log}; then exit 1; fi; "
+        numerical += 'echo RELU_SQR_NUMERICAL_PASSED; '
     shell = setup + numerical + 'exec ' + shlex.join(server)
     # Create while Qwen is still serving: timeout cannot cause a late GPU start.
     create = ['docker', 'create', '--name', NAME, '--ipc=host',
@@ -156,6 +178,8 @@ def main():
         create[2:2] = ['-e', f'GGML_SYCL_ENABLE_ESIMD={args.esimd}']
     if args.dnnl_verbose:
         create[2:2] = ['-e', 'ONEDNN_VERBOSE=1']
+    if args.sycl_debug:
+        create[2:2] = ['-e', 'GGML_SYCL_DEBUG=1']
     save(out / 'create-argv.json', create)
     summary = {'tier': 'development', 'configuration': {**vars(args), 'source': str(source)}, 'status': 'prepared'}
     save(out / 'summary.json', summary)
