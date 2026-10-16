@@ -1,0 +1,243 @@
+diff --git a/ggml/src/ggml-sycl/fusion.cpp b/ggml/src/ggml-sycl/fusion.cpp
+--- a/ggml/src/ggml-sycl/fusion.cpp
++++ b/ggml/src/ggml-sycl/fusion.cpp
+@@ -103,6 +103,35 @@
+         return ggml_sycl_should_fuse_mul_mat_glu(gate, up, glu);
+     }
+ 
++    // RELU -> SQR is a precision-preserving F32-only pointwise chain.  Keep the
++    // generic graph checks in front of the backend-specific checks: they reject
++    // an externally consumed or requested-output RELU before the dispatcher can
++    // elide its buffer.
++    if (ops.size() == 2 && ops.begin()[0] == GGML_OP_UNARY && ops.begin()[1] == GGML_OP_UNARY &&
++        unary_ops.size() == 2 &&
++        unary_ops.begin()[0] == GGML_UNARY_OP_RELU && unary_ops.begin()[1] == GGML_UNARY_OP_SQR) {
++        if (!ggml_can_fuse(cgraph, node_idx, ops)) {
++            return false;
++        }
++
++        const ggml_tensor * relu = cgraph->nodes[node_idx];
++        const ggml_tensor * sqr  = cgraph->nodes[node_idx + 1];
++        if (ggml_get_unary_op(relu) != GGML_UNARY_OP_RELU ||
++            ggml_get_unary_op(sqr) != GGML_UNARY_OP_SQR ||
++            relu->src[0] == nullptr ||
++            relu->src[0]->type != GGML_TYPE_F32 ||
++            relu->type != GGML_TYPE_F32 ||
++            sqr->type != GGML_TYPE_F32 ||
++            !ggml_is_contiguous(relu->src[0]) ||
++            !ggml_is_contiguous(relu) ||
++            !ggml_is_contiguous(sqr) ||
++            ggml_nelements(sqr) == 0 ||
++            ggml_nelements(sqr) >= ((int64_t) 1 << 31)) {
++            return false;
++        }
++        return true;
++    }
++
+     if (!ggml_can_fuse(cgraph, node_idx, ops)) {
+         return false;
+     }
+diff --git a/ggml/src/ggml-sycl/fusion.hpp b/ggml/src/ggml-sycl/fusion.hpp
+--- a/ggml/src/ggml-sycl/fusion.hpp
++++ b/ggml/src/ggml-sycl/fusion.hpp
+@@ -9,6 +9,8 @@
+ // `node_idx`, and `unary_ops` the GGML_UNARY_OP each GGML_OP_UNARY in `ops` must carry, in
+ // order; the result is true only if ggml considers that subgraph fusable *and* the SYCL
+ // kernel which would service it accepts the tensors involved (types, shapes, contiguity).
++// The RELU -> SQR branch is deliberately F32-only and relies on ggml_can_fuse() for
++// single-use/output protection before the intermediate RELU is elided.
+ //
+ // Lives in its own translation unit because it grows a branch per supported op sequence.
+ bool ggml_sycl_can_fuse(const ggml_cgraph * cgraph, int node_idx, std::initializer_list<enum ggml_op> ops,
+diff --git a/ggml/src/ggml-sycl/element_wise.cpp b/ggml/src/ggml-sycl/element_wise.cpp
+--- a/ggml/src/ggml-sycl/element_wise.cpp
++++ b/ggml/src/ggml-sycl/element_wise.cpp
+@@ -449,6 +449,24 @@
+     const sycl::uint3 n_fd = init_fastdiv_values((uint32_t) n);
+     main_stream->parallel_for(range, [=](sycl::nd_item<1> item_ct1) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
+         unary_mul_strided_kernel(x, g, dst, k, n_fd, o0, o1, item_ct1, op);
++    });
++}
++
++// Fused F32 RELU -> SQR.  This intentionally reads the original RELU input and
++// writes the SQR result, so the graph scheduler can elide the intermediate launch.
++static void relu_sqr_kernel(const float * x, float * dst, const int64_t k,
++                            const sycl::nd_item<1> & item_ct1) {
++    SYCL_GLOBAL_ID_LOOP(k, item_ct1) {
++        dst[i] = op_sqr(op_relu(x[i]));
++    }
++}
++
++static void relu_sqr_sycl(const float * x, float * dst, const int64_t k, queue_ptr stream) {
++    const size_t num_blocks = ceil_div((size_t) k, (size_t) SYCL_GLU_BLOCK_SIZE);
++    const sycl::nd_range<1> range(num_blocks * sycl::range<1>(SYCL_GLU_BLOCK_SIZE),
++                                  sycl::range<1>(SYCL_GLU_BLOCK_SIZE));
++    stream->parallel_for(range, [=](sycl::nd_item<1> item_ct1) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
++        relu_sqr_kernel(x, dst, k, item_ct1);
+     });
+ }
+ 
+@@ -743,7 +761,19 @@
+ 
+ } // namespace ggml_sycl_detail
+ 
+-
++void ggml_sycl_op_relu_sqr_fused(ggml_backend_sycl_context & ctx, ggml_tensor * relu_node, ggml_tensor * sqr_node) {
++    scope_op_debug_print scope_dbg_print(__func__, sqr_node, /*num_src=*/1, " : fused RELU_SQR");
++
++    const ggml_tensor * x = relu_node->src[0];
++    GGML_ASSERT(x != nullptr);
++    GGML_ASSERT(x->type == GGML_TYPE_F32 && relu_node->type == GGML_TYPE_F32 && sqr_node->type == GGML_TYPE_F32);
++    GGML_ASSERT(ggml_are_same_shape(x, relu_node) && ggml_are_same_shape(relu_node, sqr_node));
++    GGML_ASSERT(ggml_is_contiguous(x) && ggml_is_contiguous(relu_node) && ggml_is_contiguous(sqr_node));
++
++    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
++    ggml_sycl_detail::relu_sqr_sycl((const float *) x->data, (float *) sqr_node->data,
++                                    ggml_nelements(sqr_node), ctx.stream());
++}
+ 
+ static inline void ggml_sycl_op_sgn(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+     ggml_sycl_detail::ggml_sycl_op_unary(ctx, dst, [](auto x) {
+diff --git a/ggml/src/ggml-sycl/element_wise.hpp b/ggml/src/ggml-sycl/element_wise.hpp
+--- a/ggml/src/ggml-sycl/element_wise.hpp
++++ b/ggml/src/ggml-sycl/element_wise.hpp
+@@ -129,6 +129,9 @@
+ 
+ void ggml_sycl_arange(ggml_backend_sycl_context & ctx, ggml_tensor * dst);
+ 
++// fused F32 RELU + SQR; see ggml_sycl_can_fuse() for the accepted shapes
++void ggml_sycl_op_relu_sqr_fused(ggml_backend_sycl_context & ctx, ggml_tensor * relu_node, ggml_tensor * sqr_node);
++
+ // fused UNARY(silu|sigmoid|softplus) + MUL; see ggml_sycl_can_fuse() for the accepted shapes
+ void ggml_sycl_op_unary_mul_fused(ggml_backend_sycl_context & ctx, ggml_tensor * unary_node, ggml_tensor * mul_node);
+ 
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -6563,6 +6563,17 @@
+             i++;
+             continue;
+         }
++        // RELU -> SQR is a two-node chain: consume exactly the following SQR, never
++        // an unrelated subsequent node.  ggml_sycl_can_fuse() protects the intermediate
++        // from external consumers and rejects every non-F32/non-contiguous variant.
++        if (node->op == GGML_OP_UNARY && i + 1 < cgraph->n_nodes &&
++            cgraph->nodes[i + 1]->op == GGML_OP_UNARY &&
++            ggml_sycl_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_UNARY },
++                               { GGML_UNARY_OP_RELU, GGML_UNARY_OP_SQR })) {
++            ggml_sycl_op_relu_sqr_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
++            i++;
++            continue;
++        }
+         if (node->op == GGML_OP_UNARY &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_MUL }, { ggml_get_unary_op(node) })) {
+             ggml_sycl_op_unary_mul_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -4022,6 +4022,9 @@
+ struct test_relu_sqr : public test_case {
+     const ggml_type type;
+     const std::array<int64_t, 4> ne;
++    const std::string layout; // packed or strided RELU input
++    const std::string tail;   // none, consumer, reuse, or output
++    std::vector<ggml_tensor *> checked;
+ 
+     std::string op_desc(ggml_tensor * t) override {
+         GGML_UNUSED(t);
+@@ -4029,24 +4032,64 @@
+     }
+ 
+     bool run_whole_graph() override { return true; }
++    std::vector<ggml_tensor *> fusion_test_nodes() override { return checked; }
+ 
+     std::string vars() override {
+-        return VARS_TO_STR2(type, ne);
++        return "relu_sqr=1," + VARS_TO_STR4(type, ne, layout, tail);
+     }
+ 
+     test_relu_sqr(ggml_type type = GGML_TYPE_F32,
+-            std::array<int64_t, 4> ne = {128, 2, 2, 2})
+-        : type(type), ne(ne) {}
++            std::array<int64_t, 4> ne = {128, 2, 2, 2},
++            std::string layout = "packed", std::string tail = "none")
++        : type(type), ne(ne), layout(std::move(layout)), tail(std::move(tail)) {}
+ 
+     ggml_tensor * build_graph(ggml_context * ctx) override {
+-        ggml_tensor * a = ggml_new_tensor(ctx, type, 4, ne.data());
++        ggml_tensor * a;
++        if (layout == "packed") {
++            a = ggml_new_tensor(ctx, type, 4, ne.data());
++        } else if (layout == "strided") {
++            // The view has the same logical shape but a wider physical row, so
++            // the backend must use the ordinary two-launch fallback.
++            std::array<int64_t, 4> parent_ne = ne;
++            parent_ne[0] *= 2;
++            ggml_tensor * parent = ggml_new_tensor(ctx, type, 4, parent_ne.data());
++            ggml_set_name(parent, "a_parent");
++            a = ggml_view_4d(ctx, parent, ne[0], ne[1], ne[2], ne[3],
++                             parent->nb[1], parent->nb[2], parent->nb[3], 0);
++        } else {
++            GGML_ABORT("unknown RELU_SQR layout %s", layout.c_str());
++        }
+         ggml_set_name(a, "a");
+ 
+         ggml_tensor * r = ggml_relu(ctx, a);
+         ggml_set_name(r, "relu");
+ 
+         ggml_tensor * out = ggml_sqr(ctx, r);
+-        ggml_set_name(out, "out");
++        ggml_set_name(out, "sqr");
++
++        if (tail == "consumer") {
++            // The fused pair must leave this subsequent node for the scheduler.
++            out = ggml_add(ctx, out, a);
++            ggml_set_name(out, "consumer");
++            checked = { out };
++        } else if (tail == "reuse") {
++            // RELU has a second consumer, so fusion must be rejected.  Check the
++            // intermediate and both side-consumer results against the CPU graph.
++            ggml_tensor * side = ggml_add(ctx, r, a);
++            ggml_set_name(side, "relu_side");
++            out = ggml_add(ctx, out, side);
++            ggml_set_name(out, "reuse");
++            checked = { r, side, out };
++        } else if (tail == "output") {
++            // A requested intermediate output must remain materialized even when
++            // the chain otherwise has the exact fusable shape.
++            ggml_set_output(r);
++            checked = { r, out };
++        } else if (tail == "none") {
++            checked = { out };
++        } else {
++            GGML_ABORT("unknown RELU_SQR tail %s", tail.c_str());
++        }
+ 
+         return out;
+     }
+@@ -9712,11 +9755,24 @@
+         }
+     }
+ 
+-    // fused relu + sqr (squared ReLU)
++    // fused relu + sqr (squared ReLU); the F32 cases exercise the candidate path,
++    // while F16 remains an explicit conservative-fallback control.
+     for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32}) {
+         test_cases.emplace_back(new test_relu_sqr(type, { 128, 2, 2, 2 }));
+         test_cases.emplace_back(new test_relu_sqr(type, { 5, 7, 11, 13 }));
+     }
++    // Nemotron 3.5 Bolt routed experts use 2,048-wide rows and shared experts use
++    // 5,376-wide rows.  Include decode and multi-column/prefill shapes, plus a
++    // non-workgroup-multiple generic length and the graph-protection cases.
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 1, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 5376, 1, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 1024, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 5376, 1024, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 257, 3, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 3, 1, 1 }, "strided"));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 3, 1, 1 }, "packed", "reuse"));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 3, 1, 1 }, "packed", "output"));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 5376, 3, 1, 1 }, "packed", "consumer"));
+ 
+     // fused unary + mul (gated activations that are not expressed as GGML_OP_GLU)
+     for (ggml_unary_op op : { GGML_UNARY_OP_GELU, GGML_UNARY_OP_SILU, GGML_UNARY_OP_SIGMOID, GGML_UNARY_OP_SOFTPLUS }) {
