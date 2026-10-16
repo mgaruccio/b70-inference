@@ -1,0 +1,422 @@
+diff --git a/ggml/src/ggml-sycl/ssm_scan.hpp b/ggml/src/ggml-sycl/ssm_scan.hpp
+--- a/ggml/src/ggml-sycl/ssm_scan.hpp
++++ b/ggml/src/ggml-sycl/ssm_scan.hpp
+@@ -3,3 +3,6 @@
+ #include "common.hpp"
+ 
+ void ggml_sycl_ssm_scan(ggml_backend_sycl_context & ctx, ggml_tensor * dst);
++
++// K == 1, one sequence; eligibility and alias checks are made by the graph matcher.
++void ggml_sycl_ssm_scan_fused_cache(ggml_backend_sycl_context & ctx, ggml_tensor * dst, float * cache);
+diff --git a/ggml/src/ggml-sycl/ssm_scan.cpp b/ggml/src/ggml-sycl/ssm_scan.cpp
+--- a/ggml/src/ggml-sycl/ssm_scan.cpp
++++ b/ggml/src/ggml-sycl/ssm_scan.cpp
+@@ -3,9 +3,11 @@
+ 
+ template <int c_factor, int d_state>
+ static void ssm_scan_f32_group(
+-        const float * __restrict__ src0, const float * __restrict__ src1, const float * __restrict__ src2,
++        // The final state may overwrite an aligned row of src0. Do not promise non-aliasing for it.
++        const float * src0, const float * __restrict__ src1, const float * __restrict__ src2,
+         const float * __restrict__ src3, const float * __restrict__ src4, const float * __restrict__ src5,
+         const int32_t * __restrict__ src6, float * __restrict__ dst,
++        float * final_state,
+         const int src0_nb2, const int src0_nb3, const int src1_nb2, const int src1_nb3,
+         const int src2_nb1, const int src2_nb2, const int src3_nb1,
+         const int src4_nb2, const int src4_nb3, const int src5_nb2, const int src5_nb3,
+@@ -31,7 +33,7 @@
+     const float * B_warp  = (const float *) ((const char *) src4 + (seq_idx * src4_nb3) + (group_off));
+     const float * C_warp  = (const float *) ((const char *) src5 + (seq_idx * src5_nb3) + (group_off));
+     float *       y_warp  = dst + (seq_idx * n_tok * n_head * d_head) + warp_idx;
+-    float *       s_warp  = (float *) ((char *) dst + s_off + seq_idx * src0_nb3 + head_idx * src0_nb2 + head_off * d_state);
++    float *       s_warp  = (float *) ((char *) final_state + seq_idx * src0_nb3 + head_idx * src0_nb2 + head_off * d_state);
+ 
+     const int stride_x  = src1_nb2 / sizeof(float);
+     const int stride_dt = src2_nb1 / sizeof(float);
+@@ -87,6 +89,7 @@
+ static void ssm_scan_f32_sycl(
+         const float * src0, const float * src1, const float * src2, const float * src3,
+         const float * src4, const float * src5, const int32_t * src6, float * dst,
++        float * final_state,
+         const int src0_nb2, const int src0_nb3, const int src1_nb2, const int src1_nb3, const int src2_nb1,
+         const int src2_nb2, const int src3_nb1, const int src4_nb2, const int src4_nb3, const int src5_nb2,
+         const int src5_nb3, const int64_t s_off, const int64_t d_state, const int64_t head_dim,
+@@ -105,7 +108,7 @@
+             sycl::nd_range<2>(grid * block, block),
+             [=](sycl::nd_item<2> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
+                 ssm_scan_f32_group<128 / WARP_SIZE, 128>(
+-                    src0, src1, src2, src3, src4, src5, src6, dst,
++                    src0, src1, src2, src3, src4, src5, src6, dst, final_state,
+                     src0_nb2, src0_nb3, src1_nb2, src1_nb3, src2_nb1, src2_nb2, src3_nb1,
+                     src4_nb2, src4_nb3, src5_nb2, src5_nb3, s_off, n_head, head_dim, n_group, n_tok, K, item);
+             });
+@@ -118,7 +121,7 @@
+             sycl::nd_range<2>(grid * block, block),
+             [=](sycl::nd_item<2> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
+                 ssm_scan_f32_group<256 / WARP_SIZE, 256>(
+-                    src0, src1, src2, src3, src4, src5, src6, dst,
++                    src0, src1, src2, src3, src4, src5, src6, dst, final_state,
+                     src0_nb2, src0_nb3, src1_nb2, src1_nb3, src2_nb1, src2_nb2, src3_nb1,
+                     src4_nb2, src4_nb3, src5_nb2, src5_nb3, s_off, n_head, head_dim, n_group, n_tok, K, item);
+             });
+@@ -128,4 +131,4 @@
+-inline void ggml_sycl_op_ssm_scan(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
++inline void ggml_sycl_op_ssm_scan(ggml_backend_sycl_context & ctx, ggml_tensor * dst, float * cache) {
+     const ggml_tensor * src0 = dst->src[0];
+     const ggml_tensor * src1 = dst->src[1];
+     const ggml_tensor * src2 = dst->src[2];
+@@ -158,6 +161,7 @@
+         static_cast<const float *>(src2->data), static_cast<const float *>(src3->data),
+         static_cast<const float *>(src4->data), static_cast<const float *>(src5->data),
+         static_cast<const int32_t *>(src6->data), static_cast<float *>(dst->data),
++        cache ? cache : (float *) ((char *) dst->data + s_off),
+         src0->nb[2], src0->nb[3], src1->nb[2], src1->nb[3], src2->nb[1], src2->nb[2],
+         src3->nb[1], src4->nb[2], src4->nb[3], src5->nb[2], src5->nb[3],
+         s_off, nc, nr, nh, ng, n_t, n_s, K, stream);
+@@ -167,4 +171,11 @@
+ void ggml_sycl_ssm_scan(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/7);
+-    ggml_sycl_op_ssm_scan(ctx, dst);
++    ggml_sycl_op_ssm_scan(ctx, dst, nullptr);
++}
++
++void ggml_sycl_ssm_scan_fused_cache(ggml_backend_sycl_context & ctx, ggml_tensor * dst, float * cache) {
++    scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/7);
++    GGML_ASSERT(cache && ggml_get_op_params_i32(dst, 0) == 1);
++    GGML_ASSERT(dst->src[0]->ne[0] == 128 && dst->src[1]->ne[3] == 1);
++    ggml_sycl_op_ssm_scan(ctx, dst, cache);
+ }
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -6502,6 +6502,116 @@
+     return skip;
+ }
+ 
++// SSM_SCAN -> exact final-state cache CPY. Unlike GDN, y remains live in the scan output.
++// Only the final-state tail may be elided. Keep all other graphs on the ordinary path.
++static int ggml_sycl_try_ssm_scan_cache_fusion(const ggml_cgraph * cgraph, int node_idx, float * & cache) {
++    const ggml_tensor * ssm = cgraph->nodes[node_idx];
++    if (!g_ggml_sycl_enable_fusion || ssm->op != GGML_OP_SSM_SCAN || ssm->type != GGML_TYPE_F32 ||
++        (ssm->flags & GGML_TENSOR_FLAG_OUTPUT) || ggml_get_op_params_i32(ssm, 0) != 1) {
++        return 0;
++    }
++
++    const ggml_tensor * s = ssm->src[0];
++    const ggml_tensor * x = ssm->src[1];
++    const ggml_tensor * A = ssm->src[3];
++    // Multiple sequences could read each other's cache rows in the same launch. K > 1,
++    // Mamba-1 and other state sizes deliberately retain the existing scan + CPY.
++    if (s->type != GGML_TYPE_F32 || s->ne[0] != 128 || !ggml_is_contiguous(s) ||
++        x->ne[3] != 1 || x->ne[2] < 1 || s->ne[1] % WARP_SIZE != 0 ||
++        A->ne[0] != 1 || A->nb[1] != sizeof(float)) {
++        return 0;
++    }
++    const int64_t D = s->ne[0] * s->ne[1] * s->ne[2];
++    const size_t state_bytes = ggml_row_size(GGML_TYPE_F32, D);
++    const size_t tail_off = ggml_row_size(GGML_TYPE_F32, ggml_nelements(x));
++
++    // Match exactly what graph_compute_impl skips. Never move the cache write across a launch.
++    const ggml_tensor * cpy = nullptr;
++    int cpy_idx = node_idx;
++    for (int j = node_idx + 1; j < cgraph->n_nodes; ++j) {
++        const ggml_tensor * n = cgraph->nodes[j];
++        if (ggml_sycl_is_view_or_noop(n) || (n->flags & GGML_TENSOR_FLAG_COMPUTE) == 0) {
++            continue;
++        }
++        if (n->op != GGML_OP_CPY || (n->flags & GGML_TENSOR_FLAG_OUTPUT)) {
++            return 0;
++        }
++        cpy = n;
++        cpy_idx = j;
++        break;
++    }
++    if (!cpy) {
++        return 0;
++    }
++    const ggml_tensor * src = cpy->src[0];
++    const ggml_tensor * dst = cpy->src[1];
++    if (src->op != GGML_OP_VIEW || src->view_src != ssm || src->view_offs != tail_off ||
++        src->type != GGML_TYPE_F32 || !ggml_is_contiguous(src) || ggml_nelements(src) != D ||
++        (src->flags & GGML_TENSOR_FLAG_OUTPUT)) {
++        return 0;
++    }
++    const std::array<int64_t, GGML_MAX_DIMS> expected_ne = { D, 1, 1, 1 };
++    if (dst->op != GGML_OP_VIEW || dst->type != GGML_TYPE_F32 || !dst->data ||
++        !dst->buffer || !ssm->buffer || dst->buffer->buft != ssm->buffer->buft ||
++        (uintptr_t) dst->data % sizeof(float) != 0 ||
++        !std::equal(expected_ne.begin(), expected_ne.end(), dst->ne) ||
++        dst->nb[0] != sizeof(float) || dst->nb[1] != state_bytes || cpy->data != dst->data) {
++        return 0;
++    }
++
++    // Reuse graph use counts for the removed tail and for direct consumers of the scan.
++    // Other views must lie wholly in y; sibling/nested tail views remain live.
++    int view_uses = 0;
++    for (int j = node_idx + 1; j < cgraph->n_nodes; ++j) {
++        const ggml_tensor * n = cgraph->nodes[j];
++        if (n->src[0] == ssm && ggml_is_view_op(n->op)) {
++            ++view_uses;
++        }
++        if (n == src) {
++            if (ggml_node_get_use_count(cgraph, j) != 1) {
++                return 0;
++            }
++            continue;
++        }
++        if (n->view_src == ssm && (n->view_offs > tail_off || ggml_nbytes(n) > tail_off - n->view_offs)) {
++            return 0;
++        }
++    }
++    if (view_uses != ggml_node_get_use_count(cgraph, node_idx)) {
++        return 0; // a non-view consumer would read the unmaterialised tail
++    }
++
++    // The same conservative byte-range dependency check used by sibling kernel fusion.
++    // Integer differences avoid ordering unrelated host pointers or overflowing an end address.
++    auto overlaps = [](const ggml_tensor * a, const ggml_tensor * b) {
++        const uintptr_t ap = (uintptr_t) a->data;
++        const uintptr_t bp = (uintptr_t) b->data;
++        return ap <= bp ? bp - ap < ggml_nbytes(a) : ap - bp < ggml_nbytes(b);
++    };
++    if (!ssm->data || overlaps(dst, ssm)) {
++        return 0;
++    }
++    for (int k = 0; k < 7; ++k) {
++        if (ssm->src[k]->type != (k == 6 ? GGML_TYPE_I32 : GGML_TYPE_F32) || !ssm->src[k]->data ||
++            overlaps(ssm, ssm->src[k]) || (k != 0 && overlaps(dst, ssm->src[k]))) {
++            return 0;
++        }
++    }
++    if (overlaps(dst, s)) {
++        const uintptr_t sp = (uintptr_t) s->data;
++        const uintptr_t dp = (uintptr_t) dst->data;
++        // A single sequence can overwrite one complete, aligned input-state row: each
++        // warp reads its own state before writing that same coordinate. A shifted or
++        // partial overlap could clobber a different warp's input, so it must fall back.
++        if (dp < sp || dp - sp > ggml_nbytes(s) - state_bytes || (dp - sp) % state_bytes != 0) {
++            return 0;
++        }
++    }
++
++    cache = (float *) dst->data;
++    return cpy_idx - node_idx;
++}
++
+ static void ggml_backend_sycl_graph_compute_impl(ggml_backend_sycl_context * sycl_ctx, ggml_cgraph * cgraph) {
+     ggml_sycl_set_main_device(sycl_ctx->device);
+ 
+@@ -6527,6 +6637,16 @@
+             }
+         }
+ #endif
++        // SSM_SCAN -> CPY: write the final state into its recurrent cache row, retaining y.
++        if (node->op == GGML_OP_SSM_SCAN) {
++            float * cache = nullptr;
++            const int ssm_nodes_to_skip = ggml_sycl_try_ssm_scan_cache_fusion(cgraph, i, cache);
++            if (ssm_nodes_to_skip > 0) {
++                ggml_sycl_ssm_scan_fused_cache(*sycl_ctx, node, cache);
++                i += ssm_nodes_to_skip;
++                continue;
++            }
++        }
+         // gated_delta_net -> cpy: scatter recurrent-state snapshots into the cache
+         if (node->op == GGML_OP_GATED_DELTA_NET) {
+             ggml_sycl_gated_delta_net_fused_cache fused_state_cpy;
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -4809,17 +4809,23 @@
+     const int64_t K; // snapshot slot count (1 = final state only)
+ 
+     ggml_tensor * cpy_node = nullptr;
++    const std::string variant;
++    std::vector<ggml_tensor *> checked;
+ 
+     std::string vars() override {
+-        return VARS_TO_STR8(type, d_state, head_dim, n_head, n_group, n_seq_tokens, n_seqs, K);
++        return VARS_TO_STR8(type, d_state, head_dim, n_head, n_group, n_seq_tokens, n_seqs, K) +
++               (variant.empty() ? "" : ",bolt_ssm_cache=" + variant);
+     }
+ 
+     test_ssm_scan_cache_fusion(ggml_type type = GGML_TYPE_F32,
+             int64_t d_state = 128, int64_t head_dim = 64, int64_t n_head = 16, int64_t n_group = 2,
+-            int64_t n_seq_tokens = 4, int64_t n_seqs = 1, int64_t K = 4)
++            int64_t n_seq_tokens = 4, int64_t n_seqs = 1, int64_t K = 4, const char * variant = "")
+         : type(type), d_state(d_state), head_dim(head_dim), n_head(n_head), n_group(n_group),
+-          n_seq_tokens(n_seq_tokens), n_seqs(n_seqs), K(K) {}
++          n_seq_tokens(n_seq_tokens), n_seqs(n_seqs), K(K), variant(variant) {}
+ 
+     ggml_tensor * build_graph(ggml_context * ctx) override {
++        if (!variant.empty()) {
++            return build_cache_graph(ctx);
++        }
+         const int64_t D         = d_state * head_dim * n_head;
+         const int64_t n_written = std::min<int64_t>(n_seq_tokens, K);
+@@ -4866,14 +4872,140 @@
+         return res;
+     }
+ 
++    ggml_tensor * build_cache_graph(ggml_context * ctx) {
++        const int64_t D = d_state * head_dim * n_head;
++        const int64_t n_written = std::min<int64_t>(n_seq_tokens, K);
++        const int64_t mem_size = n_seqs + 3;
++        const int64_t pad = variant == "padded" ? 16 : 0;
++        const size_t state_bytes = D * sizeof(float);
++        const int64_t y_elems = head_dim * n_head * n_seq_tokens * n_seqs;
++        const size_t tail_off = y_elems * sizeof(float);
++        const bool state_alias = variant == "inplace" || variant == "gather" || variant == "state_shift";
++
++        ggml_tensor * cache = ggml_new_tensor_2d(ctx, type, D + pad, mem_size * n_written);
++        ggml_set_name(cache, "cache");
++        // kv_head = 1, with canary rows on both sides and padding between rollback slots.
++        const size_t cache_off = cache->nb[1] + (variant == "state_shift" ? sizeof(float) : 0);
++        ggml_tensor * s = state_alias ? ggml_reshape_4d(ctx, cache, d_state, head_dim, n_head, mem_size * n_written) :
++                                      ggml_new_tensor_4d(ctx, type, d_state, head_dim, n_head, n_seqs);
++        ggml_tensor * x = variant == "input_alias" ?
++            ggml_view_4d(ctx, cache, head_dim, n_head, n_seq_tokens, n_seqs,
++                         head_dim * sizeof(float), head_dim * n_head * sizeof(float),
++                         head_dim * n_head * n_seq_tokens * sizeof(float), cache_off) :
++            ggml_new_tensor_4d(ctx, type, head_dim, n_head, n_seq_tokens, n_seqs);
++        ggml_tensor * dt = ggml_new_tensor_3d(ctx, type, n_head, n_seq_tokens, n_seqs);
++        ggml_tensor * A = ggml_new_tensor_2d(ctx, type, 1, n_head);
++        ggml_tensor * B = ggml_new_tensor_4d(ctx, type, d_state, n_group, n_seq_tokens, n_seqs);
++        ggml_tensor * C = ggml_new_tensor_4d(ctx, type, d_state, n_group, n_seq_tokens, n_seqs);
++        ggml_tensor * ids = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, n_seqs);
++        ggml_set_name(A, "A");
++        ggml_set_name(ids, "ids");
++
++        auto tail_view = [&](ggml_tensor * scan) {
++            return ggml_view_3d(ctx, scan, D, n_seqs, n_written,
++                                state_bytes, state_bytes * n_seqs, tail_off);
++        };
++        auto cache_view = [&](ggml_tensor * base) {
++            return ggml_view_3d(ctx, base, D, n_seqs, n_written,
++                                cache->nb[1], mem_size * cache->nb[1], cache_off);
++        };
++
++        // Reference goes first, before any candidate cache/input alias can be overwritten.
++        // OUTPUT forces the ordinary scan even with fusion enabled; it does not change its math.
++        ggml_tensor * ref_cache = ggml_dup(ctx, cache);
++        ggml_build_forward_expand(gf, ref_cache);
++        ggml_tensor * ref = ggml_ssm_scan(ctx, s, x, dt, A, B, C, ids, K);
++        ggml_set_name(ref, "ssm_reference");
++        ggml_set_output(ref);
++        ggml_tensor * ref_dst = variant == "output_alias" ?
++            ggml_view_3d(ctx, ref, D, n_seqs, n_written, state_bytes, state_bytes * n_seqs, 0) : cache_view(ref_cache);
++        ggml_tensor * ref_cpy = ggml_cpy(ctx, tail_view(ref), ref_dst);
++        ggml_build_forward_expand(gf, ref_cpy);
++
++        ggml_tensor * out = ggml_ssm_scan(ctx, s, x, dt, A, B, C, ids, K);
++        ggml_set_name(out, "ssm_candidate");
++        ggml_tensor * src = tail_view(out);
++        ggml_tensor * dst = variant == "output_alias" ?
++            ggml_view_3d(ctx, out, D, n_seqs, n_written, state_bytes, state_bytes * n_seqs, 0) : cache_view(cache);
++        ggml_tensor * cpy = ggml_cpy(ctx, src, dst);
++        ggml_set_name(cpy, "ssm_candidate_cache_cpy");
++        checked.clear();
++        if (variant == "scan_output") {
++            ggml_set_output(out);
++            checked.push_back(out);
++        } else if (variant == "tail_output") {
++            ggml_set_output(src);
++            checked.push_back(src);
++        } else if (variant == "cpy_output") {
++            ggml_set_output(cpy);
++        } else if (variant == "intervening") {
++            ggml_build_forward_expand(gf, out);
++            // This is a real cache read between scan and CPY, not a skippable view.
++            ggml_tensor * before_cpy = ggml_cont(ctx, cache);
++            ggml_build_forward_expand(gf, before_cpy);
++            checked.push_back(before_cpy);
++        }
++        ggml_build_forward_expand(gf, cpy);
++        if (variant == "tail_consumer" || variant == "scan_consumer") {
++            // A separate view is intentional: checking only src's use count misses it.
++            ggml_tensor * live = ggml_cont(ctx, variant == "tail_consumer" ? tail_view(out) : out);
++            ggml_build_forward_expand(gf, live);
++            checked.push_back(live);
++        }
++
++        ggml_tensor * y = ggml_view_1d(ctx, out, y_elems, 0);
++        ggml_set_output(y); // a live y view must NOT prevent the valid fusion
++        ggml_tensor * ref_y = ggml_view_1d(ctx, ref, y_elems, 0);
++        ggml_tensor * y_delta = ggml_sub(ctx, y, ref_y);
++        ggml_tensor * state_delta = ggml_sub(ctx, ggml_cont(ctx, cpy), ggml_cont(ctx, ref_cpy));
++        // Compare every cache element, including all offsets, unused rows/slots and padding.
++        ggml_tensor * cache_delta = ggml_sub(ctx, cache, ref_cache);
++        ggml_build_forward_expand(gf, y_delta);
++        ggml_build_forward_expand(gf, state_delta);
++        checked.insert(checked.end(), { y, cpy, y_delta, state_delta, cache_delta });
++        return cache_delta;
++    }
++
+     std::string op_desc(ggml_tensor * t) override {
+         GGML_UNUSED(t);
+         return "SSM_SCAN_CACHE_FUSION";
+     }
+ 
+     bool run_whole_graph() override { return true; }
+-    std::vector<ggml_tensor *> fusion_test_nodes() override { return { cpy_node }; }
++    std::vector<ggml_tensor *> fusion_test_nodes() override {
++        return variant.empty() ? std::vector<ggml_tensor *>{ cpy_node } : checked;
++    }
++
++    double err(const float * a, const float * b, size_t n) override {
++        if (!variant.empty() && std::all_of(b, b + n, [](float v) { return v == 0.0f; })) {
++            // CPU reference deltas are zero. Demand exact same-backend equality (and
++            // avoid nmse(0, 0)'s zero denominator), including unchanged cache canaries.
++            return std::all_of(a, a + n, [](float v) { return v == 0.0f; }) ? 0.0 : 1.0;
++        }
++        return test_case::err(a, b, n); // original 1e-7 NMSE limit for actual y and cache
++    }
+ 
+     void initialize_tensors(ggml_context * ctx) override {
++        if (!variant.empty()) {
++            for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++                if (ggml_is_view_op(t->op)) { continue; }
++                if (t->type == GGML_TYPE_I32) {
++                    std::vector<int32_t> data(n_seqs);
++                    for (int64_t i = 0; i < n_seqs; ++i) {
++                        data[i] = variant == "gather" ? 2 :
++                                  (variant == "inplace" || variant == "state_shift" ? 1 : i);
++                    }
++                    ggml_backend_tensor_set(t, data.data(), 0, data.size() * sizeof(int32_t));
++                } else {
++                    std::vector<float> data(ggml_nelements(t));
++                    for (size_t i = 0; i < data.size(); ++i) {
++                        const float v = (int((i * 17 + 23) % 257) - 128) / 1024.0f;
++                        data[i] = strcmp(t->name, "A") == 0 ? -0.75f + v : v;
++                    }
++                    ggml_backend_tensor_set(t, data.data(), 0, data.size() * sizeof(float));
++                }
++            }
++            return;
++        }
+         for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != nullptr; t = ggml_get_next_tensor(ctx, t)) {
+             if (ggml_is_view_op(t->op)) { continue; }
+@@ -10678,3 +10810,24 @@
+     test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 16, 2, 300, 1, 1)); // K == 1, SSD path over two chunks
+ 
++    // Deterministic SYCL/Bolt cache suite: -o SSM_SCAN_CACHE_FUSION -p 'bolt_ssm_cache='
++    // Exactly 25 supported cases: 11 eligible fusions, 14 conservative fallbacks.
++    for (int64_t nt : { 1, 4, 32 }) {
++        for (const char * variant : { "plain", "inplace", "gather" }) {
++            test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 128, 8, nt, 1, 1, variant));
++        }
++    }
++    for (int64_t nt : { 1, 4 }) {
++        test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 4, 1, nt, 1, 1, "plain"));
++    }
++    for (const char * variant : { "padded", "state_shift", "input_alias", "output_alias", "tail_consumer",
++                                 "tail_output", "scan_output", "scan_consumer", "cpy_output", "intervening" }) {
++        const int64_t nt = strcmp(variant, "output_alias") == 0 ? 128 : 4; // y must hold a full state row
++        test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 4, 1, nt, 1, 1, variant));
++    }
++    for (int64_t nt : { 1, 8 }) {
++        test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 4, 1, nt, 1, 4, "rollback"));
++    }
++    test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 256, 64, 4, 1, 4, 1, 1, "state256"));
++    test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 4, 1, 4, 2, 1, "multiseq"));
++
+     test_cases.emplace_back(new test_rwkv_wkv6(GGML_TYPE_F32, 32, 64, 1, 1));
