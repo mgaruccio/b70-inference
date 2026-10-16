@@ -1,0 +1,410 @@
+--- a/ggml/src/ggml-sycl/element_wise.cpp
++++ b/ggml/src/ggml-sycl/element_wise.cpp
+@@ -1035,6 +1035,140 @@
+     });
+ }
+ 
++// Mamba2 post-scan: keep MUL and ADD rounding identical to the separate kernels.
++static void ggml_sycl_op_mamba_post(ggml_backend_sycl_context & ctx, const ggml_tensor * z,
++                                    const ggml_tensor * x, const ggml_tensor * d,
++                                    const ggml_tensor * y, ggml_tensor * dst) {
++    scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
++    const float * zp = (const float *) z->data;
++    const float * xp = (const float *) x->data;
++    const float * dp = (const float *) d->data;
++    const float * yp = (const float *) y->data;
++    float * out = (float *) dst->data;
++    const size_t zs = z->nb[2] / sizeof(float);
++    const size_t xs = x->nb[2] / sizeof(float);
++    const size_t n = (size_t) ggml_nelements(dst);
++    constexpr size_t block = 256;
++    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
++    ctx.stream()->parallel_for(
++        sycl::nd_range<1>(sycl::range<1>(((n + block - 1) / block) * block), sycl::range<1>(block)),
++        [=](sycl::nd_item<1> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
++#pragma clang fp contract(off) reassociate(off)
++            const size_t i = item.get_global_id(0);
++            if (i >= n) {
++                return;
++            }
++            const size_t token = i / (64 * 128);
++            const size_t col = i % (64 * 128);
++            const float product = xp[token * xs + col] * dp[col / 64];
++            const float sum = yp[i] + product;
++            out[i] = op_silu(zp[token * zs + col]) * sum;
++        });
++}
++
++// Return the number of following nodes consumed, or zero for the unchanged eager path.
++int ggml_sycl_mamba_post_fused(ggml_backend_sycl_context & ctx, const ggml_cgraph * graph, int i) {
++    if (!g_ggml_sycl_enable_fusion || i < 0 || i > graph->n_nodes - 4 ||
++        graph->nodes[i]->op != GGML_OP_CONT) {
++        return 0;
++    }
++    // Only the optional y VIEW may intervene. Never skip another executable op.
++    const bool has_view = graph->nodes[i + 1]->op == GGML_OP_VIEW;
++    const int m = i + 1 + (int) has_view;
++    if (m > graph->n_nodes - 3) {
++        return 0;
++    }
++    const int idxs[] = { i, m, m + 1, m + 2 };
++    const ggml_op ops[] = { GGML_OP_CONT, GGML_OP_MUL, GGML_OP_ADD, GGML_OP_GLU };
++    const int outputs[] = { m + 2 };
++    // y's VIEW is an external input, NOT an elided node. Its source may be a live
++    // SSM_SCAN result, and its output flag/other consumers must remain usable.
++    if (!ggml_can_fuse_subgraph_ext(graph, idxs, 4, ops, outputs, 1)) {
++        return 0;
++    }
++    const ggml_tensor * cont = graph->nodes[i];
++    const ggml_tensor * mul = graph->nodes[m];
++    const ggml_tensor * add = graph->nodes[m + 1];
++    ggml_tensor * glu = graph->nodes[m + 2];
++    const ggml_tensor * z = cont->src[0];
++    const ggml_tensor * x = mul->src[0];
++    const ggml_tensor * d = mul->src[1];
++    const ggml_tensor * y = add->src[0];
++    if (!z || !x || !d || !y || add->src[1] != mul || glu->src[0] != cont || glu->src[1] != add ||
++        (has_view && graph->nodes[i + 1] != y) || ggml_get_glu_op(glu) != GGML_GLU_OP_SWIGLU ||
++        ggml_get_op_params_i32(glu, 1) != 0) {
++        return 0;
++    }
++    // All four reads must come from outside the elided subgraph. For example,
++    // MUL(CONT(z), D) has valid internal use counts but cannot read the elided CONT.
++    for (const ggml_tensor * input : { z, x, d, y }) {
++        for (int idx : idxs) {
++            if (input == graph->nodes[idx] || input->view_src == graph->nodes[idx]) {
++                return 0;
++            }
++        }
++    }
++    // Elided in-place writes are observable through their view sources.
++    for (int j = 0; j < 4; ++j) {
++        const ggml_tensor * t = graph->nodes[idxs[j]];
++        if (j < 3 && t->view_src) {
++            return 0;
++        }
++        for (int s = (j == 0 ? 1 : 2); s < GGML_MAX_SRC; ++s) {
++            if (t->src[s]) {
++                return 0;
++            }
++        }
++    }
++    if (glu->type != GGML_TYPE_F32 || glu->ne[0] != 64 || glu->ne[1] != 128 ||
++        glu->ne[2] < 1 || glu->ne[2] > 1024 || glu->ne[3] != 1) {
++        return 0;
++    }
++    for (const ggml_tensor * t : { cont, mul, add, (const ggml_tensor *) glu, y, x, z }) {
++        if (t->type != GGML_TYPE_F32 || !ggml_are_same_shape(t, glu)) {
++            return 0;
++        }
++        if (t == x || t == z) {
++            // Rows/heads are packed; only the token stride may have padding.
++            // Bound the full stride product before either nbytes or kernel indexing.
++            if (t->nb[0] != sizeof(float) || t->nb[1] != 64 * sizeof(float) ||
++                t->nb[2] < 64 * 128 * sizeof(float) || t->nb[2] % sizeof(float) != 0 ||
++                t->nb[2] > SIZE_MAX / (size_t) t->ne[2] || t->nb[3] != t->nb[2] * t->ne[2]) {
++                return 0;
++            }
++        } else if (!ggml_is_contiguous(t)) {
++            return 0;
++        }
++    }
++    if (d->type != GGML_TYPE_F32 || d->ne[0] != 1 || d->ne[1] != 128 ||
++        d->ne[2] != 1 || d->ne[3] != 1 || !ggml_is_contiguous(d)) {
++        return 0;
++    }
++    // The final write must not alias ANY live input, including GGML_OP_NONE
++    // leaves (the top-k fusion's range helper deliberately skips those).
++    const auto range = [](const ggml_tensor * t, uintptr_t & begin, uintptr_t & end) {
++        begin = (uintptr_t) t->data;
++        const size_t bytes = ggml_nbytes(t); // shape/stride products bounded above
++        if (!begin || begin % alignof(float) != 0 || bytes > UINTPTR_MAX - begin) {
++            return false;
++        }
++        end = begin + bytes;
++        return true;
++    };
++    uintptr_t out_begin, out_end;
++    if (!range(glu, out_begin, out_end)) {
++        return 0;
++    }
++    for (const ggml_tensor * t : { z, x, d, y }) {
++        uintptr_t begin, end;
++        if (!range(t, begin, end) || (out_begin < end && begin < out_end)) {
++            return 0;
++        }
++    }
++    ggml_sycl_op_mamba_post(ctx, z, x, d, y, glu);
++    return m + 2 - i;
++}
++
+ // Hands `launch` the functor for the unary op of a fused unary chain. Anything else
+ // ggml_sycl_can_fuse() has already declined, so the default is a dispatcher bug.
+ template<typename F>
+--- a/ggml/src/ggml-sycl/element_wise.hpp
++++ b/ggml/src/ggml-sycl/element_wise.hpp
+@@ -137,4 +137,8 @@
+ void ggml_sycl_op_add_unary_mul_fused(ggml_backend_sycl_context & ctx, ggml_tensor * add_node,
+                                       ggml_tensor * unary_node, ggml_tensor * mul_node);
+ 
++// CONT(z), optional VIEW(y), MUL(x,D), ADD(y,mul), split SWIGLU(cont,add).
++// Returns following-node count on dispatch, zero for conservative fallback.
++int ggml_sycl_mamba_post_fused(ggml_backend_sycl_context & ctx, const ggml_cgraph * graph, int node_idx);
++
+ #endif // GGML_SYCL_ELEMENTWISE_HPP
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -6527,6 +6527,13 @@
+             }
+         }
+ #endif
++        if (node->op == GGML_OP_CONT) {
++            const int mamba_post_skip = ggml_sycl_mamba_post_fused(*sycl_ctx, cgraph, i);
++            if (mamba_post_skip > 0) {
++                i += mamba_post_skip;
++                continue;
++            }
++        }
+         // gated_delta_net -> cpy: scatter recurrent-state snapshots into the cache
+         if (node->op == GGML_OP_GATED_DELTA_NET) {
+             ggml_sycl_gated_delta_net_fused_cache fused_state_cpy;
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -4279,6 +4279,212 @@
+     }
+ };
+ 
++// Post-scan Mamba fusion: real token strides, full-array same-backend control,
++// and unchanged test_case CPU tolerance (1e-7). No SSM/cache or norm changes.
++struct test_mamba_post : public test_case {
++    const int64_t n_tokens;
++    const bool sensitive;
++    const std::string guard;
++    struct input_data {
++        ggml_tensor * storage;
++        ggml_tensor * layout;
++        int role; // 0=z, 1=x, 2=D, 3=y
++    };
++    std::vector<input_data> inputs;
++    std::vector<ggml_tensor *> verified;
++    size_t result_size = 0;
++
++    test_mamba_post(int64_t n_tokens, bool sensitive, const char * guard = "none") :
++        n_tokens(n_tokens), sensitive(sensitive), guard(guard) {}
++
++    std::string vars() override { return VARS_TO_STR3(n_tokens, sensitive, guard); }
++    std::string op_desc(ggml_tensor *) override { return "MAMBA_POST"; }
++    bool run_whole_graph() override { return true; }
++    std::vector<ggml_tensor *> fusion_test_nodes() override {
++        auto nodes = verified;
++        nodes.insert(nodes.end(), sentinels.begin(), sentinels.end());
++        return nodes;
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        inputs.clear();
++        verified.clear();
++        const int64_t hd = guard == "head32" ? 32 : 64;
++        const int64_t nh = 128;
++        const int64_t ns = guard == "nseq2" ? 2 : 1;
++        const auto expand = [this](ggml_tensor * t) {
++            if (mode == MODE_TEST) {
++                ggml_build_forward_expand(gf, t);
++            }
++        };
++        const auto chain = [&](bool control) {
++            // Independent candidate/control storage also permits in-place fallback tests.
++            const size_t zrow = (hd + (guard == "strided_z_head")) * sizeof(float);
++            const size_t xrow = (hd + (guard == "strided_x_head")) * sizeof(float);
++            const size_t yrow = (hd + (guard == "strided_y")) * sizeof(float);
++            const size_t zs = 74240;
++            const size_t xs = guard == "inplace_mul" ? hd * nh * sizeof(float) : 40960;
++            const size_t ys = yrow * nh;
++            ggml_tensor * z_storage;
++            ggml_tensor * z;
++            if (guard == "alias_leaf") {
++                z_storage = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, hd, nh, n_tokens, ns);
++                z = z_storage; // a direct GGML_OP_NONE input, not a view
++            } else {
++                z_storage = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, zs / sizeof(float) * n_tokens * ns + 128);
++                z = ggml_view_4d(ctx, z_storage, hd, nh, n_tokens, ns, zrow, zs, zs * n_tokens, 128 * sizeof(float));
++            }
++            ggml_tensor * x_storage = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, xs / sizeof(float) * n_tokens * ns + 64);
++            ggml_tensor * x = ggml_view_4d(ctx, x_storage, hd, nh, n_tokens, ns, xrow, xs, xs * n_tokens, 64 * sizeof(float));
++            ggml_tensor * d_storage = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, guard == "strided_d" ? 2 : 1, nh, 1, 1);
++            ggml_tensor * d = d_storage;
++            if (guard == "strided_d") {
++                d = ggml_view_4d(ctx, d_storage, 1, nh, 1, 1, d_storage->nb[1], d_storage->nb[2], d_storage->nb[3], 0);
++            }
++            // A nonconstant, already-computed source with a tail models the scan
++            // allocation. Only its leading y VIEW belongs to the post-scan path.
++            ggml_tensor * y_storage = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, ys / sizeof(float) * n_tokens * ns + 4096);
++            ggml_tensor * y_source = ggml_scale(ctx, y_storage, 1.0f);
++            ggml_tensor * y = ggml_view_4d(ctx, y_source, hd, nh, n_tokens, ns, yrow, ys, ys * n_tokens, 0);
++            inputs.push_back({z_storage, z, 0});
++            inputs.push_back({x_storage, x, 1});
++            inputs.push_back({d_storage, d, 2});
++            inputs.push_back({y_storage, y, 3});
++            expand(z);
++            expand(x);
++            expand(d);
++            expand(y_source);
++            if (guard == "early_view") {
++                expand(y); // also exercise the four-node window without an intervening VIEW
++            }
++            ggml_tensor * cont = ggml_cont(ctx, z);
++            expand(cont);
++            if (guard == "intervening_compute") {
++                ggml_tensor * barrier = ggml_scale(ctx, y_storage, 0.5f);
++                expand(barrier);
++                verified.push_back(barrier);
++            }
++            ggml_tensor * mul_input = guard == "internal_x" ? cont : x;
++            ggml_tensor * add_input = guard == "internal_y" ? cont : y;
++            ggml_tensor * mul = guard == "inplace_mul" ? ggml_mul_inplace(ctx, mul_input, d) : ggml_mul(ctx, mul_input, d);
++            ggml_tensor * add = guard == "inplace_add" ? ggml_add_inplace(ctx, add_input, mul) : ggml_add(ctx, add_input, mul);
++            ggml_tensor * out = guard == "reglu" ? ggml_reglu_split(ctx, cont, add) :
++                guard == "reversed_glu" ? ggml_swiglu_split(ctx, add, cont) : ggml_swiglu_split(ctx, cont, add);
++            if (guard == "swapped_param") {
++                ((int32_t *) out->op_params)[1] = 1;
++            }
++            if (guard == "alias_leaf" || guard == "alias_view") {
++                // A legal contiguous GLU destination backed by an input allocation.
++                // Eager GLU reads CONT, not z; fusing must decline the overlapping z read.
++                out->view_src = z_storage;
++                out->view_offs = guard == "alias_view" ? 129 * sizeof(float) : 0;
++            }
++            if (control) {
++                // Flag only the control intermediates, never the eligible candidate.
++                ggml_set_output(cont);
++                ggml_set_output(mul);
++                ggml_set_output(add);
++            }
++            ggml_format_name(out, "%s_mamba_post", control ? "control" : "candidate");
++            expand(out);
++            if (!control) {
++                ggml_tensor * observed = nullptr;
++                if (guard == "consumer_cont" || guard == "output_cont") {
++                    observed = cont;
++                } else if (guard == "consumer_mul" || guard == "output_mul") {
++                    observed = mul;
++                } else if (guard == "consumer_add" || guard == "output_add") {
++                    observed = add;
++                } else if (guard == "y_consumer" || guard == "y_output") {
++                    observed = y;
++                }
++                if (observed) {
++                    if (guard.find("consumer_") == 0 || guard == "y_consumer") {
++                        // CPU SCALE requires contiguous input; do not scale a view directly.
++                        observed = ggml_scale(ctx, ggml_cont(ctx, observed), 0.5f);
++                    } else {
++                        ggml_set_output(observed);
++                    }
++                    expand(observed); // after the whole candidate window: tests use-count protection
++                    verified.push_back(observed);
++                }
++            }
++            return out;
++        };
++        ggml_tensor * candidate = chain(false);
++        ggml_tensor * control = chain(true);
++        result_size = ggml_nelements(candidate);
++        ggml_tensor * out = ggml_concat(ctx, ggml_reshape_1d(ctx, candidate, result_size),
++            ggml_reshape_1d(ctx, control, result_size), 0);
++        ggml_set_name(out, "mamba_post_candidate_and_unfused_control");
++        verified.push_back(out);
++        return out;
++    }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++            if (t->view_src) {
++                continue;
++            }
++            GGML_ASSERT(t->type == GGML_TYPE_F32);
++            std::vector<float> data(ggml_nelements(t), 0.25f);
++            for (const auto & input : inputs) {
++                if (input.storage != t) {
++                    continue;
++                }
++                const ggml_tensor * v = input.layout;
++                for (int64_t seq = 0; seq < v->ne[3]; ++seq) {
++                    for (int64_t token = 0; token < v->ne[2]; ++token) {
++                        for (int64_t head = 0; head < v->ne[1]; ++head) {
++                            for (int64_t col = 0; col < v->ne[0]; ++col) {
++                                const size_t index = (v->view_offs + col * v->nb[0] + head * v->nb[1] +
++                                    token * v->nb[2] + seq * v->nb[3]) / sizeof(float);
++                                const uint32_t seed = (uint32_t) (col + 64 * (head + 128 * (token + n_tokens * seq)));
++                                const uint32_t bits = seed * 1664525u + 1013904223u;
++                                const float value = (float) ((int32_t) (bits >> 8) - 8388608) / 8388608.0f;
++                                float f = input.role == 0 ? 6.0f * value : input.role == 2 ? 0.75f + value * 0.25f : value;
++                                if (sensitive) {
++                                    if (input.role == 0) {
++                                        const float gates[] = { 0.5f, -0.5f, 8.0f, -8.0f, 0.001f, -0.001f, 1.5f, -1.5f };
++                                        f = gates[col % 8];
++                                    } else if (head % 4 == 0) {
++                                        // Separate product rounds to 1, then sum to 0;
++                                        // an FMA would instead produce -2^-26.
++                                        f = input.role == 1 ? 1.0f + 0x1p-13f : input.role == 2 ? 1.0f - 0x1p-13f : -1.0f;
++                                    } else if (head % 4 == 1) {
++                                        f = input.role == 1 ? 1.0f - 0x1p-13f : input.role == 2 ? 1.0f + 0x1p-13f : -1.0f;
++                                    } else if (head % 4 == 2) {
++                                        f = input.role == 1 ? 16777216.0f : input.role == 2 ? 1.0f : -16777215.0f;
++                                    }
++                                }
++                                GGML_ASSERT(index < data.size());
++                                data[index] = f;
++                            }
++                        }
++                    }
++                }
++            }
++            ggml_backend_tensor_set(t, data.data(), 0, ggml_nbytes(t));
++        }
++    }
++
++    double err(const float * a, const float * b, size_t n) override {
++        if (n == 2 * result_size) {
++            size_t mismatches = 0;
++            float max_abs = 0.0f;
++            for (size_t i = 0; i < result_size; ++i) {
++                mismatches += memcmp(a + i, a + result_size + i, sizeof(float)) != 0;
++                max_abs = std::max(max_abs, std::abs(a[i] - a[result_size + i]));
++            }
++            printf("MAMBA_POST full-array: mismatches=%zu max_abs=%.9g ", mismatches, max_abs);
++            if (mismatches != 0) {
++                return INFINITY;
++            }
++        }
++        return test_case::err(a, b, n);
++    }
++};
++
+ // SNAKE activation fusion: y = x + sin(a*x)^2 * inv_b
+ // CUDA backend matches the naive 5-op chain (mul, sin, sqr, mul, add)
+ // and dispatches a single fused kernel.
+@@ -9699,6 +9905,24 @@
+     std::vector<std::unique_ptr<test_case>> test_cases;
+     std::default_random_engine rng(0);
+ 
++    // Exactly 34 MAMBA_POST cases: 11 eligible, 23 conservative fallbacks.
++    for (int64_t nt : {1, 2, 17, 1024}) {
++        for (bool sensitive : {false, true}) {
++            test_cases.emplace_back(new test_mamba_post(nt, sensitive));
++        }
++    }
++    for (const char * guard : { "early_view", "y_output", "y_consumer" }) {
++        test_cases.emplace_back(new test_mamba_post(17, true, guard));
++    }
++    for (const char * guard : { "consumer_cont", "consumer_mul", "consumer_add", "output_cont", "output_mul",
++                               "output_add", "inplace_mul", "inplace_add", "alias_leaf", "alias_view",
++                               "strided_x_head", "strided_z_head", "strided_y", "strided_d", "reglu",
++                               "reversed_glu", "swapped_param", "intervening_compute", "head32", "nseq2",
++                               "internal_x", "internal_y" }) {
++        test_cases.emplace_back(new test_mamba_post(17, true, guard));
++    }
++    test_cases.emplace_back(new test_mamba_post(1025, true, "token_limit"));
++
+     // unary ops
+     for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32, GGML_TYPE_BF16}) {
+         for (int v : {0, 1}) {
