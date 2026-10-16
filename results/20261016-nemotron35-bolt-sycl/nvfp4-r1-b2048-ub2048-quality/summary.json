@@ -1,0 +1,1153 @@
+{
+  "tier": "development",
+  "configuration": {
+    "name": "nvfp4-r1-b2048-ub2048-quality",
+    "context": 65536,
+    "batch": 2048,
+    "ubatch": 2048,
+    "bench": true,
+    "long_bench": true,
+    "repeatability": false,
+    "esimd": 1,
+    "quality": true,
+    "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-r1",
+    "test_nvfp4": false,
+    "dnnl_verbose": false,
+    "weights": "original"
+  },
+  "status": "passed",
+  "container_id": "a95e7d58e94091a6ff15ea8de6b7e228c2c71dbd5740b8d43faf0de278c2e4b2",
+  "models": {
+    "models": [
+      {
+        "name": "nemotron-bolt",
+        "model": "nemotron-bolt",
+        "modified_at": "",
+        "size": "",
+        "digest": "",
+        "type": "model",
+        "description": "",
+        "tags": [
+          ""
+        ],
+        "capabilities": [
+          "completion"
+        ],
+        "parameters": "",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "",
+          "families": [
+            ""
+          ],
+          "parameter_size": "",
+          "quantization_level": ""
+        }
+      }
+    ],
+    "object": "list",
+    "data": [
+      {
+        "id": "nemotron-bolt",
+        "aliases": [
+          "nemotron-bolt"
+        ],
+        "tags": [],
+        "object": "model",
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "created": 1792132018,
+        "owned_by": "llamacpp",
+        "meta": {
+          "vocab_type": 2,
+          "n_vocab": 131072,
+          "n_ctx": 65536,
+          "n_ctx_train": 262144,
+          "n_embd": 4096,
+          "n_params": 74042720848,
+          "size": 22010399040,
+          "ftype": "IQ2_XXS - 2.0625 bpw"
+        }
+      }
+    ]
+  },
+  "smoke": {
+    "pass": true,
+    "checks": [
+      {
+        "name": "literal",
+        "pass": true,
+        "result": {
+          "text": "READY",
+          "elapsed_s": 0.9948226090054959,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 27,
+            "total_tokens": 30,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 27,
+            "prompt_ms": 899.5120000000001,
+            "prompt_per_token_ms": 33.315259259259264,
+            "prompt_per_second": 30.016275491599888,
+            "predicted_n": 3,
+            "predicted_ms": 92.931,
+            "predicted_per_token_ms": 46.4655,
+            "predicted_per_second": 21.521343792706418
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 3.015613007628606,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic",
+        "pass": true,
+        "result": {
+          "text": "323",
+          "elapsed_s": 0.5800317460088991,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 33,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 434.82800000000003,
+            "prompt_per_token_ms": 13.176606060606062,
+            "prompt_per_second": 75.89207686717506,
+            "predicted_n": 4,
+            "predicted_ms": 77.19,
+            "predicted_per_token_ms": 25.73,
+            "predicted_per_second": 38.8651379712398
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 6.896174265500686,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "code",
+        "pass": true,
+        "result": {
+          "text": "```python\ndef add(a, b):\n    return a + b\n```",
+          "elapsed_s": 0.9127104569924995,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 17,
+            "prompt_tokens": 35,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 35,
+            "prompt_ms": 438.69100000000003,
+            "prompt_per_token_ms": 12.534028571428573,
+            "prompt_per_second": 79.78280840044587,
+            "predicted_n": 17,
+            "predicted_ms": 407.382,
+            "predicted_per_token_ms": 25.461375,
+            "predicted_per_second": 39.27517661555984
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 18.625841163272334,
+          "full_output_budget": false
+        }
+      }
+    ]
+  },
+  "quality": {
+    "pass": true,
+    "checks": [
+      {
+        "name": "literal",
+        "pass": true,
+        "result": {
+          "text": "READY",
+          "elapsed_s": 0.6146991600398906,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 27,
+            "total_tokens": 30,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 27,
+            "prompt_ms": 422.538,
+            "prompt_per_token_ms": 15.649555555555557,
+            "prompt_per_second": 63.899578262783464,
+            "predicted_n": 3,
+            "predicted_ms": 51.72,
+            "predicted_per_token_ms": 25.86,
+            "predicted_per_second": 38.669760247486465
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 4.880436146692175,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic",
+        "pass": true,
+        "result": {
+          "text": "323",
+          "elapsed_s": 0.5855459659942426,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 33,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 434.362,
+            "prompt_per_token_ms": 13.16248484848485,
+            "prompt_per_second": 75.97349676076637,
+            "predicted_n": 4,
+            "predicted_ms": 77.205,
+            "predicted_per_token_ms": 25.735,
+            "predicted_per_second": 38.85758694385079
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 6.831231418712106,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "code",
+        "pass": true,
+        "result": {
+          "text": "```python\ndef add(a, b):\n    return a + b\n```",
+          "elapsed_s": 0.933574297989253,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 17,
+            "prompt_tokens": 35,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 35,
+            "prompt_ms": 446.942,
+            "prompt_per_token_ms": 12.76977142857143,
+            "prompt_per_second": 78.30993730730162,
+            "predicted_n": 17,
+            "predicted_ms": 406.82800000000003,
+            "predicted_per_token_ms": 25.426750000000002,
+            "predicted_per_second": 39.32865977759643
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 18.20958442902174,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-00",
+        "pass": true,
+        "result": {
+          "text": "95",
+          "elapsed_s": 0.5606783370021731,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 32,
+            "total_tokens": 35,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 32,
+            "prompt_ms": 432.851,
+            "prompt_per_token_ms": 13.52659375,
+            "prompt_per_second": 73.92844188877928,
+            "predicted_n": 3,
+            "predicted_ms": 51.84,
+            "predicted_per_token_ms": 25.92,
+            "predicted_per_second": 38.58024691358025
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 5.350661514836398,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-01",
+        "pass": true,
+        "result": {
+          "text": "616",
+          "elapsed_s": 0.5769441850134172,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 35,
+            "total_tokens": 39,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 35,
+            "prompt_ms": 436.619,
+            "prompt_per_token_ms": 12.474828571428572,
+            "prompt_per_second": 80.16142220104942,
+            "predicted_n": 4,
+            "predicted_ms": 76.805,
+            "predicted_per_token_ms": 25.60166666666667,
+            "predicted_per_second": 39.05995703404726
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 6.933079670275172,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-02",
+        "pass": true,
+        "result": {
+          "text": "1081",
+          "elapsed_s": 0.6096674560103565,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 5,
+            "prompt_tokens": 32,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 32,
+            "prompt_ms": 431.765,
+            "prompt_per_token_ms": 13.49265625,
+            "prompt_per_second": 74.11439093025142,
+            "predicted_n": 5,
+            "predicted_ms": 102.209,
+            "predicted_per_token_ms": 25.55225,
+            "predicted_per_second": 39.13549687405219
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 8.201192224889013,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-03",
+        "pass": true,
+        "result": {
+          "text": "12",
+          "elapsed_s": 0.5582005259930156,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 33,
+            "total_tokens": 36,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 432.777,
+            "prompt_per_token_ms": 13.114454545454546,
+            "prompt_per_second": 76.25174165909927,
+            "predicted_n": 3,
+            "predicted_ms": 51.627,
+            "predicted_per_token_ms": 25.8135,
+            "predicted_per_second": 38.73941929610475
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 5.3744127070878775,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-04",
+        "pass": true,
+        "result": {
+          "text": "1369",
+          "elapsed_s": 0.595603566034697,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 5,
+            "prompt_tokens": 32,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 32,
+            "prompt_ms": 431.422,
+            "prompt_per_token_ms": 13.4819375,
+            "prompt_per_second": 74.17331522268219,
+            "predicted_n": 5,
+            "predicted_ms": 102.19200000000001,
+            "predicted_per_token_ms": 25.548000000000002,
+            "predicted_per_second": 39.14200720212932
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 8.394845640848168,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-05",
+        "pass": true,
+        "result": {
+          "text": "55",
+          "elapsed_s": 0.5805191249819472,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 32,
+            "total_tokens": 35,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 32,
+            "prompt_ms": 434.495,
+            "prompt_per_token_ms": 13.57796875,
+            "prompt_per_second": 73.648718627372,
+            "predicted_n": 3,
+            "predicted_ms": 51.641,
+            "predicted_per_token_ms": 25.8205,
+            "predicted_per_second": 38.72891694583761
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 5.1677883998968905,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-06",
+        "pass": true,
+        "result": {
+          "text": "-17",
+          "elapsed_s": 1.0734187479829416,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 33,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 435.243,
+            "prompt_per_token_ms": 13.189181818181819,
+            "prompt_per_second": 75.81971450431139,
+            "predicted_n": 4,
+            "predicted_ms": 76.871,
+            "predicted_per_token_ms": 25.623666666666665,
+            "predicted_per_second": 39.026420886940464
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 3.726411530929928,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-07",
+        "pass": true,
+        "result": {
+          "text": "16",
+          "elapsed_s": 0.5462195730069652,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 33,
+            "total_tokens": 36,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 432.979,
+            "prompt_per_token_ms": 13.120575757575757,
+            "prompt_per_second": 76.21616752775539,
+            "predicted_n": 3,
+            "predicted_ms": 51.652,
+            "predicted_per_token_ms": 25.826,
+            "predicted_per_second": 38.72066909316193
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 5.492296776340061,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-08",
+        "pass": true,
+        "result": {
+          "text": "800",
+          "elapsed_s": 0.9751054279622622,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 32,
+            "total_tokens": 36,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 32,
+            "prompt_ms": 435.981,
+            "prompt_per_token_ms": 13.62440625,
+            "prompt_per_second": 73.39769393620364,
+            "predicted_n": 4,
+            "predicted_ms": 76.843,
+            "predicted_per_token_ms": 25.614333333333335,
+            "predicted_per_second": 39.04064130760121
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 4.10212053517028,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic-09",
+        "pass": true,
+        "result": {
+          "text": "1000",
+          "elapsed_s": 0.8112049140036106,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 5,
+            "prompt_tokens": 32,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 32,
+            "prompt_ms": 433.274,
+            "prompt_per_token_ms": 13.5398125,
+            "prompt_per_second": 73.85626647340943,
+            "predicted_n": 5,
+            "predicted_ms": 102.229,
+            "predicted_per_token_ms": 25.55725,
+            "predicted_per_second": 39.1278404366667
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 6.163670749136691,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "literal-red",
+        "pass": true,
+        "result": {
+          "text": "RED",
+          "elapsed_s": 0.7007795929675922,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 2,
+            "prompt_tokens": 25,
+            "total_tokens": 27,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 25,
+            "prompt_ms": 600.674,
+            "prompt_per_token_ms": 24.02696,
+            "prompt_per_second": 41.619913630355235,
+            "predicted_n": 2,
+            "predicted_ms": 26.377,
+            "predicted_per_token_ms": 26.377,
+            "predicted_per_second": 37.91181711339425
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 2.8539643849082386,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "literal-cedar",
+        "pass": true,
+        "result": {
+          "text": "cedar",
+          "elapsed_s": 0.5341040680068545,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 26,
+            "total_tokens": 29,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 26,
+            "prompt_ms": 420.771,
+            "prompt_per_token_ms": 16.183500000000002,
+            "prompt_per_second": 61.79133067630611,
+            "predicted_n": 3,
+            "predicted_ms": 51.801,
+            "predicted_per_token_ms": 25.9005,
+            "predicted_per_second": 38.60929325688693
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 5.616882888002079,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "literal-code",
+        "pass": true,
+        "result": {
+          "text": "X7-Q92",
+          "elapsed_s": 0.9218997359857894,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 6,
+            "prompt_tokens": 30,
+            "total_tokens": 36,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 30,
+            "prompt_ms": 429.411,
+            "prompt_per_token_ms": 14.3137,
+            "prompt_per_second": 69.86313811243774,
+            "predicted_n": 6,
+            "predicted_ms": 127.94800000000001,
+            "predicted_per_token_ms": 25.5896,
+            "predicted_per_second": 39.07837559008347
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 6.508299943902453,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "sort-numbers",
+        "pass": true,
+        "result": {
+          "text": "1,2,5,9",
+          "elapsed_s": 0.9847852439852431,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 8,
+            "prompt_tokens": 44,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 44,
+            "prompt_ms": 487.65500000000003,
+            "prompt_per_token_ms": 11.083068181818183,
+            "prompt_per_second": 90.2277224677282,
+            "predicted_n": 8,
+            "predicted_ms": 178.684,
+            "predicted_per_token_ms": 25.526285714285713,
+            "predicted_per_second": 39.175303888428736
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 8.123598570207536,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "reverse",
+        "pass": true,
+        "result": {
+          "text": "reward",
+          "elapsed_s": 0.82965782599058,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 29,
+            "total_tokens": 32,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 29,
+            "prompt_ms": 429.451,
+            "prompt_per_token_ms": 14.808655172413793,
+            "prompt_per_second": 67.52807654423904,
+            "predicted_n": 3,
+            "predicted_ms": 51.839,
+            "predicted_per_token_ms": 25.9195,
+            "predicted_per_second": 38.58099114566253
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 3.615948534467343,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "json",
+        "pass": true,
+        "result": {
+          "text": "{\"ready\": true, \"count\": 3}",
+          "elapsed_s": 0.8523747540311888,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 12,
+            "prompt_tokens": 37,
+            "total_tokens": 49,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 37,
+            "prompt_ms": 440.697,
+            "prompt_per_token_ms": 11.910729729729729,
+            "prompt_per_second": 83.95791212556473,
+            "predicted_n": 12,
+            "predicted_ms": 280.21,
+            "predicted_per_token_ms": 25.473636363636363,
+            "predicted_per_second": 39.25627208165305
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 14.078314665289717,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "extract",
+        "pass": true,
+        "result": {
+          "text": "13",
+          "elapsed_s": 0.558282929006964,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 40,
+            "total_tokens": 43,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 40,
+            "prompt_ms": 444.367,
+            "prompt_per_token_ms": 11.109175,
+            "prompt_per_second": 90.01568523315187,
+            "predicted_n": 3,
+            "predicted_ms": 51.96,
+            "predicted_per_token_ms": 25.98,
+            "predicted_per_second": 38.49114703618168
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 5.373619439405388,
+          "full_output_budget": false
+        }
+      }
+    ]
+  },
+  "bench": {
+    "tier": "development",
+    "anchor": null,
+    "warmup": {
+      "text": "Designing a reliable file backup system is not merely about copying data from one disk to another; it is about building a **resilience strategy**. A backup is only reliable if it can be restored quickly and accurately when a disaster occurs.\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. Backup Strategies: Full vs. Incremental\nThe goal is to balance the need for comprehensive data protection with the limitation of storage space and network bandwidth.\n\n#### Full Backups\nA full backup copies every selected file and folder, regardless of whether they have changed since the last backup.\n*   **Pros:**",
+      "elapsed_s": 3.77020927000558,
+      "ttft_s": 0.5458557850215584,
+      "usage": {
+        "completion_tokens": 128,
+        "prompt_tokens": 54,
+        "total_tokens": 182,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 54,
+        "prompt_ms": 476.77,
+        "prompt_per_token_ms": 8.829074074074073,
+        "prompt_per_second": 113.26215995133923,
+        "predicted_n": 128,
+        "predicted_ms": 3224.492,
+        "predicted_per_token_ms": 25.389700787401576,
+        "predicted_per_second": 39.38604902725763
+      },
+      "finish_reason": "length",
+      "decode_tps_client": 39.38774101271634,
+      "end_to_end_output_tps": 33.95037008113095,
+      "full_output_budget": true
+    },
+    "measured": [
+      {
+        "text": "Designing a reliable file backup system is not merely about copying data from one drive to another; it is about building a **resilience strategy**. A backup is only reliable if it can be restored. \n\nBelow is a comprehensive guide to designing a professional-grade backup system.\n\n---\n\n### 1. The Foundational Strategy: The 3-2-1 Rule\nBefore choosing tools, adhere to the industry standard for data protection:\n*   **3 Copies of Data:** Your primary data plus two backups.\n*   **2 Different Media Types:** (e.g., an internal SSD and an external USB drive, or a local",
+        "elapsed_s": 3.826666640001349,
+        "ttft_s": 0.60282992903376,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 55,
+          "total_tokens": 183,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 55,
+          "prompt_ms": 478.40500000000003,
+          "prompt_per_token_ms": 8.698272727272728,
+          "prompt_per_second": 114.96535362297634,
+          "predicted_n": 128,
+          "predicted_ms": 3223.814,
+          "predicted_per_token_ms": 25.384362204724408,
+          "predicted_per_second": 39.394332303290454
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 39.394054781975214,
+        "end_to_end_output_tps": 33.449477585001986,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system is not merely about copying data from one drive to another; it is about building a **resilience strategy**. A backup is only reliable if it can be restored quickly and accurately when a disaster occurs.\n\nBelow is a comprehensive guide to designing a professional-grade file backup system.\n\n---\n\n### 1. The Core Strategy: The 3-2-1 Rule\nBefore diving into technical details, adhere to the industry standard **3-2-1 Backup Rule**:\n*   **3** copies of your data (the original and two backups).\n*   **2** different media types (e.g.,",
+        "elapsed_s": 3.791162820009049,
+        "ttft_s": 0.5694235480041243,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 55,
+          "total_tokens": 183,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 55,
+          "prompt_ms": 473.093,
+          "prompt_per_token_ms": 8.601690909090909,
+          "prompt_per_second": 116.25621178077037,
+          "predicted_n": 128,
+          "predicted_ms": 3221.6130000000003,
+          "predicted_per_token_ms": 25.367031496062996,
+          "predicted_per_second": 39.421246437731654
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 39.41970137172722,
+        "end_to_end_output_tps": 33.76272823853407,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system is not merely about copying data from one drive to another; it is about building a **resilience strategy**. A backup is only reliable if it can be verified, restored quickly, and protected from the same threats that affect the primary data.\n\nBelow is a comprehensive guide to designing a professional-grade file backup system.\n\n---\n\n### 1. The Foundation: The 3-2-1 Backup Rule\nBefore diving into specific methods, adhere to the industry standard **3-2-1 Rule**:\n*   **3** copies of your data (the original and two backups).\n*   **2**",
+        "elapsed_s": 3.766764346975833,
+        "ttft_s": 0.5439490859862417,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 55,
+          "total_tokens": 183,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 55,
+          "prompt_ms": 472.581,
+          "prompt_per_token_ms": 8.592381818181819,
+          "prompt_per_second": 116.38216517380089,
+          "predicted_n": 128,
+          "predicted_ms": 3222.797,
+          "predicted_per_token_ms": 25.37635433070866,
+          "predicted_per_second": 39.40676375210725
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 39.40654046704608,
+        "end_to_end_output_tps": 33.98141965073167,
+        "full_output_budget": true
+      }
+    ],
+    "decode_tps_client_median": 39.40654046704608,
+    "ttft_s_median": 0.5694235480041243,
+    "pass": true,
+    "distinct_output_texts": 3
+  },
+  "long": {
+    "tier": "development",
+    "anchor": {
+      "text": "BOLT-7319-CEDAR",
+      "elapsed_s": 11.169330442964565,
+      "ttft_s": null,
+      "usage": {
+        "completion_tokens": 11,
+        "prompt_tokens": 8238,
+        "total_tokens": 8249,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 8238,
+        "prompt_ms": 10839.721,
+        "prompt_per_token_ms": 1.3158194950230637,
+        "prompt_per_second": 759.98266007031,
+        "predicted_n": 11,
+        "predicted_ms": 262.469,
+        "predicted_per_token_ms": 26.2469,
+        "predicted_per_second": 38.09973749280868
+      },
+      "finish_reason": "stop",
+      "decode_tps_client": null,
+      "end_to_end_output_tps": 0.9848396961814999,
+      "full_output_budget": false
+    },
+    "warmup": {
+      "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that you can recover that data quickly and completely regardless of the failure scenario (hardware crash, ransomware, or natural disaster).\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Foundation: The 3-2-1 Backup Rule\nBefore diving into technical details, adhere to the industry gold standard: the **3-2-1 Rule**.\n*   **3",
+      "elapsed_s": 12.10817408002913,
+      "ttft_s": 8.784213402017485,
+      "usage": {
+        "completion_tokens": 128,
+        "prompt_tokens": 8269,
+        "total_tokens": 8397,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 8269,
+        "prompt_ms": 8693.564,
+        "prompt_per_token_ms": 1.051344056113194,
+        "prompt_per_second": 951.1634123818493,
+        "predicted_n": 128,
+        "predicted_ms": 3323.835,
+        "predicted_per_token_ms": 26.171929133858267,
+        "predicted_per_second": 38.20887619271113
+      },
+      "finish_reason": "length",
+      "decode_tps_client": 38.207431525925855,
+      "end_to_end_output_tps": 10.571370972533296,
+      "full_output_budget": true
+    },
+    "measured": [
+      {
+        "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that you can recover that data quickly and completely regardless of the disaster (hardware failure, ransomware, or natural catastrophe).\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Foundation: The 3-2-1 Backup Rule\nBefore diving into technical details, adhere to the industry standard **3-2-1 Rule**:\n*   **3** copies of your",
+        "elapsed_s": 12.057321692002006,
+        "ttft_s": 8.730364489019848,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 8270,
+          "total_tokens": 8398,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 8270,
+          "prompt_ms": 8625.382,
+          "prompt_per_token_ms": 1.042972430471584,
+          "prompt_per_second": 958.798114680602,
+          "predicted_n": 128,
+          "predicted_ms": 3326.7870000000003,
+          "predicted_per_token_ms": 26.19517322834646,
+          "predicted_per_second": 38.174971827171376
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 38.17301884321267,
+        "end_to_end_output_tps": 10.61595628529231,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that copy is recoverable, secure, and isolated from the threats that might destroy the original.\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Core Strategy: The 3-2-1 Rule\nBefore diving into technical details, adhere to the industry-standard **3-2-1 Backup Rule**:\n*   **3** copies of your data (the original and two back",
+        "elapsed_s": 12.066633637994528,
+        "ttft_s": 8.737085860979278,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 8270,
+          "total_tokens": 8398,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 8270,
+          "prompt_ms": 8629.212,
+          "prompt_per_token_ms": 1.0434355501813783,
+          "prompt_per_second": 958.3725605536172,
+          "predicted_n": 128,
+          "predicted_ms": 3329.347,
+          "predicted_per_token_ms": 26.21533070866142,
+          "predicted_per_second": 38.14561834497876
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 38.14331810365198,
+        "end_to_end_output_tps": 10.607763842018292,
+        "full_output_budget": true
+      },
+      {
+        "text": "Designing a reliable file backup system requires a shift in mindset from simply \"copying files\" to implementing a **data resilience strategy**. The goal is not just to have a copy of your data, but to ensure that copy is recoverable, secure, and independent of the primary system's failures.\n\nHere is a comprehensive guide to designing a reliable file backup system.\n\n---\n\n### 1. The Core Strategy: The 3-2-1 Rule\nBefore diving into technical details, adhere to the industry-standard **3-2-1 Backup Rule**:\n*   **3** copies of your data (the original and two backups).\n",
+        "elapsed_s": 12.024674712971319,
+        "ttft_s": 8.701125588966534,
+        "usage": {
+          "completion_tokens": 128,
+          "prompt_tokens": 8270,
+          "total_tokens": 8398,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 8270,
+          "prompt_ms": 8613.102,
+          "prompt_per_token_ms": 1.0414875453446193,
+          "prompt_per_second": 960.1651066015472,
+          "predicted_n": 128,
+          "predicted_ms": 3323.3940000000002,
+          "predicted_per_token_ms": 26.168456692913388,
+          "predicted_per_second": 38.21394634521215
+        },
+        "finish_reason": "length",
+        "decode_tps_client": 38.21216273974266,
+        "end_to_end_output_tps": 10.64477859529316,
+        "full_output_budget": true
+      }
+    ],
+    "decode_tps_client_median": 38.17301884321267,
+    "ttft_s_median": 8.730364489019848,
+    "pass": true,
+    "distinct_output_texts": 3
+  },
+  "cleanup": {
+    "warnings": [],
+    "canary": {
+      "http_status": 200,
+      "elapsed_s": 60.998032105038874,
+      "body": {
+        "id": "cmpl-9d3c404c573bbdc7",
+        "object": "text_completion",
+        "created": 1792132303,
+        "model": "qwen38",
+        "choices": [
+          {
+            "index": 0,
+            "text": " five",
+            "logprobs": {
+              "text_offset": [
+                0
+              ],
+              "token_logprobs": [
+                -1.2177563905715942
+              ],
+              "tokens": [
+                " five"
+              ],
+              "top_logprobs": [
+                {
+                  " five": -1.2177563905715942
+                }
+              ]
+            },
+            "finish_reason": "length",
+            "stop_reason": null,
+            "token_ids": null,
+            "prompt_logprobs": null,
+            "prompt_token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6",
+        "usage": {
+          "prompt_tokens": 7,
+          "total_tokens": 8,
+          "completion_tokens": 1,
+          "prompt_tokens_details": null
+        },
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "raw_text": "{\"id\":\"cmpl-9d3c404c573bbdc7\",\"object\":\"text_completion\",\"created\":1792132303,\"model\":\"qwen38\",\"choices\":[{\"index\":0,\"text\":\" five\",\"logprobs\":{\"text_offset\":[0],\"token_logprobs\":[-1.2177563905715942],\"tokens\":[\" five\"],\"top_logprobs\":[{\" five\":-1.2177563905715942}]},\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.27.2rc1.dev77+gac7509e2b-9c3b9cf6\",\"usage\":{\"prompt_tokens\":7,\"total_tokens\":8,\"completion_tokens\":1,\"prompt_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}"
+    },
+    "restore_attempts": 1,
+    "production_restored": true
+  }
+}

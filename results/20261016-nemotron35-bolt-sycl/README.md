@@ -57,7 +57,7 @@ Runtime research found UR immediate-command-list controls, but current-main docu
 
 All model/runtime workloads run on `inference-host`, outside interactive Pi. Raw artifacts mirror `/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/`. The Lab preview tool failed with ENOENT; native text diffs are the fallback.
 
-## BF16 prefill feasibility research (not yet implemented)
+## BF16 prefill research and rejected experiment
 
 Fresh official sources document GPU BF16×BF16→F32 MatMul and default strict F32 accumulation: [MatMul support/layout](https://uxlfoundation.github.io/oneDNN/v3.14/dev_guide_matmul.html), [accumulation mode](https://uxlfoundation.github.io/oneDNN/v3.14/dev_guide_attributes_accumulation_mode.html), [Xe2 BF16 datatype support](https://uxlfoundation.github.io/oneDNN/v3.14/dev_guide_data_types.html), and [SYCL BF16 round-to-nearest-even conversion](https://github.com/intel/llvm/blob/sycl/sycl/doc/extensions/supported/sycl_ext_oneapi_bfloat16.asciidoc). [Intel's B70 datasheet](https://www.intel.com/content/dam/www/central-libraries/us/en/documents/2026-03/datasheet-b70-gpu.pdf) identifies Xe2-HPG/XMX hardware. These establish feasibility, not a speedup or the capabilities of the installed binary.
 
@@ -73,14 +73,36 @@ Run `python3 -B run-cell.py --name nvfp4-r1-onednn-diag --source /home/mike/infe
 Observed diagnostic result: 20/20 checks, exact 8K retrieval and Qwen restoration pass. `server.log` confirms the same oneDNN commit on the B70 Level Zero device and real GPU `jit:gemm:any` MatMul calls. Representative SSM-in descriptor: `src:f32 wei:f32 dst:f32`, `attr-fpmath:f16`, problem `1x18560x4096:1x4096x1024`; SSM-out similarly uses `1x4096x8192:1x8192x1024`. This proves an F32-operand GPU path with permission for internal F16 math, **not** strict F32 arithmetic, explicit BF16, native XMX instructions, or a bottleneck. Reported per-primitive execution times are zero, so these are dispatch records, not an operation timing profile. Diagnostic timings are excluded from accepted comparisons.
 
 
-### Next isolated BF16 prototype: declared verification process
+### Predeclared BF16 prototype verification process
 
-Hypothesis only: explicit BF16 operands with strict F32 accumulation may improve NVFP4 SSM prefill and honor its BF16 precision request. Preserve the working reorder kernel and all default/F32 routes. Limit the new branch to dense named NVFP4 SSM projections with a BF16 request, full-row single-device library GEMM and supported oneDNN execution; keep all unrelated operations unchanged. Activate the existing compiled-out BF16 support only in the experimental build. Never relax the F16 eligibility condition, change global math settings, quantize model data again or promote a launcher.
+Hypothesis only: explicit BF16 operands with strict F32 accumulation may improve NVFP4 SSM prefill and honor its BF16 precision request. Preserve the working reorder kernel and all default/F32 routes. Limit the new branch to dense named NVFP4 SSM projections with a BF16 request, full-row single-device library GEMM and supported oneDNN execution; keep all unrelated operations unchanged. Correction from actual source inspection: `common.hpp:34–39` auto-defines `GGML_SYCL_HAS_BF16` when the Intel compiler/header are present; absence of a compiler `-D` was not evidence of compiled-out support. The candidate build keeps inherited flags unchanged and syntax-probes that auto-detection condition. The gap is NVFP4 dispatch. Never relax the F16 eligibility condition, change global math settings, quantize model data again or promote a launcher.
 
 Environment/preconditions: same host, original verified GGUF, existing pinned oneAPI/oneDNN library and unchanged Qwen image/launcher; a separate source/build derived from the winning native prototype. No CPU conversion/build during GPU measurements. Before stopping Qwen, require compilation/dependency checks and the reviewed ownership preflight.
 
 Native test data/steps: retain the existing 56-case default/F32 NVFP4 suite and its OPT=1/0 controls, unchanged 5e-4 NMSE threshold; add separately identifiable BF16-request coverage for original/reordered layouts, odd tails, small and real SSM dimensions, prefill→decode→prefill transitions and explicit-F32/non-SSM controls. Verify BF16 RNE conversion on halfway-even/odd vectors and compare BF16 MatMul against an F32-accumulation reference using BF16-rounded operands. Fix selectors and expected case counts from the actual test construction before launch; no skipped or loosened failures count as a pass.
 
+Concrete candidate `3b0ea286` fixes native selectors at **56 OPT1 + 56 OPT0**, **`nvfp4_bf16_lifetime=1`: 20 OPT1 + 20 OPT0**, **`nvfp4_bf16_reference=1`: 4 OPT1** (156 cases total). The reference includes exact RNE vectors and independently BF16-rounded operands/F32 FMA. Parent controller requires exact counts, no unsupported/skipped cases, both layouts, executed GPU BF16/BF16/F32 oneDNN records and no relaxed/F16 permission before server startup. Its 18 local lifecycle/ordering/syntax tests pass; source artifact's four tests pass. Selective source review found no blockers and confirmed real `ssm_in` reachability; `ssm_out` views intentionally retain fallback. These are not native/API passes.
+
+First GPU command after successful CPU build/precheck (diagnostic timings excluded):
+
+```sh
+python3 -B run-cell.py --name nvfp4-bf16-r1-diag \
+  --source /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-bf16-r1 \
+  --context 65536 --batch 1024 --ubatch 1024 --esimd 1 \
+  --test-nvfp4 --test-bf16 --dnnl-verbose --quality --long-bench
+```
+
 Real application boundary: first use a diagnostic window on the new source with the same 65,536 context, 1024 batch/microbatch, ESIMD=1, original weights, q8 KV and F32 recurrent state. Require all native checks, 20/20 API cases and exact 8K retrieval. Capture oneDNN verbose output from the **actual model prefill** proving BF16 source/weights and F32 destination with no F16/relaxed math permission for that branch. Only after correctness/dispatch pass, run uninstrumented matched short55/128 and long8270/128 requests, one warmup plus three repetitions; compare against the two recorded native-R1 launches and independently repeat an apparent gain. Record actual tokens/cache usage, TTFT, server timings and client decode, not a proxy microbenchmark speed.
 
 Retain source patch, exact build/launch commands, library/binary hashes, native counts/errors, frozen controllers, raw API responses/dispatch logs and pre/post device state in the experimental artifact/cell directories. Every failure or success removes only the known Bolt container and restores unchanged Qwen with observed 7+1 usage/finite logprobs. A failed numerical/API gate rejects the candidate; a no-gain result leaves the verified native kernel as winner. Development only, not full-quality or full-context validation.
+
+
+### Independent native-R1 batch probe
+
+While the BF16 artifact is developed locally, test the existing winning binary with **both logical batch and physical microbatch 2048**, versus its recorded 1024/1024 runs. This is a bundled limit change, not attribution to microbatch alone. Keep original weights, context 65,536, q8 KV, F32 recurrent state, ESIMD=1, no verbose trace and all precision defaults unchanged. Run the same 20-case guard, exact 8K retrieval and warmed three-request short/long comparisons through `run-cell.py`; retain allocation evidence, errors and raw timings. No host build/conversion overlaps this window. Restore unchanged Qwen afterward; require all correctness gates before accepting any result.
+
+### BF16 observed outcome — rejected
+
+`nvfp4-bf16-r1-diag` executes all five native groups successfully: **56/56 OPT1, 56/56 OPT0, 20/20 lifetime OPT1, 20/20 lifetime OPT0, 4/4 reference OPT1**. Both AoS/SoA BF16 paths execute, including exact RNE vectors. After the native pass marker, the actual model emits **920** GPU BF16/BF16/F32 MatMul records, `jit:gemm:any`, with no non-strict fpmath/relaxed accumulation attribute. These cover short guard-prompt SSM-in shapes (e.g. `1x18560x4096:1x4096x31`), not 1024-column long prefill or proof of XMX instructions. Library-reported execution times remain zero; this is dispatch evidence only.
+
+Smoke passes, but the expanded API guard is **19/20**: reversing `drawer` yields `rewrad` rather than `reward`. The fixed gate correctly prevents all timing and 8K retrieval requests. **Reject the candidate; no BF16 speed result is accepted.** This does not by itself establish a causal precision regression, given previously observed same-setting output variability. Qwen restores with 7+1 usage/finite logprob and no kernel log entries. Keep native R1 at 1024/1024 as the verified winner; original weights and production launcher are unchanged. Raw quality details are in `nvfp4-bf16-r1-diag/quality/summary.json`.

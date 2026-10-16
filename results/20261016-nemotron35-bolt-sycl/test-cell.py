@@ -17,7 +17,7 @@ spec.loader.exec_module(cell)
 
 
 class Lifecycle(unittest.TestCase):
-    def exercise(self, fault=None, prototype=False, weights='original', dnnl_verbose=False):
+    def exercise(self, fault=None, prototype=False, weights='original', dnnl_verbose=False, bf16=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             src = root / 'src'
@@ -28,14 +28,16 @@ class Lifecycle(unittest.TestCase):
             argv = ['run-cell.py', '--name', 'test']
             if dnnl_verbose:
                 argv += ['--dnnl-verbose']
-            if prototype:
-                candidate = src.with_name(src.name + '-nvfp4-r1')
+            if prototype or bf16:
+                candidate = src.with_name(src.name + ('-nvfp4-bf16-r1' if bf16 else '-nvfp4-r1'))
                 (candidate / 'build-sycl/bin').mkdir(parents=True)
                 for binary in ('llama-server', 'test-backend-ops'):
                     (candidate / 'build-sycl/bin' / binary).touch()
                 (candidate / 'UPSTREAM_COMMIT').write_text((src / 'UPSTREAM_COMMIT').read_text())
-                (root / 'nvfp4-r1-runtime-precheck.log').write_text('no missing libraries')
+                (root / ('bf16-r1-runtime-precheck.log' if bf16 else 'nvfp4-r1-runtime-precheck.log')).write_text('no missing libraries')
                 argv += ['--source', str(candidate), '--test-nvfp4']
+                if bf16:
+                    argv += ['--test-bf16']
             model_root = root / 'models'
             selected_model = model_root if weights == 'original' else model_root.with_name(model_root.name + '-' + weights)
             selected_model.mkdir()
@@ -207,6 +209,45 @@ class Lifecycle(unittest.TestCase):
         self.assertEqual(shell.count("grep -Fx '  56/56 tests passed'"), 2)
         syntax = subprocess.run(['bash', '-n'], input=shell, text=True, capture_output=True)
         self.assertEqual(syntax.returncode, 0, syntax.stderr)
+
+    def test_bf16_gates_precede_server_and_preserve_legacy_counts(self):
+        state, summary, error = self.exercise(bf16=True)
+        self.assertIsNone(error)
+        self.assertTrue(summary['cleanup']['production_restored'])
+        shell = state['create_argv'][-1]
+        self.assertEqual(shell.count("grep -Fx '  56/56 tests passed'"), 2)
+        self.assertEqual(shell.count("grep -Fx '  20/20 tests passed'"), 2)
+        self.assertEqual(shell.count("grep -Fx '  4/4 tests passed'"), 1)
+        for marker in ('NVFP4_NUMERICAL_PASSED', 'BF16_NATIVE_lifetime-opt1',
+                       'BF16_NATIVE_lifetime-opt0', 'BF16_NATIVE_reference-opt1'):
+            self.assertLess(shell.index(marker), shell.index('BF16_NUMERICAL_PASSED'))
+        self.assertLess(shell.index('BF16_NUMERICAL_PASSED'), shell.index('exec /src/build-sycl/bin/llama-server'))
+        for gate in ('layout=AoS', 'layout=SoA', 'src:bf16', 'wei:bf16', 'dst:f32',
+                     'primitive,exec,gpu,matmul', 'not supported|skipping large tensors',
+                     'attr-fpmath:(bf16|f16|any|tf32)|relaxed', "if grep -F '/nvfp4_bf16'"):
+            self.assertIn(gate, shell)
+        self.assertNotIn('ONEDNN_VERBOSE=1', state['create_argv'])
+        syntax = subprocess.run(['bash', '-n'], input=shell, text=True, capture_output=True)
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+
+    def test_bf16_native_failure_restores_without_api(self):
+        state, summary, error = self.exercise('native', bf16=True)
+        self.assertIsNotNone(error)
+        self.assertNotIn('smoke', summary)
+        self.assertTrue(summary['cleanup']['production_restored'])
+        self.assertEqual(state['containers'], {'qwen38': True})
+
+    def test_bf16_requires_candidate_and_legacy_suite_before_host_reads(self):
+        for suffix, legacy in (('', True), ('-nvfp4-r1', True), ('-nvfp4-bf16-r1', False)):
+            with self.subTest(suffix=suffix, legacy=legacy):
+                source = cell.SRC.with_name(cell.SRC.name + suffix)
+                argv = ['run-cell.py', '--name', 'bad', '--source', str(source), '--test-bf16']
+                if legacy:
+                    argv += ['--test-nvfp4']
+                with patch.object(sys, 'argv', argv), patch.object(cell.runpy, 'run_path') as helper:
+                    with self.assertRaises(AssertionError):
+                        cell.main()
+                    helper.assert_not_called()
 
     def test_native_process_failure_restores_without_api_checks(self):
         state, summary, error = self.exercise('native', prototype=True)

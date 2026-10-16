@@ -57,10 +57,13 @@ def main():
     parser.add_argument('--source', type=Path, default=SRC)
     parser.add_argument('--test-nvfp4', action='store_true')
     parser.add_argument('--dnnl-verbose', action='store_true', help='Diagnostic dispatch logs; not a comparable timing run.')
+    parser.add_argument('--test-bf16', action='store_true')
     parser.add_argument('--weights', choices=('original', 'ssm-q8_0', 'ssm-q6_k'), default='original')
     args = parser.parse_args()
     source = args.source.resolve()
-    assert source in (SRC, SRC.with_name(SRC.name + '-nvfp4-r1'))
+    bf16_source = SRC.with_name(SRC.name + '-nvfp4-bf16-r1')
+    assert source in (SRC, SRC.with_name(SRC.name + '-nvfp4-r1'), bf16_source)
+    assert not args.test_bf16 or (source == bf16_source and args.test_nvfp4)
     assert not args.test_nvfp4 or source != SRC
     assert args.weights == 'original' or source == SRC
     model_dir = MODEL if args.weights == 'original' else MODEL.with_name(MODEL.name + '-' + args.weights)
@@ -86,7 +89,8 @@ def main():
     assert (source / 'build-sycl/bin/llama-server').is_file()
     assert (ROOT / 'runtime-precheck.log').is_file()
     if source != SRC:
-        assert (ROOT / 'nvfp4-r1-runtime-precheck.log').is_file()
+        precheck = 'bf16-r1-runtime-precheck.log' if source == bf16_source else 'nvfp4-r1-runtime-precheck.log'
+        assert (ROOT / precheck).is_file()
     if args.test_nvfp4:
         assert (source / 'build-sycl/bin/test-backend-ops').is_file()
     with socket.socket() as sock:
@@ -109,12 +113,37 @@ def main():
         numerical = ('echo NVFP4_NUMERICAL_OPT1; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_OPT=1 ' + test +
                      ' 2>&1 | tee /tmp/nvfp4-opt1.log; '
                      "grep -Fx '  56/56 tests passed' /tmp/nvfp4-opt1.log; "
+                     "if grep -Ei 'not supported|skipping large tensors' /tmp/nvfp4-opt1.log; then exit 1; fi; "
                      "grep -F 'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl' /tmp/nvfp4-opt1.log > /dev/null; "
                      'echo NVFP4_NUMERICAL_OPT0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_OPT=0 ' + test +
                      ' 2>&1 | tee /tmp/nvfp4-opt0.log; '
                      "grep -Fx '  56/56 tests passed' /tmp/nvfp4-opt0.log; "
+                     "if grep -Ei 'not supported|skipping large tensors' /tmp/nvfp4-opt0.log; then exit 1; fi; "
                      "if grep -F 'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl' /tmp/nvfp4-opt0.log; then exit 1; fi; "
                      'echo NVFP4_NUMERICAL_PASSED; ')
+    if args.test_bf16:
+        for label, selector, count, opt in (
+            ('lifetime-opt1', 'nvfp4_bf16_lifetime=1', 20, 1),
+            ('lifetime-opt0', 'nvfp4_bf16_lifetime=1', 20, 0),
+            ('reference-opt1', 'nvfp4_bf16_reference=1', 4, 1),
+        ):
+            log = f'/tmp/bf16-{label}.log'
+            primitives = f'/tmp/bf16-{label}-primitives.log'
+            test = shlex.join(['/src/build-sycl/bin/test-backend-ops', 'test', '-b', 'SYCL0',
+                               '-o', 'MUL_MAT', '-p', selector])
+            numerical += (f'echo BF16_NATIVE_{label}; GGML_SYCL_DEBUG=1 ONEDNN_VERBOSE=1 '
+                          f'GGML_SYCL_ENABLE_OPT={opt} ' + test + f' 2>&1 | tee {log}; '
+                          f"grep -Fx '  {count}/{count} tests passed' {log}; "
+                          f"if grep -Ei 'not supported|skipping large tensors' {log}; then exit 1; fi; ")
+            if opt:
+                numerical += (f"grep -F 'layout=AoS' {log} > /dev/null; "
+                              f"grep -F 'layout=SoA' {log} > /dev/null; "
+                              f"grep -F 'onednn_verbose,v1,primitive,exec,gpu,matmul' {log} | "
+                              f"grep -F 'src:bf16' | grep -F 'wei:bf16' | grep -F 'dst:f32' > {primitives}; "
+                              f"if grep -E 'attr-fpmath:(bf16|f16|any|tf32)|relaxed' {primitives}; then exit 1; fi; ")
+            else:
+                numerical += f"if grep -F '/nvfp4_bf16' {log}; then exit 1; fi; "
+        numerical += 'echo BF16_NUMERICAL_PASSED; '
     shell = setup + numerical + 'exec ' + shlex.join(server)
     # Create while Qwen is still serving: timeout cannot cause a late GPU start.
     create = ['docker', 'create', '--name', NAME, '--ipc=host',

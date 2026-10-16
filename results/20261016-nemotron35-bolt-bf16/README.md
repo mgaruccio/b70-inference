@@ -1,10 +1,14 @@
 # EXPERIMENTAL Bolt NVFP4 → BF16 prefill
 
-**Incremental patch artifact only. Native SYCL compilation, GPU tests and real
-API tests NOT RUN. No new correctness PASS, speedup or promotion is claimed.**
+At artifact creation (`3b0ea286`), native SYCL compilation, GPU tests and real
+API tests were not run. Lead execution now confirms compilation/dependencies,
+all **156 native cases**, and actual-model BF16/BF16→F32 dispatch. However the
+API guard scored **19/20** (`drawer` → `rewrad`), so the candidate is **REJECTED**.
+Timing and 8K retrieval were gated off; **no BF16 speed result or promotion**.
+Qwen was restored unchanged. See the lead's [execution record](../20261016-nemotron35-bolt-sycl/execution.md).
 Development tier; quality-sensitive activation rounding. Not a standard-compliant
 benchmark publication. Original models, production launcher, library and driver
-remain unchanged. No inference-host writes, builds or workloads were performed.
+remain unchanged. The implementation worker performed no host writes/workloads.
 
 User authority: “another gear shift time. lets get nemotron 3.5 bolt running on
 the b70 and see how fast we can get it”; “no need to stop here, continue working
@@ -135,7 +139,7 @@ scale/nibble combinations' BF16 representability, and the one-hot test layout in
 AoS/SoA. These are source/scalar checks, **not native execution**, compiler/API
 validation of the SYCL changes, or substitutes for the following acceptance.
 
-## Lead-only build and native acceptance — NOT RUN
+## Lead-only build and native acceptance process
 
 Use a separate source/build derived from R1. In that source directory:
 
@@ -145,14 +149,14 @@ git apply --whitespace=error /absolute/path/nvfp4-bf16.patch
 ```
 
 Use the same oneAPI 2026.0 development image, pinned library mount and baseline
-SYCL CMake settings. Explicitly enable the existing definition **only in the
-candidate build**: with the observed empty baseline CXX flags,
-`cmake -S "$PROTO_SRC" -B "$PROTO_BUILD" -DLLAMA_BUILD_TESTS=ON -DCMAKE_CXX_FLAGS:STRING=-DGGML_SYCL_HAS_BF16`.
-This is redundant if header auto-detection already enabled it; it is not a new
-CMake option. Do not change F16/global math settings or replace nonempty baseline
-flags. Build `llama-server` and `test-backend-ops`, retaining exact configuration,
-commands, diagnostics, loaded-library identity and binary hashes. No build may
-run concurrently with GPU measurements. Compilation remains an open gate.
+SYCL CMake settings:
+`cmake -S "$PROTO_SRC" -B "$PROTO_BUILD" -DLLAMA_BUILD_TESTS=ON`.
+Lead build `build-bf16-r1.sh` verified the exact header auto-detection condition
+with an Intel compiler syntax probe; no explicit BF16 definition or CXX flag
+change was needed. Preserve F16/global math settings and inherited flags. Build
+`llama-server` and `test-backend-ops`, retaining configuration, commands,
+diagnostics, loaded-library identity and binary hashes. No build may run
+concurrently with GPU measurements. The recorded lead build and precheck passed.
 
 Run on the exclusive B70 in the candidate runtime environment (`SYCL0`, or its
 reported equivalent), retaining stdout/stderr/exit status:
@@ -205,23 +209,23 @@ marker/primitive should appear for F32/non-SSM/source-F32 or ≤8-column control
 A marker alone, unsupported-primitive fallback, or numerical PASS alone does
 not establish successful BF16 execution or native XMX use.
 
-## Lead-only actual-model process — NOT RUN
+## Predeclared actual-model process
 
 Follow the already-declared BF16 process in the baseline README, not a parallel
 benchmark. Same original verified GGUF, B70, 65,536 context, batch/microbatch
 1024, ESIMD=1, q8 KV, F32 recurrent state, template, sampling and cache policy.
-Intentional differences are this patch and the explicit candidate-only compile
-definition; diagnostic verbosity is never part of a performance comparison.
+The intentional implementation difference is this patch; the lead preserved
+compile flags. Diagnostic verbosity is never part of a performance comparison.
 After compilation/dependency checks and the existing ownership preflight:
 
 ```sh
-python3 -B run-cell.py --name nvfp4-bf16-diag \
-  --source /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-bf16 \
+python3 -B run-cell.py --name nvfp4-bf16-r1-diag \
+  --source /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-bf16-r1 \
   --context 65536 --batch 1024 --ubatch 1024 --esimd 1 \
-  --dnnl-verbose --quality --long-bench
+  --test-nvfp4 --test-bf16 --dnnl-verbose --quality --long-bench
 ```
 
-This is a **proposed lead-only command**, not an executed command. Through the
+The lead executed this command; its 19/20 quality result gated off 8K and timing. Through the
 real server require health/models, smoke, **20/20 API cases**, and exact 8K
 retrieval. `server.log` must show actual model SSM-in prefill (e.g.
 `1x18560x4096:1x4096x1024`) with BF16 source/weights, F32 destination and strict
