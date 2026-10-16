@@ -102,7 +102,7 @@ def main():
                      ('literal-cedar', 'Reply with exactly cedar and no other text.', 'cedar'),
                      ('literal-code', 'Copy this code exactly with no other text: X7-Q92', 'X7-Q92'),
                      ('sort-numbers', 'Sort these numbers ascending: 9, 2, 5, 1. Reply exactly as comma-separated numbers with no spaces.', '1,2,5,9'),
-                     ('reverse', 'Reverse the letters in drawer. Reply with only the resulting word.', 'reward'),
+                     ('json-lookup', 'Read this JSON object: {"oak":17,"cedar":42,"pine":9}. Reply with only the integer value of cedar.', '42'),
                      ('json', 'Reply with only this JSON object, no markdown: {"ready": true, "count": 3}', '{"ready": true, "count": 3}'),
                      ('extract', 'The shelf contains 5 red boxes and 8 blue boxes. How many boxes total? Reply with only the integer.', '13')]
             for name, prompt, answer in fixed:
