@@ -63,6 +63,8 @@ class BoltCell(unittest.TestCase):
         self.assertEqual(gate.count("grep -Fx '  82/82 tests passed'"), 2)
         self.assertEqual(gate.count('test "$count" -eq 82'), 4)
         self.assertEqual(gate.count('test "$count" -eq 5'), 2)
+        self.assertEqual(gate.count('BOLT_ROUTER consumer bytes: mismatches=0 '), 2)
+        self.assertEqual(gate.count('test "$count" -eq 2;'), 2)
         self.assertIn('test "$count" -eq 67', gate)
         self.assertTrue(gate.endswith('echo BOLT_ROUTER_NUMERICAL_PASSED; '))
 

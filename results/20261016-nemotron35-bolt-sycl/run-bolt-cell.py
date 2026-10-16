@@ -96,6 +96,8 @@ def native_router_gate():
             commands += [f"count=$(grep -Fc '{marker}' {log} || true)", 'test "$count" -eq 82']
         commands += [f"count=$(grep -Fc 'BOLT_ROUTER allocator: logits=probs exact (2 graphs)' {log} || true)",
                      'test "$count" -eq 5',
+                     f"count=$(grep -Fc 'BOLT_ROUTER consumer bytes: mismatches=0 ' {log} || true)",
+                     'test "$count" -eq 2',
                      f"count=$(grep -Fc 'call ggml_sycl_op_router_fused:' {log} || true)",
                      f'test "$count" -eq {expected}']
     return '; '.join(commands + ['echo BOLT_ROUTER_NUMERICAL_PASSED']) + '; '

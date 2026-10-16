@@ -1,6 +1,6 @@
 # Bolt R1 + MoE: sigmoid/bias/full-sort fusion
 
-**Fixture-v2 source-only development candidate. The initial remote SYCL build passed, but fusion-off native testing failed 78/82; this test-only revision needs fresh remote validation. No fusion-on/model test, speed claim or promotion.** Baseline is accepted R1 plus the corrected `../20261016-nemotron35-bolt-moe-reduce/moe-reduce.patch` (validated 40.1887/38.8496 short/long decode tok/s), not an SSM/post-fusion stack. The patch changes only `ggml/src/ggml-sycl/ggml-sycl.cpp` and `tests/test-backend-ops.cpp`.
+**Development result: 316 native checks, gate-v2 20/20 API checks and exact8K retrieval pass. Router+MoE measures40.51732/39.13339 short/long decode tok/s, +0.73%/+0.50% versus fresh MoE40.22366/38.93780.** Baseline is accepted R1 plus the corrected `../20261016-nemotron35-bolt-moe-reduce/moe-reduce.patch`, not an SSM/post-fusion stack. This small, three-repetition comparison is not a standard publishable benchmark; persistent launchers are unchanged. The patch changes only `ggml/src/ggml-sycl/ggml-sycl.cpp` and `tests/test-backend-ops.cpp`.
 
 ## Contract
 
@@ -88,4 +88,18 @@ git apply --check --reverse --directory=.pi/router-fusion/candidate \
     results/20261016-nemotron35-bolt-router-fusion/router-fusion.patch
 ```
 
-Added source lines are whitespace-clean; the original sort kernels and launcher are byte-identical. Scratch is ignored under `.pi/router-fusion/`. No SSH, build, model or GPU workload ran locally; no oneAPI compiler was on PATH, so device syntax checking was not run. **Remote build, exact native numerics/markers, model dispatch, API and performance remain pending.** Only this README and `router-fusion.patch` are deliverables.
+Added source lines are whitespace-clean; the original sort kernels and launcher are byte-identical. Scratch is ignored under `.pi/router-fusion/`. No SSH, build, model or GPU workload ran locally; no oneAPI compiler was on PATH, so device syntax checking was not run. Remote checks were pending at the worker handoff; lead results follow. Only this README and `router-fusion.patch` are deliverables.
+
+## Lead validation and results
+
+Artifacts are under `../20261016-nemotron35-bolt-sycl/`; completed logs are losslessly gzip-compressed. Original weights, q8 KV, F32 recurrent state, c65536, b/ub1024, ESIMD1/FUSION1/graphs0 and single-sequence settings are unchanged.
+
+- `router-r1-dispatch`: build/precheck and152 legacy/MoE cases passed; router fusion-off passed78/82. All four fixture failures and the original patch are retained. No fusion-on/model/API run occurred.
+- Fixture-v2 changes only test inputs/observations: exact alias-score keys and byte-exact non-arithmetic consumers. Production patch is unchanged. `router-r1-fixture-v2` passes **316 native cases**, router0/67 markers,82 complete float/index matches,5 real allocator checks and2 consumer-byte checks per mode. Actual model records1,280 router starts and1,280 MoE starts, including840 decode starts each=40×21. Standalone sigmoid/argsort calls are zero; this removes80 additional launches per decode token.
+- `router-r1-validated` passed native/smoke but failed the old API gate19/20 (`rewrad` rather than `reward`). It was not timed. This remains a gate-v1 failure.
+- At the user's request, gate-v2 replaces only reversal with exact JSON lookup (`cedar`→`42`);19 other checks, request settings and20/20 requirement are unchanged. Both fresh runs below pass the new20/20 gate and exact8238-token retrieval `BOLT-7319-CEDAR`.
+- `moe-reduce-r1-gate-v2-baseline`: medians **40.22366 short /38.93780 long tok/s**. Router `router-r1-gate-v2-validated`: **40.51732/39.13339**, **+0.73%/+0.50%**. All six timing request JSONs match exactly:55/8270 input tokens,128 output tokens,cache_n0,warm-up+3 measured repetitions. Router longTTFT8.72665s versus8.71733s baseline.
+- Router short repetitions:40.51732,40.51554,40.52500; long:39.13339,39.12343,39.15910. Baseline short:40.22366,40.19590,40.26207; long:38.94237,38.92688,38.93780. No outliers removed. These are small development-only gains, not a bandwidth-saturation or community-comparable claim. The validated router+MoE experiment remains resident; no persistent launcher was changed.
+- Within-cell inclusive IQR (tok/s): baseline short0.03309/long0.00775; router short0.00473/long0.01783. Only three samples per cell; these describe observed spread, not a confidence interval or cross-run stability estimate. Both cells mount the original model directory read-only.
+
+Host commands: `bash build-router-r1.sh` (then `--resume` after the fixture-only revision); `python3 -B -u run-bolt-cell-router-r1-v2.py --name router-r1-fixture-v2 --source /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-router-r1 --debug`; then the same frozen controller with `--measure` for the two gate-v2 cells, choosing the corresponding MoE or router source. Exact argv and controller copies are retained per cell.
