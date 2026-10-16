@@ -145,11 +145,17 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
  
      std::string op_desc(ggml_tensor * t) override {
          GGML_UNUSED(t);
-@@ -4029,24 +4032,64 @@
+@@ -4029,24 +4032,70 @@
      }
  
      bool run_whole_graph() override { return true; }
 +    std::vector<ggml_tensor *> fusion_test_nodes() override { return checked; }
++
++    double max_nmse_err() override {
++        // F32 RELU -> SQR must match the CPU reference exactly; keep the
++        // inherited tolerance only for the F16 fallback controls.
++        return type == GGML_TYPE_F32 ? 0.0 : test_case::max_nmse_err();
++    }
  
      std::string vars() override {
 -        return VARS_TO_STR2(type, ne);
@@ -215,7 +221,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
  
          return out;
      }
-@@ -9712,11 +9755,24 @@
+@@ -9712,11 +9761,33 @@
          }
      }
  
@@ -226,13 +232,22 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
          test_cases.emplace_back(new test_relu_sqr(type, { 128, 2, 2, 2 }));
          test_cases.emplace_back(new test_relu_sqr(type, { 5, 7, 11, 13 }));
      }
-+    // Nemotron 3.5 Bolt routed experts use 2,048-wide rows and shared experts use
-+    // 5,376-wide rows.  Include decode and multi-column/prefill shapes, plus a
-+    // non-workgroup-multiple generic length and the graph-protection cases.
++    // Existing Bolt shape controls cover routed/shared decode and multi-column
++    // shapes; retain them alongside the actual routed FFN-up expert shapes below.
 +    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 1, 1, 1 }));
 +    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 5376, 1, 1, 1 }));
 +    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 1024, 1, 1 }));
 +    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 5376, 1024, 1, 1 }));
++    // Original Nemotron 3.5 Bolt GGUF ffn_up_exps shapes: four routed
++    // widths, n_expert_used=9, with decode and 31-column prefill coverage.
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 1536, 9, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 1536, 9, 31, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 9, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 9, 31, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2304, 9, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2304, 9, 31, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2560, 9, 1, 1 }));
++    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2560, 9, 31, 1 }));
 +    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 257, 3, 1, 1 }));
 +    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 3, 1, 1 }, "strided"));
 +    test_cases.emplace_back(new test_relu_sqr(GGML_TYPE_F32, { 2048, 3, 1, 1 }, "packed", "reuse"));

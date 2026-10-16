@@ -53,9 +53,9 @@ class PatchTests(unittest.TestCase):
 
     def test_native_case_catalog(self):
         text = source(CANDIDATE, "tests/test-backend-ops.cpp")
-        # Four cases from the type loop plus nine explicit Bolt/guard cases.
-        self.assertEqual(text.count("new test_relu_sqr"), 11)
-        self.assertEqual(text.count("new test_relu_sqr(GGML_TYPE_F32"), 9)
+        # Four cases from the type loop plus seventeen explicit Bolt/guard cases.
+        self.assertEqual(text.count("new test_relu_sqr"), 19)
+        self.assertEqual(text.count("new test_relu_sqr(GGML_TYPE_F32"), 17)
         for shape in (
             "{ 2048, 1, 1, 1 }",
             "{ 5376, 1, 1, 1 }",
@@ -64,11 +64,15 @@ class PatchTests(unittest.TestCase):
             "{ 257, 3, 1, 1 }",
         ):
             self.assertIn(shape, text)
+        for width in (1536, 2048, 2304, 2560):
+            for columns in (1, 31):
+                self.assertIn(f"{{ {width}, 9, {columns}, 1 }}", text)
         for tail in ('"strided"', '"reuse"', '"output"', '"consumer"'):
             self.assertIn(tail, text)
         self.assertIn('return "relu_sqr=1," + VARS_TO_STR4(type, ne, layout, tail);', text)
         self.assertIn("checked = { r, side, out };", text)
         self.assertIn("ggml_set_output(r);", text)
+        self.assertIn("return type == GGML_TYPE_F32 ? 0.0 : test_case::max_nmse_err();", text)
 
     def test_scalar_contract_is_finite_pointwise(self):
         # Keep the reference contract visible in this source-only check without

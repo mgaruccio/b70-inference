@@ -52,11 +52,14 @@ python3 -B test_patch.py /absolute/path/to/r1 /absolute/path/to/candidate
 
 The patch keeps the unique `RELU_SQR` operation label and adds the selector
 prefix `relu_sqr=1`. The native `test-backend-ops` selector must execute exactly
-**13 cases per invocation** with no skipped or unsupported cases:
+**21 cases per invocation** with no skipped or unsupported cases:
 
 - 4 existing F16/F32 controls;
-- 4 Bolt shapes: routed width 2,048 and shared width 5,376 at decode and
-  1,024-column prefill/multi-column shapes;
+- 4 existing Bolt shape controls: routed width 2,048 and shared width 5,376 at
+  decode and 1,024-column prefill/multi-column shapes;
+- 8 actual routed FFN-up expert shapes from the original GGUF: widths 1,536,
+  2,048, 2,304, and 2,560, each with `n_expert_used=9` at `{width,9,1,1}`
+  and `{width,9,31,1}`;
 - a 257×3 non-workgroup-multiple case;
 - contiguous rejection controls for a strided input, an extra RELU consumer,
   and an explicitly requested RELU output;
@@ -67,25 +70,27 @@ After the lead builds the copied candidate on the inference host, run both the
 candidate path and the existing fallback control:
 
 ```sh
-# 13/13 candidate cases; retain output and require the fused marker.
+# 21/21 candidate cases; retain output and require the fused marker.
 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_DEBUG=1 \
   "$PROTO_BUILD/bin/test-backend-ops" test -b SYCL0 -o RELU_SQR -p 'relu_sqr=1'
 
-# 13/13 ordinary two-launch cases; same CPU reference and strict comparison.
+# 21/21 ordinary two-launch cases; same CPU reference and strict comparison.
 GGML_SYCL_ENABLE_FUSION=0 \
   "$PROTO_BUILD/bin/test-backend-ops" test -b SYCL0 -o RELU_SQR -p 'relu_sqr=1'
 ```
 
-The test harness compares the complete graph with its CPU reference. The reuse
-case additionally checks the RELU intermediate and side-consumer result; the
-output case checks that an explicitly requested intermediate remains materialized.
-The F32 pointwise contract is finite and should be exact; do not relax the
-native tolerance to hide a mismatch.
+The test harness compares the complete graph with its CPU reference through
+`err()`/`max_nmse_err()`. `test_relu_sqr::max_nmse_err()` returns `0.0` for F32,
+so every finite F32 element must match exactly; only the retained F16 fallback
+controls use the inherited framework tolerance. The reuse case additionally
+checks the RELU intermediate and side-consumer result; the output case checks
+that an explicitly requested intermediate remains materialized. Do not relax
+the F32 tolerance to hide a mismatch.
 
 ## Lead-only acceptance and benchmark gate
 
 The lead owns the copied-source build and native execution. Before any timing,
-run the 13-case selector with fusion on and off, the existing accepted NVFP4
+run the 21-case selector with fusion on and off, the existing accepted NVFP4
 native tests, and the fixed 20-case API guards. Only after all guards pass may
 the lead run the predeclared short `55 -> 128` and long `8270 -> 128` requests
 with one warm-up and three measured repetitions, plus exact 8K retrieval and a
