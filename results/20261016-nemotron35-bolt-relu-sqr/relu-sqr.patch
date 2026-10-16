@@ -9,9 +9,9 @@ diff --git a/ggml/src/ggml-sycl/fusion.cpp b/ggml/src/ggml-sycl/fusion.cpp
 +    // generic graph checks in front of the backend-specific checks: they reject
 +    // an externally consumed or requested-output RELU before the dispatcher can
 +    // elide its buffer.
-+    if (ops.size() == 2 && ops.begin()[0] == GGML_OP_UNARY && ops.begin()[1] == GGML_OP_UNARY &&
-+        unary_ops.size() == 2 &&
-+        unary_ops.begin()[0] == GGML_UNARY_OP_RELU && unary_ops.begin()[1] == GGML_UNARY_OP_SQR) {
++    if (ops.size() == 2 && ops.begin()[0] == GGML_OP_UNARY && ops.begin()[1] == GGML_OP_SQR &&
++        unary_ops.size() == 1 &&
++        unary_ops.begin()[0] == GGML_UNARY_OP_RELU) {
 +        if (!ggml_can_fuse(cgraph, node_idx, ops)) {
 +            return false;
 +        }
@@ -19,7 +19,7 @@ diff --git a/ggml/src/ggml-sycl/fusion.cpp b/ggml/src/ggml-sycl/fusion.cpp
 +        const ggml_tensor * relu = cgraph->nodes[node_idx];
 +        const ggml_tensor * sqr  = cgraph->nodes[node_idx + 1];
 +        if (ggml_get_unary_op(relu) != GGML_UNARY_OP_RELU ||
-+            ggml_get_unary_op(sqr) != GGML_UNARY_OP_SQR ||
++            sqr->op != GGML_OP_SQR ||
 +            relu->src[0] == nullptr ||
 +            relu->src[0]->type != GGML_TYPE_F32 ||
 +            relu->type != GGML_TYPE_F32 ||
@@ -92,7 +92,7 @@ diff --git a/ggml/src/ggml-sycl/element_wise.cpp b/ggml/src/ggml-sycl/element_wi
 +    GGML_ASSERT(ggml_is_contiguous(x) && ggml_is_contiguous(relu_node) && ggml_is_contiguous(sqr_node));
 +
 +    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
-+    ggml_sycl_detail::relu_sqr_sycl((const float *) x->data, (float *) sqr_node->data,
++    relu_sqr_sycl((const float *) x->data, (float *) sqr_node->data,
 +                                    ggml_nelements(sqr_node), ctx.stream());
 +}
  
@@ -122,9 +122,9 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +        // an unrelated subsequent node.  ggml_sycl_can_fuse() protects the intermediate
 +        // from external consumers and rejects every non-F32/non-contiguous variant.
 +        if (node->op == GGML_OP_UNARY && i + 1 < cgraph->n_nodes &&
-+            cgraph->nodes[i + 1]->op == GGML_OP_UNARY &&
-+            ggml_sycl_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_UNARY },
-+                               { GGML_UNARY_OP_RELU, GGML_UNARY_OP_SQR })) {
++            cgraph->nodes[i + 1]->op == GGML_OP_SQR &&
++            ggml_sycl_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_SQR },
++                               { GGML_UNARY_OP_RELU })) {
 +            ggml_sycl_op_relu_sqr_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
 +            i++;
 +            continue;
