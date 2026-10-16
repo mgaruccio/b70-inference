@@ -14,7 +14,7 @@ production checkout.
 
 The Nemotron-H Bolt graph uses `LLM_FFN_RELU_SQR` in routed and shared FFN
 paths. The patch recognizes only the exact adjacent graph chain
-`UNARY(RELU) -> UNARY(SQR)` and computes the existing unary semantics directly
+`UNARY(RELU) -> SQR` and computes the existing unary semantics directly
 as `op_sqr(op_relu(x))` in one F32 pointwise kernel.
 
 Fusion requires all of the following:
