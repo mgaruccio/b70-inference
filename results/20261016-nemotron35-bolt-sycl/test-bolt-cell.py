@@ -56,6 +56,16 @@ class BoltCell(unittest.TestCase):
         self.assertIn('echo MOE_REDUCE_NUMERICAL_PASSED', gate)
         self.assertTrue(gate.endswith('echo MAMBA_POST_NUMERICAL_PASSED; '))
 
+    def test_router_gate_keeps_moe_and_exact_router_checks(self):
+        gate = cell.CANDIDATES[cell.ROUTER]
+        self.assertEqual(gate.count("grep -Fx '  56/56 tests passed'"), 2)
+        self.assertEqual(gate.count("grep -Fx '  20/20 tests passed'"), 2)
+        self.assertEqual(gate.count("grep -Fx '  82/82 tests passed'"), 2)
+        self.assertEqual(gate.count('test "$count" -eq 82'), 4)
+        self.assertEqual(gate.count('test "$count" -eq 5'), 2)
+        self.assertIn('test "$count" -eq 67', gate)
+        self.assertTrue(gate.endswith('echo BOLT_ROUTER_NUMERICAL_PASSED; '))
+
     def test_empty_gpu_needs_no_stop(self):
         with patch.object(cell, 'command', side_effect=['', '']) as cmd:
             cell.replace_owned_container()

@@ -21,6 +21,7 @@ MOE = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-moe-reduce-r1')
 COMBINED = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-ssm-moe-r1')
 POST = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-mamba-post-r1')
 MOE_POST = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-moe-post-r1')
+ROUTER = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-router-r1')
 
 
 def native_legacy_commands():
@@ -82,10 +83,29 @@ def native_post_gate(legacy=True):
     return '; '.join(commands + ['echo MAMBA_POST_NUMERICAL_PASSED']) + '; '
 
 
+def native_router_gate():
+    test = '/src/build-sycl/bin/test-backend-ops test -b SYCL0'
+    commands = []
+    for fusion, expected in ((0, 0), (1, 67)):
+        log = f'/tmp/bolt-router-fusion{fusion}.log'
+        commands += [f'echo BOLT_ROUTER_NATIVE_FUSION{fusion}',
+                     f"GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION={fusion} {test} -o '^BOLT_ROUTER$' -j 1 2>&1 | tee {log}",
+                     f"grep -Fx '  82/82 tests passed' {log}",
+                     f"if grep -Ei 'not supported|skipping large tensors' {log}; then exit 1; fi"]
+        for marker in ('BOLT_ROUTER floats: mismatches=0 ', 'BOLT_ROUTER indices: mismatches=0 '):
+            commands += [f"count=$(grep -Fc '{marker}' {log} || true)", 'test "$count" -eq 82']
+        commands += [f"count=$(grep -Fc 'BOLT_ROUTER allocator: logits=probs exact (2 graphs)' {log} || true)",
+                     'test "$count" -eq 5',
+                     f"count=$(grep -Fc 'call ggml_sycl_op_router_fused:' {log} || true)",
+                     f'test "$count" -eq {expected}']
+    return '; '.join(commands + ['echo BOLT_ROUTER_NUMERICAL_PASSED']) + '; '
+
+
 # Registration requires a fixed native gate; no arbitrary source/command injection.
 CANDIDATES = {BASE: '', SSM: native_ssm_gate(), MOE: native_moe_gate(),
               COMBINED: native_ssm_gate() + native_moe_gate(legacy=False), POST: native_post_gate(),
-              MOE_POST: native_moe_gate() + native_post_gate(legacy=False)}
+              MOE_POST: native_moe_gate() + native_post_gate(legacy=False),
+              ROUTER: native_moe_gate() + native_router_gate()}
 
 
 def command(*argv, timeout=90):
@@ -144,6 +164,9 @@ def main():
     if source == MOE_POST:
         assert (source / 'build-sycl/bin/test-backend-ops').is_file()
         assert 'MOE_POST_RUNTIME_PRECHECK_PASSED' in (ROOT / 'moe-post-r1-runtime-precheck.log').read_text()
+    if source == ROUTER:
+        assert (source / 'build-sycl/bin/test-backend-ops').is_file()
+        assert 'BOLT_ROUTER_RUNTIME_PRECHECK_PASSED' in (ROOT / 'router-r1-runtime-precheck.log').read_text()
     verified = json.loads((ROOT / 'model-verified.json').read_text())
     assert verified['pass_'] and Path(verified['path']) == MODEL / 'NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB.gguf'
     assert Path(verified['path']).stat().st_size == verified['bytes']
