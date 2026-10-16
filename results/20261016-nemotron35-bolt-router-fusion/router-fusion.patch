@@ -191,7 +191,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 --- a/tests/test-backend-ops.cpp
 +++ b/tests/test-backend-ops.cpp
-@@ -7134,6 +7134,248 @@
+@@ -7134,6 +7134,280 @@
      }
  };
  
@@ -202,6 +202,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +    const bool ties;
 +    const std::string guard;
 +    std::array<ggml_tensor *, 2> input{}, bias_input{}, logits{}, probs{}, biased{}, indices{};
++    std::array<ggml_tensor *, 2> consumed{};
 +    std::vector<ggml_tensor *> checked;
 +    ggml_gallocr_ptr allocation;
 +
@@ -219,6 +220,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +
 +    ggml_tensor * build_graph(ggml_context * ctx) override {
 +        checked.clear();
++        consumed = {};
 +        const auto expand = [&](ggml_tensor * t) {
 +            if (mode == MODE_TEST) {
 +                ggml_build_forward_expand(gf, t);
@@ -301,10 +303,10 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +                if (guard == "indices_logits_view") {
 +                    source = ggml_view_1d(ctx, source, experts, 0);
 +                }
-+                // Indices intentionally overwrite the logit storage in this
-+                // sequential graph. Amplify its finite I32 bit patterns so the
-+                // CPU comparison is meaningful; fusion must decline live reuse.
-+                observed = ggml_scale(ctx, ggml_cont(ctx, source), FLT_MAX);
++                // Read the overwritten logit bytes without arithmetic on the
++                // I32 bit patterns interpreted as F32 subnormals (FTZ-sensitive).
++                observed = ggml_cont(ctx, source);
++                consumed[side] = observed;
 +            }
 +            if (observed) {
 +                ggml_set_output(observed);
@@ -361,7 +363,15 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +                if (t == input[0] || t == input[1]) {
 +                    const int col = (i % t->ne[0]) % experts;
 +                    const int row = i / t->ne[0];
-+                    if (ties) {
++                    if (guard == "bias_alias" || guard == "bias_alias_shifted") {
++                        // Exact {0, 0.5, 1} probabilities, varying by row. The
++                        // repeated first/second-row bias still aliases an output,
++                        // but CPU/SYCL sorting no longer depends on near-tie keys.
++                        const float values[] = { -FLT_MAX, 0.0f, FLT_MAX };
++                        data[i] = values[(col + row) % 3];
++                    } else if (guard == "indices_logits_consumer" || guard == "indices_logits_view") {
++                        data[i] = 0.0f; // p=0.5; integer bias below makes unique exact keys
++                    } else if (ties) {
 +                        const float values[] = { -FLT_MAX, -100.0f, -0.0f, +0.0f, 100.0f, FLT_MAX,
 +                                                 -FLT_MAX, FLT_MAX };
 +                        data[i] = values[(col + row * 8) % 8];
@@ -371,7 +381,8 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +                } else if (t == bias_input[0] || t == bias_input[1]) {
 +                    const int col = (guard == "strided_bias" ? i / 2 : i) % experts;
 +                    // p=0,b=1 and p=1,b=0 create exact bias-induced ties.
-+                    data[i] = ties ? (col % 8 == 6 ? 1.0f : 0.0f) : col * 0.001f;
++                    data[i] = (guard == "indices_logits_consumer" || guard == "indices_logits_view") ?
++                        (float) col : ties ? (col % 8 == 6 ? 1.0f : 0.0f) : col * 0.001f;
 +                }
 +            }
 +            ggml_backend_tensor_set(t, data.data(), 0, ggml_nbytes(t));
@@ -380,6 +391,11 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +
 +    double err(const float * a, const float * b, size_t n) override {
 +        const size_t count = experts * rows();
++        if (consumed[0] && n == (size_t) ggml_nelements(consumed[0])) {
++            // tensor_to_float copies F32 bits without arithmetic. Require exact
++            // CPU/device copy bytes, rather than an undefined 0/0 subnormal NMSE.
++            return memcmp(a, b, n * sizeof(float)) == 0 ? 0.0 : INFINITY;
++        }
 +        if (n == 4 * count) {
 +            size_t mismatches = 0;
 +            for (size_t j = 0; j < 2 * count; ++j) {
@@ -401,6 +417,22 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +            mismatches += ia[j] != ic[j];
 +            mismatches += a[j] != a[count + j];
 +            mismatches += b[j] != b[count + j];
++        }
++        if (consumed[0]) {
++            GGML_ASSERT(consumed[1] && ggml_nbytes(consumed[0]) == ggml_nbytes(consumed[1]));
++            const size_t bytes = ggml_nbytes(consumed[0]);
++            GGML_ASSERT(bytes <= count * sizeof(int32_t));
++            std::vector<uint8_t> copy_a(bytes), copy_control(bytes);
++            ggml_backend_tensor_get(consumed[0], copy_a.data(), 0, bytes);
++            ggml_backend_tensor_get(consumed[1], copy_control.data(), 0, bytes);
++            // Complete copies (one row for the view guard) must match both the
++            // independent control and the actual index bytes now in the source.
++            const size_t copy_mismatches =
++                (memcmp(copy_a.data(), copy_control.data(), bytes) != 0) +
++                (memcmp(copy_a.data(), ia.data(), bytes) != 0) +
++                (memcmp(copy_control.data(), ic.data(), bytes) != 0);
++            printf("BOLT_ROUTER consumer bytes: mismatches=%zu ", copy_mismatches);
++            mismatches += copy_mismatches;
 +        }
 +        printf("BOLT_ROUTER indices: mismatches=%zu ", mismatches);
 +        if (mismatches) {
@@ -440,7 +472,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
  // GGML_OP_TOP_K
  struct test_top_k : public test_case {
      const ggml_type type;
-@@ -12190,6 +12432,30 @@
+@@ -12190,6 +12464,30 @@
          }
      }
  

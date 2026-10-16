@@ -1,6 +1,6 @@
 # Bolt R1 + MoE: sigmoid/bias/full-sort fusion
 
-**Source-only development candidate. Remote compilation, native/API gates and timing are pending; no speed claim or promotion.** Baseline is accepted R1 plus the corrected `../20261016-nemotron35-bolt-moe-reduce/moe-reduce.patch` (validated 40.1887/38.8496 short/long decode tok/s), not an SSM/post-fusion stack. The patch changes only `ggml/src/ggml-sycl/ggml-sycl.cpp` and `tests/test-backend-ops.cpp`.
+**Fixture-v2 source-only development candidate. The initial remote SYCL build passed, but fusion-off native testing failed 78/82; this test-only revision needs fresh remote validation. No fusion-on/model test, speed claim or promotion.** Baseline is accepted R1 plus the corrected `../20261016-nemotron35-bolt-moe-reduce/moe-reduce.patch` (validated 40.1887/38.8496 short/long decode tok/s), not an SSM/post-fusion stack. The patch changes only `ggml/src/ggml-sycl/ggml-sycl.cpp` and `tests/test-backend-ops.cpp`.
 
 ## Contract
 
@@ -34,6 +34,8 @@ Index-alias cases mark only the I32 tensor OUTPUT: `ggml_set_output` recursively
 
 Each case uses independent deterministic inputs and an unfused same-backend control, separated by an executable output-marked CONT. Complete probability/biased arrays must match bitwise; complete original I32 tensors and both index arrays must match exactly. CPU F32 NMSE remains **1e-7**. CPU index checking follows existing `test_top_k(ties)` convention: full permutations and identical ranked values, not an unspecified CPU tie order; same-backend tie indices are never relaxed. Sentinels and extra consumers remain checked. No NaN cases or tolerance changes. Shifted output aliases and indices/biased aliases are rejected but not executed as native graphs: their unfused parallel kernels lack a safe reference contract.
 
+Fixture-v2 changes only four negative fixtures: bias-alias logits cycle by row through `{-FLT_MAX,0,FLT_MAX}`, giving exact `{0,0.5,1}` probabilities and half-integer biased keys. First/second-row bias still aliases the inplace sigmoid output, and its pre-sigmoid values differ from the required post-sigmoid bias. Consumer/view fixtures use zero logits and integer bias for distinct ranked keys; an executable CONT reads the overwritten logit storage without arithmetic on I32-as-F32 subnormals. Every copied byte is checked against the independent same-backend control and the corresponding full/prefix I32 output, and CPU/device copy bytes must match exactly (stricter than NMSE). The existing raw/biased/index pair checks, CPU F32 1e-7 gate and 82/67 counts are unchanged; two additional zero-mismatch copy markers are required per mode.
+
 On a disposable isolated **R1+MoE** source/build, with absolute `SRC`, `BUILD`, `PATCH`, `RUN`:
 
 ```bash
@@ -50,12 +52,19 @@ for f in 0 1; do
     test "$(grep -cF 'BOLT_ROUTER floats: mismatches=0 ' "$RUN/router-native-$f.log" || true)" -eq 82
     test "$(grep -cF 'BOLT_ROUTER indices: mismatches=0 ' "$RUN/router-native-$f.log" || true)" -eq 82
     test "$(grep -cF 'BOLT_ROUTER allocator: logits=probs exact (2 graphs)' "$RUN/router-native-$f.log" || true)" -eq 5
+    test "$(grep -cF 'BOLT_ROUTER consumer bytes: mismatches=0 ' "$RUN/router-native-$f.log" || true)" -eq 2
 done
 test "$(grep -cF '[SYCL][OP] call ggml_sycl_op_router_fused:' "$RUN/router-native-0.log" || true)" -eq 0
 test "$(grep -cF '[SYCL][OP] call ggml_sycl_op_router_fused:' "$RUN/router-native-1.log" || true)" -eq 67
 ```
 
 Zero, unsupported or skipped cases cannot satisfy these fixed counts. Also run the lead's unchanged legacy 112 and MoE 40 off/on cases: **316 native cases total**. Retain raw logs, including failures; no identical retry of a failed candidate.
+
+## Retained initial failure and fixture-v2 status
+
+The lead's initial `router-r1-dispatch/server.log` under `../20261016-nemotron35-bolt-sycl/` is retained unchanged. Observed: fusion-off passed 78/82; both bias-alias cases had zero pair mismatches before the custom CPU rank oracle returned infinity; consumer/view cases had SCALE NMSE=1 on both sides despite zero routing pair mismatches. Fusion-on and model testing were not attempted.
+
+Source inspection confirms the old rank oracle compares CPU indices against SYCL-computed score keys, while ordinary sigmoid/add scores need only satisfy 1e-7 CPU NMSE; complementary logits can create near-tie keys without identical rounding across backends. It also confirms SCALE operated on index bit patterns interpreted as subnormal F32. Near-tie ordering and FTZ differences are **hypotheses**, not tensor-level diagnoses from this log. The revision removes those fixture assumptions without relaxing an oracle or changing production code. Use a fresh isolated R1+MoE source/build and a new `router-r1-fixture-v2` run directory; never overwrite/retry the failed run in place. Remote results for this revision remain pending.
 
 ## Predefined public-boundary gate (lead-owned; not implemented here)
 
