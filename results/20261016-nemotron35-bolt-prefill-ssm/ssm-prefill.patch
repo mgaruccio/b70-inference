@@ -1,0 +1,422 @@
+diff --git a/ggml/src/ggml-sycl/ssm_scan.cpp b/ggml/src/ggml-sycl/ssm_scan.cpp
+--- a/ggml/src/ggml-sycl/ssm_scan.cpp
++++ b/ggml/src/ggml-sycl/ssm_scan.cpp
+@@ -125,6 +125,199 @@
+     }
+ }
+
++// Same serial recurrence and subgroup reduction as ssm_scan_f32_group. Only dt's
++// softplus and dA are loaded from a shared F32 table instead of recomputed per lane.
++template <int c_factor, int d_state>
++static void ssm_scan_f32_group_prefill(
++        const float * __restrict__ src0, const float * __restrict__ src1,
++        const float * __restrict__ softplus, const float * __restrict__ decay,
++        const float * __restrict__ src4, const float * __restrict__ src5,
++        const int32_t * __restrict__ src6, float * __restrict__ dst,
++        const int src0_nb2, const int src0_nb3, const int src1_nb2, const int src1_nb3,
++        const int src4_nb2, const int src4_nb3, const int src5_nb2, const int src5_nb3,
++        const int64_t s_off, const int64_t n_head, const int64_t d_head, const int64_t n_group, const int64_t n_tok,
++        const int64_t K,
++        const sycl::nd_item<2> & item) {
++
++    const int lane     = item.get_local_id(1) % WARP_SIZE;
++    const int warp     = item.get_local_id(1) / WARP_SIZE;
++    const int warp_idx = item.get_group(1) * c_factor + warp;
++    const int seq_idx  = item.get_group(0);
++
++    const int head_idx = warp_idx / d_head;
++    const int head_off = (warp_idx % d_head) * sizeof(float);
++    const int group_off = (head_idx / (n_head / n_group)) * d_state * sizeof(float);
++
++    const float * s0_warp = (const float *) ((const char *) src0 + src6[seq_idx] * src0_nb3 + head_idx * src0_nb2 + head_off * d_state);
++    const float * x_warp  = (const float *) ((const char *) src1 + (seq_idx * src1_nb3) + (warp_idx * sizeof(float)));
++    const float * dt_warp = softplus + seq_idx * n_tok * n_head + head_idx;
++    const float * dA_warp = decay    + seq_idx * n_tok * n_head + head_idx;
++    const float * B_warp  = (const float *) ((const char *) src4 + (seq_idx * src4_nb3) + (group_off));
++    const float * C_warp  = (const float *) ((const char *) src5 + (seq_idx * src5_nb3) + (group_off));
++    float *       y_warp  = dst + (seq_idx * n_tok * n_head * d_head) + warp_idx;
++    float *       s_warp  = (float *) ((char *) dst + s_off + seq_idx * src0_nb3 + head_idx * src0_nb2 + head_off * d_state);
++
++    const int stride_x  = src1_nb2 / sizeof(float);
++    const int stride_B  = src4_nb2 / sizeof(float);
++    const int stride_C  = src5_nb2 / sizeof(float);
++    const int stride_y  = n_head * d_head;
++
++    float state[c_factor];
++    float state_sum = 0.0f;
++
++#pragma unroll
++    for (int j = 0; j < c_factor; j++) {
++        state[j] = s0_warp[WARP_SIZE * j + lane];
++    }
++
++    for (int64_t i = 0; i < n_tok; i++) {
++        const float dt_soft_plus = dt_warp[i * n_head];
++
++        state_sum = 0.0f;
++        const float dA   = dA_warp[i * n_head];
++        const float x_dt = x_warp[i * stride_x] * dt_soft_plus;
++#pragma unroll
++        for (int j = 0; j < c_factor; j++) {
++            const float B_val = B_warp[i * stride_B + WARP_SIZE * j + lane];
++            const float C_val = C_warp[i * stride_C + WARP_SIZE * j + lane];
++            state[j] = (state[j] * dA) + (B_val * x_dt);
++            state_sum += state[j] * C_val;
++        }
++
++        state_sum = warp_reduce_sum<WARP_SIZE>(state_sum);
++
++        if (lane == 0) {
++            y_warp[i * stride_y] = state_sum;
++        }
++
++        const int64_t slot = n_tok - 1 - i;
++        if (K > 1 && slot > 0 && slot < K) {
++            float * s_snapshot_warp = (float *) ((char *) dst + s_off + (slot * item.get_group_range(0) + seq_idx) * src0_nb3 + head_idx * src0_nb2 + head_off * d_state);
++#pragma unroll
++            for (int j = 0; j < c_factor; j++) {
++                s_snapshot_warp[WARP_SIZE * j + lane] = state[j];
++            }
++        }
++    }
++
++#pragma unroll
++    for (int j = 0; j < c_factor; j++) {
++        s_warp[WARP_SIZE * j + lane] = state[j];
++    }
++}
++
++static bool ssm_scan_prefill_supported(ggml_backend_sycl_context & ctx, const ggml_tensor * dst) {
++    const ggml_tensor * s  = dst->src[0];
++    const ggml_tensor * x  = dst->src[1];
++    const ggml_tensor * dt = dst->src[2];
++    const ggml_tensor * A  = dst->src[3];
++    const ggml_tensor * B  = dst->src[4];
++    const int64_t nh = x->ne[1], nt = x->ne[2], ns = x->ne[3], ng = B->ne[1];
++    const int64_t K = ggml_get_op_params_i32(dst, 0);
++
++    // Bolt and the small native controls only. Decode always uses the original kernel.
++    if (!g_ggml_sycl_enable_fusion || nt < 2 || nt > 1024 || K < 1 || K > 4 ||
++        s->ne[0] != 128 || s->ne[1] != 64 || x->ne[0] != 64 || A->ne[0] != 1 ||
++        !((nh == 128 && ng == 8 && ns == 1) ||
++          (nh == 16 && ng == 2 && ns == 2) ||
++          (nh == 4 && (ng == 1 || ng == 4) && (ns == 1 || ns == 2)))) {
++        return false;
++    }
++
++    // The VMM pool only rewinds its allocation cursor on release: backing storage
++    // stays mapped. Later reuse on this same in-order queue follows the scan. Do not
++    // use the legacy pool here: its full-cache eviction can immediately free USM.
++#if defined(GGML_SYCL_SUPPORT_VMM)
++    extern int g_ggml_sycl_enable_vmm;
++    if (!g_ggml_sycl_enable_vmm || !ggml_sycl_info().devices[ctx.device].vmm) {
++        return false;
++    }
++#else
++    GGML_UNUSED(ctx);
++    return false;
++#endif
++    if (!ctx.stream()->is_in_order() || !ggml_is_contiguous(dst) ||
++        !ggml_is_contiguous(s) || !ggml_is_contiguous(dt) || !ggml_is_contiguous(A) ||
++        !ggml_is_contiguous(dst->src[6]) ||
++        s->nb[0] != sizeof(float) || s->nb[1] != 128 * sizeof(float) ||
++        s->nb[2] != 128 * 64 * sizeof(float) || s->nb[3] != 128 * 64 * nh * sizeof(float)) {
++        return false;
++    }
++    for (int j = 0; j < 7; ++j) {
++        const ggml_tensor * t = dst->src[j];
++        if (t->type != (j == 6 ? GGML_TYPE_I32 : GGML_TYPE_F32) || ggml_nbytes(t) > INT32_MAX) {
++            return false;
++        }
++        // Both kernels require independent output storage. Read-only input/input
++        // overlap is harmless; never let staging move a read across an output write.
++        const uintptr_t a = reinterpret_cast<uintptr_t>(dst->data);
++        const uintptr_t b = reinterpret_cast<uintptr_t>(t->data);
++        if (a <= b ? b - a < ggml_nbytes(dst) : a - b < ggml_nbytes(t)) {
++            return false;
++        }
++    }
++    for (int j : { 1, 4, 5 }) {
++        const ggml_tensor * t = dst->src[j];
++        // Contiguous channel/group planes, optionally padded token/sequence strides.
++        // Axis-permuted layouts stay on the original path even when it supports them.
++        if (t->nb[0] != sizeof(float) || t->nb[1] != t->ne[0] * sizeof(float) ||
++            t->nb[2] < t->nb[1] * t->ne[1] || t->nb[3] < t->nb[2] * t->ne[2] ||
++            t->nb[2] > INT32_MAX || t->nb[3] > INT32_MAX ||
++            t->nb[2] % sizeof(float) != 0 || t->nb[3] % sizeof(float) != 0) {
++            return false;
++        }
++    }
++    return true;
++}
++
++static void ggml_sycl_ssm_scan_prefill(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
++    scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/7);
++    const ggml_tensor * s = dst->src[0], * x = dst->src[1], * dt = dst->src[2];
++    const ggml_tensor * A = dst->src[3], * B = dst->src[4], * C = dst->src[5];
++    const int64_t nh = x->ne[1], nt = x->ne[2], ns = x->ne[3], ng = B->ne[1];
++    const int64_t K = ggml_get_op_params_i32(dst, 0);
++    const int64_t s_off = ggml_nelements(x) * sizeof(float);
++    const size_t count = nh * nt * ns;
++    dpct::queue_ptr stream = ctx.stream();
++    // One allocation, alive through both submissions. At most 1 MiB for Bolt.
++    ggml_sycl_pool_alloc<float> transforms(ctx.pool(), 2 * count);
++    float * softplus = transforms.get();
++    float * decay = softplus + count;
++    const float * dt_data = static_cast<const float *>(dt->data);
++    const float * A_data = static_cast<const float *>(A->data);
++    constexpr size_t threads = 128;
++    stream->parallel_for(
++        sycl::nd_range<1>(sycl::range<1>((count + threads - 1) / threads * threads), sycl::range<1>(threads)),
++        [=](sycl::nd_item<1> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
++            const size_t i = item.get_global_id(0);
++            if (i >= count) { return; }
++            const float dt_val = dt_data[i];
++            const float dt_soft_plus = (dt_val <= 20.0f ? sycl::log1p(sycl::exp(dt_val)) : dt_val);
++            softplus[i] = dt_soft_plus;
++            decay[i] = sycl::exp(dt_soft_plus * A_data[i % nh]);
++        });
++
++    const float * s_data = static_cast<const float *>(s->data);
++    const float * x_data = static_cast<const float *>(x->data);
++    const float * B_data = static_cast<const float *>(B->data);
++    const float * C_data = static_cast<const float *>(C->data);
++    const int32_t * ids = static_cast<const int32_t *>(dst->src[6]->data);
++    float * out = static_cast<float *>(dst->data);
++    const int s_nb2 = s->nb[2], s_nb3 = s->nb[3], x_nb2 = x->nb[2], x_nb3 = x->nb[3];
++    const int B_nb2 = B->nb[2], B_nb3 = B->nb[3], C_nb2 = C->nb[2], C_nb3 = C->nb[3];
++    constexpr int num_warps = threads / WARP_SIZE;
++    const sycl::range<2> grid(ns, (nh * 64 + num_warps - 1) / num_warps);
++    const sycl::range<2> block(1, threads);
++    stream->parallel_for(
++        sycl::nd_range<2>(grid * block, block),
++        [=](sycl::nd_item<2> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
++            ssm_scan_f32_group_prefill<128 / WARP_SIZE, 128>(
++                s_data, x_data, softplus, decay, B_data, C_data, ids, out,
++                s_nb2, s_nb3, x_nb2, x_nb3, B_nb2, B_nb3, C_nb2, C_nb3,
++                s_off, nh, 64, ng, nt, K, item);
++        });
++}
++
+ inline void ggml_sycl_op_ssm_scan(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+     const ggml_tensor * src0 = dst->src[0];
+     const ggml_tensor * src1 = dst->src[1];
+@@ -154,6 +347,11 @@
+     dpct::queue_ptr stream = ctx.stream();
+     SYCL_CHECK(ggml_sycl_set_device(ctx.device));
+
++    if (ssm_scan_prefill_supported(ctx, dst)) {
++        ggml_sycl_ssm_scan_prefill(ctx, dst);
++        return;
++    }
++
+     ssm_scan_f32_sycl(
+         static_cast<const float *>(src0->data), static_cast<const float *>(src1->data),
+         static_cast<const float *>(src2->data), static_cast<const float *>(src3->data),
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -4892,6 +4892,171 @@
+     }
+ };
+
++// Bolt staged-prefill contract: full arrays, not a reduced scalar or a sampled delta.
++struct test_bolt_ssm_prefill : public test_case {
++    const int64_t n_seq_tokens, n_head, n_group, n_seqs, K, d_state, head_dim;
++    const std::string layout;
++
++    test_bolt_ssm_prefill(int64_t nt, int64_t nh = 4, int64_t ng = 1, int64_t ns = 1,
++                          int64_t k = 1, const char * layout = "contiguous",
++                          int64_t ds = 128, int64_t hd = 64) :
++        n_seq_tokens(nt), n_head(nh), n_group(ng), n_seqs(ns), K(k), d_state(ds), head_dim(hd), layout(layout) {}
++
++    std::string op_desc(ggml_tensor *) override { return "BOLT_SSM_PREFILL"; }
++    std::string vars() override {
++        return VARS_TO_STR8(n_seq_tokens, n_head, n_group, n_seqs, K, d_state, head_dim, layout);
++    }
++    bool run_whole_graph() override { return true; }
++
++    size_t y_elems() const { return head_dim * n_head * n_seq_tokens * n_seqs; }
++    size_t state_elems() const { return d_state * head_dim * n_head * n_seqs; }
++
++    ggml_tensor * input(ggml_context * ctx, int64_t d0, int64_t d1, const char * name) {
++        ggml_tensor * t;
++        if (layout == "padded") {
++            // Independent read-only backing allocations, with token/sequence gaps
++            // and a nonzero offset. Never alias scan output or mutable CPU state.
++            ggml_tensor * storage = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, d0, d1 + 1, n_seq_tokens + 1, n_seqs);
++            ggml_format_name(storage, "%s_storage", name);
++            t = ggml_view_4d(ctx, storage, d0, d1, n_seq_tokens, n_seqs,
++                             storage->nb[1], storage->nb[2], storage->nb[3], sizeof(float));
++        } else if (layout == "permuted") {
++            ggml_tensor * storage = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, d0, d1, n_seqs, n_seq_tokens);
++            ggml_format_name(storage, "%s_storage", name);
++            t = ggml_permute(ctx, storage, 0, 1, 3, 2);
++        } else {
++            t = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, d0, d1, n_seq_tokens, n_seqs);
++        }
++        ggml_set_name(t, name);
++        return t;
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        const int64_t cache_rows = n_seqs + (layout == "gather" ? 3 : layout == "duplicate_ids" ? 2 : 0);
++        ggml_tensor * s = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, d_state, head_dim, n_head, cache_rows);
++        ggml_tensor * x = input(ctx, head_dim, n_head, "prefill_x");
++        ggml_tensor * dt = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, n_head, n_seq_tokens, n_seqs);
++        ggml_tensor * A = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, n_head);
++        ggml_tensor * B = input(ctx, d_state, n_group, "prefill_B");
++        ggml_tensor * C = input(ctx, d_state, n_group, "prefill_C");
++        ggml_tensor * ids = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, n_seqs);
++        ggml_set_name(s, "prefill_s");
++        ggml_set_name(dt, "prefill_dt");
++        ggml_set_name(A, "prefill_A");
++        ggml_set_name(ids, "prefill_ids");
++
++        // K=5 is outside the staged dispatch. In the original kernel, K only guards
++        // snapshot stores: the complete y and the first K<=5 state slots are the
++        // same computation. This forces a same-backend original-kernel reference
++        // without changing a global environment variable or inventing a test flag.
++        GGML_ASSERT(K <= 5);
++        ggml_tensor * ref = ggml_ssm_scan(ctx, s, x, dt, A, B, C, ids, 5);
++        ggml_set_name(ref, "prefill_scan_reference");
++        ggml_build_forward_expand(gf, ref);
++        ggml_tensor * out = ggml_ssm_scan(ctx, s, x, dt, A, B, C, ids, K);
++        ggml_set_name(out, "prefill_scan_candidate");
++        // No arithmetic between scan and readback: concat preserves signed zero
++        // and every F32 bit, including unwritten K>nt canaries. The reference's
++        // extra slots are not candidate output; ALL candidate slots are compared.
++        ggml_tensor * ref_prefix = ggml_view_1d(ctx, ref, ggml_nelements(out), 0);
++        ggml_tensor * pair = ggml_concat(ctx, out, ref_prefix, 0);
++        ggml_set_name(pair, "prefill_full_array_pair");
++        return pair;
++    }
++
++    static float canary(size_t i) { return float(1 + i % 31) / 64.0f; }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++            if (ggml_is_view_op(t->op)) { continue; }
++            if (t->type == GGML_TYPE_I32) {
++                std::vector<int32_t> data(n_seqs);
++                for (int64_t i = 0; i < n_seqs; ++i) {
++                    data[i] = layout == "gather" ? n_seqs + 2 :
++                              layout == "duplicate_ids" ? n_seqs : n_seqs - 1 - i;
++                }
++                ggml_backend_tensor_set(t, data.data(), 0, data.size() * sizeof(int32_t));
++                continue;
++            }
++            uint32_t salt = 0;
++            for (const char * p = t->name; *p; ++p) { salt = salt * 33 + uint8_t(*p); }
++            std::vector<float> data(ggml_nelements(t));
++            for (size_t i = 0; i < data.size(); ++i) {
++                data[i] = (int((i * 17 + salt) % 257) - 128) / 1024.0f;
++                if (strncmp(t->name, "prefill_scan_", 13) == 0) {
++                    data[i] = canary(i); // identical candidate/reference unused-slot contents
++                } else if (strcmp(t->name, "prefill_A") == 0) {
++                    const float edge_A[] = { -0.0f, -0.0001f, -0.5f, -8.0f };
++                    data[i] = layout == "edges" ? edge_A[i % 4] : -0.5f - float(i % 17) / 32.0f;
++                } else if (strcmp(t->name, "prefill_dt") == 0) {
++                    const float edge_dt[] = { -104.0f, -90.0f, -80.0f, -20.0f, -1.0f, -0.0f, 0.0f,
++                                             0x1p-149f, 1.0f, 0x1.3ffffep+4f, 20.0f, 0x1.400002p+4f, 80.0f };
++                    data[i] = layout == "edges" ? edge_dt[i % 13] : float(int(i % 33) - 16) / 4.0f;
++                }
++            }
++            ggml_backend_tensor_set(t, data.data(), 0, data.size() * sizeof(float));
++        }
++    }
++
++    static uint32_t bits(float v) {
++        uint32_t u;
++        memcpy(&u, &v, sizeof(u));
++        return u;
++    }
++
++    bool exact_pair(const float * data, const char * backend) {
++        const size_t ny = y_elems(), ns = state_elems(), total = ny + K * ns;
++        size_t bad_y = 0, bad_state = 0, bad_canary = 0, first = total;
++        for (size_t i = 0; i < total; ++i) {
++            if (bits(data[i]) != bits(data[total + i])) {
++                ++(i < ny ? bad_y : bad_state);
++                if (first == total) { first = i; }
++            }
++            if (i >= ny + std::min(K, n_seq_tokens) * ns &&
++                (bits(data[i]) != bits(canary(i)) || bits(data[total + i]) != bits(canary(i)))) {
++                ++bad_canary;
++                if (first == total) { first = i; }
++            }
++        }
++        printf("[BOLT_SSM_PREFILL] backend=%s y_words=%zu state_words=%zu "
++               "y_mismatches=%zu state_mismatches=%zu canary_mismatches=%zu case=(%s)\n",
++               backend, ny, K * ns, bad_y, bad_state, bad_canary, vars().c_str());
++        if (first != total) {
++            printf("[BOLT_SSM_PREFILL_MISMATCH] backend=%s index=%zu region=%s "
++                   "candidate=0x%08" PRIx32 " reference=0x%08" PRIx32 "\n",
++                   backend, first, first < ny ? "y" : "state", bits(data[first]), bits(data[total + first]));
++            return false;
++        }
++        return true;
++    }
++
++    double err(const float * a, const float * b, size_t n) override {
++        const size_t ny = y_elems(), ns = state_elems(), total = ny + K * ns;
++        if (n != 2 * total) {
++            printf("[BOLT_SSM_PREFILL_MISMATCH] incomplete comparison: got=%zu expected=%zu\n", n, 2 * total);
++            return 1.0;
++        }
++        const bool exact_a = exact_pair(a, "under_test");
++        const bool exact_b = exact_pair(b, "CPU");
++        if (!exact_a || !exact_b) { return 1.0; }
++        // Keep the default 1e-7 CPU NMSE limit, separately for y and EACH complete
++        // state slot (including unwritten slots), for both halves. No dilution by
++        // the other array or the initialized rollback canaries is allowed.
++        double result = 0.0;
++        for (size_t half : { size_t(0), total }) {
++            for (int64_t part = 0; part <= K; ++part) {
++                const size_t off = half + (part == 0 ? 0 : ny + (part - 1) * ns);
++                const size_t len = part == 0 ? ny : ns;
++                if (memcmp(a + off, b + off, len * sizeof(float)) == 0) { continue; }
++                const double e = test_case::err(a + off, b + off, len);
++                if (!std::isfinite(e)) { return 1.0; }
++                result = std::max(result, e);
++            }
++        }
++        return result;
++    }
++};
++
+ // GGML_OP_RWKV_WKV6
+ struct test_rwkv_wkv6 : public test_case {
+     const ggml_type type;
+@@ -11125,6 +11290,31 @@
+     test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 16, 2, 4, 1, 1));
+     test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 16, 2, 300, 1, 1)); // K == 1, SSD path over two chunks
+
++    // -o BOLT_SSM_PREFILL: 34 cases, 23 staged candidates + 11 fallbacks.
++    // Every case also runs a K=5 original-kernel reference (never staged).
++    for (int64_t nt : { 1, 2, 32, 78, 128, 256, 512, 1024 }) {
++        test_cases.emplace_back(new test_bolt_ssm_prefill(nt, 128, 8)); // actual Bolt shape
++        test_cases.emplace_back(new test_bolt_ssm_prefill(nt));         // small control
++    }
++    test_cases.emplace_back(new test_bolt_ssm_prefill(2, 128, 8, 1, 4)); // Bolt-size snapshot strides
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 4, 4));
++    test_cases.emplace_back(new test_bolt_ssm_prefill(78, 16, 2, 2, 3)); // reversed sequence ids + snapshots
++    test_cases.emplace_back(new test_bolt_ssm_prefill(2, 16, 2, 2, 4));  // unwritten snapshot canaries
++    test_cases.emplace_back(new test_bolt_ssm_prefill(78, 128, 8, 1, 1, "padded"));
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 16, 2, 2, 4, "padded"));
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 16, 2, 2, 3, "permuted")); // layout fallback
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 128, 8, 1, 1, "gather"));
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 4, 1, 2, 2, "duplicate_ids"));
++    test_cases.emplace_back(new test_bolt_ssm_prefill(128, 4, 4, 2, 4, "edges"));
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 4, 1, 1, 1, "contiguous", 256)); // d_state fallback
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 4, 1, 1, 1, "contiguous", 128, 32)); // head_dim fallback
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 8, 1));       // unlisted head count
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 4, 2));       // unlisted group count
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 16, 2, 3));   // unlisted sequence count
++    test_cases.emplace_back(new test_bolt_ssm_prefill(1025));          // token limit fallback
++    test_cases.emplace_back(new test_bolt_ssm_prefill(32, 4, 1, 1, 5)); // K limit fallback
++    test_cases.emplace_back(new test_bolt_ssm_prefill(1, 4, 1, 1, 4));  // decode + unwritten snapshots
++
+     test_cases.emplace_back(new test_rwkv_wkv6(GGML_TYPE_F32, 32, 64, 1, 1));
+     test_cases.emplace_back(new test_rwkv_wkv6(GGML_TYPE_F32, 32, 64, 32, 1));
+     test_cases.emplace_back(new test_rwkv_wkv6(GGML_TYPE_F32, 32, 64, 32, 4));
