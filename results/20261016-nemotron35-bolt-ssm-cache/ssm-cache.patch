@@ -99,7 +99,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +    const ggml_tensor * ssm = cgraph->nodes[node_idx];
 +    if (!g_ggml_sycl_enable_fusion || ssm->op != GGML_OP_SSM_SCAN || ssm->type != GGML_TYPE_F32 ||
 +        (ssm->flags & GGML_TENSOR_FLAG_OUTPUT) || ggml_get_op_params_i32(ssm, 0) != 1) {
-+        return 0;
++        GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +    }
 +
 +    const ggml_tensor * s = ssm->src[0];
@@ -110,7 +110,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +    if (s->type != GGML_TYPE_F32 || s->ne[0] != 128 || !ggml_is_contiguous(s) ||
 +        x->ne[3] != 1 || x->ne[2] < 1 || s->ne[1] % WARP_SIZE != 0 ||
 +        A->ne[0] != 1 || A->nb[1] != sizeof(float)) {
-+        return 0;
++        GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +    }
 +    const int64_t D = s->ne[0] * s->ne[1] * s->ne[2];
 +    const size_t state_bytes = ggml_row_size(GGML_TYPE_F32, D);
@@ -125,21 +125,21 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +            continue;
 +        }
 +        if (n->op != GGML_OP_CPY || (n->flags & GGML_TENSOR_FLAG_OUTPUT)) {
-+            return 0;
++            GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +        }
 +        cpy = n;
 +        cpy_idx = j;
 +        break;
 +    }
 +    if (!cpy) {
-+        return 0;
++        GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +    }
 +    const ggml_tensor * src = cpy->src[0];
 +    const ggml_tensor * dst = cpy->src[1];
 +    if (src->op != GGML_OP_VIEW || src->view_src != ssm || src->view_offs != tail_off ||
 +        src->type != GGML_TYPE_F32 || !ggml_is_contiguous(src) || ggml_nelements(src) != D ||
 +        (src->flags & GGML_TENSOR_FLAG_OUTPUT)) {
-+        return 0;
++        GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +    }
 +    const std::array<int64_t, GGML_MAX_DIMS> expected_ne = { D, 1, 1, 1 };
 +    if (dst->op != GGML_OP_VIEW || dst->type != GGML_TYPE_F32 || !dst->data ||
@@ -147,7 +147,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +        (uintptr_t) dst->data % sizeof(float) != 0 ||
 +        !std::equal(expected_ne.begin(), expected_ne.end(), dst->ne) ||
 +        dst->nb[0] != sizeof(float) || dst->nb[1] != state_bytes || cpy->data != dst->data) {
-+        return 0;
++        GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +    }
 +
 +    // Reuse graph use counts for the removed tail and for direct consumers of the scan.
@@ -155,21 +155,21 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +    int view_uses = 0;
 +    for (int j = node_idx + 1; j < cgraph->n_nodes; ++j) {
 +        const ggml_tensor * n = cgraph->nodes[j];
-+        if (n->src[0] == ssm && ggml_is_view_op(n->op)) {
++        if (n->src[0] == ssm && (n->op == GGML_OP_VIEW || n->op == GGML_OP_RESHAPE || n->op == GGML_OP_PERMUTE || n->op == GGML_OP_TRANSPOSE)) {
 +            ++view_uses;
 +        }
 +        if (n == src) {
 +            if (ggml_node_get_use_count(cgraph, j) != 1) {
-+                return 0;
++                GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +            }
 +            continue;
 +        }
 +        if (n->view_src == ssm && (n->view_offs > tail_off || ggml_nbytes(n) > tail_off - n->view_offs)) {
-+            return 0;
++            GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +        }
 +    }
 +    if (view_uses != ggml_node_get_use_count(cgraph, node_idx)) {
-+        return 0; // a non-view consumer would read the unmaterialised tail
++        GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0; // a non-view consumer would read the unmaterialised tail
 +    }
 +
 +    // The same conservative byte-range dependency check used by sibling kernel fusion.
@@ -180,12 +180,12 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +        return ap <= bp ? bp - ap < ggml_nbytes(a) : ap - bp < ggml_nbytes(b);
 +    };
 +    if (!ssm->data || overlaps(dst, ssm)) {
-+        return 0;
++        GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +    }
 +    for (int k = 0; k < 7; ++k) {
 +        if (ssm->src[k]->type != (k == 6 ? GGML_TYPE_I32 : GGML_TYPE_F32) || !ssm->src[k]->data ||
 +            overlaps(ssm, ssm->src[k]) || (k != 0 && overlaps(dst, ssm->src[k]))) {
-+            return 0;
++            GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +        }
 +    }
 +    if (overlaps(dst, s)) {
@@ -195,7 +195,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 +        // warp reads its own state before writing that same coordinate. A shifted or
 +        // partial overlap could clobber a different warp's input, so it must fall back.
 +        if (dp < sp || dp - sp > ggml_nbytes(s) - state_bytes || (dp - sp) % state_bytes != 0) {
-+            return 0;
++            GGML_SYCL_DEBUG("SSM_CACHE_REJECT %s line=%d\n", ssm->name, __LINE__); return 0;
 +        }
 +    }
 +
@@ -339,7 +339,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +        }
 +
 +        ggml_tensor * y = ggml_view_1d(ctx, out, y_elems, 0);
-+        ggml_set_output(y); // a live y view must NOT prevent the valid fusion
++        if (variant == "y_output") { ggml_set_output(y); } // This API also marks the full scan OUTPUT.
 +        ggml_tensor * ref_y = ggml_view_1d(ctx, ref, y_elems, 0);
 +        ggml_tensor * y_delta = ggml_sub(ctx, y, ref_y);
 +        ggml_tensor * state_delta = ggml_sub(ctx, ggml_cont(ctx, cpy), ggml_cont(ctx, ref_cpy));
@@ -399,7 +399,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
      test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 16, 2, 300, 1, 1)); // K == 1, SSD path over two chunks
  
 +    // Deterministic SYCL/Bolt cache suite: -o SSM_SCAN_CACHE_FUSION -p 'bolt_ssm_cache='
-+    // Exactly 25 supported cases: 11 eligible fusions, 14 conservative fallbacks.
++    // Exactly 26 supported cases: 11 eligible fusions, 15 conservative fallbacks.
 +    for (int64_t nt : { 1, 4, 32 }) {
 +        for (const char * variant : { "plain", "inplace", "gather" }) {
 +            test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 128, 8, nt, 1, 1, variant));
@@ -409,7 +409,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +        test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 4, 1, nt, 1, 1, "plain"));
 +    }
 +    for (const char * variant : { "padded", "state_shift", "input_alias", "output_alias", "tail_consumer",
-+                                 "tail_output", "scan_output", "scan_consumer", "cpy_output", "intervening" }) {
++                                 "y_output", "tail_output", "scan_output", "scan_consumer", "cpy_output", "intervening" }) {
 +        const int64_t nt = strcmp(variant, "output_alias") == 0 ? 128 : 4; // y must hold a full state row
 +        test_cases.emplace_back(new test_ssm_scan_cache_fusion(GGML_TYPE_F32, 128, 64, 4, 1, nt, 1, 1, variant));
 +    }
