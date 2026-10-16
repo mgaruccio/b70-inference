@@ -38,6 +38,24 @@ class BoltCell(unittest.TestCase):
         self.assertIn('echo SSM_CACHE_NUMERICAL_PASSED', gate)
         self.assertTrue(gate.endswith('echo MOE_REDUCE_NUMERICAL_PASSED; '))
 
+    def test_fixed_post_native_gate(self):
+        gate = cell.CANDIDATES[cell.POST]
+        self.assertEqual(gate.count("grep -Fx '  56/56 tests passed'"), 2)
+        self.assertEqual(gate.count("grep -Fx '  37/37 tests passed'"), 2)
+        self.assertEqual(gate.count('MAMBA_POST full-array: mismatches=0 max_abs=0 '), 2)
+        self.assertEqual(gate.count('test "$count" -eq 37'), 2)
+        self.assertIn('test "$count" -eq 0', gate)
+        self.assertIn('test "$count" -eq 16', gate)
+        self.assertTrue(gate.endswith('echo MAMBA_POST_NUMERICAL_PASSED; '))
+
+    def test_moe_post_gate_keeps_both_suites_and_one_legacy(self):
+        gate = cell.CANDIDATES[cell.MOE_POST]
+        self.assertEqual(gate.count("grep -Fx '  56/56 tests passed'"), 2)
+        self.assertEqual(gate.count("grep -Fx '  20/20 tests passed'"), 2)
+        self.assertEqual(gate.count("grep -Fx '  37/37 tests passed'"), 2)
+        self.assertIn('echo MOE_REDUCE_NUMERICAL_PASSED', gate)
+        self.assertTrue(gate.endswith('echo MAMBA_POST_NUMERICAL_PASSED; '))
+
     def test_empty_gpu_needs_no_stop(self):
         with patch.object(cell, 'command', side_effect=['', '']) as cmd:
             cell.replace_owned_container()

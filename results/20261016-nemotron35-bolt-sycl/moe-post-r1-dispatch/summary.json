@@ -1,0 +1,171 @@
+{
+  "tier": "development",
+  "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-moe-post-r1",
+  "measure": false,
+  "debug": true,
+  "status": "passed",
+  "container_id": "1db2710e95d6cd2d64908c98f9fb4ac7a911da454845b3609e3cb71a85b87195",
+  "models": {
+    "models": [
+      {
+        "name": "nemotron-bolt",
+        "model": "nemotron-bolt",
+        "modified_at": "",
+        "size": "",
+        "digest": "",
+        "type": "model",
+        "description": "",
+        "tags": [
+          ""
+        ],
+        "capabilities": [
+          "completion"
+        ],
+        "parameters": "",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "",
+          "families": [
+            ""
+          ],
+          "parameter_size": "",
+          "quantization_level": ""
+        }
+      }
+    ],
+    "object": "list",
+    "data": [
+      {
+        "id": "nemotron-bolt",
+        "aliases": [
+          "nemotron-bolt"
+        ],
+        "tags": [],
+        "object": "model",
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "created": 1792174289,
+        "owned_by": "llamacpp",
+        "meta": {
+          "vocab_type": 2,
+          "n_vocab": 131072,
+          "n_ctx": 65536,
+          "n_ctx_train": 262144,
+          "n_embd": 4096,
+          "n_params": 74042720848,
+          "size": 22010399040,
+          "ftype": "IQ2_XXS - 2.0625 bpw"
+        }
+      }
+    ]
+  },
+  "smoke": {
+    "pass": true,
+    "checks": [
+      {
+        "name": "literal",
+        "pass": true,
+        "result": {
+          "text": "READY",
+          "elapsed_s": 1.0358225450036116,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 3,
+            "prompt_tokens": 27,
+            "total_tokens": 30,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 27,
+            "prompt_ms": 926.249,
+            "prompt_per_token_ms": 34.30551851851852,
+            "prompt_per_second": 29.149829041650786,
+            "predicted_n": 3,
+            "predicted_ms": 107.586,
+            "predicted_per_token_ms": 53.793,
+            "predicted_per_second": 18.589779339319243
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 2.8962489902066575,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "arithmetic",
+        "pass": true,
+        "result": {
+          "text": "323",
+          "elapsed_s": 0.63099765998777,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 33,
+            "total_tokens": 37,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 33,
+            "prompt_ms": 475.314,
+            "prompt_per_token_ms": 14.403454545454546,
+            "prompt_per_second": 69.42778878804327,
+            "predicted_n": 4,
+            "predicted_ms": 93.926,
+            "predicted_per_token_ms": 31.308666666666667,
+            "predicted_per_second": 31.94003790217831
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 6.339167723819337,
+          "full_output_budget": false
+        }
+      },
+      {
+        "name": "code",
+        "pass": true,
+        "result": {
+          "text": "```python\ndef add(a, b):\n    return a + b\n```",
+          "elapsed_s": 0.978941832028795,
+          "ttft_s": null,
+          "usage": {
+            "completion_tokens": 17,
+            "prompt_tokens": 35,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 35,
+            "prompt_ms": 479.308,
+            "prompt_per_token_ms": 13.694514285714286,
+            "prompt_per_second": 73.02193996344731,
+            "predicted_n": 17,
+            "predicted_ms": 437.73900000000003,
+            "predicted_per_token_ms": 27.358687500000002,
+            "predicted_per_second": 36.551461030431376
+          },
+          "finish_reason": "stop",
+          "decode_tps_client": null,
+          "end_to_end_output_tps": 17.365689608716153,
+          "full_output_budget": false
+        }
+      }
+    ]
+  },
+  "bolt_running": true
+}

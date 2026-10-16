@@ -1,19 +1,20 @@
 --- a/ggml/src/ggml-sycl/element_wise.cpp
 +++ b/ggml/src/ggml-sycl/element_wise.cpp
-@@ -1035,6 +1035,140 @@
+@@ -1035,6 +1035,167 @@
      });
  }
  
 +// Mamba2 post-scan: keep MUL and ADD rounding identical to the separate kernels.
 +static void ggml_sycl_op_mamba_post(ggml_backend_sycl_context & ctx, const ggml_tensor * z,
 +                                    const ggml_tensor * x, const ggml_tensor * d,
-+                                    const ggml_tensor * y, ggml_tensor * dst) {
++                                    const ggml_tensor * y, const ggml_tensor * cont, const ggml_tensor * dst) {
 +    scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
 +    const float * zp = (const float *) z->data;
 +    const float * xp = (const float *) x->data;
 +    const float * dp = (const float *) d->data;
 +    const float * yp = (const float *) y->data;
 +    float * out = (float *) dst->data;
++    float * out_z = (float *) cont->data;
 +    const size_t zs = z->nb[2] / sizeof(float);
 +    const size_t xs = x->nb[2] / sizeof(float);
 +    const size_t n = (size_t) ggml_nelements(dst);
@@ -29,23 +30,30 @@
 +            }
 +            const size_t token = i / (64 * 128);
 +            const size_t col = i % (64 * 128);
-+            const float product = xp[token * xs + col] * dp[col / 64];
++            volatile float product = xp[token * xs + col] * dp[col / 64];
 +            const float sum = yp[i] + product;
-+            out[i] = op_silu(zp[token * zs + col]) * sum;
++            const float z_value = zp[token * zs + col];
++            out_z[i] = z_value;
++            out[i] = sum; // Leave SwiGLU in its original kernel/compiler context.
 +        });
 +}
 +
 +// Return the number of following nodes consumed, or zero for the unchanged eager path.
 +int ggml_sycl_mamba_post_fused(ggml_backend_sycl_context & ctx, const ggml_cgraph * graph, int i) {
++    const auto reject = [&](int line) {
++        const ggml_tensor * t = i >= 0 && i < graph->n_nodes ? graph->nodes[i] : nullptr;
++        if (t && t->ne[0] == 64 && t->ne[1] == 128) { GGML_SYCL_DEBUG("MAMBA_POST_REJECT %s line=%d\n", t->name, line); }
++        return 0;
++    };
 +    if (!g_ggml_sycl_enable_fusion || i < 0 || i > graph->n_nodes - 4 ||
 +        graph->nodes[i]->op != GGML_OP_CONT) {
-+        return 0;
++        return reject(__LINE__);
 +    }
 +    // Only the optional y VIEW may intervene. Never skip another executable op.
 +    const bool has_view = graph->nodes[i + 1]->op == GGML_OP_VIEW;
 +    const int m = i + 1 + (int) has_view;
 +    if (m > graph->n_nodes - 3) {
-+        return 0;
++        return reject(__LINE__);
 +    }
 +    const int idxs[] = { i, m, m + 1, m + 2 };
 +    const ggml_op ops[] = { GGML_OP_CONT, GGML_OP_MUL, GGML_OP_ADD, GGML_OP_GLU };
@@ -53,7 +61,7 @@
 +    // y's VIEW is an external input, NOT an elided node. Its source may be a live
 +    // SSM_SCAN result, and its output flag/other consumers must remain usable.
 +    if (!ggml_can_fuse_subgraph_ext(graph, idxs, 4, ops, outputs, 1)) {
-+        return 0;
++        return reject(__LINE__);
 +    }
 +    const ggml_tensor * cont = graph->nodes[i];
 +    const ggml_tensor * mul = graph->nodes[m];
@@ -66,14 +74,14 @@
 +    if (!z || !x || !d || !y || add->src[1] != mul || glu->src[0] != cont || glu->src[1] != add ||
 +        (has_view && graph->nodes[i + 1] != y) || ggml_get_glu_op(glu) != GGML_GLU_OP_SWIGLU ||
 +        ggml_get_op_params_i32(glu, 1) != 0) {
-+        return 0;
++        return reject(__LINE__);
 +    }
 +    // All four reads must come from outside the elided subgraph. For example,
 +    // MUL(CONT(z), D) has valid internal use counts but cannot read the elided CONT.
 +    for (const ggml_tensor * input : { z, x, d, y }) {
 +        for (int idx : idxs) {
 +            if (input == graph->nodes[idx] || input->view_src == graph->nodes[idx]) {
-+                return 0;
++                return reject(__LINE__);
 +            }
 +        }
 +    }
@@ -81,21 +89,21 @@
 +    for (int j = 0; j < 4; ++j) {
 +        const ggml_tensor * t = graph->nodes[idxs[j]];
 +        if (j < 3 && t->view_src) {
-+            return 0;
++            return reject(__LINE__);
 +        }
 +        for (int s = (j == 0 ? 1 : 2); s < GGML_MAX_SRC; ++s) {
 +            if (t->src[s]) {
-+                return 0;
++                return reject(__LINE__);
 +            }
 +        }
 +    }
 +    if (glu->type != GGML_TYPE_F32 || glu->ne[0] != 64 || glu->ne[1] != 128 ||
 +        glu->ne[2] < 1 || glu->ne[2] > 1024 || glu->ne[3] != 1) {
-+        return 0;
++        return reject(__LINE__);
 +    }
 +    for (const ggml_tensor * t : { cont, mul, add, (const ggml_tensor *) glu, y, x, z }) {
 +        if (t->type != GGML_TYPE_F32 || !ggml_are_same_shape(t, glu)) {
-+            return 0;
++            return reject(__LINE__);
 +        }
 +        if (t == x || t == z) {
 +            // Rows/heads are packed; only the token stride may have padding.
@@ -103,18 +111,18 @@
 +            if (t->nb[0] != sizeof(float) || t->nb[1] != 64 * sizeof(float) ||
 +                t->nb[2] < 64 * 128 * sizeof(float) || t->nb[2] % sizeof(float) != 0 ||
 +                t->nb[2] > SIZE_MAX / (size_t) t->ne[2] || t->nb[3] != t->nb[2] * t->ne[2]) {
-+                return 0;
++                return reject(__LINE__);
 +            }
 +        } else if (!ggml_is_contiguous(t)) {
-+            return 0;
++            return reject(__LINE__);
 +        }
 +    }
 +    if (d->type != GGML_TYPE_F32 || d->ne[0] != 1 || d->ne[1] != 128 ||
 +        d->ne[2] != 1 || d->ne[3] != 1 || !ggml_is_contiguous(d)) {
-+        return 0;
++        return reject(__LINE__);
 +    }
-+    // The final write must not alias ANY live input, including GGML_OP_NONE
-+    // leaves (the top-k fusion's range helper deliberately skips those).
++    // Bound ranges including GGML_OP_NONE leaves. The later GLU is not fused;
++    // overlap checks below protect the actual CONT and ADD destinations.
 +    const auto range = [](const ggml_tensor * t, uintptr_t & begin, uintptr_t & end) {
 +        begin = (uintptr_t) t->data;
 +        const size_t bytes = ggml_nbytes(t); // shape/stride products bounded above
@@ -126,16 +134,35 @@
 +    };
 +    uintptr_t out_begin, out_end;
 +    if (!range(glu, out_begin, out_end)) {
-+        return 0;
++        return reject(__LINE__);
++    }
++    // This narrower fusion materializes CONT and ADD, then runs the original GLU.
++    // Protect both actual destinations; the later GLU retains its own eager alias semantics.
++    uintptr_t cont_begin, cont_end, add_begin, add_end;
++    if (!range(cont, cont_begin, cont_end) || !range(add, add_begin, add_end) ||
++        (cont_begin < add_end && add_begin < cont_end)) {
++        return reject(__LINE__);
 +    }
 +    for (const ggml_tensor * t : { z, x, d, y }) {
 +        uintptr_t begin, end;
-+        if (!range(t, begin, end) || (out_begin < end && begin < out_end)) {
-+            return 0;
++        if (!range(t, begin, end)) {
++            return reject(__LINE__);
++        }
++        // CONT may only reuse its own packed input. ADD may reuse a packed
++        // elementwise input: every work-item reads that coordinate before writing.
++        // Repeated D values, shifted overlaps and strided compression stay rejected.
++        const bool packed = ggml_is_contiguous(t) && ggml_are_same_shape(t, add);
++        if ((cont_begin < end && begin < cont_end) &&
++            !(t == z && packed && begin == cont_begin && end == cont_end)) {
++            return reject(__LINE__);
++        }
++        if ((add_begin < end && begin < add_end) &&
++            !(packed && begin == add_begin && end == add_end)) {
++            return reject(__LINE__);
 +        }
 +    }
-+    ggml_sycl_op_mamba_post(ctx, z, x, d, y, glu);
-+    return m + 2 - i;
++    ggml_sycl_op_mamba_post(ctx, z, x, d, y, cont, add);
++    return m + 1 - i; // GLU is deliberately not skipped.
 +}
 +
  // Hands `launch` the functor for the unary op of a fused unary chain. Anything else
@@ -170,7 +197,7 @@
              ggml_sycl_gated_delta_net_fused_cache fused_state_cpy;
 --- a/tests/test-backend-ops.cpp
 +++ b/tests/test-backend-ops.cpp
-@@ -4279,6 +4279,212 @@
+@@ -4279,6 +4279,225 @@
      }
  };
  
@@ -188,6 +215,8 @@
 +    std::vector<input_data> inputs;
 +    std::vector<ggml_tensor *> verified;
 +    size_t result_size = 0;
++    ggml_tensor * reuse_dst = nullptr;
++    ggml_tensor * reuse_src = nullptr;
 +
 +    test_mamba_post(int64_t n_tokens, bool sensitive, const char * guard = "none") :
 +        n_tokens(n_tokens), sensitive(sensitive), guard(guard) {}
@@ -204,6 +233,7 @@
 +    ggml_tensor * build_graph(ggml_context * ctx) override {
 +        inputs.clear();
 +        verified.clear();
++        reuse_dst = reuse_src = nullptr;
 +        const int64_t hd = guard == "head32" ? 32 : 64;
 +        const int64_t nh = 128;
 +        const int64_t ns = guard == "nseq2" ? 2 : 1;
@@ -263,6 +293,10 @@
 +            ggml_tensor * add_input = guard == "internal_y" ? cont : y;
 +            ggml_tensor * mul = guard == "inplace_mul" ? ggml_mul_inplace(ctx, mul_input, d) : ggml_mul(ctx, mul_input, d);
 +            ggml_tensor * add = guard == "inplace_add" ? ggml_add_inplace(ctx, add_input, mul) : ggml_add(ctx, add_input, mul);
++            if (!control && (guard == "reuse_add_y" || guard == "reuse_add_x" || guard == "reuse_cont_z")) {
++                reuse_dst = guard == "reuse_cont_z" ? cont : add;
++                reuse_src = guard == "reuse_cont_z" ? z : guard == "reuse_add_x" ? x : y;
++            }
 +            ggml_tensor * out = guard == "reglu" ? ggml_reglu_split(ctx, cont, add) :
 +                guard == "reversed_glu" ? ggml_swiglu_split(ctx, add, cont) : ggml_swiglu_split(ctx, cont, add);
 +            if (guard == "swapped_param") {
@@ -270,7 +304,7 @@
 +            }
 +            if (guard == "alias_leaf" || guard == "alias_view") {
 +                // A legal contiguous GLU destination backed by an input allocation.
-+                // Eager GLU reads CONT, not z; fusing must decline the overlapping z read.
++                // The unchanged GLU runs after the fused launch, so this late reuse is safe.
 +                out->view_src = z_storage;
 +                out->view_offs = guard == "alias_view" ? 129 * sizeof(float) : 0;
 +            }
@@ -361,6 +395,12 @@
 +            }
 +            ggml_backend_tensor_set(t, data.data(), 0, ggml_nbytes(t));
 +        }
++        if (reuse_dst) {
++            // Simulate graph-allocator reuse after initialization, without changing
++            // op/view metadata or the independent control graph's input values.
++            reuse_dst->data = reuse_src->data;
++            reuse_dst->buffer = reuse_src->buffer;
++        }
 +    }
 +
 +    double err(const float * a, const float * b, size_t n) override {
@@ -383,11 +423,14 @@
  // SNAKE activation fusion: y = x + sin(a*x)^2 * inv_b
  // CUDA backend matches the naive 5-op chain (mul, sin, sqr, mul, add)
  // and dispatches a single fused kernel.
-@@ -9699,6 +9905,24 @@
+@@ -9699,6 +9918,27 @@
      std::vector<std::unique_ptr<test_case>> test_cases;
      std::default_random_engine rng(0);
  
-+    // Exactly 34 MAMBA_POST cases: 11 eligible, 23 conservative fallbacks.
++    // Exactly 37 MAMBA_POST cases: 16 eligible, 21 conservative fallbacks.
++    test_cases.emplace_back(new test_mamba_post(17, true, "reuse_add_y"));
++    test_cases.emplace_back(new test_mamba_post(1, true, "reuse_add_x"));
++    test_cases.emplace_back(new test_mamba_post(1, true, "reuse_cont_z"));
 +    for (int64_t nt : {1, 2, 17, 1024}) {
 +        for (bool sensitive : {false, true}) {
 +            test_cases.emplace_back(new test_mamba_post(nt, sensitive));

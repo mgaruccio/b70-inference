@@ -19,6 +19,8 @@ LABEL = 'b70.experiment=bolt-fusion'
 SSM = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-ssm-cache-r1')
 MOE = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-moe-reduce-r1')
 COMBINED = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-ssm-moe-r1')
+POST = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-mamba-post-r1')
+MOE_POST = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-moe-post-r1')
 
 
 def native_legacy_commands():
@@ -64,9 +66,26 @@ def native_moe_gate(legacy=True):
     return '; '.join(commands + ['echo MOE_REDUCE_NUMERICAL_PASSED']) + '; '
 
 
+def native_post_gate(legacy=True):
+    test = '/src/build-sycl/bin/test-backend-ops test -b SYCL0'
+    commands = native_legacy_commands() if legacy else []
+    for fusion, expected in ((0, 0), (1, 16)):
+        log = f'/tmp/mamba-post-fusion{fusion}.log'
+        commands += [f'echo MAMBA_POST_NATIVE_FUSION{fusion}',
+                     f"GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION={fusion} {test} -o '^MAMBA_POST$' -j 1 2>&1 | tee {log}",
+                     f"grep -Fx '  37/37 tests passed' {log}",
+                     f"if grep -Ei 'not supported|skipping large tensors' {log}; then exit 1; fi",
+                     f"count=$(grep -Fc 'MAMBA_POST full-array: mismatches=0 max_abs=0 ' {log} || true)",
+                     'test "$count" -eq 37',
+                     f"count=$(grep -Fc 'call ggml_sycl_op_mamba_post:' {log} || true)",
+                     f'test "$count" -eq {expected}']
+    return '; '.join(commands + ['echo MAMBA_POST_NUMERICAL_PASSED']) + '; '
+
+
 # Registration requires a fixed native gate; no arbitrary source/command injection.
 CANDIDATES = {BASE: '', SSM: native_ssm_gate(), MOE: native_moe_gate(),
-              COMBINED: native_ssm_gate() + native_moe_gate(legacy=False)}
+              COMBINED: native_ssm_gate() + native_moe_gate(legacy=False), POST: native_post_gate(),
+              MOE_POST: native_moe_gate() + native_post_gate(legacy=False)}
 
 
 def command(*argv, timeout=90):
@@ -119,6 +138,12 @@ def main():
     if source == COMBINED:
         assert (source / 'build-sycl/bin/test-backend-ops').is_file()
         assert 'SSM_MOE_RUNTIME_PRECHECK_PASSED' in (ROOT / 'ssm-moe-r1-runtime-precheck.log').read_text()
+    if source == POST:
+        assert (source / 'build-sycl/bin/test-backend-ops').is_file()
+        assert 'MAMBA_POST_RUNTIME_PRECHECK_PASSED' in (ROOT / 'mamba-post-r1-runtime-precheck.log').read_text()
+    if source == MOE_POST:
+        assert (source / 'build-sycl/bin/test-backend-ops').is_file()
+        assert 'MOE_POST_RUNTIME_PRECHECK_PASSED' in (ROOT / 'moe-post-r1-runtime-precheck.log').read_text()
     verified = json.loads((ROOT / 'model-verified.json').read_text())
     assert verified['pass_'] and Path(verified['path']) == MODEL / 'NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB.gguf'
     assert Path(verified['path']).stat().st_size == verified['bytes']
