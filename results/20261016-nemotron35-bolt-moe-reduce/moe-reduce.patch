@@ -219,7 +219,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +                }
 +                if (observed) {
 +                    if (guard.find("consumer_") == 0) {
-+                        observed = ggml_scale(ctx, observed, 0.5f);
++                        observed = ggml_scale(ctx, ggml_cont(ctx, observed), 0.5f);
 +                    } else {
 +                        ggml_set_output(observed);
 +                    }

@@ -18,6 +18,7 @@ NAME = 'nemotron-bolt-probe'
 LABEL = 'b70.experiment=bolt-fusion'
 SSM = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-ssm-cache-r1')
 MOE = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-moe-reduce-r1')
+COMBINED = BASE.with_name('llama.cpp-bolt-b6334e37-nvfp4-ssm-moe-r1')
 
 
 def native_legacy_commands():
@@ -47,9 +48,9 @@ def native_ssm_gate():
     return '; '.join(commands + ['echo SSM_CACHE_NUMERICAL_PASSED']) + '; '
 
 
-def native_moe_gate():
+def native_moe_gate(legacy=True):
     test = '/src/build-sycl/bin/test-backend-ops test -b SYCL0'
-    commands = native_legacy_commands()
+    commands = native_legacy_commands() if legacy else []
     for fusion, expected in ((0, 0), (1, 8)):
         log = f'/tmp/moe-reduce-fusion{fusion}.log'
         commands += [f'echo MOE_REDUCE_NATIVE_FUSION{fusion}',
@@ -64,7 +65,8 @@ def native_moe_gate():
 
 
 # Registration requires a fixed native gate; no arbitrary source/command injection.
-CANDIDATES = {BASE: '', SSM: native_ssm_gate(), MOE: native_moe_gate()}
+CANDIDATES = {BASE: '', SSM: native_ssm_gate(), MOE: native_moe_gate(),
+              COMBINED: native_ssm_gate() + native_moe_gate(legacy=False)}
 
 
 def command(*argv, timeout=90):
@@ -114,6 +116,9 @@ def main():
     if source == MOE:
         assert (source / 'build-sycl/bin/test-backend-ops').is_file()
         assert 'MOE_REDUCE_RUNTIME_PRECHECK_PASSED' in (ROOT / 'moe-reduce-r1-runtime-precheck.log').read_text()
+    if source == COMBINED:
+        assert (source / 'build-sycl/bin/test-backend-ops').is_file()
+        assert 'SSM_MOE_RUNTIME_PRECHECK_PASSED' in (ROOT / 'ssm-moe-r1-runtime-precheck.log').read_text()
     verified = json.loads((ROOT / 'model-verified.json').read_text())
     assert verified['pass_'] and Path(verified['path']) == MODEL / 'NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB.gguf'
     assert Path(verified['path']).stat().st_size == verified['bytes']

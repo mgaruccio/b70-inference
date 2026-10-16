@@ -30,6 +30,14 @@ class BoltCell(unittest.TestCase):
         self.assertIn('test "$count" -eq 8', gate)
         self.assertTrue(gate.endswith('echo MOE_REDUCE_NUMERICAL_PASSED; '))
 
+    def test_combined_gate_keeps_both_suites_and_one_legacy(self):
+        gate = cell.CANDIDATES[cell.COMBINED]
+        self.assertEqual(gate.count("grep -Fx '  56/56 tests passed'"), 2)
+        self.assertEqual(gate.count("grep -Fx '  26/26 tests passed'"), 2)
+        self.assertEqual(gate.count("grep -Fx '  20/20 tests passed'"), 2)
+        self.assertIn('echo SSM_CACHE_NUMERICAL_PASSED', gate)
+        self.assertTrue(gate.endswith('echo MOE_REDUCE_NUMERICAL_PASSED; '))
+
     def test_empty_gpu_needs_no_stop(self):
         with patch.object(cell, 'command', side_effect=['', '']) as cmd:
             cell.replace_owned_container()

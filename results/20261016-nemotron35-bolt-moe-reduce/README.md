@@ -1,6 +1,6 @@
 # Bolt R1: nine-expert weighted reduction
 
-**Development candidate, source-only; not yet SYCL-built or runtime-validated. No speedup claim.** Standalone on accepted R1, not stacked with SSM/ReLU experiments. No remote files, builds, GPU work, launchers, model restores, or canaries were changed/run by this worker.
+**Development candidate; lead SYCL/native/API validation passed below. No production promotion.** Standalone on accepted R1, not stacked with SSM/ReLU experiments. The worker made no remote changes; the lead performed the isolated runtime validation.
 
 Base: upstream `b6334e37e6ef286fc5091a41b6561b2113d915fb` plus accepted R1, read from `/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-r1` on `mike@inference-host` (non-Git source). The patch changes only `ggml/src/ggml-sycl/topk-moe.cpp` and `tests/test-backend-ops.cpp`.
 
@@ -63,4 +63,14 @@ git apply --check --whitespace=error --directory=.pi/moe-reduce/base \
     results/20261016-nemotron35-bolt-moe-reduce/moe-reduce.patch
 ```
 
-All passed. Copies under ignored `.pi/moe-reduce/` are worker scratch, not deliverables. **These are syntax/patch checks, not a SYCL compilation or numerical/performance result.** OneAPI compilation, 20-case fusion-on/off runs, 112 legacy cases, public API quality/retrieval, and timings remain required before accepting/promoting this candidate.
+All passed. Copies under ignored `.pi/moe-reduce/` are worker scratch, not deliverables. **These are syntax/patch checks, not a SYCL compilation or numerical/performance result.** Those runtime checks were pending at worker handoff; lead results follow.
+
+## Lead runtime validation
+
+Evidence under `../20261016-nemotron35-bolt-sycl/`, on `inference-host` with the same oneAPI 2026.0 image, oneDNN hash, original weights and fixed serving settings:
+
+- `build-moe-reduce-r1.sh` compiled the isolated candidate successfully. Initial native run (`moe-reduce-r1-quality`) stopped in the CPU reference: the extra-consumer test applied SCALE to a strided view, which CPU SCALE rejects. Fixed only that test by inserting CONT before SCALE; the extra consumer remains protected. No kernel/tolerance change; failed run retained.
+- `moe-reduce-r1-validated`: **152/152 native cases** (112 legacy plus20 off/20 on), exactly0/8 fused starts, and20 full-array bitwise matches in each fusion mode.
+- **20/20 API guards and exact8K retrieval pass**. Measured requests are55/8270 input tokens and128 uncached output tokens, one warm-up plus three repetitions per prompt class.
+- Median client decode **40.18873 short /38.84961 long tok/s**, long TTFT **8.71815s**. The subsequent single fresh R1 control (`fusion-r1-baseline-fresh`) passed20/20 and exact8K retrieval, measuring39.44741/38.13176 tok/s: **+1.88% short /+1.88% long** for this candidate. All six measured request JSONs match the fresh baseline exactly. This is a development comparison, not a randomized/interleaved publication suite. No production settings changed.
+- `moe-reduce-r1-dispatch`: **1,280 actual-model fused starts**, including840 single-token starts=40×21 decode evaluations. The observed output widths are1024. Smoke passes; debug data is never used for throughput timing.
