@@ -1,0 +1,467 @@
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -3311,6 +3311,172 @@
+ 
+     argsort_f32_i32_sycl(src0_dd, (int *)dst_dd, ncols, nrows, order,
+                          main_stream, ctx.device, ctx.pool());
++}
++
++// Bolt routing only: keep the original shared-memory bitonic network (including
++// its strict tie comparisons and padding). There is no global-sort fusion.
++static int ggml_sycl_router_fused(ggml_backend_sycl_context & ctx, ggml_cgraph * graph, int i) {
++    if (!g_ggml_sycl_enable_fusion || i + 2 >= graph->n_nodes) {
++        return 0;
++    }
++    ggml_tensor * probs = graph->nodes[i];
++    int add_idx = i + 1;
++    // build_moe_ffn visits the raw-probability weight view before the selection
++    // branch. Admit only that exact metadata reshape, never an executable node.
++    const ggml_tensor * view = graph->nodes[add_idx];
++    if (view->op == GGML_OP_RESHAPE && view->src[0] == probs &&
++        view->ne[0] == 1 && view->ne[1] == probs->ne[0] &&
++        view->ne[2] == probs->ne[1] && view->ne[3] == 1) {
++        ++add_idx;
++    }
++    if (add_idx + 1 >= graph->n_nodes) {
++        return 0;
++    }
++    ggml_tensor * biased = graph->nodes[add_idx];
++    ggml_tensor * indices = graph->nodes[add_idx + 1];
++    const int nodes[] = { i, add_idx, add_idx + 1 };
++    const ggml_op ops[] = { GGML_OP_UNARY, GGML_OP_ADD, GGML_OP_ARGSORT };
++    // All three values are materialized, including externally consumed raw
++    // probabilities. Output exceptions still require COMPUTE on every node.
++    if (!ggml_can_fuse_subgraph_ext(graph, nodes, 3, ops, nodes, 3) ||
++        ggml_get_unary_op(probs) != GGML_UNARY_OP_SIGMOID ||
++        biased->src[0] != probs || indices->src[0] != biased ||
++        indices->op_params[0] != GGML_SORT_ORDER_DESC) {
++        return false;
++    }
++    const ggml_tensor * logits = probs->src[0];
++    const ggml_tensor * bias = biased->src[1];
++    const int64_t nc = probs->ne[0];
++    if (!logits || !bias || (nc != 240 && nc != 304 && nc != 368 && nc != 432 && nc != 496) ||
++        probs->ne[1] < 1 || probs->ne[1] > 1024 || probs->ne[2] != 1 || probs->ne[3] != 1) {
++        return false;
++    }
++    for (const ggml_tensor * t : std::array<const ggml_tensor *, 5>{ logits, bias, probs, biased, indices }) {
++        if (!t->data || !t->buffer ||
++            ggml_backend_buffer_get_type(t->buffer) != ggml_backend_sycl_buffer_type(ctx.device) ||
++            t->type != (t == indices ? GGML_TYPE_I32 : GGML_TYPE_F32) || !ggml_is_contiguous(t)) {
++            return false;
++        }
++        if (t == bias ? (t->ne[0] != nc || t->ne[1] != 1 || t->ne[2] != 1 || t->ne[3] != 1) :
++                        !ggml_are_same_shape(t, probs)) {
++            return false;
++        }
++    }
++    const auto overlaps = [](const ggml_tensor * a, const ggml_tensor * b) {
++        const uintptr_t x = (uintptr_t) a->data, y = (uintptr_t) b->data;
++        return x <= y ? y - x < ggml_nbytes(a) : x - y < ggml_nbytes(b);
++    };
++    const auto same_range = [](const ggml_tensor * a, const ggml_tensor * b) {
++        return a->data == b->data && ggml_nbytes(a) == ggml_nbytes(b);
++    };
++    // A lane loads its logit before either store. Exact packed coordinate reuse
++    // is safe; shifted/cross-row reuse is not. The repeated bias is read-only.
++    for (const ggml_tensor * out : { probs, biased, indices }) {
++        if (overlaps(out, bias) || (overlaps(out, logits) && !same_range(out, logits))) {
++            return false;
++        }
++    }
++    if (overlaps(probs, biased) || overlaps(probs, indices) || overlaps(biased, indices)) {
++        // In particular, do not overwrite biased storage inside the unchanged
++        // sorter: its final barrier fences local, not global, memory.
++        return false;
++    }
++    if (overlaps(indices, logits)) {
++        // Indices may reuse a dead, non-view computed logit allocation, after
++        // the global barrier. Never erase an externally visible logit or view.
++        if (logits->op == GGML_OP_NONE || logits->view_src ||
++            (logits->flags & (GGML_TENSOR_FLAG_INPUT | GGML_TENSOR_FLAG_OUTPUT))) {
++            return false;
++        }
++        const auto live_logit = [&](const ggml_tensor * t) {
++            if (t != probs) {
++                for (const ggml_tensor * src : t->src) {
++                    if (src == logits) {
++                        return true;
++                    }
++                }
++            }
++            const ggml_tensor * owner = t;
++            while (owner && (owner->op == GGML_OP_VIEW || owner->op == GGML_OP_RESHAPE ||
++                             owner->op == GGML_OP_PERMUTE || owner->op == GGML_OP_TRANSPOSE)) {
++                owner = owner->src[0];
++            }
++            // Views derived from the new I32 output are not old logit users.
++            if (owner != indices) {
++                for (const ggml_tensor * v = t->view_src; v; v = v->view_src) {
++                    if (v == logits) {
++                        return true;
++                    }
++                }
++            }
++            return false;
++        };
++        for (int j = 0; j < graph->n_nodes; ++j) {
++            if (live_logit(graph->nodes[j])) {
++                return false;
++            }
++        }
++        for (int j = 0; j < graph->n_leafs; ++j) {
++            if (live_logit(graph->leafs[j])) {
++                return false;
++            }
++        }
++    }
++
++    const int ncols = (int) nc;
++    const int nrows = (int) probs->ne[1];
++    const int ncols_pad = next_power_of_2(ncols);
++    const size_t shared_mem = (size_t) ncols_pad * sizeof(int);
++    if (shared_mem > ggml_sycl_info().devices[ctx.device].smpbo) {
++        return false;
++    }
++    // Match argsort_f32_i32_sycl's local path and tasks-per-thread exactly.
++    const int max_block_size = ggml_sycl_info().max_work_group_sizes[ctx.device];
++    int nth = 1;
++    while (nth < ncols_pad && nth < max_block_size) {
++        nth *= 2;
++    }
++    if (nth > max_block_size) {
++        nth = max_block_size;
++    }
++    if (nth <= 0 || ncols_pad % nth != 0) {
++        return false;
++    }
++    const int tasks_per_thread = ncols_pad / nth;
++    const scope_op_debug_print log("ggml_sycl_op_router_fused", indices, 0);
++    SYCL_CHECK(ggml_sycl_set_device(ctx.device));
++    const float * x = (const float *) logits->data;
++    const float * b = (const float *) bias->data;
++    float * p = (float *) probs->data;
++    float * y = (float *) biased->data;
++    int * dst = (int *) indices->data;
++    const sycl::range<3> block_dims(1, 1, nth);
++    const sycl::range<3> block_nums(1, nrows, 1);
++    ctx.stream()->submit([&](sycl::handler & cgh) {
++        sycl::local_accessor<uint8_t, 1> scratch(sycl::range<1>(shared_mem), cgh);
++        cgh.parallel_for(sycl::nd_range<3>(block_nums * block_dims, block_dims), [=](sycl::nd_item<3> item) {
++            const int row = item.get_group(1);
++            for (int task = 0; task < tasks_per_thread; ++task) {
++                const int col = item.get_local_id(2) * tasks_per_thread + task;
++                if (col < ncols) {
++                    const int offset = row * ncols + col;
++                    const float v = x[offset];
++                    const float bias_value = b[col];
++                    // Identical to F32 op_sigmoid; same default compiler math.
++                    const float probability = 1.0f / (1.0f + op_exp(-v));
++                    p[offset] = probability;
++                    y[offset] = probability + bias_value;
++                }
++            }
++            // The original sort's local-only barrier cannot publish these USM
++            // writes. Every lane, including padded lanes, reaches this barrier.
++            item.barrier(sycl::access::fence_space::global_and_local);
++            k_argsort_f32_i32<GGML_SORT_ORDER_DESC>(
++                y, dst, ncols, ncols_pad, tasks_per_thread, item,
++                scratch.get_multi_ptr<sycl::access::decorated::no>().get());
++        });
++    });
++    return add_idx + 1 - i;
+ }
+ 
+ static void ggml_sycl_op_top_k(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
+@@ -6527,6 +6693,13 @@
+             }
+         }
+ #endif
++        if (node->op == GGML_OP_UNARY) {
++            const int router_skip = ggml_sycl_router_fused(*sycl_ctx, cgraph, i);
++            if (router_skip != 0) {
++                i += router_skip;
++                continue;
++            }
++        }
+         // gated_delta_net -> cpy: scatter recurrent-state snapshots into the cache
+         if (node->op == GGML_OP_GATED_DELTA_NET) {
+             ggml_sycl_gated_delta_net_fused_cache fused_state_cpy;
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -7134,6 +7134,242 @@
+     }
+ };
+ 
++// Bolt's complete sigmoid + bias + descending argsort. Unlike a CPU argsort
++// oracle, the independent same-backend control fixes the bitonic tie order.
++struct test_bolt_router : public test_case {
++    const int64_t experts, tokens;
++    const bool ties;
++    const std::string guard;
++    std::array<ggml_tensor *, 2> input{}, bias_input{}, logits{}, probs{}, biased{}, indices{};
++    std::vector<ggml_tensor *> checked;
++    ggml_gallocr_ptr allocation;
++
++    test_bolt_router(int64_t experts, int64_t tokens, bool ties, const char * guard = "none") :
++        experts(experts), tokens(tokens), ties(ties), guard(guard) {}
++    std::string vars() override { return VARS_TO_STR4(experts, tokens, ties, guard); }
++    std::string op_desc(ggml_tensor *) override { return "BOLT_ROUTER"; }
++    bool run_whole_graph() override { return true; }
++    std::vector<ggml_tensor *> fusion_test_nodes() override {
++        auto result = checked;
++        result.insert(result.end(), sentinels.begin(), sentinels.end());
++        return result;
++    }
++    int64_t rows() const { return tokens * (guard == "dimensions" ? 2 : 1); }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        checked.clear();
++        const auto expand = [&](ggml_tensor * t) {
++            if (mode == MODE_TEST) {
++                ggml_build_forward_expand(gf, t);
++            }
++        };
++        for (int side = 0; side < 2; ++side) {
++            const bool control = side == 1;
++            input[side] = ggml_new_tensor_3d(ctx, GGML_TYPE_F32,
++                experts + (guard == "strided_logits"), tokens, guard == "dimensions" ? 2 : 1);
++            logits[side] = ggml_dup(ctx, input[side]); // preserve signed zero exactly
++            if (guard == "strided_logits") {
++                logits[side] = ggml_view_3d(ctx, logits[side], experts, tokens, 1,
++                    logits[side]->nb[1], logits[side]->nb[2], 0);
++            }
++            ggml_tensor * bias;
++            if (guard == "bias_alias" || guard == "bias_alias_shifted") {
++                bias_input[side] = nullptr;
++                bias = ggml_view_1d(ctx, logits[side], experts,
++                    guard == "bias_alias_shifted" ? experts * sizeof(float) : 0);
++            } else if (guard == "strided_bias") {
++                bias_input[side] = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 2, experts);
++                bias = ggml_transpose(ctx, ggml_view_2d(ctx, bias_input[side], 1, experts,
++                    2 * sizeof(float), 0));
++            } else {
++                bias_input[side] = ggml_new_tensor_2d(ctx, GGML_TYPE_F32,
++                    experts, guard == "bias_rows" ? tokens : 1);
++                bias = bias_input[side];
++            }
++            // Prepare all input/view nodes BEFORE the exact three-node window.
++            expand(logits[side]);
++            expand(bias);
++            const bool inplace_sigmoid = guard == "inplace_sigmoid" ||
++                guard == "bias_alias" || guard == "bias_alias_shifted";
++            probs[side] = guard == "wrong_unary" ? ggml_tanh(ctx, logits[side]) :
++                inplace_sigmoid ? ggml_sigmoid_inplace(ctx, logits[side]) : ggml_sigmoid(ctx, logits[side]);
++            expand(probs[side]);
++            ggml_tensor * weight_view = nullptr;
++            if (guard == "model_reshape" || guard == "allocator") {
++                weight_view = ggml_reshape_3d(ctx, probs[side], 1, experts, tokens);
++                expand(weight_view);
++            }
++            if (control || guard == "intervening") {
++                // Executable, output-marked copy, not a view/no-op. The control
++                // still uses the original probabilities, including inplace ADD.
++                ggml_tensor * barrier = ggml_cont(ctx, probs[side]);
++                ggml_set_output(barrier);
++                expand(barrier);
++            }
++            biased[side] = guard == "inplace_add" ? ggml_add_inplace(ctx, probs[side], bias) :
++                ggml_add(ctx, probs[side], bias);
++            if (guard == "reuse_logits_biased") {
++                // Explicit exact-coordinate reuse, as opposed to a shifted view.
++                biased[side]->view_src = logits[side];
++                biased[side]->view_offs = 0;
++            }
++            expand(biased[side]);
++            indices[side] = ggml_argsort(ctx, biased[side],
++                guard == "ascending" ? GGML_SORT_ORDER_ASC : GGML_SORT_ORDER_DESC);
++            if (guard == "reuse_logits_indices" || guard.find("indices_logits_") == 0) {
++                indices[side]->view_src = logits[side];
++                indices[side]->view_offs = 0;
++            }
++            expand(indices[side]);
++            // Materialized values and external consumers must remain supported.
++            ggml_set_output(probs[side]);
++            ggml_set_output(biased[side]);
++            ggml_set_output(indices[side]);
++            ggml_tensor * observed = nullptr;
++            if (weight_view) {
++                observed = ggml_scale(ctx, ggml_cont(ctx, weight_view), 0.5f);
++            } else if (guard == "consumer_probs" || guard == "consumer_biased") {
++                observed = ggml_scale(ctx, ggml_cont(ctx, ggml_view_1d(ctx,
++                    guard == "consumer_probs" ? probs[side] : biased[side], experts, 0)), 0.5f);
++            } else if (guard == "indices_logits_output") {
++                ggml_set_output(logits[side]);
++            } else if (guard == "indices_logits_consumer" || guard == "indices_logits_view") {
++                ggml_tensor * source = logits[side];
++                if (guard == "indices_logits_view") {
++                    source = ggml_view_1d(ctx, source, experts, 0);
++                }
++                // Indices intentionally overwrite the logit storage in this
++                // sequential graph. Amplify its finite I32 bit patterns so the
++                // CPU comparison is meaningful; fusion must decline live reuse.
++                observed = ggml_scale(ctx, ggml_cont(ctx, source), FLT_MAX);
++            }
++            if (observed) {
++                ggml_set_output(observed);
++                expand(observed);
++                checked.push_back(observed);
++            }
++        }
++        const int64_t n = experts * rows();
++        const auto flat = [&](ggml_tensor * t) { return ggml_reshape_1d(ctx, t, n); };
++        ggml_tensor * floats = ggml_concat(ctx,
++            ggml_concat(ctx, flat(probs[0]), flat(biased[0]), 0),
++            ggml_concat(ctx, flat(probs[1]), flat(biased[1]), 0), 0);
++        ggml_set_output(floats);
++        expand(floats);
++        checked.push_back(floats);
++        ggml_tensor * out = ggml_concat(ctx, flat(indices[0]), flat(indices[1]), 0);
++        ggml_set_output(out);
++        checked.push_back(out);
++        return out;
++    }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        if (guard == "allocator") {
++            // test_case normally uses non-reusing context allocation. Exercise
++            // the real gallocr here, without changing the shared test framework.
++            auto buft = ggml_backend_buffer_get_type(input[0]->buffer);
++            for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++                t->data = nullptr;
++                t->buffer = nullptr;
++                t->extra = nullptr;
++                if (t->op == GGML_OP_NONE) {
++                    ggml_set_input(t);
++                    ggml_set_output(t);
++                }
++            }
++            allocation.reset(ggml_gallocr_new(buft));
++            GGML_ASSERT(allocation && ggml_gallocr_alloc_graph(allocation.get(), gf));
++            for (int side = 0; side < 2; ++side) {
++                GGML_ASSERT(probs[side]->data == logits[side]->data);
++                GGML_ASSERT(probs[side]->data != biased[side]->data);
++            }
++            printf("BOLT_ROUTER allocator: logits=probs exact (2 graphs) ");
++        }
++        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++            if (t->view_src || (guard == "allocator" && t->op != GGML_OP_NONE)) {
++                continue;
++            }
++            std::vector<float> data(ggml_nelements(t), 0.25f);
++            for (size_t i = 0; i < data.size(); ++i) {
++                if (t == input[0] || t == input[1]) {
++                    const int col = (i % t->ne[0]) % experts;
++                    const int row = i / t->ne[0];
++                    if (ties) {
++                        const float values[] = { -FLT_MAX, -100.0f, -0.0f, +0.0f, 100.0f, FLT_MAX,
++                                                 -FLT_MAX, FLT_MAX };
++                        data[i] = values[(col + row * 8) % 8];
++                    } else {
++                        data[i] = ((col * 37 + row * 17) % experts - experts / 2) * 0.01f;
++                    }
++                } else if (t == bias_input[0] || t == bias_input[1]) {
++                    const int col = (guard == "strided_bias" ? i / 2 : i) % experts;
++                    // p=0,b=1 and p=1,b=0 create exact bias-induced ties.
++                    data[i] = ties ? (col % 8 == 6 ? 1.0f : 0.0f) : col * 0.001f;
++                }
++            }
++            ggml_backend_tensor_set(t, data.data(), 0, ggml_nbytes(t));
++        }
++    }
++
++    double err(const float * a, const float * b, size_t n) override {
++        const size_t count = experts * rows();
++        if (n == 4 * count) {
++            size_t mismatches = 0;
++            for (size_t j = 0; j < 2 * count; ++j) {
++                mismatches += memcmp(a + j, a + 2 * count + j, sizeof(float)) != 0;
++                mismatches += memcmp(b + j, b + 2 * count + j, sizeof(float)) != 0;
++            }
++            printf("BOLT_ROUTER floats: mismatches=%zu ", mismatches);
++            return mismatches ? INFINITY : test_case::err(a, b, n); // unchanged 1e-7 CPU NMSE
++        }
++        if (n != 2 * count) {
++            return test_case::err(a, b, n); // extra consumers and sentinels
++        }
++        // Read actual I32 tensors too: no cast, subset/top-k, or checksum oracle.
++        std::vector<int32_t> ia(count), ic(count);
++        ggml_backend_tensor_get(indices[0], ia.data(), 0, count * sizeof(int32_t));
++        ggml_backend_tensor_get(indices[1], ic.data(), 0, count * sizeof(int32_t));
++        size_t mismatches = 0;
++        for (size_t j = 0; j < count; ++j) {
++            mismatches += ia[j] != ic[j];
++            mismatches += a[j] != a[count + j];
++            mismatches += b[j] != b[count + j];
++        }
++        printf("BOLT_ROUTER indices: mismatches=%zu ", mismatches);
++        if (mismatches) {
++            return INFINITY;
++        }
++        // Existing test_top_k(ties) convention: CPU tie order is unspecified.
++        // Require full permutations and identical ranked values; the stronger
++        // same-backend comparison above still requires EXACT original indices.
++        std::vector<float> scores(count);
++        ggml_backend_tensor_get(biased[1], scores.data(), 0, count * sizeof(float));
++        for (size_t row = 0; row < (size_t) rows(); ++row) {
++            std::vector<bool> seen_a(experts, false), seen_b(experts, false);
++            for (int col = 0; col < experts; ++col) {
++                const size_t pos = row * experts + col;
++                if (a[pos] < 0 || a[pos] >= experts || b[pos] < 0 || b[pos] >= experts ||
++                    a[pos] != (int) a[pos] || b[pos] != (int) b[pos]) {
++                    return INFINITY;
++                }
++                const int x = (int) a[pos], y = (int) b[pos];
++                if (seen_a[x] || seen_b[y] || scores[row * experts + x] != scores[row * experts + y]) {
++                    return INFINITY;
++                }
++                seen_a[x] = seen_b[y] = true;
++                if (col) {
++                    const float previous = scores[row * experts + (int) a[pos - 1]];
++                    const float current = scores[row * experts + x];
++                    if (guard == "ascending" ? previous > current : previous < current) {
++                        return INFINITY;
++                    }
++                }
++            }
++        }
++        return 0.0;
++    }
++};
++
+ // GGML_OP_TOP_K
+ struct test_top_k : public test_case {
+     const ggml_type type;
+@@ -12190,6 +12426,30 @@
+         }
+     }
+ 
++    // Exactly 82 BOLT_ROUTER cases: 67 eligible and 15 fallbacks. Each includes
++    // an independent unfused control. Expected debug starts: off=0, on=67.
++    for (int64_t experts : {240, 304, 368, 432, 496}) {
++        for (int64_t tokens : {1, 2, 17, 1024}) {
++            for (bool ties : {false, true}) {
++                test_cases.emplace_back(new test_bolt_router(experts, tokens, ties));
++            }
++        }
++        for (const char * guard : { "inplace_sigmoid", "reuse_logits_biased", "reuse_logits_indices",
++                                   "allocator", "model_reshape" }) {
++            test_cases.emplace_back(new test_bolt_router(experts, 17, true, guard));
++        }
++    }
++    for (const char * guard : { "consumer_probs", "consumer_biased" }) {
++        test_cases.emplace_back(new test_bolt_router(240, 17, true, guard));
++    }
++    test_cases.emplace_back(new test_bolt_router(239, 17, false, "width"));
++    test_cases.emplace_back(new test_bolt_router(240, 1025, false, "tokens"));
++    for (const char * guard : { "dimensions", "strided_logits", "strided_bias", "bias_rows", "ascending",
++                               "intervening", "inplace_add", "bias_alias", "bias_alias_shifted", "wrong_unary",
++                               "indices_logits_output", "indices_logits_consumer", "indices_logits_view" }) {
++        test_cases.emplace_back(new test_bolt_router(240, 17, false, guard));
++    }
++
+     // Exactly 20 MOE_REDUCE_9 cases: eight eligible, twelve conservative fallbacks.
+     for (const auto & shape : { std::array<int64_t, 2>{1024, 1}, {1024, 128}, {1024, 1024}, {1031, 3} }) {
+         for (bool sensitive : {false, true}) {
