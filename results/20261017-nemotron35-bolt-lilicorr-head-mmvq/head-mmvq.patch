@@ -1,0 +1,15 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -5569,6 +5569,12 @@
+         use_dequantize_mul_mat_vec = use_dequantize_mul_mat_vec && use;
+     }
+ 
++    // Head-only counterfactual: prefer MMVQ over DMMV for singleton output.weight.
++    if (src0->type == GGML_TYPE_Q8_0 && std::strcmp(src0->name, "output.weight") == 0 &&
++        src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32 && src1->ne[1] == 1 && use_mul_mat_vec_q) {
++        use_dequantize_mul_mat_vec = false;
++    }
++
+     if (!split && src0->type == GGML_TYPE_F16 && ggml_is_permuted(src0) && ggml_is_permuted(src1) && src1->ne[1] == 1) {
+         // TODO: Refactor and cleanup of mul mat dispatching.
+         if (src0->ne[3] == 1 && src1->ne[3] == 1) {
