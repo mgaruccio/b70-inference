@@ -48,8 +48,9 @@ kernel. Debug mode emits one host-side marker per conversion call:
 ## Native exactness test
 
 `tests/test-nvfp4-sycl.cpp` is built as `test-nvfp4-sycl` only for a static SYCL
-build. The target mirrors the configured `ggml-sycl` compile definitions (including
-warp size) so this TU uses the same SYCL ABI macros. It calls the production
+build. The target uses the backend directory's `COMPILE_DEFINITIONS` property
+(including `GGML_SYCL_F16` and `GGML_SYCL_WARP_SIZE`) without inheriting its
+oneDNN-only private definition. It calls the production
 `ggml_get_to_fp32_sycl` dispatch: fusion-off is
 the same-device original reference and fusion-on is the candidate path. It
 checks full-array raw F32 bits, unchanged input bytes, destination guards and
