@@ -1,0 +1,431 @@
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -144,6 +144,118 @@
+ int g_ggml_sycl_enable_sparse_fa = 0;
+ int g_ggml_sycl_debug_sparse_fa = 0;
+ int g_ggml_sycl_sparse_fa_margin = 256;
++
++static std::string ggml_sycl_grouped_iq2_diag_json_quote(const char * value) {
++    std::string out = "\"";
++    if (value) {
++        for (const char raw : std::string(value)) {
++            const unsigned char c = (unsigned char) raw;
++            switch (c) {
++                case '"': out += "\\\""; break;
++                case '\\': out += "\\\\"; break;
++                case '\b': out += "\\b"; break;
++                case '\f': out += "\\f"; break;
++                case '\n': out += "\\n"; break;
++                case '\r': out += "\\r"; break;
++                case '\t': out += "\\t"; break;
++                default:
++                    if (c < 0x20) {
++                        static constexpr char hex[] = "0123456789abcdef";
++                        out += "\\u00";
++                        out += hex[c >> 4];
++                        out += hex[c & 0xf];
++                    } else {
++                        out += (char) c;
++                    }
++                    break;
++            }
++        }
++    }
++    out += "\"";
++    return out;
++}
++
++static std::string ggml_sycl_grouped_iq2_diag_array(const std::vector<int64_t> & values, bool tails) {
++    std::string out = "[";
++    for (size_t i = 0; i < values.size(); ++i) {
++        if (i != 0) {
++            out += ",";
++        }
++        out += std::to_string(tails ? values[i] % 32 : values[i]);
++    }
++    out += "]";
++    return out;
++}
++
++static int64_t ggml_sycl_grouped_iq2_diag_tiles32(const std::vector<int64_t> & row_counts) {
++    int64_t tiles = 0;
++    for (const int64_t rows : row_counts) {
++        tiles += (rows + 31) / 32;
++    }
++    return tiles;
++}
++
++static void ggml_sycl_grouped_iq2_diag_caller(
++        const ggml_tensor * src0, const ggml_tensor * src1, const ggml_tensor * dst,
++        int64_t M, int64_t K, int64_t n_as, int64_t total_rows,
++        const std::vector<int64_t> & row_counts,
++        bool outer_contiguous, bool outer_type, bool outer_stride,
++        size_t nb11, size_t nb1) {
++    if (!g_ggml_sycl_debug || src0->type != GGML_TYPE_IQ2_XXS) {
++        return;
++    }
++
++    std::string outer_reasons = "[";
++    bool first_reason = true;
++    const auto add_reason = [&](const char * reason) {
++        if (!first_reason) {
++            outer_reasons += ",";
++        }
++        outer_reasons += ggml_sycl_grouped_iq2_diag_json_quote(reason);
++        first_reason = false;
++    };
++    if (!outer_contiguous) {
++        add_reason("contiguity");
++    }
++    if (!outer_type) {
++        add_reason("type");
++    }
++    if (!outer_stride) {
++        add_reason("stride");
++    }
++    outer_reasons += "]";
++
++    int64_t n_active = 0;
++    for (const int64_t rows : row_counts) {
++        n_active += rows > 0;
++    }
++    const std::string json =
++        "{\"event\":\"caller_begin\",\"schema\":\"grouped_iq2_diag/v1\""
++        ",\"tensor\":" + ggml_sycl_grouped_iq2_diag_json_quote(src0->name) +
++        ",\"M\":" + std::to_string(M) +
++        ",\"K\":" + std::to_string(K) +
++        ",\"experts\":" + std::to_string(n_as) +
++        ",\"total_rows\":" + std::to_string(total_rows) +
++        ",\"n_active\":" + std::to_string(n_active) +
++        ",\"row_counts\":" + ggml_sycl_grouped_iq2_diag_array(row_counts, false) +
++        ",\"tiles_bn32\":" + std::to_string(ggml_sycl_grouped_iq2_diag_tiles32(row_counts)) +
++        ",\"tail_rows_bn32\":" + ggml_sycl_grouped_iq2_diag_array(row_counts, true) +
++        ",\"valid_columns\":" + std::to_string(total_rows) +
++        ",\"padded_columns\":null,\"n_tiles\":null"
++        ",\"selected_combo\":null,\"BN\":null,\"SG_ROWS\":null"
++        ",\"outer_eligible\":" + (outer_contiguous && outer_type && outer_stride ? "true" : "false") +
++        ",\"outer_reasons\":" + outer_reasons +
++        ",\"outer_contiguous\":" + (outer_contiguous ? "true" : "false") +
++        ",\"outer_type_ok\":" + (outer_type ? "true" : "false") +
++        ",\"outer_stride_ok\":" + (outer_stride ? "true" : "false") +
++        ",\"src1_type\":" + ggml_sycl_grouped_iq2_diag_json_quote(ggml_type_name(src1->type)) +
++        ",\"dst_type\":" + ggml_sycl_grouped_iq2_diag_json_quote(ggml_type_name(dst->type)) +
++        ",\"nb11\":" + std::to_string(nb11) +
++        ",\"expected_nb11\":" + std::to_string(sizeof(float) * src1->ne[0]) +
++        ",\"nb1\":" + std::to_string(nb1) +
++        ",\"expected_nb1\":" + std::to_string(sizeof(float) * dst->ne[0]) + "}";
++    GGML_SYCL_DEBUG("[SYCL_GROUPED_IQ2_DIAG] %s\n", json.c_str());
++}
+ 
+ #if GGML_SYCL_DNNL
+ // ask oneDNN which matmul it picks for a small f16 problem
+@@ -5903,9 +6015,15 @@
+             });
+         }
+ 
++        const bool grouped_outer_contiguous = ggml_is_contiguous(src0);
++        const bool grouped_outer_type = src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32;
++        const bool grouped_outer_stride = nb11 == sizeof(float)*ne10 && nb1 == sizeof(float)*ne0;
++        ggml_sycl_grouped_iq2_diag_caller(
++            src0, src1, dst, ne01, ne10, n_as, n_routed_rows, expert_row_counts,
++            grouped_outer_contiguous, grouped_outer_type, grouped_outer_stride, nb11, nb1);
++
+         bool grouped = false;
+-        if (ggml_is_contiguous(src0) && src1->type == GGML_TYPE_F32 &&
+-            dst->type == GGML_TYPE_F32 && nb11 == sizeof(float)*ne10 && nb1 == sizeof(float)*ne0) {
++        if (grouped_outer_contiguous && grouped_outer_type && grouped_outer_stride) {
+             // the grouped GEMM reads the reorder (SoA) layout faster, and the first decode step installs it
+             // anyway: install it here already, so prefill does not depend on whether a decode ran before
+             if (g_ggml_sycl_dynamic_precision != GGML_SYCL_DYNAMIC_PRECISION_F32 &&
+diff --git a/ggml/src/ggml-sycl/fused-gemm.cpp b/ggml/src/ggml-sycl/fused-gemm.cpp
+--- a/ggml/src/ggml-sycl/fused-gemm.cpp
++++ b/ggml/src/ggml-sycl/fused-gemm.cpp
+@@ -117,6 +117,7 @@
+ // matrix_combinations are built (appendix of sycl_ext_oneapi_matrix and the runtime's own list).
+ template <typename F> static void fg_visit_combo(int idx, F && f);
+ static constexpr int FG_N_COMBOS = 8;
++using fg_combo0 = fg_combo<fg_half, fg_half, 8, 16, 16, 16>;
+ 
+ // A spir64_gen AOT build (GGML_SYCL_XMX_AOT_SG) drops the combinations of the other sub-group size
+ // entirely: ocloc rejects even an empty kernel that asks for a sub-group size it lacks.
+@@ -215,6 +216,89 @@
+     return name;
+ }
+ 
++static std::string fg_iq2_diag_json_quote(const std::string & value) {
++    std::string out = "\"";
++    for (const char raw : value) {
++        const unsigned char c = (unsigned char) raw;
++        if (c == '"') {
++            out += "\\\"";
++        } else if (c == '\\') {
++            out += "\\\\";
++        } else {
++            out += raw;
++        }
++    }
++    out += "\"";
++    return out;
++}
++
++static std::string fg_iq2_diag_rows(const int64_t * expert_row_offsets, int64_t n_as, bool tails) {
++    std::string out = "[";
++    for (int64_t e = 0; e < n_as; ++e) {
++        if (e != 0) {
++            out += ",";
++        }
++        const int64_t rows = expert_row_offsets[e + 1] - expert_row_offsets[e];
++        out += std::to_string(tails ? rows % 32 : rows);
++    }
++    out += "]";
++    return out;
++}
++
++static int64_t fg_iq2_diag_tiles32(const int64_t * expert_row_offsets, int64_t n_as) {
++    int64_t tiles = 0;
++    for (int64_t e = 0; e < n_as; ++e) {
++        const int64_t rows = expert_row_offsets[e + 1] - expert_row_offsets[e];
++        tiles += (rows + 31) / 32;
++    }
++    return tiles;
++}
++
++static void fg_iq2_diag_emit(const char * reason, bool grouped, int combo, int64_t n_tiles,
++                             const int64_t * expert_row_offsets, int64_t n_as, int64_t M, int64_t K,
++                             int64_t total_rows, int64_t n_active, bool reordered, int32_t src1_prec) {
++    if (!g_ggml_sycl_debug) {
++        return;
++    }
++
++    int         BN = 0;
++    int         SG_ROWS = 0;
++    std::string combo_name;
++    if (combo >= 0) {
++        fg_visit_combo(combo, [&](auto s) {
++            using S = decltype(s);
++            BN = S::BN;
++            SG_ROWS = S::SG_ROWS;
++        });
++        if (BN > 0) {
++            combo_name = fg_combo_name(combo);
++        }
++    }
++    const int64_t padded_columns = BN > 0 && n_tiles >= 0 ? n_tiles * BN : -1;
++    const std::string json =
++        "{\"event\":\"inner_result\",\"schema\":\"grouped_iq2_diag/v1\""
++        ",\"decision\":" + fg_iq2_diag_json_quote(grouped ? "grouped" : "fallback") +
++        ",\"reason\":" + fg_iq2_diag_json_quote(reason) +
++        ",\"M\":" + std::to_string(M) +
++        ",\"K\":" + std::to_string(K) +
++        ",\"experts\":" + std::to_string(n_as) +
++        ",\"total_rows\":" + std::to_string(total_rows) +
++        ",\"n_active\":" + std::to_string(n_active) +
++        ",\"row_counts\":" + fg_iq2_diag_rows(expert_row_offsets, n_as, false) +
++        ",\"tiles_bn32\":" + std::to_string(fg_iq2_diag_tiles32(expert_row_offsets, n_as)) +
++        ",\"tail_rows_bn32\":" + fg_iq2_diag_rows(expert_row_offsets, n_as, true) +
++        ",\"valid_columns\":" + std::to_string(total_rows) +
++        ",\"padded_columns\":" + (padded_columns >= 0 ? std::to_string(padded_columns) : "null") +
++        ",\"n_tiles\":" + (n_tiles >= 0 ? std::to_string(n_tiles) : "null") +
++        ",\"selected_combo\":" + (combo >= 0 ? std::to_string(combo) : "null") +
++        ",\"combo_name\":" + (combo_name.empty() ? "null" : fg_iq2_diag_json_quote(combo_name)) +
++        ",\"BN\":" + (BN > 0 ? std::to_string(BN) : "null") +
++        ",\"SG_ROWS\":" + (SG_ROWS > 0 ? std::to_string(SG_ROWS) : "null") +
++        ",\"reordered\":" + (reordered ? "true" : "false") +
++        ",\"src1_precision\":" + std::to_string(src1_prec) + "}";
++    GGML_SYCL_DEBUG("[SYCL_GROUPED_IQ2_DIAG] %s\n", json.c_str());
++}
++
+ // Combinations this build has kernels for and the device lists, one bit each. Cached per device:
+ // on a mixed box the first caller's verdict is not the others'.
+ static int fg_device_combos(const sycl::device & dev) {
+@@ -736,7 +820,7 @@
+ 
+ // one SG_ROWS x BN output tile: B columns [b0, b0 + BN) of packed_b go to dst columns [n0, n1),
+ // n1 - n0 <= BN
+-template <typename S, typename block_q_t, bool reordered>
++template <typename S, typename block_q_t, bool reordered, bool iq2_tail16 = false>
+ static void fused_dequant_gemm_tile(
+     const block_q_t * __restrict__ x,
+     const typename S::tsb * __restrict__ packed_b,
+@@ -813,6 +897,11 @@
+                 mx::joint_matrix<sycl::sub_group, TB, mx::use::b, S::TK, S::TN, S::b_layout> sub_b[S::NT];
+ #pragma unroll
+                 for (int nt = 0; nt < S::NT; ++nt) {
++                    if constexpr (iq2_tail16) {
++                        if (n1 - n0 <= S::TN && nt == 1) {
++                            continue;
++                        }
++                    }
+                     mx::joint_matrix_load(sg, sub_b[nt], b_ptr + (size_t) kq0 * b_stride + (b0 + nt * S::TN) * S::VNNI, b_stride);
+                 }
+ #pragma unroll
+@@ -823,6 +912,11 @@
+                         FG_BK);
+ #pragma unroll
+                     for (int nt = 0; nt < S::NT; ++nt) {
++                        if constexpr (iq2_tail16) {
++                            if (n1 - n0 <= S::TN && nt == 1) {
++                                continue;
++                            }
++                        }
+                         mx::joint_matrix_mad(sg, acc[mt][nt], sub_a, sub_b[nt], acc[mt][nt]);
+                     }
+                 }
+@@ -835,6 +929,11 @@
+         for (int mt = 0; mt < S::MT; ++mt) {
+ #pragma unroll
+             for (int nt = 0; nt < S::NT; ++nt) {
++                if constexpr (iq2_tail16) {
++                    if (n1 - n0 <= S::TN && nt == 1) {
++                        continue;
++                    }
++                }
+                 mx::joint_matrix_store(sg, acc[mt][nt],
+                     tile_c.template get_multi_ptr<sycl::access::decorated::no>() + c_base + (mt * S::TM) * S::BN + nt * S::TN,
+                     S::BN, mx::layout::row_major);
+@@ -871,14 +970,14 @@
+             sycl::nd_range<2>(sycl::range<2>(groups_n, groups_m * S::WG_SIZE), sycl::range<2>(1, S::WG_SIZE)),
+             [=](sycl::nd_item<2> item) [[sycl::reqd_sub_group_size(S::SG)]] {
+                 const int n0 = item.get_group(0) * S::BN;
+-                fused_dequant_gemm_tile<S, block_q_t, false>((const block_q_t *) src0, packed, dst, M, Npad, K, ldd,
++                fused_dequant_gemm_tile<S, block_q_t, false, false>((const block_q_t *) src0, packed, dst, M, Npad, K, ldd,
+                                                       n0, n0, N, tile_a, tile_c, item);
+             });
+     });
+ }
+ 
+ // grouped: work-group (t, mt) is tile t of the schedule; its B columns sit at t * BN
+-template <typename S, typename block_q_t, bool reordered>
++template <typename S, typename block_q_t, bool reordered, bool iq2_tail16 = false>
+ static void grouped_dequant_gemm_launch(const char * src0_dd, const size_t expert_stride,
+                                         const ggml_sycl_gg_tile * tiles_ptr, const typename S::tsb * packed, float * dst,
+                                         const int M, const int Npad, const int K, const int64_t n_tiles,
+@@ -892,7 +991,7 @@
+                 const int               t    = item.get_group(0);
+                 const ggml_sycl_gg_tile tile = tiles_ptr[t];
+                 const block_q_t *       x    = (const block_q_t *) (src0_dd + (size_t) tile.expert * expert_stride);
+-                fused_dequant_gemm_tile<S, block_q_t, reordered>(x, packed, dst, M, Npad, K, M, t * S::BN, tile.n0,
++                fused_dequant_gemm_tile<S, block_q_t, reordered, iq2_tail16>(x, packed, dst, M, Npad, K, M, t * S::BN, tile.n0,
+                                                                  tile.n1, tile_a, tile_c, item);
+             });
+     });
+@@ -1032,16 +1131,28 @@
+ static bool fg_grouped_run(ggml_type src0_type, bool reordered, const void * src0_base, size_t expert_stride,
+                            const float * src1, float * dst, const int64_t * expert_row_offsets, int64_t n_as, int64_t M,
+                            int64_t K, std::vector<ggml_sycl_gg_tile> & tiles, ggml_sycl_pool & pool,
+-                           dpct::queue_ptr stream) {
++                           dpct::queue_ptr stream, bool iq2_tail16) {
+     // the host knows every slice, so it lays out the work-groups: no search on the device
++    const bool emit_iq2_tail16 = g_ggml_sycl_debug && std::is_same_v<S, fg_combo0> &&
++                                 src0_type == GGML_TYPE_IQ2_XXS && !reordered;
++    int64_t narrow_tiles = 0;
+     tiles.clear();
+     for (int64_t e = 0; e < n_as; ++e) {
+         const int64_t end = expert_row_offsets[e + 1];
+         for (int64_t n0 = expert_row_offsets[e]; n0 < end; n0 += S::BN) {
+-            tiles.push_back({ (int32_t) e, (int32_t) n0, (int32_t) std::min<int64_t>(n0 + S::BN, end) });
++            const int64_t n1 = std::min<int64_t>(n0 + S::BN, end);
++            tiles.push_back({ (int32_t) e, (int32_t) n0, (int32_t) n1 });
++            if (emit_iq2_tail16 && n1 - n0 <= 16) {
++                ++narrow_tiles;
++            }
+         }
+     }
+     const int64_t n_tiles  = tiles.size();
++    if (emit_iq2_tail16) {
++        GGML_SYCL_DEBUG("[SYCL][IQ2_TAIL16] path=%s combo=0 tiles=%lld narrow_tiles=%lld M=%lld K=%lld\n",
++                        iq2_tail16 ? "tail16" : "original", (long long) n_tiles,
++                        (long long) narrow_tiles, (long long) M, (long long) K);
++    }
+     const int64_t groups_m = (M + S::SG_ROWS - 1) / S::SG_ROWS;
+     const int     Npad     = (int) (n_tiles * S::BN);
+ 
+@@ -1058,9 +1169,17 @@
+     const char *              src0_dd   = (const char *) src0_base;
+     return fg_visit_type(src0_type, reordered, [&](auto tag) {
+         using T = decltype(tag);
+-        grouped_dequant_gemm_launch<S, typename T::type, T::reordered>(src0_dd, expert_stride, tiles_ptr, packed, dst,
+-                                                                       (int) M, Npad, (int) K, n_tiles, groups_m,
+-                                                                       stream);
++        if constexpr (std::is_same_v<S, fg_combo0> && std::is_same_v<typename T::type, block_iq2_xxs> &&
++                      !T::reordered) {
++            if (iq2_tail16) {
++                grouped_dequant_gemm_launch<S, typename T::type, T::reordered, true>(
++                    src0_dd, expert_stride, tiles_ptr, packed, dst, (int) M, Npad, (int) K, n_tiles, groups_m,
++                    stream);
++                return;
++            }
++        }
++        grouped_dequant_gemm_launch<S, typename T::type, T::reordered, false>(
++            src0_dd, expert_stride, tiles_ptr, packed, dst, (int) M, Npad, (int) K, n_tiles, groups_m, stream);
+     });
+ }
+ 
+@@ -1068,26 +1187,50 @@
+                                     const float * src1, int32_t src1_prec, float * dst,
+                                     const int64_t * expert_row_offsets, int64_t n_as, int64_t M, int64_t K,
+                                     int64_t total_rows, std::vector<ggml_sycl_gg_tile> & tiles,
+-                                    ggml_sycl_pool & pool, dpct::queue_ptr stream) {
++                                    ggml_sycl_pool & pool, dpct::queue_ptr stream, bool iq2_tail16) {
+     int64_t n_active = 0;
+     for (int64_t e = 0; e < n_as; ++e) {
+         n_active += expert_row_offsets[e + 1] > expert_row_offsets[e];
+     }
+-    if (g_ggml_sycl_dynamic_precision == GGML_SYCL_DYNAMIC_PRECISION_F32 ||
+-        !ggml_sycl_xmx_gather_type_enabled(src0_type) || !fg_visit_type(src0_type, reordered, [](auto) {})) {
++    const bool diag = g_ggml_sycl_debug && src0_type == GGML_TYPE_IQ2_XXS;
++    const auto diag_fallback = [&](const char * reason) {
++        if (diag) {
++            fg_iq2_diag_emit(reason, false, -1, -1, expert_row_offsets, n_as, M, K, total_rows,
++                              n_active, reordered, src1_prec);
++        }
++    };
++    if (g_ggml_sycl_dynamic_precision == GGML_SYCL_DYNAMIC_PRECISION_F32) {
++        diag_fallback("dynamic_precision");
+         return false;
+     }
+-    if (!ggml_sycl_grouped_dequant_gemm_shape_ok(src0_type, M, K, total_rows, n_active)) {
++    if (!ggml_sycl_xmx_gather_type_enabled(src0_type)) {
++        diag_fallback("type_mask");
++        return false;
++    }
++    if (!fg_visit_type(src0_type, reordered, [](auto) {})) {
++        diag_fallback("unsupported_layout_type");
++        return false;
++    }
++    const bool shape_ok = ggml_sycl_grouped_dequant_gemm_shape_ok(src0_type, M, K, total_rows, n_active);
++    if (!shape_ok) {
++        const bool base_shape_ok = ggml_sycl_fused_dequant_gemm_shape_ok(src0_type, M, 1, K, M);
++        const bool total_rows_ok = total_rows > 0 && total_rows <= INT32_MAX;
++        diag_fallback(!base_shape_ok || !total_rows_ok ? "invalid_shape" : "average_gt_64");
+         return false;
+     }
+     const int combo = fg_pick_combo(stream, GGML_TYPE_F32, src1_prec);
+     if (combo < 0) {
++        diag_fallback("unsupported_combo");
+         return false;
+     }
+     bool launched = false;
+     fg_visit_combo(combo, [&](auto s) {
+         launched = fg_grouped_run<decltype(s)>(src0_type, reordered, src0_base, expert_stride, src1, dst,
+-                                               expert_row_offsets, n_as, M, K, tiles, pool, stream);
++                                               expert_row_offsets, n_as, M, K, tiles, pool, stream, iq2_tail16);
+     });
++    if (diag) {
++        fg_iq2_diag_emit(launched ? "launch_true" : "launch_false", launched, combo, (int64_t) tiles.size(),
++                          expert_row_offsets, n_as, M, K, total_rows, n_active, reordered, src1_prec);
++    }
+     return launched;
+ }
+diff --git a/ggml/src/ggml-sycl/fused-gemm.hpp b/ggml/src/ggml-sycl/fused-gemm.hpp
+--- a/ggml/src/ggml-sycl/fused-gemm.hpp
++++ b/ggml/src/ggml-sycl/fused-gemm.hpp
+@@ -83,6 +83,6 @@
+                                     const float * src1, int32_t src1_prec, float * dst,
+                                     const int64_t * expert_row_offsets, int64_t n_as, int64_t M, int64_t K,
+                                     int64_t total_rows, std::vector<ggml_sycl_gg_tile> & tiles,
+-                                    ggml_sycl_pool & pool, dpct::queue_ptr stream);
++                                    ggml_sycl_pool & pool, dpct::queue_ptr stream, bool iq2_tail16 = true);
+ 
+ #endif // GGML_SYCL_FUSED_GEMM_HPP
