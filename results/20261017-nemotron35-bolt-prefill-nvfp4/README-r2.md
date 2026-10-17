@@ -1,6 +1,6 @@
 # Experimental Bolt NVFP4 → F32 prefill workgroup packing — R2
 
-**Patch artifact only. No worker GPU/build result or speed claim.** Tier: development.
+**Numerical/activation/API gates pass; rejected for lack of prefill improvement.** Development-only: matched8K prefill8231.233→8248.592ms (+0.21%), not a speedup.
 
 R2 is the bounded correction to the R1 NVFP4 packing experiment. It keeps the same
 256-work-item, eight-block workgroup and the same per-lane scale conversion, nibble
@@ -171,3 +171,34 @@ GPU:
 
 The lead owns all oneAPI builds, native execution, actual-model debug activation,
 API gates, timing, retrieval, and artifact retention.
+
+## Lead execution and disposition
+
+Build and validation ran on `mike@inference-host`, using the unchanged image/toolchain and six build jobs. Executable scripts and frozen controllers are in `../20261016-nemotron35-bolt-sycl/`:
+
+```bash
+# On inference-host, in /home/mike/b70-evals/20261016-nemotron35-bolt-sycl:
+timeout --signal=TERM --kill-after=60s 3600s bash build-nvfp4-prefill-r2.sh
+timeout --signal=TERM --kill-after=240s 9000s bash validate-nvfp4-prefill-r2.sh
+```
+
+The second script performs candidate native+debug activation, then a fresh non-debug SSM baseline and candidate. Each measured launch passes native checks and fresh20/20 gate-v2 before timing. Candidate registration rejects measurement without the successful debug summary. Controller ownership/native-registration checks:16/16 pass.
+
+- Existing385 native checks pass unchanged. New production-converter test:22 raw cases (11 block counts ×2 layouts) with full-array bitwise comparisons and input/output guards; finite CPU comparison and half fallback pass. Exact marker counts: packed10+10 by layout, original13+14 F32 and1 F16. No skipped/ineligible device is accepted; B70 reports max workgroup1024.
+- Real-model debug:960 packed calls,880 reordered. Token widths: non-reordered18:80; reordered24:80,26:80,1024:560,73:80,1020:80. No one-token conversion marker in this exercised trace. This is observed Bolt behavior, not a universal prefill-only dispatcher guarantee.
+- `nvfp4-prefill-r2-pair-baseline` and `nvfp4-prefill-r2-pair-candidate`: both20/20 API checks and exact8238-token `BOLT-7319-CEDAR` retrieval pass. All20 quality,4 short and5 long request payloads are byte-identical. Measured requests are55/8270 tokens with128 forced outputs and cache_n0. Hardware records match.
+
+| Median | SSM baseline | Packed R2 | Delta |
+|---|---:|---:|---:|
+| Short server prefill |469.278ms|472.943ms|+0.781%|
+| Long server prefill |8231.233ms|8248.592ms|+0.211%|
+| Long prefill throughput |1004.7097tok/s|1002.5954tok/s|−0.210%|
+| Long client TTFT |8.323424s|8.336008s|+0.151%|
+| Short decode |40.4448tok/s|40.4815tok/s|+0.091%|
+| Long decode |39.0389tok/s|39.1062tok/s|+0.172%|
+
+Long server prefill repetitions: baseline8224.010,8247.240,8231.233ms; candidate8245.275,8250.518,8248.592ms. Inclusive IQR11.615/2.6215ms. Short repetitions469.278,468.431,494.334ms vs486.214,472.943,468.240ms. No samples excluded. Three repetitions establish no useful gain here, not a precise regression estimate or broad performance claim.
+
+Short client TTFT falls0.933318→0.592205s while server prefill does not improve. RAM prompt-cache bookkeeping remains variable; do not attribute that client-only change to the kernel. Generated outputs match0/3 short and2/3 long; native bitwise parity is not full-output identity or comprehensive quality evidence (same-build launch variation was already documented for the baseline).
+
+**Disposition: R2 is not the serving winner.** The accepted staged-SSM source is restored under unique run `nvfp4-prefill-r2-no-gain-recovery`: native gates/API smoke pass, all three accepted binary hashes match, the live `/src` mount is the SSM winner, and `/health` returns `{"status":"ok"}`. See `nvfp4-prefill-r2-restored-residency.log`. No weights, persistent launcher, hardware/driver/network settings, KV/recurrent precision, context or batch settings were changed. Peak memory, maximum-context capacity, broader fidelity, graph replay and other devices remain uncharacterized. No further candidate retry or tuning sweep is part of this result.
