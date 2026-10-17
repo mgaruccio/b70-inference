@@ -1,0 +1,11 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -5412,7 +5412,7 @@
+             w->view_src || !ggml_is_contiguous(w) || w->ne[2] != 1 || w->ne[3] != 1 ||
+             !w->buffer || !ggml_backend_buffer_is_sycl(w->buffer) ||
+             w->ne[0] % QK_NVFP4 != 0 || ggml_nelements(w) > INT_MAX ||
+-            (uintptr_t) w->data % 16 != 0 || dst->src[1]->ne[1] != 1) {
++            (uintptr_t) w->data % 16 != 0 || (dst->src[1]->ne[1] != 1 && dst->src[1]->ne[1] != 2)) {
+             return false;
+         }
+     }
