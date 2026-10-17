@@ -1,0 +1,129 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -3829,7 +3829,7 @@
+         src0->ne[2] != 1 || src0->ne[3] != 1 || src1->ne[2] != 1 || src1->ne[3] != 1 ||
+         dst->ne[2] != 1 || dst->ne[3] != 1 ||
+         src0->op != GGML_OP_NONE || (src0->flags & (GGML_TENSOR_FLAG_INPUT | GGML_TENSOR_FLAG_OUTPUT | GGML_TENSOR_FLAG_COMPUTE)) ||
+-        src0->view_src || src1->view_src || dst->view_src || src0->view_offs || src1->view_offs || dst->view_offs ||
++        src0->view_src || dst->view_src || src0->view_offs || src1->view_offs || dst->view_offs ||
+         !ggml_is_contiguous(src0) || !ggml_is_contiguous(src1) || !ggml_is_contiguous(dst) ||
+         !src0->buffer || ggml_backend_buffer_is_sycl_split(src0->buffer) || !ggml_backend_buffer_is_sycl(src0->buffer) ||
+         !src0->buffer->context || !src0->extra || !src0->data || (uintptr_t) src0->data % 16 != 0 ||
+@@ -3846,9 +3846,33 @@
+ #endif
+     constexpr char down[] = ".ffn_latent_down.weight";
+     constexpr char up[] = ".ffn_latent_up.weight";
++    constexpr char attn_q[] = ".attn_q.weight";
++    constexpr char attn_k[] = ".attn_k.weight";
++    constexpr char attn_v[] = ".attn_v.weight";
++    constexpr char attn_out[] = ".attn_output.weight";
+     const size_t len = std::strlen(src0->name);
++    const bool is_attn_output =
++        len >= sizeof(attn_out) - 1 &&
++        std::strcmp(src0->name + len - (sizeof(attn_out) - 1), attn_out) == 0;
++    if (src1->view_src) {
++        const ggml_tensor * src1_base = src1->view_src;
++        if (!is_attn_output || src1->op != GGML_OP_RESHAPE || src1->view_offs != 0 ||
++            src1->data != src1_base->data || src1->buffer != src1_base->buffer ||
++            !src1->buffer || ggml_backend_buffer_is_sycl_split(src1->buffer) ||
++            !ggml_backend_buffer_is_sycl(src1->buffer) || !src1->buffer->context ||
++            static_cast<ggml_backend_sycl_buffer_context *>(src1->buffer->context)->device != ctx.device ||
++            src1_base->view_src || src1_base->view_offs || src1_base->type != GGML_TYPE_F32 ||
++            !ggml_is_contiguous(src1_base) || ggml_nelements(src1) != ggml_nelements(src1_base) ||
++            ggml_nbytes(src1) != ggml_nbytes(src1_base)) {
++            return false;
++        }
++    }
+     return (len >= sizeof(down) - 1 && std::strcmp(src0->name + len - (sizeof(down) - 1), down) == 0) ||
+-           (len >= sizeof(up) - 1 && std::strcmp(src0->name + len - (sizeof(up) - 1), up) == 0);
++           (len >= sizeof(up) - 1 && std::strcmp(src0->name + len - (sizeof(up) - 1), up) == 0) ||
++           (len >= sizeof(attn_q) - 1 && std::strcmp(src0->name + len - (sizeof(attn_q) - 1), attn_q) == 0) ||
++           (len >= sizeof(attn_k) - 1 && std::strcmp(src0->name + len - (sizeof(attn_k) - 1), attn_k) == 0) ||
++           (len >= sizeof(attn_v) - 1 && std::strcmp(src0->name + len - (sizeof(attn_v) - 1), attn_v) == 0) ||
++           is_attn_output;
+ #else
+     GGML_UNUSED(ctx);
+     GGML_UNUSED(src0);
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5611,6 +5611,56 @@
+     }
+ };
+ 
++
++// Named Q8_0/F32 CPU-reference regressions for the bounded attention DMMV control.
++// Reuse latent_dmmv2 initialization, tolerance, and CPU reference unchanged.
++struct test_mul_mat_attention_dmmv2 : public test_mul_mat {
++    const char * weight;
++
++    test_mul_mat_attention_dmmv2(const char * weight, int64_t m, int64_t n, int64_t k) :
++        test_mul_mat(GGML_TYPE_Q8_0, GGML_TYPE_F32, m, n, k, {1, 1}, {1, 1}), weight(weight) {}
++
++    std::string vars() override {
++        return std::string("attention_dmmv2=1,weight=") + weight + "," + test_mul_mat::vars();
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * a = ggml_new_tensor_2d(ctx, GGML_TYPE_Q8_0, k, m);
++        ggml_set_name(a, weight);
++        ggml_tensor * b = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, n);
++        return ggml_mul_mat(ctx, a, b);
++    }
++};
++
++// Native fixtures exercise the actual flash-attention F32 3D-to-2D reshape view.
++struct test_mul_mat_attention_view_dmmv2 : public test_mul_mat {
++    const char * weight;
++
++    test_mul_mat_attention_view_dmmv2(const char * weight, int64_t n) :
++        test_mul_mat(GGML_TYPE_Q8_0, GGML_TYPE_F32, 4096, n, 4096, {1, 1}, {1, 1}), weight(weight) {}
++
++    std::string vars() override {
++        return std::string("attention_view_dmmv2=1,weight=") + weight + "," + test_mul_mat::vars();
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * a = ggml_new_tensor_2d(ctx, GGML_TYPE_Q8_0, k, m);
++        ggml_set_name(a, weight);
++        const bool partial = strcmp(weight, "blk.7.prefix.attn_output.weight") == 0 ||
++                             strcmp(weight, "blk.7.offset.attn_output.weight") == 0;
++        ggml_tensor * base = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, 128, 32, partial ? 3 : n);
++        ggml_tensor * view = nullptr;
++        if (partial) {
++            const size_t offset = strcmp(weight, "blk.7.offset.attn_output.weight") == 0 ? base->nb[2] : 0;
++            view = ggml_view_2d(ctx, base, 4096, 2, base->nb[2], offset);
++            view = ggml_reshape_2d(ctx, view, 4096, 2);
++        } else {
++            view = ggml_reshape_2d(ctx, base, 4096, n);
++        }
++        return ggml_mul_mat(ctx, a, view);
++    }
++};
++
+ // GGML_HINT_SRC0_IS_HADAMARD
+ struct test_mul_mat_hadamard : public test_mul_mat {
+     test_mul_mat_hadamard(ggml_type type_a = GGML_TYPE_F32, ggml_type type_b = GGML_TYPE_F32,
+@@ -11548,6 +11598,23 @@
+     }
+     test_cases.emplace_back(new test_mul_mat_latent_dmmv2("output.weight", 1024, 2, 4096));
+ 
++    // Exactly thirteen cases, selected by -p '^attention_dmmv2=1,'.
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_attention_dmmv2("blk.7.attn_q.weight", 4096, n, 4096));
++        test_cases.emplace_back(new test_mul_mat_attention_dmmv2("blk.7.attn_k.weight", 256, n, 4096));
++        test_cases.emplace_back(new test_mul_mat_attention_dmmv2("blk.7.attn_v.weight", 256, n, 4096));
++        test_cases.emplace_back(new test_mul_mat_attention_dmmv2("blk.7.attn_output.weight", 4096, n, 4096));
++    }
++    test_cases.emplace_back(new test_mul_mat_attention_dmmv2("blk.7.unrelated.weight", 256, 2, 4096));
++
++    // Exactly six cases, selected by -p '^attention_view_dmmv2=1,'.
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_attention_view_dmmv2("blk.7.attn_output.weight", n));
++    }
++    test_cases.emplace_back(new test_mul_mat_attention_view_dmmv2("blk.7.prefix.attn_output.weight", 2));
++    test_cases.emplace_back(new test_mul_mat_attention_view_dmmv2("blk.7.offset.attn_output.weight", 2));
++    test_cases.emplace_back(new test_mul_mat_attention_view_dmmv2("blk.7.unrelated.weight", 2));
++
+     // Experimental NVFP4 reorder lifetime/scale regressions. Filter with -p nvfp4_reorder=1.
+     for (bool f32 : {false, true}) {
+         for (int64_t k : {64, 192}) {
