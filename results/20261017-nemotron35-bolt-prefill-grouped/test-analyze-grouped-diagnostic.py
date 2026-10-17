@@ -117,7 +117,7 @@ class GroupedDiagnosticTests(unittest.TestCase):
         self.assertEqual(report["outer_fallback_reasons"], {"type": 1})
         self.assertEqual(report["calls_detail"][0]["reason"], "outer_type")
 
-    def test_rejects_total_mismatch_and_large_tail(self) -> None:
+    def test_rejects_total_and_tail_mismatch(self) -> None:
         rows = [16, 16]
         bad_total = _begin(rows)
         bad_total["total_rows"] += 1
@@ -129,11 +129,29 @@ class GroupedDiagnosticTests(unittest.TestCase):
             directory.cleanup()
 
         bad_tail = _begin([17, 16])
-        bad_tail["tail_rows_bn32"] = [17, 16]
+        bad_tail["tail_rows_bn32"] = [16, 16]
         directory, path = _write_log([bad_tail])
         try:
             with self.assertRaisesRegex(ANALYZER.DiagnosticError, "tail"):
                 ANALYZER.analyze_path(path)
+        finally:
+            directory.cleanup()
+
+    def test_accepts_all_tail_widths_and_skew_above_average(self) -> None:
+        rows = [0, 1, 15, 16, 17, 31, 32, 33, 63, 64, 65]
+        directory, path = _write_log([_begin(rows), _result(rows)])
+        try:
+            report = ANALYZER.analyze_path(path)
+            geometry = report["grouped_geometry"]
+            self.assertEqual(report["grouped_calls"], 1)
+            self.assertEqual(geometry["tiles_bn32"], 15)
+            self.assertEqual(geometry["active_experts"], 10)
+            self.assertEqual(geometry["tail_tiles_le16"], 5)
+            self.assertEqual(geometry["tail_tiles_17_31"], 3)
+            self.assertEqual(geometry["max_rows_per_expert"], 65)
+            self.assertEqual(geometry["tiles_per_expert_histogram"], {1: 6, 2: 3, 3: 1})
+            self.assertAlmostEqual(geometry["tiles_per_active_expert"], 1.5)
+            self.assertAlmostEqual(geometry["padding_fraction_weighted_bn32"], (480 - sum(rows)) / 480)
         finally:
             directory.cleanup()
 

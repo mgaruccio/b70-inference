@@ -1,0 +1,205 @@
+{
+  "tier": "development",
+  "design": "matched sequential baseline/candidate launches; warmup plus three measurements",
+  "baseline": {
+    "quality_passed": 20,
+    "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1",
+    "source_hashes": {
+      "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d",
+      "libggml-sycl.so.0": "076b16475de805572cf7a623eecca827fd04e58903bf03a003121f60af56fd2f",
+      "test-backend-ops": "a6a3f666754fce8edfbb59d9840290a188ba2681e7065f812de3359f4e12c98d"
+    },
+    "bench": {
+      "prefill_ms": {
+        "samples": [
+          473.149,
+          468.68600000000004,
+          471.675
+        ],
+        "median": 471.675
+      },
+      "prefill_tokens_per_second": {
+        "samples": [
+          116.24245216623093,
+          117.34935543199498,
+          116.60571367997032
+        ],
+        "median": 116.60571367997032
+      },
+      "ttft_s": {
+        "samples": [
+          0.9974343230132945,
+          0.893264960963279,
+          0.7439746530144475
+        ],
+        "median": 0.893264960963279
+      },
+      "decode_tokens_per_second": {
+        "samples": [
+          40.4150957087116,
+          40.27467531527346,
+          40.345125674845534
+        ],
+        "median": 40.345125674845534
+      }
+    },
+    "long": {
+      "prefill_ms": {
+        "samples": [
+          8230.415,
+          8226.255000000001,
+          8230.688
+        ],
+        "median": 8230.415
+      },
+      "prefill_tokens_per_second": {
+        "samples": [
+          1004.8095995159417,
+          1005.317729635174,
+          1004.7762714368471
+        ],
+        "median": 1004.8095995159417
+      },
+      "ttft_s": {
+        "samples": [
+          8.323125260008965,
+          8.417415697011165,
+          8.318517888023052
+        ],
+        "median": 8.323125260008965
+      },
+      "decode_tokens_per_second": {
+        "samples": [
+          38.91630361333761,
+          39.03406158711353,
+          39.05271267830549
+        ],
+        "median": 39.03406158711353
+      }
+    },
+    "retrieval": {
+      "prompt_tokens": 8238,
+      "pass": true
+    }
+  },
+  "candidate": {
+    "quality_passed": 20,
+    "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-grouped-tail-r1",
+    "source_hashes": {
+      "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d",
+      "libggml-sycl.so.0": "cbac2a30701fa64b8549070948696fe4a85c5b8b88fcc2fe88cac4aa83632efb",
+      "test-backend-ops": "1efcb3b266b001a23dbff6594c3b3fc9990a73f0c1e85ef69c8a6435d91dcfab"
+    },
+    "bench": {
+      "prefill_ms": {
+        "samples": [
+          468.576,
+          468.315,
+          468.132
+        ],
+        "median": 468.315
+      },
+      "prefill_tokens_per_second": {
+        "samples": [
+          117.37690363996448,
+          117.4423198061134,
+          117.48822981552212
+        ],
+        "median": 117.4423198061134
+      },
+      "ttft_s": {
+        "samples": [
+          0.884950105973985,
+          0.6715907910256647,
+          0.6312473450088874
+        ],
+        "median": 0.6715907910256647
+      },
+      "decode_tokens_per_second": {
+        "samples": [
+          40.47642760615691,
+          40.4902238889442,
+          40.47833478996447
+        ],
+        "median": 40.47833478996447
+      }
+    },
+    "long": {
+      "prefill_ms": {
+        "samples": [
+          8222.669,
+          8216.915,
+          8212.975
+        ],
+        "median": 8216.915
+      },
+      "prefill_tokens_per_second": {
+        "samples": [
+          1005.7561601956737,
+          1006.4604538321255,
+          1006.9432818193163
+        ],
+        "median": 1006.4604538321255
+      },
+      "ttft_s": {
+        "samples": [
+          8.31862395000644,
+          8.404638162988704,
+          8.301294407981914
+        ],
+        "median": 8.31862395000644
+      },
+      "decode_tokens_per_second": {
+        "samples": [
+          39.04787837595442,
+          39.145262635417296,
+          39.029033695785046
+        ],
+        "median": 39.04787837595442
+      }
+    },
+    "retrieval": {
+      "prompt_tokens": 8238,
+      "pass": true
+    }
+  },
+  "excluded_samples": [],
+  "delta_percent": {
+    "bench": {
+      "prefill_ms": -0.7123549053903666,
+      "prefill_tokens_per_second": 0.7174658082700791,
+      "ttft_s": -24.816172090592847,
+      "decode_tokens_per_second": 0.3301739996858899
+    },
+    "long": {
+      "prefill_ms": -0.16402575082787862,
+      "prefill_tokens_per_second": 0.16429523732446327,
+      "ttft_s": -0.05408196875460458,
+      "decode_tokens_per_second": 0.03539674909323054
+    }
+  },
+  "payloads": {
+    "quality": {
+      "byte_identical": 20,
+      "total": 20
+    },
+    "bench": {
+      "byte_identical": 4,
+      "total": 4
+    },
+    "long": {
+      "byte_identical": 5,
+      "total": 5
+    }
+  },
+  "output_identity": {
+    "bench": {
+      "matches": 0,
+      "total": 3
+    },
+    "long": {
+      "matches": 0,
+      "total": 3
+    }
+  }
+}

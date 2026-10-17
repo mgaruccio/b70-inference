@@ -606,7 +606,7 @@ void run_negative_case(const char * name, negative_gate gate, int64_t M, int64_t
         const bool returned = ggml_sycl_grouped_dequant_gemm(
             GGML_TYPE_IQ2_XXS, gate == negative_gate::reordered, weights.payload(), expert_stride,
             activations.payload_as<float>(), GGML_PREC_UNDEFINED, output.payload_as<float>(), routing.offsets.data(),
-            static_cast<int64_t>(routing.widths.size()), M, K, call_rows, tiles, pool, queue, is_candidate);
+            static_cast<int64_t>(routing.widths.size()), M, K, total_rows, tiles, pool, queue, is_candidate);
         queue->wait_and_throw();
 
         require(!returned, std::string(name) + " " + phase + ": negative gate returned true");

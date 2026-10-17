@@ -1,0 +1,12 @@
+diff --git a/tests/test-grouped-iq2-sycl.cpp b/tests/test-grouped-iq2-sycl.cpp
+--- a/tests/test-grouped-iq2-sycl.cpp
++++ b/tests/test-grouped-iq2-sycl.cpp
+@@ -131,7 +131,7 @@
+         while (first < snapshot.size() && buffer.base[first] == snapshot[first]) {
+             ++first;
+         }
+-        std::fprintf(stderr, "%s: input changed at byte %zu: got=0x%02x want=0x%02x\n", label, first,
++        std::fprintf(stderr, "%s: input changed at byte %zu: got=0x%02x want=0x%02x\n", label.c_str(), first,
+                      first < snapshot.size() ? buffer.base[first] : 0,
+                      first < snapshot.size() ? snapshot[first] : 0);
+         fail(label + ": input bytes changed");

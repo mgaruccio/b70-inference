@@ -118,8 +118,6 @@ def _validate_common(data: dict[str, Any], *, line: int) -> dict[str, Any]:
     expected_tails = [value % TILE_WIDTH for value in rows]
     if data.get("tail_rows_bn32") != expected_tails:
         raise DiagnosticError(f"line {line}: tail_rows_bn32 does not match row_counts modulo 32")
-    if any(value > TAIL_LIMIT for value in expected_tails):
-        raise DiagnosticError(f"line {line}: row-count tail exceeds {TAIL_LIMIT}: {expected_tails}")
     if data.get("valid_columns") != total_rows:
         raise DiagnosticError(f"line {line}: valid_columns must equal total_rows")
 
@@ -320,6 +318,26 @@ def _counter_dict(values: Iterable[str]) -> dict[str, int]:
     return dict(sorted(Counter(values).items()))
 
 
+def _geometry(items: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    rows = [row for item in items for row in item["row_counts"] if row > 0]
+    tiles = sum((row + TILE_WIDTH - 1) // TILE_WIDTH for row in rows)
+    narrow = sum(0 < row % TILE_WIDTH <= TAIL_LIMIT for row in rows)
+    padded = tiles * TILE_WIDTH
+    return {
+        "active_experts": len(rows),
+        "valid_columns": sum(rows),
+        "padded_columns_bn32": padded,
+        "tiles_bn32": tiles,
+        "tiles_per_active_expert": tiles / len(rows) if rows else None,
+        "padding_fraction_weighted_bn32": (padded - sum(rows)) / padded if padded else None,
+        "tail_tiles_le16": narrow,
+        "tail_tiles_17_31": sum(TAIL_LIMIT < row % TILE_WIDTH < TILE_WIDTH for row in rows),
+        "tail_tiles_le16_fraction": narrow / tiles if tiles else None,
+        "max_rows_per_expert": max(rows, default=0),
+        "tiles_per_expert_histogram": dict(sorted(Counter((row + 31) // 32 for row in rows).items())),
+    }
+
+
 def summarize_calls(calls: Sequence[DiagnosticCall], *, source: str | None = None) -> dict[str, Any]:
     details = [_call_summary(call) for call in calls]
     shape_groups: dict[tuple[int, int], list[dict[str, Any]]] = defaultdict(list)
@@ -342,6 +360,8 @@ def summarize_calls(calls: Sequence[DiagnosticCall], *, source: str | None = Non
                 sum(item["padding_fraction_bn32"] for item in group) / len(group)
             ),
             "reasons": _counter_dict(item["reason"] for item in group),
+
+            "grouped_geometry": _geometry([item for item in group if item["decision"] == "grouped"]),
         }
 
     grouped = [item for item in details if item["decision"] == "grouped"]
@@ -351,6 +371,7 @@ def summarize_calls(calls: Sequence[DiagnosticCall], *, source: str | None = Non
         "marker_records": len(details) + sum(item["result_line"] is not None for item in details),
         "calls": len(details),
         "grouped_calls": len(grouped),
+        "grouped_geometry": _geometry(grouped),
         "fallback_calls": len(details) - len(grouped),
         "outer_fallback_reasons": _counter_dict(
             reason for item in details if not item["outer_eligible"] for reason in item["outer_reasons"]
