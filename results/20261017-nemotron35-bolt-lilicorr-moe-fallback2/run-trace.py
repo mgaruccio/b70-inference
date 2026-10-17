@@ -58,22 +58,29 @@ def legacy_native_prefix(prefix):
     return prefix.replace(old, old.removesuffix('23') + '0', 1)
 
 def check_iq2_native_gate(log):
+    log = re.sub(r'(?m)^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z ', '', log)
     marker = 'BOLT_VERIFY_IQ2_NATIVE_PASSED'
     assert log.count(marker) == 1
     assert 'BOLT_LILICORR_OUTPROD_NATIVE_PASSED' in log
     focused = log.split('BOLT_LILICORR_OUTPROD_NATIVE_PASSED', 1)[1].split(marker, 1)[0]
+    focused = re.sub(r'\x1b\[[0-9;]*m', '', focused)
     rows = re.findall(r'(?m)^\s*(\d+)/(\d+) tests passed\s*$', focused)
-    assert rows == [('6', '6'), ('6', '6')], rows
-    assert not re.search(r'(?i)not supported|skipping|unsupported|unexpected|err\s*=|failed', focused)
+    assert rows == [('6', '6')], rows
+    cases = re.findall(r'(?m)^\s*MUL_MAT_ID\(type_a=iq2_xxs,type_b=f32,n_mats=16,n_used=9,[^\n]*\): OK\s*$', focused)
+    assert len(cases) == 6, len(cases)
+    # The backend filter intentionally skips CPU as a test target; CPU remains the numerical reference.
+    focused = re.sub(r'(?m)^Backend \d+/\d+: CPU\n[ \t]+Skipping\n', '', focused)
+    assert not re.search(r'(?i)not supported|skipp|unsupported|unexpected|err\s*=|failed', focused)
 
 
 IQ2_NATIVE_COMMAND = (
     "GGML_SYCL_DEBUG=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT_ID "
     "-p 'type_a=iq2_xxs,type_b=f32,n_mats=16,n_used=9,' 2>&1 | "
     "tee /tmp/iq2-xxs-native.log; "
-    "grep -Fx '  6/6 tests passed' /tmp/iq2-xxs-native.log; "
-    "count=$(grep -Fc '  6/6 tests passed' /tmp/iq2-xxs-native.log || true); test \"$count\" -eq 2; "
-    "if grep -Eiq 'not supported|skipping large tensors|unsupported|UNEXPECTED|ERR =|failed' "
+    "grep -Fqx '  6/6 tests passed' /tmp/iq2-xxs-native.log; "
+    "count=$(grep -Fc '  6/6 tests passed' /tmp/iq2-xxs-native.log || true); test \"$count\" -eq 1; "
+    "count=$(grep -Ec '^  MUL_MAT_ID\\(type_a=iq2_xxs,type_b=f32,n_mats=16,n_used=9,.*\\):.*OK' /tmp/iq2-xxs-native.log || true); test \"$count\" -eq 6; "
+    "if grep -Eiq 'not supported|skipping large tensors|skipped|unsupported|UNEXPECTED|ERR =|failed' "
     "/tmp/iq2-xxs-native.log; then exit 1; fi; "
     "echo BOLT_VERIFY_IQ2_NATIVE_PASSED; "
 )

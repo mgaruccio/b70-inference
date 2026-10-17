@@ -5,6 +5,7 @@ import ast
 import copy
 import json
 import runpy
+import shlex
 import shutil
 import socket
 import subprocess
@@ -20,6 +21,15 @@ OLD = runpy.run_path(str(M['WIDTH1'] / 'run-controls.py'))
 NATIVE = runpy.run_path(str(M['WIDTH1'] / 'analyze-controls.py'))
 BASE = json.loads((OLD['OLD'] / 'nvfp4-prefill-r2-no-gain-recovery/create-argv.json').read_text())
 IMAGE = 'intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04'
+
+
+def iq2_native_output():
+    cases = []
+    for n in (1, 2, 3):
+        for b, m, k in ((1, 2048, 1024), (0, 1024, 2048)):
+            cases.append(f'  MUL_MAT_ID(type_a=iq2_xxs,type_b=f32,n_mats=16,n_used=9,b={b},m={m},n={n},k={k},amax=1,m_v=0,ids_offset=0): \x1b[1;32mOK\x1b[0m')
+    return ('Backend 1/2: SYCL0\n' + '\n'.join(cases) + '\n  6/6 tests passed\n'
+            '  Backend SYCL0: OK\nBackend 2/2: CPU\n  Skipping\n2/2 backends passed\nOK\n')
 
 
 def fixture(directory, speculative=False, diverge=False, chunked_prompt=False):
@@ -425,18 +435,48 @@ class Trace(unittest.TestCase):
         raw = '\n'.join(line for line in raw.split('\n') if 'call ggml_sycl_ssm_scan_prefill:' not in line)
         log = raw.replace(
             OLD['SERVER_MARKER'],
-            '  6/6 tests passed\n  6/6 tests passed\nBOLT_VERIFY_IQ2_NATIVE_PASSED\n' + M['MARKER'])
+            iq2_native_output() + 'BOLT_VERIFY_IQ2_NATIVE_PASSED\n' + M['MARKER'])
         M['check_startup'](log, 'C0', OLD, NATIVE)
         suppressed = log.replace('n_max=1, n_min=0,', 'n_max=1, n_min=2,')
         M['check_startup'](suppressed, 'S0', OLD, NATIVE)
+        for source, label in ((log, 'C0'), (suppressed, 'S0')):
+            stamped = '\n'.join('2026-10-17T20:10:00.123456789Z ' + line for line in source.splitlines())
+            M['check_startup'](stamped, label, OLD, NATIVE)
         for broken in (
                 log.replace('BOLT_VERIFY_IQ2_NATIVE_PASSED', 'missing'),
-                log.replace('  6/6 tests passed\n  6/6 tests passed', '  6/6 tests passed'),
+                log.replace('  6/6 tests passed', '  6/6 tests passed\n  6/6 tests passed'),
+                log.replace('Backend 2/2: CPU', 'Backend 2/2: UNEXPECTED_GPU'),
+                log.replace('  6/6 tests passed', '  5/6 tests passed'),
+                log.replace('  6/6 tests passed', 'SKIPPED\n  6/6 tests passed'),
                 log.replace('BOLT_VERIFY_IQ2_NATIVE_PASSED', 'not supported\nBOLT_VERIFY_IQ2_NATIVE_PASSED'),
                 log.replace('n_max=1, n_min=0,', 'n_max=4, n_min=0,'),
                 log + '\nBOLT_VERIFY error op=mkstemp errno=28\n'):
             with self.assertRaises(AssertionError):
                 M['check_startup'](broken, 'C0', OLD, NATIVE)
+
+    def test_iq2_native_shell_gate_counts_once_and_fails_closed(self):
+        transcript = self.root / 'iq2-native-input.log'
+        captured = self.root / 'iq2-native-captured.log'
+        suffix = M['IQ2_NATIVE_COMMAND'].split(' 2>&1 | ', 1)[1]
+        suffix = suffix.replace('/tmp/iq2-xxs-native.log', shlex.quote(str(captured)))
+        for output, status, succeeds in (
+            (iq2_native_output(), 0, True),
+            (iq2_native_output() + '  6/6 tests passed\n', 0, False),
+            (iq2_native_output().replace('\x1b[1;32mOK', 'SKIPPED', 1), 0, False),
+            (iq2_native_output() + 'not supported\n', 0, False),
+            (iq2_native_output(), 1, False),
+        ):
+            transcript.write_text(output)
+            producer = f'(cat {shlex.quote(str(transcript))}; exit {status})'
+            command = 'set -euo pipefail; ' + producer + ' 2>&1 | ' + suffix
+            result = subprocess.run(['bash', '-c', command], capture_output=True, text=True)
+            self.assertEqual(result.returncode == 0, succeeds, result.stdout + result.stderr)
+            if succeeds:
+                self.assertEqual(result.stdout.count('6/6 tests passed'), 1)
+                M['check_iq2_native_gate']('BOLT_LILICORR_OUTPROD_NATIVE_PASSED\n' + result.stdout)
+            else:
+                self.assertNotIn('BOLT_VERIFY_IQ2_NATIVE_PASSED', result.stdout)
+
     def test_restoration_identity_config_all_mounts_and_hostconfig(self):
         original = dict(Id='original-id', State=dict(Running=True), Config=dict(Env=['x=1']),
                         HostConfig=dict(PortBindings={'a': 'b'}), Mounts=[dict(Destination='/src', Source='/parent', RW=False)])
@@ -757,5 +797,10 @@ class Trace(unittest.TestCase):
             changed = A['analyze_arm'](c0_cell, 'C0', OLD)
             self.assertTrue(changed['c0_parent_report_only'])
             self.assertFalse(changed['parent_comparison']['actual_batch_inputs_match'])
+            c0_parent['prompt_ids'][0] ^= 1
+            (c0_parent_cell / 'alignment.json').write_text(json.dumps(c0_parent))
+            with self.assertRaisesRegex(AssertionError, 'prompt IDs differ'):
+                A['analyze_arm'](c0_cell, 'C0', OLD)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

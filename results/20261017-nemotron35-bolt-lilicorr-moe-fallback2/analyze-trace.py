@@ -432,6 +432,7 @@ def report_parent_comparison(candidate, label, ordinary, diagnostic):
     assert parent_capture.is_dir()
     assert len(candidate['samples']) == len(parent['samples']) == 128
     prompt_ids_match = (candidate['prompt_ids'] == parent['prompt_ids'])
+    assert prompt_ids_match, f'{label} prompt IDs differ from MoE-route parent'
     a_ids, b_ids = candidate['emitted_ids'], parent['emitted_ids']
     first_output = next((i + 1 for i, pair in enumerate(zip(a_ids, b_ids)) if pair[0] != pair[1]), None)
     cutoff = first_output or 128
