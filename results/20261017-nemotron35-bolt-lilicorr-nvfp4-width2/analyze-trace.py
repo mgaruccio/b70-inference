@@ -205,6 +205,7 @@ def assert_actual_route_gates(route_analysis, label):
             assert ssm_routes, weight
             for route in ssm_routes:
                 assert route['src0_type'] == 'nvfp4', route
+                assert route['src1_ne1'] == expected_head_ne1, route
                 assert route['route'] == 'MMVQ_REORDERED' and route['reorder'] == 1, route
 
 
@@ -452,6 +453,7 @@ def report_parent_comparison(candidate, label, ordinary, diagnostic):
 def assert_strict_s0_parent_invariant(parent_comparison):
     """S0 must match head-MMVQ parent on all 128 raw vectors and reported identity fields."""
     assert parent_comparison['compared_through_ordinal'] == 128
+    assert len(parent_comparison['comparisons']) == 128
     assert parent_comparison['first_output_difference_ordinal'] is None
     assert parent_comparison['first_raw_difference'] is None
     assert parent_comparison['prompt_ids_match']

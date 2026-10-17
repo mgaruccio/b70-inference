@@ -569,8 +569,8 @@ class Trace(unittest.TestCase):
             return dict(routes=[
                 dict(weight='output.weight', src0_type='q8_0', route='MMVQ_REORDERED', reorder=1,
                      src1_ne1=head_ne1),
-                dict(weight='blk.0.ssm_in.weight', src0_type='nvfp4', route='MMVQ_REORDERED', reorder=1),
-                dict(weight='blk.0.ssm_out.weight', src0_type='nvfp4', route='MMVQ_REORDERED', reorder=1),
+                dict(weight='blk.0.ssm_in.weight', src0_type='nvfp4', route='MMVQ_REORDERED', reorder=1, src1_ne1=head_ne1),
+                dict(weight='blk.0.ssm_out.weight', src0_type='nvfp4', route='MMVQ_REORDERED', reorder=1, src1_ne1=head_ne1),
             ])
 
         A['assert_actual_route_gates'](dict(selected_batches=[batch(1)]), 'S0')
@@ -584,6 +584,10 @@ class Trace(unittest.TestCase):
         bad_ssm['selected_batches'][0]['routes'][1]['reorder'] = 0
         with self.assertRaises(AssertionError):
             A['assert_actual_route_gates'](bad_ssm, 'C0')
+        bad_shape = dict(selected_batches=[batch(2)])
+        bad_shape['selected_batches'][0]['routes'][1]['src1_ne1'] = 1
+        with self.assertRaises(AssertionError):
+            A['assert_actual_route_gates'](bad_shape, 'C0')
 
     def test_strict_s0_parent_invariant_gate(self):
         candidate = self.aligned()
@@ -603,6 +607,8 @@ class Trace(unittest.TestCase):
         with patch.dict(A['report_parent_comparison'].__globals__, PARENT_RESULTS=parent_results):
             report = A['report_parent_comparison'](candidate, 'S0', ordinary, diagnostic)
             A['assert_strict_s0_parent_invariant'](report)
+            with self.assertRaises(AssertionError):
+                A['assert_strict_s0_parent_invariant'](dict(report, comparisons=[]))
             broken = bytearray((parent_capture / parent['samples'][0]['file']).read_bytes())
             broken[0] ^= 1
             (parent_capture / parent['samples'][0]['file']).write_bytes(broken)
