@@ -545,10 +545,22 @@ class Trace(unittest.TestCase):
                 self.assertEqual(result['parent_comparison']['raw_vector_count'], 128)
                 self.assertFalse(result['parent_comparison']['reference_equivalence_required'])
 
+    def test_route_gate_with_saved_runtime_metadata(self):
+        # Keep real formatter dtypes/shapes; simulate only the intended head route.
+        for label in ('S0', 'C0'):
+            cell = M['PARENT_RESULTS'] / 'run-r1' / label
+            metadata = json.loads((cell / 'alignment.json').read_text())['route_analysis']
+            for batch in metadata['selected_batches']:
+                for route in batch['routes']:
+                    if route['weight'] == 'output.weight':
+                        self.assertEqual(route['src0_type'], 'q8_0')
+                        route['route'] = 'MMVQ_REORDERED'
+            A['assert_actual_route_gates'](metadata, label)
+
     def test_actual_route_gate_head_and_ssm(self):
         def batch(head_ne1, ssm_route, ssm_reorder):
             return dict(routes=[
-                dict(weight='output.weight', src0_type='Q8_0', route='MMVQ_REORDERED', reorder=1,
+                dict(weight='output.weight', src0_type='q8_0', route='MMVQ_REORDERED', reorder=1,
                      src1_ne1=head_ne1),
                 dict(weight='blk.0.ssm_in.weight', route=ssm_route, reorder=ssm_reorder),
                 dict(weight='blk.0.ssm_out.weight', route=ssm_route, reorder=ssm_reorder),

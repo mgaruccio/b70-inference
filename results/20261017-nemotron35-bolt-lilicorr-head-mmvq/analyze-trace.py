@@ -196,7 +196,7 @@ def assert_actual_route_gates(route_analysis, label):
         head_routes = [route for route in batch['routes'] if route['weight'] == 'output.weight']
         assert head_routes, 'output.weight missing from target backend routes'
         for route in head_routes:
-            assert route['src0_type'] == 'Q8_0', route
+            assert route['src0_type'] == 'q8_0', route
             assert route['route'] == 'MMVQ_REORDERED', route
             assert route['reorder'] == 1, route
             assert route['src1_ne1'] == expected_head_ne1, route
