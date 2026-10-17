@@ -1,0 +1,78 @@
+--- a/tools/server/server-context.cpp	2026-10-17 09:46:34.118312656 -0400
++++ b/tools/server/server-context.cpp	2026-10-17 09:46:43.749421388 -0400
+@@ -10,6 +10,7 @@
+ 
+ #include "build-info.h"
+ #include "common.h"
++#include "debug.h"
+ #include "fit.h"
+ #include "llama.h"
+ #include "log.h"
+@@ -21,6 +22,8 @@
+ #include <algorithm>
+ #include <cstddef>
+ #include <cinttypes>
++#include <cstdlib>
++#include <cstring>
+ #include <exception>
+ #include <memory>
+ #include <filesystem>
+@@ -934,6 +937,35 @@
+     return true;
+ }
+ 
++static bool bolt_tensor_trace_enabled() {
++    const char * env = std::getenv("BOLT_TRACE_TENSORS");
++    return env != nullptr && std::strcmp(env, "1") == 0;
++}
++
++static bool bolt_tensor_trace_wants_tensor(const char * name) {
++    if (name == nullptr) {
++        return false;
++    }
++    if (std::strcmp(name, "inp_embd") == 0) {
++        return true;
++    }
++    if (std::strcmp(name, "result_output") == 0) {
++        return true;
++    }
++    static constexpr char k_l_out_prefix[] = "l_out-";
++    return std::strncmp(name, k_l_out_prefix, sizeof(k_l_out_prefix) - 1) == 0;
++}
++
++static bool bolt_tensor_trace_cb_eval(struct ggml_tensor * t, bool ask, void * user_data) {
++    if (ask) {
++        return bolt_tensor_trace_wants_tensor(t->name);
++    }
++    if (!bolt_tensor_trace_wants_tensor(t->name)) {
++        return true;
++    }
++    return common_debug_cb_eval(t, false, user_data);
++}
++
+ //
+ // server_context_impl (private implementation)
+ //
+@@ -988,6 +1020,8 @@
+ 
+     common_params params_base;
+ 
++    common_debug_cb_user_data bolt_tensor_trace_cb_user_data;
++
+     // note: keep these alive - they determine the lifetime of the model, context, etc.
+     common_init_result_ptr llama_init;
+ 
+@@ -1214,6 +1248,13 @@
+             params_base.load_progress_callback_user_data = &load_progress_text;
+         }
+ 
++        if (bolt_tensor_trace_enabled()) {
++            params_base.cb_eval_user_data = &bolt_tensor_trace_cb_user_data;
++            params_base.cb_eval           = bolt_tensor_trace_cb_eval;
++            SRV_WRN("%s\n",
++                    "BOLT_TENSOR_TRACE_ENABLED: graph eval callback active; timing and numerics may differ (observer effect)");
++        }
++
+         llama_init = common_init_from_params(params_base);
+ 
+         model_tgt = llama_init->model();
