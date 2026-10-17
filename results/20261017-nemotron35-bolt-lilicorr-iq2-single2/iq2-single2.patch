@@ -1,0 +1,189 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -5950,10 +5950,10 @@
+     }
+ }
+
+-// Fused MoE TG fast path. Returns false to fall back to the per-expert loop below.
+-static bool ggml_sycl_mul_mat_id_mmvq_fused(
+-    ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
+-    const ggml_tensor * src1, const ggml_tensor * ids, ggml_tensor * dst)
++// Pure singleton layout checks, shared with the exact-two-token preflight.
++static bool ggml_sycl_mul_mat_id_mmvq_layout(
++    const ggml_tensor * src0, const ggml_tensor * src1,
++    const ggml_tensor * ids, const ggml_tensor * dst)
+ {
+     const int64_t ne10 = src1->ne[0];
+     const int64_t ne11 = src1->ne[1];
+@@ -5966,6 +5966,19 @@
+     const int64_t n_ids_per_group = ids->ne[0];
+     if (ids->ne[1] != 1) return false;
+     if (ne11 != 1 && ne11 != n_ids_per_group) return false;
++
++    return true;
++}
++
++// Fused MoE TG fast path. Returns false to fall back to the per-expert loop below.
++static bool ggml_sycl_mul_mat_id_mmvq_fused(
++    ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
++    const ggml_tensor * src1, const ggml_tensor * ids, ggml_tensor * dst)
++{
++    if (!ggml_sycl_mul_mat_id_mmvq_layout(src0, src1, ids, dst)) return false;
++    const int64_t ne10 = src1->ne[0];
++    const int64_t ne11 = src1->ne[1];
++    const int64_t n_ids_per_group = ids->ne[0];
+
+     const queue_ptr stream           = ctx.stream();
+     const int       src1_padded_cols = GGML_PAD((int) ne10, MATRIX_ROW_PADDING);
+@@ -6018,6 +6031,100 @@
+     return dispatched;
+ }
+
++// This range check is read-only: no queue, pool, reorder, quantization or launch.
++// Layout/extent checks precede it, so ggml_nbytes cannot overflow.
++static bool ggml_sycl_iq2_single2_range(
++    const ggml_backend_sycl_context & ctx, const ggml_tensor * t)
++{
++    if (!t->data || !t->buffer || !ggml_backend_buffer_is_sycl(t->buffer) ||
++        !t->buffer->context || (uintptr_t) t->data % 4 != 0 ||
++        static_cast<const ggml_backend_sycl_buffer_context *>(t->buffer->context)->device != ctx.device) {
++        return false;
++    }
++    const uintptr_t base = (uintptr_t) ggml_backend_buffer_get_base(t->buffer);
++    const uintptr_t data = (uintptr_t) t->data;
++    const size_t size = ggml_backend_buffer_get_size(t->buffer);
++    return data >= base && data - base <= size && ggml_nbytes(t) <= size - (data - base);
++}
++
++static bool ggml_sycl_iq2_single2_eligible(
++    const ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
++    const ggml_tensor * src1, const ggml_tensor * ids, const ggml_tensor * dst)
++{
++    if (dst->op != GGML_OP_MUL_MAT_ID || dst->src[0] != src0 || dst->src[1] != src1 || dst->src[2] != ids ||
++        src0->type != GGML_TYPE_IQ2_XXS || src1->type != GGML_TYPE_F32 ||
++        ids->type != GGML_TYPE_I32 || dst->type != GGML_TYPE_F32 ||
++        src1->ne[2] != 2 || ids->ne[1] != 2 || dst->ne[2] != 2 ||
++        src0->ne[3] != 1 || src1->ne[3] != 1 || ids->ne[2] != 1 || ids->ne[3] != 1 || dst->ne[3] != 1) {
++        return false;
++    }
++    // Bound all products and the helper's int casts before inspecting strides.
++    for (const ggml_tensor * t : {src0, src1, ids, dst}) {
++        int64_t elements = 1;
++        for (int i = 0; i < GGML_MAX_DIMS; ++i) {
++            if (t->ne[i] <= 0 || t->ne[i] > INT_MAX / elements) return false;
++            elements *= t->ne[i];
++        }
++    }
++    if (src0->ne[0] % QK_K != 0 || src0->ne[0] > INT_MAX - MATRIX_ROW_PADDING ||
++        src1->ne[0] != src0->ne[0] || dst->ne[0] != src0->ne[1] || dst->ne[1] != ids->ne[0] ||
++        ids->ne[0] > src0->ne[2] || (src1->ne[1] != 1 && src1->ne[1] != ids->ne[0])) {
++        return false;
++    }
++    // Require the known plain IQ2 q-id switch arm (unconditional true after launch).
++    // opt_for_reorder_id excludes IQ2; an already installed reordered layout is unsafe.
++    const auto * extra = static_cast<const ggml_tensor_extra_gpu *>(src0->extra);
++    if (extra && extra->optimized_feature.reorder) return false;
++    if (src0->nb[0] != sizeof(block_iq2_xxs) ||
++        src0->nb[1] != src0->ne[0] / QK_K * sizeof(block_iq2_xxs) ||
++        src0->nb[2] != src0->nb[1] * src0->ne[1] || src0->nb[3] != src0->nb[2] * src0->ne[2]) {
++        return false;
++    }
++    for (const ggml_tensor * t : {src1, dst}) {
++        if (t->nb[0] != sizeof(float) || t->nb[1] != sizeof(float) * t->ne[0] ||
++            t->nb[2] != t->nb[1] * t->ne[1] || t->nb[3] != t->nb[2] * t->ne[2]) return false;
++    }
++    // IDs are a view of the full expert-count rows, not tightly packed selected IDs.
++    if (ids->nb[0] != sizeof(int32_t) || ids->nb[1] < sizeof(int32_t) * ids->ne[0] ||
++        ids->nb[1] % sizeof(int32_t) != 0 || ids->nb[1] > SIZE_MAX / 2 ||
++        ids->nb[2] != 2 * ids->nb[1] || ids->nb[3] != ids->nb[2]) return false;
++    for (const ggml_tensor * t : {src0, src1, ids, dst}) {
++        if (!ggml_sycl_iq2_single2_range(ctx, t)) return false;
++    }
++    return true;
++}
++
++static bool ggml_sycl_mul_mat_id_iq2_single2(
++    ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
++    const ggml_tensor * src1, const ggml_tensor * ids, ggml_tensor * dst)
++{
++    if (!ggml_sycl_iq2_single2_eligible(ctx, src0, src1, ids, dst)) return false;
++    ggml_tensor src1_token[2] = {*src1, *src1};
++    ggml_tensor ids_token[2] = {*ids, *ids};
++    ggml_tensor dst_token[2] = {*dst, *dst};
++    for (int t = 0; t < 2; ++t) {
++        src1_token[t].data = (char *) src1->data + t * src1->nb[2];
++        ids_token[t].data  = (char *) ids->data  + t * ids->nb[1];
++        dst_token[t].data  = (char *) dst->data  + t * dst->nb[2];
++        src1_token[t].ne[2] = 1;
++        ids_token[t].ne[1] = 1;
++        dst_token[t].ne[2] = 1;
++        // Preflight BOTH complete views before the first helper can enqueue anything.
++        if (!ggml_sycl_mul_mat_id_mmvq_layout(src0, &src1_token[t], &ids_token[t], &dst_token[t]) ||
++            !ggml_sycl_iq2_single2_range(ctx, &src1_token[t]) ||
++            !ggml_sycl_iq2_single2_range(ctx, &ids_token[t]) ||
++            !ggml_sycl_iq2_single2_range(ctx, &dst_token[t])) return false;
++    }
++    for (int t = 0; t < 2; ++t) {
++        // ctx.stream()/pool() share the existing in-order queue; scratch reuse is ordered.
++        // A false here violates the preflight contract: never fall back after a partial enqueue.
++        if (!ggml_sycl_mul_mat_id_mmvq_fused(ctx, src0, &src1_token[t], &ids_token[t], &dst_token[t])) {
++            GGML_ABORT("preflighted IQ2 singleton dispatch failed");
++        }
++    }
++    return true;
++}
++
+ // counting sort of the routed rows by expert id (row_id_i, as chosen by the router):
+ // builds a projection of a memory layout where each expert's slice is contiguous
+ static void mmid_counting_sort_rows(
+@@ -6073,6 +6180,10 @@
+
+     const int64_t n_as = ne02;
+     const int64_t n_ids = ids->ne[0];
++
++    if (ne12 == 2 && ggml_sycl_mul_mat_id_iq2_single2(ctx, src0, src1, ids, dst)) {
++        return;
++    }
+
+     if (ne12 == 1) {
+         if (ggml_sycl_mul_mat_id_mmvq_fused(ctx, src0, src1, ids, dst)) {
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5866,6 +5866,18 @@
+     }
+ };
+
++// Name only the six existing IQ2 numerical cases for the bounded route logger.
++// Graph construction, initialization, vars(), tolerance and CPU comparison stay inherited.
++struct test_mul_mat_id_iq2_single2 : public test_mul_mat_id {
++    using test_mul_mat_id::test_mul_mat_id;
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * result = test_mul_mat_id::build_graph(ctx);
++        ggml_set_name(result->src[0], b ? "blk.1.ffn_up_exps.weight" : "blk.1.ffn_down_exps.weight");
++        return result;
++    }
++};
++
+ // MUL_MAT_ID with expert ids repeated within a token's row
+ struct test_mul_mat_id_dup : public test_mul_mat_id {
+     using test_mul_mat_id::test_mul_mat_id;
+@@ -11935,12 +11947,12 @@
+     test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 1, 1, false, 1, 8192, 4096));
+
+     // Native CPU-reference coverage for the routed IQ2_XXS expert shapes.
+-    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 1, 1024));
+-    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 2, 1024));
+-    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 3, 1024));
+-    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 1, 2048));
+-    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 2, 2048));
+-    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 3, 2048));
++    test_cases.emplace_back(new test_mul_mat_id_iq2_single2(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 1, 1024));
++    test_cases.emplace_back(new test_mul_mat_id_iq2_single2(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 2, 1024));
++    test_cases.emplace_back(new test_mul_mat_id_iq2_single2(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 3, 1024));
++    test_cases.emplace_back(new test_mul_mat_id_iq2_single2(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 1, 2048));
++    test_cases.emplace_back(new test_mul_mat_id_iq2_single2(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 2, 2048));
++    test_cases.emplace_back(new test_mul_mat_id_iq2_single2(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 3, 2048));
+
+     for (int k : {1, 63, 65}) {
+         test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_F16, GGML_TYPE_F32, 1, 1, false, 8, 16, k));
