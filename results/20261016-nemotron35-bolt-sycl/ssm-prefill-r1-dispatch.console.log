@@ -1,0 +1,9 @@
+{"tier": "development", "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1", "measure": false, "debug": true, "status": "failed", "container_id": "4fecace208eeea9e3edc06678c8ad58974439601e770554001b78a1189bb8b38", "error": "AssertionError('Bolt/native gate stopped')", "bolt_running": false}
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/run-bolt-cell-ssm-prefill-r1.py", line 291, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/b70-evals/20261016-nemotron35-bolt-sycl/run-bolt-cell-ssm-prefill-r1.py", line 253, in main
+    assert command('docker', 'inspect', '--format', '{{.State.Running}}', NAME).strip() == 'true', 'Bolt/native gate stopped'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Bolt/native gate stopped

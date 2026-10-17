@@ -1,6 +1,6 @@
-# Bolt staged SSM prefill — patch-only candidate
+# Bolt staged SSM prefill — validated development result
 
-**Development tier; not a performance result or a promoted configuration. Device build, native execution, real-model activation, API gates, retrieval and timings: NOT RUN by this worker.** Only the two-file patch and this handoff are delivered. No remote sources, running servers, launchers, weights, build settings or runners were changed.
+**385 native cases, actual-model activation,20/20 gate-v2 API checks and exact8K retrieval pass.** A fresh confirmation pair reduces8270-token server prefill **8641.700→8232.165ms (−4.74%)**, raises prefill **956.988→1004.596tok/s (+4.97%)**, and reduces client TTFT **8.72924→8.31887s (−4.70%)**. Short server prefill is neutral; short client TTFT is variable and not improved. The experimental candidate remains resident; no persistent launcher was promoted. See lead results below. Worker-only static checks are preserved as historical evidence, not substituted for device validation.
 
 The requested direction is prefill, not decode. The lead-reported current router+MoE baseline passed 20/20 gate-v2 and exact retrieval; uncached 8270-token prefill median was **8583.184 ms**, TTFT **8.6699 s**. Its warmed, output-1 unitrace capture attributed **1.497786 s / 17.4413%** of **8.587583 s summed device activity** to 440 SSM scans. That attribution is motivation, **not** a prediction of wall-time savings. Staging adds a launch and scratch traffic; a gain is not guaranteed, especially for short batches.
 
@@ -146,6 +146,43 @@ git apply --verbose --reverse --check --directory=.pi/ssm-prefill/applied "$P"
 - Source comparison assertions: original scan/helper unchanged; staged recurrence/reduction/snapshots/final stores byte-identical. Registration enumeration: 34 cases, 23/11 eligibility, 34 forced fallback references; padded-view bounds and aggregate word counts checked statically.
 - ast-grep C++ `ERROR` query on patched `ssm_scan.cpp`: `[]` (exit 1 means no matches). This is a parse check, **not SYCL type checking or device compilation**.
 - Native/SYCL/serving/performance results remain **NOT RUN**. No numerical identity or speed claim is made.
+
+## Lead validation: initial dispatch failure and correction
+
+The initial device build and dependency precheck passed with IntelLLVM2026.0.0. `ssm-prefill-r1-dispatch` passed316 baseline native cases and both34-case SSM suites, but **fusion-on activated0 times instead of23**. The activation gate correctly stopped the run before model startup/API/timing. These are original-path results, not staged-kernel parity evidence. `ssm-prefill-r1-native-failure-recovery` restored validated router+MoE Bolt and passed smoke.
+
+Root cause verified in the actual source and `build.ninja`: `GGML_SYCL_SUPPORT_VMM` is defined inside `ggml-sycl.cpp`, not in `ssm_scan.cpp`. The initial preprocessor guard therefore compiled eligibility to false. The corrected patch uses the existing runtime `g_ggml_sycl_enable_vmm && devices[device].vmm` predicate: device-info initialization explicitly sets `vmm=0` when compiled without VMM, and the same predicate selects the VMM pool. The legacy-pool fallback remains mandatory. Neither recurrence nor tests changed.
+
+The initial patch, binary hashes, build/precheck output, failed activation run and recovery remain under `../20261016-nemotron35-bolt-sycl/ssm-prefill-r1-initial*`, `ssm-prefill-r1-dispatch/`, and `ssm-prefill-r1-native-failure-recovery/`. The initial static review found no blockers but missed the translation-unit macro visibility defect; actual activation evidence overrides that review. Its remaining caveats are missing explicit overflow-sentinel coverage and unvalidated graph replay (required runs keep graphs off).
+
+Corrected patch applicability, reverse-check, and byte comparison with patched source pass. Native tests are byte-identical across the dispatch correction. All subsequent gates below use the unchanged0/23 activation requirement and exact numerical thresholds.
+
+## Lead validation and measured results
+
+Artifacts are under `../20261016-nemotron35-bolt-sycl/`. Builds, tests and model workloads ran only on inference-host. Source and hardware settings match the router baseline except this patch. The frozen `run-bolt-cell-ssm-prefill-r1.py` requires the baseline316 native checks plus68 staged-suite cases and1 VMM-off control before server startup. Its focused controller tests pass14/14; shell syntax checks pass. Debug mode and measurement are mutually exclusive.
+
+- `ssm-prefill-r1-vmm-dispatch`: **385/385 native checks**, exact0/23 staged entries,34 complete comparisons per backend per mode, each18,883,328 y words and19,939,328 state words, zero bit mismatches and zero unwritten-slot mismatches. VMM-off1/1 passes with zero staged entries. CPU NMSE remains1e-7.
+- Actual debug model smoke plus an uncached8270-token/output1 activation request pass. There are **880 staged starts** across those requests, including280 at1024 tokens and40 at1020; none at one token. Other observed batch lengths are2,4,5,18,24,26,73. The server's checkpoint-driven splitting means the real remainder is73 in this request, not simply8270 modulo1024. This is activation evidence, not timing evidence.
+- `ssm-prefill-r1-validated`: fresh non-debug20/20 gate-v2 precedes timings; exact8238-token retrieval passes. First candidate long prefill8230.087ms versus the earlier resident baseline8583.184ms (−4.11% time/+4.29% throughput). Short TTFT rose0.53315→0.93343s despite neutral server prefill, triggering a fresh-launch confirmation pair rather than accepting the initial comparison alone.
+- `prefill-router-r1-confirm-baseline` and `ssm-prefill-r1-confirm-candidate`: both fresh non-debug20/20, native gates and exact8238 retrieval pass. Original weights/q8 KV/F32 recurrent/c65536/bub1024/one sequence/ESIMD1/FUSION1/graphs0 unchanged. All20 quality payloads and all6 measured timing payloads match exactly;55/8270 inputs,128 forced outputs,cache_n0,warm-up+3 measured repetitions.
+
+| Confirmation metric | Router baseline | Staged SSM | Change |
+|---|---:|---:|---:|
+| Long server prefill median |8641.700ms|8232.165ms|−4.74%|
+| Long server prefill throughput |956.9876tok/s|1004.5960tok/s|+4.97%|
+| Long client TTFT median |8.729244s|8.318865s|−4.70%|
+| Short server prefill median |471.335ms|471.201ms|−0.03%|
+| Short client TTFT median |0.547986s|0.592528s|+8.13%|
+| Short decode median |40.36985tok/s|40.40360tok/s|+0.08%|
+| Long decode median |39.11831tok/s|39.04209tok/s|−0.19%|
+
+Long prefill repetitions: baseline8641.700,8646.108,8640.736ms; candidate8231.059,8232.612,8232.165ms. Inclusive IQR2.686/0.7765ms. Short prefill IQR0.6765/2.1555ms. No outliers removed. These are small development runs, not community-comparable performance or confidence intervals. The long gain appears in both candidate launches; decode is effectively unchanged at this evidence level.
+
+**TTFT caveat:** request `cache_prompt:false` and `cache_n0` prevent reuse, but the server still maintains its RAM prompt cache. Initial baseline short cache-update times were61.06/59.28/62.51ms versus candidate459.06/461.17/554.18ms; fresh-pair baseline73.74/80.20/67.12ms versus candidate136.80/118.70/71.58ms. These logged pre-evaluation delays account for the observed variable short TTFT, while measured server prefill stays neutral. Do not erase the short TTFT regression or claim its root cause is proven to be the kernel. RAM-cache configuration was **not changed**; disabling that storage would be a separate experiment. Pinned server [documentation](https://github.com/ggml-org/llama.cpp/blob/b6334e37e6ef286fc5091a41b6561b2113d915fb/tools/server/README.md) distinguishes request reuse from `--cache-ram` storage.
+
+**Fidelity caveat:** native cases are bitwise exact, but full generated-output identity is not established. Of six measured outputs, first baseline/candidate match0/6 and the fresh pair match2/6. Same-build independent-launch controls also vary: router baseline matches1/6 across its two runs, candidate matches0/6. All gates/retrieval pass; this is a development smoke guarantee, not comprehensive semantic fidelity or proof that the patch cannot affect any output.
+
+Exact commands are retained in build/validation/measurement/confirmation shell scripts and per-cell controller/create-argv files. Failures and first measurements are preserved. The candidate adds at most1MiB requested scratch for the tested Bolt shapes; peak VRAM and maximum usable context were not separately measured. Configured context remains65536 and tested prompts reach8270 tokens. No persistent launcher or unrelated model was changed.
 
 ## External sources and conclusions
 

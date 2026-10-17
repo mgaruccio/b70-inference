@@ -1,7 +1,7 @@
 diff --git a/ggml/src/ggml-sycl/ssm_scan.cpp b/ggml/src/ggml-sycl/ssm_scan.cpp
 --- a/ggml/src/ggml-sycl/ssm_scan.cpp
 +++ b/ggml/src/ggml-sycl/ssm_scan.cpp
-@@ -125,6 +125,199 @@
+@@ -125,6 +125,196 @@
      }
  }
 
@@ -107,15 +107,12 @@ diff --git a/ggml/src/ggml-sycl/ssm_scan.cpp b/ggml/src/ggml-sycl/ssm_scan.cpp
 +    // The VMM pool only rewinds its allocation cursor on release: backing storage
 +    // stays mapped. Later reuse on this same in-order queue follows the scan. Do not
 +    // use the legacy pool here: its full-cache eviction can immediately free USM.
-+#if defined(GGML_SYCL_SUPPORT_VMM)
++    // GGML_SYCL_SUPPORT_VMM is private to ggml-sycl.cpp. Its device-info
++    // initialization sets vmm=false when the backend was built without VMM.
 +    extern int g_ggml_sycl_enable_vmm;
 +    if (!g_ggml_sycl_enable_vmm || !ggml_sycl_info().devices[ctx.device].vmm) {
 +        return false;
 +    }
-+#else
-+    GGML_UNUSED(ctx);
-+    return false;
-+#endif
 +    if (!ctx.stream()->is_in_order() || !ggml_is_contiguous(dst) ||
 +        !ggml_is_contiguous(s) || !ggml_is_contiguous(dt) || !ggml_is_contiguous(A) ||
 +        !ggml_is_contiguous(dst->src[6]) ||
@@ -201,7 +198,7 @@ diff --git a/ggml/src/ggml-sycl/ssm_scan.cpp b/ggml/src/ggml-sycl/ssm_scan.cpp
  inline void ggml_sycl_op_ssm_scan(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
      const ggml_tensor * src0 = dst->src[0];
      const ggml_tensor * src1 = dst->src[1];
-@@ -154,6 +347,11 @@
+@@ -154,6 +344,11 @@
      dpct::queue_ptr stream = ctx.stream();
      SYCL_CHECK(ggml_sycl_set_device(ctx.device));
 
