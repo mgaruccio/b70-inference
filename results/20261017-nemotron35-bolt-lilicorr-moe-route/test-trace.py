@@ -682,29 +682,33 @@ class Trace(unittest.TestCase):
 
     def test_analyze_arm_parent_observer_negative_through_full_wiring(self):
         synthetic = route_log()
-        cell = M['PARENT_RESULTS'] / 'run-r1' / 'S0'
-        with patch.dict(A['analyze_arm'].__globals__, select_route_batches=lambda log, label: A['select_route_batches'](synthetic, label)):
-            result = A['analyze_arm'](cell, 'S0', OLD)
-            self.assertTrue(result['parent_observer_passed'])
         parent_results = self.root / 'parent-results-negative'
-        parent_cell = parent_results / 'run-r1' / 'S0'
-        parent_capture = parent_cell / 'capture'
-        parent_capture.mkdir(parents=True)
-        aligned = self.aligned()
-        for sample in aligned['samples']:
-            shutil.copy2(Path(aligned['capture_path']) / sample['file'], parent_capture / sample['file'])
-        parent = copy.deepcopy(aligned)
-        parent['batches'][1]['tokens'] = [999]
-        parent['capture_path'] = str(parent_capture)
-        (parent_cell / 'alignment.json').write_text(json.dumps(parent))
-        ordinary = json.loads((cell / 'ordinary.result.json').read_text())
-        diagnostic = json.loads((cell / 'diagnostic.response.json').read_text())
-        (parent_cell / 'ordinary.result.json').write_text(json.dumps(ordinary))
-        (parent_cell / 'diagnostic.response.json').write_text(json.dumps(diagnostic))
-        with patch.dict(A['report_parent_comparison'].__globals__, PARENT_RESULTS=parent_results):
-            with patch.dict(A['analyze_arm'].__globals__, select_route_batches=lambda log, label: A['select_route_batches'](synthetic, label)):
+        for label in ('S0', 'C0'):
+            cell = M['PARENT_RESULTS'] / 'run-r1' / label
+            parent_cell = parent_results / 'run-r1' / label
+            parent_cell.mkdir(parents=True)
+            parent = json.loads((cell / 'alignment.json').read_text())
+            parent['capture_path'] = str(cell / 'capture')
+            parent_capture = parent_cell / 'capture'
+            parent_capture.mkdir()
+            for sample in parent['samples']:
+                shutil.copy2(cell / 'capture' / sample['file'], parent_capture / sample['file'])
+            (parent_cell / 'alignment.json').write_text(json.dumps(parent))
+            ordinary = json.loads((cell / 'ordinary.result.json').read_text())
+            diagnostic = json.loads((cell / 'diagnostic.response.json').read_text())
+            (parent_cell / 'ordinary.result.json').write_text(json.dumps(ordinary))
+            (parent_cell / 'diagnostic.response.json').write_text(json.dumps(diagnostic))
+            with patch.dict(A['analyze_arm'].__globals__, PARENT_RESULTS=parent_results,
+                            select_route_batches=lambda log, label: A['select_route_batches'](synthetic, label)):
+                result = A['analyze_arm'](cell, label, OLD)
+                self.assertTrue(result['parent_observer_passed'])
+                parent['batches'][1]['tokens'][0] ^= 1
+                (parent_cell / 'alignment.json').write_text(json.dumps(parent))
+                report = A['report_parent_comparison'](result, label, ordinary, diagnostic)
+                self.assertFalse(report['actual_batch_inputs_match'])
+                self.assertTrue(all(row['raw_bytes_equal'] for row in report['comparisons']))
                 with self.assertRaises(AssertionError):
-                    A['analyze_arm'](cell, 'S0', OLD)
+                    A['analyze_arm'](cell, label, OLD)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
