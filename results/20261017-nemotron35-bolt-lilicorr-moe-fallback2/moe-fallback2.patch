@@ -1,0 +1,24 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -6099,6 +6099,7 @@
+         bool grouped = false;
+         if (ggml_is_contiguous(src0) && src1->type == GGML_TYPE_F32 &&
+-            dst->type == GGML_TYPE_F32 && nb11 == sizeof(float)*ne10 && nb1 == sizeof(float)*ne0) {
++            dst->type == GGML_TYPE_F32 && nb11 == sizeof(float)*ne10 && nb1 == sizeof(float)*ne0 &&
++            !(src0->type == GGML_TYPE_IQ2_XXS && src1->ne[2] == 2)) {
+             // the grouped GEMM reads the reorder (SoA) layout faster, and the first decode step installs it
+             // anyway: install it here already, so prefill does not depend on whether a decode ran before
+             if (g_ggml_sycl_dynamic_precision != GGML_SYCL_DYNAMIC_PRECISION_F32 &&
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -11842,2 +11842,10 @@
++    // Native CPU-reference coverage for the routed IQ2_XXS expert shapes.
++    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 1, 1024));
++    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 2, 1024));
++    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, true,  2048, 3, 1024));
++    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 1, 2048));
++    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 2, 2048));
++    test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, false, 1024, 3, 2048));
++
+     for (int k : {1, 63, 65}) {
+         test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_F16, GGML_TYPE_F32, 1, 1, false, 8, 16, k));
