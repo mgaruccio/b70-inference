@@ -1,0 +1,12 @@
+--- a/ggml/src/ggml-sycl/ssm_scan.cpp
++++ b/ggml/src/ggml-sycl/ssm_scan.cpp
+@@ -344,7 +344,8 @@
+     dpct::queue_ptr stream = ctx.stream();
+     SYCL_CHECK(ggml_sycl_set_device(ctx.device));
+ 
+-    if (ssm_scan_prefill_supported(ctx, dst)) {
++    // legacy-scan control: force original serial scan (disable custom prefill route)
++    if (false && ssm_scan_prefill_supported(ctx, dst)) {
+         ggml_sycl_ssm_scan_prefill(ctx, dst);
+         return;
+     }
