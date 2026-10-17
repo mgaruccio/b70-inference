@@ -173,7 +173,7 @@
 +            GGML_ASSERT(type_a == GGML_TYPE_F32 && bs[0] == 2);
 +            ggml_tensor * base = ggml_new_tensor_4d(ctx, type_a, 2, m, k, bs[1]);
 +            ggml_set_name(base, "a_stride0_backing");
-+            a = ggml_permute(ctx, base, 1, 2, 0, 3);
++            a = ggml_permute(ctx, base, 2, 0, 1, 3);
 +        } else if (layout == "bad_column") {
 +            GGML_ASSERT(type_a == GGML_TYPE_F32);
 +            ggml_tensor * base = ggml_new_tensor_4d(ctx, type_a, m, k, bs[0], bs[1]);
@@ -196,7 +196,7 @@
 +            if (layout == "bad_src1") {
 +                GGML_ASSERT(type_b == GGML_TYPE_F32 && bs[0]*nr[0] == 2);
 +                b_storage = ggml_new_tensor_4d(ctx, type_b, 2, n, k, bs[1]*nr[1]);
-+                b = ggml_permute(ctx, b_storage, 1, 2, 0, 3);
++                b = ggml_permute(ctx, b_storage, 2, 0, 1, 3);
 +            } else {
 +                b_storage = ggml_new_tensor_4d(ctx, type_b, n, k, bs[0]*nr[0], bs[1]*nr[1]);
 +                b = b_storage;
@@ -204,7 +204,7 @@
          }
          ggml_set_name(b, "b");
  
-@@ -11847,6 +11956,31 @@
+@@ -11847,6 +11956,33 @@
          }
      }
  
@@ -218,12 +218,14 @@
 +    for (bool trans_b : {false, true}) {
 +        test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
 +                                                  37, 11, 19, {3, 2}, {2, 3}, trans_b));
++        test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
++                                                  37, 11, 19, {3, 2}, {2, 3}, trans_b, "qkv_view"));
 +    }
 +
-+    // Contiguous Q1_0 regression with the same irregular repeat geometry.
++    // Contiguous Q1_0 regression: preserve the supported non-broadcast contract.
 +    for (bool trans_b : {false, true}) {
 +        test_cases.emplace_back(new test_out_prod(GGML_TYPE_Q1_0, GGML_TYPE_F32,
-+                                                  64, 11, 19, {3, 2}, {2, 3}, trans_b));
++                                                  128, 11, 19, {3, 2}, {1, 1}, trans_b));
 +    }
 +
 +    // These layouts must be reported unsupported by SYCL, not silently skipped as passes.
@@ -236,7 +238,7 @@
      // ne2 sweep to cover the cublasSgemmStridedBatched path (dps2 == 1, ne2 > 1)
      for (int64_t ne2 : {1, 8, 16, 32}) {
          test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
-@@ -13633,10 +13767,11 @@
+@@ -13633,10 +13769,11 @@
              test_cases.end()
          );
  
