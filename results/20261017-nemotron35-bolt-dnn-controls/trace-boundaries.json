@@ -1,0 +1,2030 @@
+[
+  [
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{90, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.819723
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 90, 1, 1}, }) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1548.532471
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 90, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        935.248779
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 90, 1, 1}}) = {18560, 90, 1, 1}",
+      "shape": [
+        18560,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -545317760.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{93, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 90, 1, 1}",
+      "shape": [
+        10240,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -3832.506592
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 90, 1}}) = {1785856, 1, 1, 1}",
+      "shape": [
+        1785856,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        187025.8125
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 90, 1}, node_50{64, 128, 90, 1}}) = {64, 128, 90, 1}",
+      "shape": [
+        64,
+        128,
+        90,
+        1
+      ],
+      "printed_sums": [
+        286338.5625
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 90, 1}, }) = {1024, 8, 90, 1}",
+      "shape": [
+        1024,
+        8,
+        90,
+        1
+      ],
+      "printed_sums": [
+        33971.835938
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -4656.155762
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 90, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -0.778358
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 90, 1, 1}, SYCL0#embd#0{4096, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.0413
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 0, 1, 1}}) = {131072, 0, 1, 1}",
+      "shape": [
+        131072,
+        0,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.0
+      ]
+    },
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{4, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.52892
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 4, 1, 1}, }) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        53.029514
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 4, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        39.57021
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 4, 1, 1}}) = {18560, 4, 1, 1}",
+      "shape": [
+        18560,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -30755990.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{7, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 4, 1, 1}",
+      "shape": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -273.288757
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 4, 1}}) = {1081344, 1, 1, 1}",
+      "shape": [
+        1081344,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        14186.669922
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 4, 1}, node_50{64, 128, 4, 1}}) = {64, 128, 4, 1}",
+      "shape": [
+        64,
+        128,
+        4,
+        1
+      ],
+      "printed_sums": [
+        14006.43457
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 4, 1}, }) = {1024, 8, 4, 1}",
+      "shape": [
+        1024,
+        8,
+        4,
+        1
+      ],
+      "printed_sums": [
+        1644.677246
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4224.220703
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 4, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.705953
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 4, 1, 1}, SYCL0#embd#0{4096, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1.23487
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 1, 1, 1}}) = {131072, 1, 1, 1}",
+      "shape": [
+        131072,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4308795.0
+      ]
+    }
+  ],
+  [
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{90, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.819723
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 90, 1, 1}, }) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1548.532471
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 90, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        935.248779
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 90, 1, 1}}) = {18560, 90, 1, 1}",
+      "shape": [
+        18560,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -545317760.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{93, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 90, 1, 1}",
+      "shape": [
+        10240,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -3832.506592
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 90, 1}}) = {1785856, 1, 1, 1}",
+      "shape": [
+        1785856,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        187025.8125
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 90, 1}, node_50{64, 128, 90, 1}}) = {64, 128, 90, 1}",
+      "shape": [
+        64,
+        128,
+        90,
+        1
+      ],
+      "printed_sums": [
+        286338.5625
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 90, 1}, }) = {1024, 8, 90, 1}",
+      "shape": [
+        1024,
+        8,
+        90,
+        1
+      ],
+      "printed_sums": [
+        33971.835938
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -4656.155762
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 90, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -0.778358
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 90, 1, 1}, SYCL0#embd#0{4096, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.0413
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 0, 1, 1}}) = {131072, 0, 1, 1}",
+      "shape": [
+        131072,
+        0,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.0
+      ]
+    },
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{4, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.52892
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 4, 1, 1}, }) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        53.029514
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 4, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        39.57021
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 4, 1, 1}}) = {18560, 4, 1, 1}",
+      "shape": [
+        18560,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -30755990.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{7, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 4, 1, 1}",
+      "shape": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -273.288757
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 4, 1}}) = {1081344, 1, 1, 1}",
+      "shape": [
+        1081344,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        14186.669922
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 4, 1}, node_50{64, 128, 4, 1}}) = {64, 128, 4, 1}",
+      "shape": [
+        64,
+        128,
+        4,
+        1
+      ],
+      "printed_sums": [
+        14006.43457
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 4, 1}, }) = {1024, 8, 4, 1}",
+      "shape": [
+        1024,
+        8,
+        4,
+        1
+      ],
+      "printed_sums": [
+        1644.677246
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4224.220703
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 4, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.705953
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 4, 1, 1}, SYCL0#embd#0{4096, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1.23487
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 1, 1, 1}}) = {131072, 1, 1, 1}",
+      "shape": [
+        131072,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4308795.0
+      ]
+    }
+  ],
+  [
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{90, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.819723
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 90, 1, 1}, }) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1548.532471
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 90, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        935.248779
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 90, 1, 1}}) = {18560, 90, 1, 1}",
+      "shape": [
+        18560,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -545317760.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{93, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 90, 1, 1}",
+      "shape": [
+        10240,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -3832.506592
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 90, 1}}) = {1785856, 1, 1, 1}",
+      "shape": [
+        1785856,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        187025.8125
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 90, 1}, node_50{64, 128, 90, 1}}) = {64, 128, 90, 1}",
+      "shape": [
+        64,
+        128,
+        90,
+        1
+      ],
+      "printed_sums": [
+        286338.5625
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 90, 1}, }) = {1024, 8, 90, 1}",
+      "shape": [
+        1024,
+        8,
+        90,
+        1
+      ],
+      "printed_sums": [
+        33971.835938
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -4656.155762
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 90, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -0.778358
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 90, 1, 1}, SYCL0#embd#0{4096, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.0413
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 0, 1, 1}}) = {131072, 0, 1, 1}",
+      "shape": [
+        131072,
+        0,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.0
+      ]
+    },
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{4, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.52892
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 4, 1, 1}, }) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        53.029514
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 4, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        39.57021
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 4, 1, 1}}) = {18560, 4, 1, 1}",
+      "shape": [
+        18560,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -30755990.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{7, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 4, 1, 1}",
+      "shape": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -273.288757
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 4, 1}}) = {1081344, 1, 1, 1}",
+      "shape": [
+        1081344,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        14186.669922
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 4, 1}, node_50{64, 128, 4, 1}}) = {64, 128, 4, 1}",
+      "shape": [
+        64,
+        128,
+        4,
+        1
+      ],
+      "printed_sums": [
+        14006.43457
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 4, 1}, }) = {1024, 8, 4, 1}",
+      "shape": [
+        1024,
+        8,
+        4,
+        1
+      ],
+      "printed_sums": [
+        1644.677246
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4224.220703
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 4, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.705953
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 4, 1, 1}, SYCL0#embd#0{4096, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1.23487
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 1, 1, 1}}) = {131072, 1, 1, 1}",
+      "shape": [
+        131072,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4308795.0
+      ]
+    }
+  ],
+  [
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{90, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.819723
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 90, 1, 1}, }) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1548.532471
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 90, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        935.248779
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 90, 1, 1}}) = {18560, 90, 1, 1}",
+      "shape": [
+        18560,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -545317760.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{93, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 90, 1, 1}",
+      "shape": [
+        10240,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -3832.506592
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 90, 1}}) = {1785856, 1, 1, 1}",
+      "shape": [
+        1785856,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        187025.8125
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 90, 1}, node_50{64, 128, 90, 1}}) = {64, 128, 90, 1}",
+      "shape": [
+        64,
+        128,
+        90,
+        1
+      ],
+      "printed_sums": [
+        286338.5625
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 90, 1}, }) = {1024, 8, 90, 1}",
+      "shape": [
+        1024,
+        8,
+        90,
+        1
+      ],
+      "printed_sums": [
+        33971.835938
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -4656.155762
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 90, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -0.778358
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 90, 1, 1}, SYCL0#embd#0{4096, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.0413
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 0, 1, 1}}) = {131072, 0, 1, 1}",
+      "shape": [
+        131072,
+        0,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.0
+      ]
+    },
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{4, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.52892
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 4, 1, 1}, }) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        53.029514
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 4, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        39.57021
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 4, 1, 1}}) = {18560, 4, 1, 1}",
+      "shape": [
+        18560,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -30755990.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{7, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 4, 1, 1}",
+      "shape": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -273.288757
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 4, 1}}) = {1081344, 1, 1, 1}",
+      "shape": [
+        1081344,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        14186.669922
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 4, 1}, node_50{64, 128, 4, 1}}) = {64, 128, 4, 1}",
+      "shape": [
+        64,
+        128,
+        4,
+        1
+      ],
+      "printed_sums": [
+        14006.43457
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 4, 1}, }) = {1024, 8, 4, 1}",
+      "shape": [
+        1024,
+        8,
+        4,
+        1
+      ],
+      "printed_sums": [
+        1644.677246
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4224.220703
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 4, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.705953
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 4, 1, 1}, SYCL0#embd#0{4096, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1.23487
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 1, 1, 1}}) = {131072, 1, 1, 1}",
+      "shape": [
+        131072,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4308795.0
+      ]
+    }
+  ],
+  [
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{90, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.819723
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 90, 1, 1}, }) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1548.532471
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 90, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        935.248779
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 90, 1, 1}}) = {18560, 90, 1, 1}",
+      "shape": [
+        18560,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -545317760.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{93, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 90, 1, 1}",
+      "shape": [
+        10240,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -3832.506592
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 90, 1}}) = {1785856, 1, 1, 1}",
+      "shape": [
+        1785856,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        187025.8125
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 90, 1}, node_50{64, 128, 90, 1}}) = {64, 128, 90, 1}",
+      "shape": [
+        64,
+        128,
+        90,
+        1
+      ],
+      "printed_sums": [
+        286338.5625
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 90, 1}, }) = {1024, 8, 90, 1}",
+      "shape": [
+        1024,
+        8,
+        90,
+        1
+      ],
+      "printed_sums": [
+        33971.835938
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -4656.155762
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 90, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -0.778358
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 90, 1, 1}, SYCL0#embd#0{4096, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.0413
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 0, 1, 1}}) = {131072, 0, 1, 1}",
+      "shape": [
+        131072,
+        0,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.0
+      ]
+    },
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{4, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.52892
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 4, 1, 1}, }) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        53.029514
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 4, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        39.57021
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 4, 1, 1}}) = {18560, 4, 1, 1}",
+      "shape": [
+        18560,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -30755990.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{7, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 4, 1, 1}",
+      "shape": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -273.288757
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 4, 1}}) = {1081344, 1, 1, 1}",
+      "shape": [
+        1081344,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        14186.669922
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 4, 1}, node_50{64, 128, 4, 1}}) = {64, 128, 4, 1}",
+      "shape": [
+        64,
+        128,
+        4,
+        1
+      ],
+      "printed_sums": [
+        14006.43457
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 4, 1}, }) = {1024, 8, 4, 1}",
+      "shape": [
+        1024,
+        8,
+        4,
+        1
+      ],
+      "printed_sums": [
+        1644.677246
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4224.220703
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 4, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.705953
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 4, 1, 1}, SYCL0#embd#0{4096, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1.23487
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 1, 1, 1}}) = {131072, 1, 1, 1}",
+      "shape": [
+        131072,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4308795.0
+      ]
+    }
+  ],
+  [
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{90, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.819723
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 90, 1, 1}, }) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1548.532471
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 90, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        935.248779
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 90, 1, 1}}) = {18560, 90, 1, 1}",
+      "shape": [
+        18560,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -545317760.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{93, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 90, 1, 1}",
+      "shape": [
+        10240,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -3832.506592
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 90, 1}}) = {1785856, 1, 1, 1}",
+      "shape": [
+        1785856,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        187025.8125
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 90, 1}, node_50{64, 128, 90, 1}}) = {64, 128, 90, 1}",
+      "shape": [
+        64,
+        128,
+        90,
+        1
+      ],
+      "printed_sums": [
+        286338.5625
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 90, 1}, }) = {1024, 8, 90, 1}",
+      "shape": [
+        1024,
+        8,
+        90,
+        1
+      ],
+      "printed_sums": [
+        33971.835938
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -4656.155762
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 90, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -0.778358
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 90, 1, 1}, SYCL0#embd#0{4096, 90, 1, 1}}) = {4096, 90, 1, 1}",
+      "shape": [
+        4096,
+        90,
+        1,
+        1
+      ],
+      "printed_sums": [
+        24.0413
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 0, 1, 1}}) = {131072, 0, 1, 1}",
+      "shape": [
+        131072,
+        0,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.0
+      ]
+    },
+    {
+      "name": "embd",
+      "op": "GET_ROWS",
+      "header": "common_debug_cb_eval:                     embd = (f32)   GET_ROWS(token_embd.weight{4096, 131072, 1, 1}, inp_tokens{4, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.52892
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM(SYCL0#embd#0{4096, 4, 1, 1}, }) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        53.029514
+      ]
+    },
+    {
+      "name": "attn_norm-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              attn_norm-0 = (f32)        MUL(norm-0{4096, 4, 1, 1}, blk.0.attn_norm.weight{4096, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        39.57021
+      ]
+    },
+    {
+      "name": "node_15",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_15 = (f32)    MUL_MAT(blk.0.ssm_in.weight{4096, 18560, 1, 1}, attn_norm-0{4096, 4, 1, 1}}) = {18560, 4, 1, 1}",
+      "shape": [
+        18560,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -30755990.0
+      ]
+    },
+    {
+      "name": "node_28",
+      "op": "SSM_CONV",
+      "header": "common_debug_cb_eval:                  node_28 = (f32)   SSM_CONV(node_20{7, 10240, 1, 1}, blk.0.ssm_conv1d.weight{4, 10240, 1, 1}}) = {10240, 4, 1, 1}",
+      "shape": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        -273.288757
+      ]
+    },
+    {
+      "name": "node_38",
+      "op": "SSM_SCAN",
+      "header": "common_debug_cb_eval:                  node_38 = (f32)   SSM_SCAN(cache_s_l0 (reshaped) (reshaped){128, 64, 128, 1},  (view){64, 128, 4, 1}}) = {1081344, 1, 1, 1}",
+      "shape": [
+        1081344,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        14186.669922
+      ]
+    },
+    {
+      "name": "mamba2_y_add_d-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:         mamba2_y_add_d-0 = (f32)        ADD(node_38 (view){64, 128, 4, 1}, node_50{64, 128, 4, 1}}) = {64, 128, 4, 1}",
+      "shape": [
+        64,
+        128,
+        4,
+        1
+      ],
+      "printed_sums": [
+        14006.43457
+      ]
+    },
+    {
+      "name": "norm-0",
+      "op": "RMS_NORM",
+      "header": "common_debug_cb_eval:                   norm-0 = (f32)   RMS_NORM( (reshaped){1024, 8, 4, 1}, }) = {1024, 8, 4, 1}",
+      "shape": [
+        1024,
+        8,
+        4,
+        1
+      ],
+      "printed_sums": [
+        1644.677246
+      ]
+    },
+    {
+      "name": "node_57",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:                  node_57 = (f32)    MUL_MAT(blk.0.ssm_out.weight{8192, 4096, 1, 1},  (reshaped){8192, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4224.220703
+      ]
+    },
+    {
+      "name": "mamba_out-0",
+      "op": "MUL",
+      "header": "common_debug_cb_eval:              mamba_out-0 = (f32)        MUL(node_57{4096, 4, 1, 1}, blk.0.ssm_out.scale{1, 1, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        0.705953
+      ]
+    },
+    {
+      "name": "nemotron_h_block_out-0",
+      "op": "ADD",
+      "header": "common_debug_cb_eval:   nemotron_h_block_out-0 = (f32)        ADD(mamba_out-0{4096, 4, 1, 1}, SYCL0#embd#0{4096, 4, 1, 1}}) = {4096, 4, 1, 1}",
+      "shape": [
+        4096,
+        4,
+        1,
+        1
+      ],
+      "printed_sums": [
+        1.23487
+      ]
+    },
+    {
+      "name": "result_output",
+      "op": "MUL_MAT",
+      "header": "common_debug_cb_eval:            result_output = (f32)    MUL_MAT(output.weight{4096, 131072, 1, 1}, result_norm{4096, 1, 1, 1}}) = {131072, 1, 1, 1}",
+      "shape": [
+        131072,
+        1,
+        1,
+        1
+      ],
+      "printed_sums": [
+        4308795.0
+      ]
+    }
+  ]
+]
