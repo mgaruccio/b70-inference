@@ -1,0 +1,10 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -160,6 +160,7 @@
+     }
+     return std::strncmp(weight->name, "blk.0.", 6) == 0 ||
+            std::strncmp(weight->name, "blk.1.", 6) == 0 ||
++           std::strncmp(weight->name, "blk.7.", 6) == 0 ||
+            std::strcmp(weight->name, "output.weight") == 0;
+ }
+ 
