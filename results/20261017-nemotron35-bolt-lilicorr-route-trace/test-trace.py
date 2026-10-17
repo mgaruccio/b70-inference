@@ -85,12 +85,23 @@ def fixture(directory, speculative=False, diverge=False, chunked_prompt=False):
         i += len(emitted)
     return '\n'.join(rows) + '\n', tokens
 
-def route_line(route='MMVQ_PLAIN', weight='blk.0.attn_q.weight', backend='0xdef', aux='-', result=-1, expert=-1):
-    fields = dict(route=route, weight=weight, aux_weight=aux, op='MUL_MAT',
-                  src0_type='NVFP4', aux_type='-', src1_type='F32', dst_type='F32',
+def route_line(route='MMVQ_PLAIN', weight='blk.0.attn_q.weight', backend='0xdef', aux='-',
+               result=-1, expert=-1, op='MUL_MAT', op_id=0, ids=False, omit=()):
+    fields = dict(route=route, weight=weight, aux_weight=aux, op=op, op_id=op_id,
+                  dst_name='dst.tensor', src0_type='NVFP4', aux_type='-', src1_type='F32', dst_type='F32',
                   ne0=8, ne1=4, ne2=1, ne3=1, nb0=1, nb1=8, nb2=32, nb3=32,
-                  reorder=0, requested_prec=0, effective_prec=-1, dynamic_prec=3,
+                  src1_ne0=8, src1_ne1=1, src1_ne2=1, src1_ne3=1,
+                  src1_nb0=4, src1_nb1=32, src1_nb2=32, src1_nb3=32,
+                  dst_ne0=8, dst_ne1=1, dst_ne2=1, dst_ne3=1,
+                  dst_nb0=4, dst_nb1=32, dst_nb2=32, dst_nb3=32,
+                  ids_ne0=2 if ids else 0, ids_ne1=1 if ids else 0,
+                  ids_ne2=1 if ids else 0, ids_ne3=1 if ids else 0,
+                  ids_nb0=4 if ids else 0, ids_nb1=8 if ids else 0,
+                  ids_nb2=8 if ids else 0, ids_nb3=8 if ids else 0,
+                  reorder=0, src1_prec=0, operand_prec=-1, accum_prec=0, dynamic_prec=3,
                   device=0, backend_ctx=backend, expert=expert, result=result)
+    for key in omit:
+        fields.pop(key)
     return '2026-10-17T00:00:00Z 0.0.1 I BOLT_ROUTE ' + ' '.join(f'{k}={v}' for k, v in fields.items())
 
 
@@ -102,17 +113,19 @@ def route_batch(pos, tokens):
             f'pos={",".join(map(str, pos))} outputs={",".join(map(str, outputs))} seq={seq}')
 
 
-def route_decoded():
-    return '2026-10-17T00:00:00Z 0.0.1 I BOLT_VERIFY decoded ctx=0xabc ret=0'
+def route_decoded(ctx='0xabc', ret=0):
+    return f'2026-10-17T00:00:00Z 0.0.1 I BOLT_VERIFY decoded ctx={ctx} ret={ret}'
 
 
-def route_log():
+def route_log(missing_output=False):
     lines = [route_line(weight='blk.0.outside.weight')]
     lines += [route_batch(list(range(55)), list(range(1000, 1055))),
               route_line(weight='output.weight', backend='0xabc'),
               route_line(weight='blk.0.prompt.weight'), route_decoded()]
-    lines += [route_batch([55], [1055]), route_line(weight='blk.0.attn_q.weight'),
-              route_line(weight='output.weight'), route_decoded()]
+    lines += [route_batch([55], [1055]), route_line(weight='blk.0.attn_q.weight', backend='0xabc')]
+    if not missing_output:
+        lines.append(route_line(weight='output.weight'))
+    lines.append(route_decoded())
     lines += [route_line(weight='blk.0.after.weight'),
               route_batch([56], [1056]), route_line(weight='blk.0.attn_k.weight'),
               route_line(weight='output.weight'), route_decoded()]
@@ -158,6 +171,12 @@ class Trace(unittest.TestCase):
         self.assertEqual(names, M['SOURCE_SCOPE'])
         self.assertIn('BOLT_ROUTE', patch.read_text())
         self.assertIn('BOLT_VERIFY_CAPTURE_DIR', patch.read_text())
+        for field in ('src1_ne0', 'src1_nb0', 'dst_name', 'dst_ne0', 'dst_nb0',
+                      'ids_ne0', 'ids_nb0', 'op_id', 'src1_prec', 'operand_prec', 'accum_prec'):
+            self.assertIn(field, patch.read_text())
+        self.assertNotIn('requested_prec', patch.read_text())
+        self.assertNotIn('effective_prec', patch.read_text())
+        self.assertNotIn('bolt_route_dynamic_effective_precision', patch.read_text())
 
     def test_capture_reserve_and_parent_results(self):
         self.assertEqual(M['CAPTURE_RESERVE_BYTES'], 4 * 1024**3)
@@ -404,12 +423,16 @@ class Trace(unittest.TestCase):
         self.assertEqual([b['batch']['pos'] for b in c0['selected_batches']], [[55, 56]])
         self.assertTrue(s0['actual_route_presence'] and c0['actual_route_presence'])
         for summary in (s0, c0):
+            for batch in summary['selected_batches']:
+                weights = [route['weight'] for route in batch['routes']]
+                self.assertIn('output.weight', weights)
+                self.assertTrue(any(weight.startswith('blk.0.') for weight in weights))
             weights = [route['weight'] for batch in summary['selected_batches'] for route in batch['routes']]
-            self.assertIn('output.weight', weights)
-            self.assertTrue(any(weight.startswith('blk.0.') for weight in weights))
             self.assertNotIn('blk.0.outside.weight', weights)
-            self.assertTrue(all(route['backend_ctx'] != '0xabc'
-                                for batch in summary['selected_batches'] for route in batch['routes']))
+        self.assertTrue(any(route['backend_ctx'] == '0xabc'
+                            for batch in s0['selected_batches'] for route in batch['routes']))
+        with self.assertRaises(AssertionError):
+            A['select_route_batches'](route_log(missing_output=True), 'S0')
 
     def test_route_framing_malformed_and_empty_fail_closed(self):
         with self.assertRaises(AssertionError):
@@ -421,11 +444,28 @@ class Trace(unittest.TestCase):
         with self.assertRaises(AssertionError):
             A['route_records'](route_line() + ' route=MMQ\n')
         with self.assertRaises(AssertionError):
+            A['route_records'](route_line(route='UNKNOWN_ROUTE'))
+        with self.assertRaises(AssertionError):
+            A['route_records'](route_line(omit={'src1_ne0'}))
+        with self.assertRaises(AssertionError):
+            A['route_records'](route_line(omit={'dst_ne0'}))
+        with self.assertRaises(AssertionError):
+            A['route_records'](route_line(omit={'src1_prec'}))
+        ids = A['route_records'](route_line(op='MUL_MAT_ID', op_id=7, ids=True))[0]
+        self.assertEqual((ids['op_id'], ids['ids_ne0'], ids['ids_nb0']), (7, 2, 4))
+        with self.assertRaises(AssertionError):
             A['select_route_batches'](route_line(), 'S0')
+        mixed = route_batch([55], [1055]) + ' ' + route_line()
+        with self.assertRaises(AssertionError):
+            A['route_frames'](mixed)
         with self.assertRaises(AssertionError):
             A['select_route_batches'](route_batch([55], [1055]) + '\n' + route_batch([56], [1056]) + '\n' + route_decoded() + '\n', 'S0')
         with self.assertRaises(AssertionError):
             A['select_route_batches'](route_batch([55], [1055]) + '\n', 'S0')
+        for decoded in (route_decoded(ctx='0x999'), route_decoded(ret=1)):
+            log = '\n'.join((route_batch([55], [1055]), route_line(), decoded)) + '\n'
+            with self.assertRaises(AssertionError):
+                A['select_route_batches'](log, 'S0')
 
     def test_route_parent_byte_mismatch_fail_closed(self):
         candidate = self.aligned()

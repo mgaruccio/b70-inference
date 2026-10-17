@@ -8,7 +8,7 @@
  #include <float.h>
  #include <limits>
  #include <optional>
-@@ -145,6 +146,121 @@
+@@ -145,6 +146,143 @@
  int g_ggml_sycl_debug_sparse_fa = 0;
  int g_ggml_sycl_sparse_fa_margin = 256;
  
@@ -53,17 +53,21 @@
 +    return extra && extra->optimized_feature.reorder;
 +}
 +
-+static int32_t bolt_route_requested_precision(const ggml_tensor * dst) {
++static int32_t bolt_route_src1_precision(const ggml_tensor * dst) {
++    // This is the activation precision tag (op_params[3]), not accumulation precision.
 +    return dst ? ggml_sycl_src1_prec(dst) : -1;
 +}
 +
-+static int32_t bolt_route_dynamic_effective_precision() {
-+    switch (g_ggml_sycl_dynamic_precision) {
-+        case GGML_SYCL_DYNAMIC_PRECISION_F16:  return GGML_PREC_F16;
-+        case GGML_SYCL_DYNAMIC_PRECISION_BF16: return GGML_PREC_BF16;
-+        case GGML_SYCL_DYNAMIC_PRECISION_TF32: return -2; // no GGML_PREC_TF32 enum
-+        default:                               return GGML_PREC_F32;
++static int32_t bolt_route_accum_precision(const ggml_tensor * dst) {
++    // op_params[0] is meaningful here only for the two matmul operations.
++    if (!dst || (dst->op != GGML_OP_MUL_MAT && dst->op != GGML_OP_MUL_MAT_ID)) {
++        return -1;
 +    }
++    return static_cast<int32_t>(dst->op_params[0]);
++}
++
++static int32_t bolt_route_op_id(const ggml_tensor * tensor) {
++    return tensor ? static_cast<int32_t>(tensor->op) : -1;
 +}
 +
 +static void bolt_route_record(const char * route,
@@ -72,27 +76,45 @@
 +                              const ggml_tensor * src1,
 +                              const ggml_tensor * dst,
 +                              int device,
-+                              int32_t requested_precision,
-+                              int32_t effective_precision,
++                              int32_t src1_precision,
++                              int32_t operand_precision,
 +                              const ggml_tensor * aux_weight,
++                              const ggml_tensor * ids,
 +                              int64_t expert,
 +                              int result) {
 +    if (!bolt_route_enabled() || !bolt_route_selected_weight(weight)) {
 +        return;
 +    }
 +
++    // operand_prec is a known library operand type when supplied; it is not a claim about
++    // floating-point math or accumulation precision. accum_prec is the raw op_params[0] tag.
 +    fprintf(stderr,
-+            "BOLT_ROUTE route=%s weight=%s aux_weight=%s op=%s src0_type=%s aux_type=%s "
-+            "src1_type=%s dst_type=%s ne0=%" PRId64 " ne1=%" PRId64 " ne2=%" PRId64 " ne3=%" PRId64 " "
-+            "nb0=%zu nb1=%zu nb2=%zu nb3=%zu reorder=%d requested_prec=%" PRId32 " effective_prec=%" PRId32 " "
++            "BOLT_ROUTE route=%s weight=%s aux_weight=%s op=%s op_id=%" PRId32 " dst_name=%s "
++            "src0_type=%s aux_type=%s src1_type=%s dst_type=%s "
++            "ne0=%" PRId64 " ne1=%" PRId64 " ne2=%" PRId64 " ne3=%" PRId64 " "
++            "nb0=%zu nb1=%zu nb2=%zu nb3=%zu "
++            "src1_ne0=%" PRId64 " src1_ne1=%" PRId64 " src1_ne2=%" PRId64 " src1_ne3=%" PRId64 " "
++            "src1_nb0=%zu src1_nb1=%zu src1_nb2=%zu src1_nb3=%zu "
++            "dst_ne0=%" PRId64 " dst_ne1=%" PRId64 " dst_ne2=%" PRId64 " dst_ne3=%" PRId64 " "
++            "dst_nb0=%zu dst_nb1=%zu dst_nb2=%zu dst_nb3=%zu "
++            "ids_ne0=%" PRId64 " ids_ne1=%" PRId64 " ids_ne2=%" PRId64 " ids_ne3=%" PRId64 " "
++            "ids_nb0=%zu ids_nb1=%zu ids_nb2=%zu ids_nb3=%zu "
++            "reorder=%d src1_prec=%" PRId32 " operand_prec=%" PRId32 " accum_prec=%" PRId32 " "
 +            "dynamic_prec=%d device=%d backend_ctx=%p expert=%" PRId64 " result=%d\n",
 +            route, bolt_route_name(weight), bolt_route_name(aux_weight), bolt_route_op_name(dst),
-+            bolt_route_type_name(weight), bolt_route_type_name(aux_weight), bolt_route_type_name(src1),
-+            bolt_route_type_name(dst),
++            bolt_route_op_id(dst), bolt_route_name(dst), bolt_route_type_name(weight),
++            bolt_route_type_name(aux_weight), bolt_route_type_name(src1), bolt_route_type_name(dst),
 +            bolt_route_ne(weight, 0), bolt_route_ne(weight, 1), bolt_route_ne(weight, 2), bolt_route_ne(weight, 3),
 +            bolt_route_nb(weight, 0), bolt_route_nb(weight, 1), bolt_route_nb(weight, 2), bolt_route_nb(weight, 3),
-+            bolt_route_reordered(weight) ? 1 : 0, requested_precision, effective_precision,
-+            g_ggml_sycl_dynamic_precision, device, static_cast<const void *>(&ctx), expert, result);
++            bolt_route_ne(src1, 0), bolt_route_ne(src1, 1), bolt_route_ne(src1, 2), bolt_route_ne(src1, 3),
++            bolt_route_nb(src1, 0), bolt_route_nb(src1, 1), bolt_route_nb(src1, 2), bolt_route_nb(src1, 3),
++            bolt_route_ne(dst, 0), bolt_route_ne(dst, 1), bolt_route_ne(dst, 2), bolt_route_ne(dst, 3),
++            bolt_route_nb(dst, 0), bolt_route_nb(dst, 1), bolt_route_nb(dst, 2), bolt_route_nb(dst, 3),
++            bolt_route_ne(ids, 0), bolt_route_ne(ids, 1), bolt_route_ne(ids, 2), bolt_route_ne(ids, 3),
++            bolt_route_nb(ids, 0), bolt_route_nb(ids, 1), bolt_route_nb(ids, 2), bolt_route_nb(ids, 3),
++            bolt_route_reordered(weight) ? 1 : 0, src1_precision, operand_precision,
++            bolt_route_accum_precision(dst), g_ggml_sycl_dynamic_precision, device,
++            static_cast<const void *>(&ctx), expert, result);
 +}
 +
 +static void bolt_route_record_gateup(const char * route,
@@ -103,7 +125,7 @@
 +                                     const ggml_tensor * glu) {
 +    const ggml_tensor * weight = bolt_route_selected_weight(wu) ? wu : wg;
 +    const ggml_tensor * aux = weight == wu ? wg : wu;
-+    bolt_route_record(route, ctx, weight, act, glu, ctx.device, -1, -1, aux, -1, -1);
++    bolt_route_record(route, ctx, weight, act, glu, ctx.device, -1, -1, aux, nullptr, -1, -1);
 +}
 +
 +static const char * bolt_route_dmmv_kind(const ggml_tensor * weight, bool reordered) {
@@ -130,16 +152,16 @@
  #if GGML_SYCL_DNNL
  // ask oneDNN which matmul it picks for a small f16 problem
  static bool ggml_sycl_dnnl_detect_optimized_gemm(int device) {
-@@ -3114,6 +3230,8 @@
+@@ -3114,6 +3252,8 @@
          row_diff == src0->ne[1]) {
          using bf16_t = sycl::ext::oneapi::bfloat16;
          ggml_sycl_pool_alloc<bf16_t> src1_as_bf16(ctx.pool(), src1_ncols*ne10);
 +        bolt_route_record("LIBRARY_DNNL_BF16", ctx, src0, src1, dst, id,
-+                          bolt_route_requested_precision(dst), GGML_PREC_BF16, nullptr, -1, -1);
++                          bolt_route_src1_precision(dst), GGML_PREC_BF16, nullptr, nullptr, -1, -1);
          if (src1->type != GGML_TYPE_BF16) {
              const to_bf16_sycl_t to_bf16_sycl = ggml_get_to_bf16_sycl(src1->type, dst);
              GGML_ASSERT(to_bf16_sycl != nullptr);
-@@ -3134,9 +3252,13 @@
+@@ -3134,9 +3274,13 @@
  
      // dequantize inside the GEMM instead of writing the f16 weights out and reading them back; src1
      // goes in its own type, so there is no separate conversion pass
@@ -151,73 +173,73 @@
 +                                     row_diff, src1_ncols, ne10, ldc, ctx.pool(), stream);
 +    if (used_fused_dequant) {
 +        bolt_route_record("LIBRARY_FUSED_DEQUANT_GEMM", ctx, src0, src1, dst, id,
-+                          bolt_route_requested_precision(dst), bolt_route_dynamic_effective_precision(), nullptr, -1, -1);
++                          bolt_route_src1_precision(dst), -1, nullptr, nullptr, -1, -1);
          return;
      }
  
-@@ -3174,6 +3296,8 @@
+@@ -3174,6 +3318,8 @@
  
  #if GGML_SYCL_DNNL
          if (g_ggml_sycl_enable_dnn && ggml_sycl_dnnl_has_optimized_gemm(ggml_sycl_get_device())) {
 +                bolt_route_record("LIBRARY_DNNL_F16", ctx, src0, src1, dst, id,
-+                                  bolt_route_requested_precision(dst), GGML_PREC_F16, nullptr, -1, -1);
++                                  bolt_route_src1_precision(dst), GGML_PREC_F16, nullptr, nullptr, -1, -1);
                  DnnlGemmWrapper::row_gemm(ctx,row_diff, src1_ncols , ne10, src0_ptr,
                                       DnnlGemmWrapper::to_dt<sycl::half>(), src1_ptr, DnnlGemmWrapper::to_dt<sycl::half>(),
                                        dst_dd_i, DnnlGemmWrapper::to_dt<float>(), stream);
-@@ -3181,6 +3305,8 @@
+@@ -3181,6 +3327,8 @@
          else
  #endif
          {
 +            bolt_route_record("LIBRARY_MKL_F16", ctx, src0, src1, dst, id,
-+                              bolt_route_requested_precision(dst), GGML_PREC_F16, nullptr, -1, -1);
++                              bolt_route_src1_precision(dst), GGML_PREC_F16, nullptr, nullptr, -1, -1);
              const float alpha = 1.0f;
              const float beta  = 0.0f;
              SYCL_CHECK(CHECK_TRY_ERROR(dpct::gemm(
-@@ -3218,6 +3344,8 @@
+@@ -3218,6 +3366,8 @@
              const int64_t gemm_flops = (int64_t)row_diff * src1_ncols * ne10;
              const bool use_mkl_direct = gemm_flops < 256 * 256 * 256;
              if (g_ggml_sycl_enable_dnn && !use_mkl_direct && ggml_sycl_dnnl_has_optimized_gemm(ggml_sycl_get_device())) {
 +                bolt_route_record("LIBRARY_DNNL_F32", ctx, src0, src1, dst, id,
-+                                  bolt_route_requested_precision(dst), GGML_PREC_F32, nullptr, -1, -1);
++                                  bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
                  DnnlGemmWrapper::row_gemm(ctx, row_diff, src1_ncols, ne10, src0_ddf_i,
                                            DnnlGemmWrapper::to_dt<float>(), src1_ddf1_i, DnnlGemmWrapper::to_dt<float>(),
                                            dst_dd_i, DnnlGemmWrapper::to_dt<float>(), stream);
-@@ -3225,6 +3353,8 @@
+@@ -3225,6 +3375,8 @@
              else
  #endif
              {
 +                bolt_route_record("LIBRARY_MKL_F32", ctx, src0, src1, dst, id,
-+                                  bolt_route_requested_precision(dst), GGML_PREC_F32, nullptr, -1, -1);
++                                  bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
                  const float alpha = 1.0f;
                  const float beta  = 0.0f;
                  SYCL_CHECK(CHECK_TRY_ERROR(oneapi::mkl::blas::column_major::gemm(
-@@ -5422,31 +5552,48 @@
+@@ -5422,31 +5574,48 @@
          if (src0->ne[3] == 1 && src1->ne[3] == 1) {
              // KQ single-batch
              // mmv p021 was specific for these dimensions
 +            bolt_route_record("F16_P021", ctx, src0, src1, dst, ctx.device,
-+                              bolt_route_requested_precision(dst), GGML_PREC_F16, nullptr, -1, -1);
++                              bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
              ggml_sycl_mul_mat_vec_p021(ctx, src0, src1, dst);
          } else {
              // The kernel from the if path is faster for that specific case, but does not support all mul mats.
 +            bolt_route_record("F16_BATCHED_SYCL", ctx, src0, src1, dst, ctx.device,
-+                              bolt_route_requested_precision(dst), GGML_PREC_F16, nullptr, -1, -1);
++                              bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
              ggml_sycl_mul_mat_batched_sycl(ctx, src0, src1, dst);
          }
      } else if (!split && src0->type == GGML_TYPE_F16 && !ggml_is_contiguous(src0) && !ggml_is_transposed(src1) && src1->ne[1] == 1 && src1->ne[3] == 1) {
          // KQV single-batch
 +        bolt_route_record("F16_NC", ctx, src0, src1, dst, ctx.device,
-+                          bolt_route_requested_precision(dst), GGML_PREC_F16, nullptr, -1, -1);
++                          bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
          ggml_sycl_mul_mat_vec_nc(ctx, src0, src1, dst);
      } else if (!split && src0->type == GGML_TYPE_F16 && !ggml_is_transposed(src0) && !ggml_is_transposed(src1) && src1->ne[2] * src1->ne[3] > 1) {
          // KQ + KQV multi-batch
 +        bolt_route_record("F16_BATCHED_SYCL", ctx, src0, src1, dst, ctx.device,
-+                          bolt_route_requested_precision(dst), GGML_PREC_F16, nullptr, -1, -1);
++                          bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
          ggml_sycl_mul_mat_batched_sycl(ctx, src0, src1, dst);
      } else if (use_dequantize_mul_mat_vec) {
          opt_for_reorder(&ctx, src0, src1, dst, mul_mat_algo::DMMV);
 +        bolt_route_record(bolt_route_dmmv_kind(src0, bolt_route_reordered(src0)), ctx, src0, src1, dst,
-+                          ctx.device, bolt_route_requested_precision(dst), -1, nullptr, -1, -1);
++                          ctx.device, bolt_route_src1_precision(dst), -1, nullptr, nullptr, -1, -1);
          ggml_sycl_op_mul_mat<no_quantize_q8_1>(ctx, src0, src1, dst, ggml_sycl_op_dequantize_mul_mat_vec);
      } else if (use_mul_mat_vec_q) {
          opt_for_reorder(&ctx, src0, src1, dst, mul_mat_algo::MMVQ);
@@ -225,7 +247,7 @@
 -        if (extra && extra->optimized_feature.reorder) {
 +        const bool reordered = extra && extra->optimized_feature.reorder;
 +        bolt_route_record(reordered ? "MMVQ_REORDERED" : "MMVQ_PLAIN", ctx, src0, src1, dst,
-+                          ctx.device, bolt_route_requested_precision(dst), -1, nullptr, -1, -1);
++                          ctx.device, bolt_route_src1_precision(dst), -1, nullptr, nullptr, -1, -1);
 +        if (reordered) {
              ggml_sycl_op_mul_mat<quantize_and_reorder_q8_1_soa>(ctx, src0, src1, dst, ggml_sycl_op_mul_mat_vec_q);
          } else {
@@ -233,15 +255,15 @@
          }
      } else if (use_mul_mat_q) {
 +        bolt_route_record("MMQ", ctx, src0, src1, dst, ctx.device,
-+                          bolt_route_requested_precision(dst), -1, nullptr, -1, -1);
++                          bolt_route_src1_precision(dst), -1, nullptr, nullptr, -1, -1);
          ggml_sycl_op_mul_mat<quantize_q8_1>(ctx, src0, src1, dst, ggml_sycl_op_mul_mat_q);
      } else {
 +        bolt_route_record("MUL_MAT_SYCL", ctx, src0, src1, dst, ctx.device,
-+                          bolt_route_requested_precision(dst), -1, nullptr, -1, -1);
++                          bolt_route_src1_precision(dst), -1, nullptr, nullptr, -1, -1);
          ggml_sycl_op_mul_mat<no_quantize_q8_1>(ctx, src0, src1, dst, ggml_sycl_op_mul_mat_sycl);
      }
  }
-@@ -5481,11 +5628,15 @@
+@@ -5481,11 +5650,15 @@
      quantize_row_q8_1_sycl<quantize_q8_1>((const float *) act->data, src1_ddq, (int) ne00, (int) ne11,
                                            src1_padded_cols, stream);
  
@@ -262,7 +284,7 @@
  }
  
  // Fused dense-FFN mat-vec for the {mul_mat(gate), mul_mat(up), GLU} subgraph at node_idx.
-@@ -5555,11 +5706,15 @@
+@@ -5555,11 +5728,15 @@
      quantize_row_q8_1_sycl<quantize_and_reorder_q8_1_soa>((const float *) act->data, src1_ddq, (int) ne00, (int) ne11,
                                                            src1_padded_cols, stream);
  
@@ -283,7 +305,7 @@
  }
  
  // Batch the run of consecutive L2_NORM siblings starting at node_idx into one launch.
-@@ -5721,20 +5876,27 @@
+@@ -5721,20 +5898,27 @@
      const size_t bytes_per_qrow = (size_t) src1_padded_cols * sizeof(block_q8_1) / QK8_1;
      const size_t src1_row_stride = (ne11 == 1) ? 0 : bytes_per_qrow;
  
@@ -312,44 +334,44 @@
 -        src1_row_stride, stream);
 +    if (dispatched) {
 +        bolt_route_record(use_reorder ? "MOE_SINGLE_MMVQ_REORDERED_Q8_1" : "MOE_SINGLE_MMVQ_PLAIN_Q8_1",
-+                          ctx, src0, src1, dst, ctx.device, bolt_route_requested_precision(dst), -1, nullptr, -1, -1);
++                          ctx, src0, src1, dst, ctx.device, bolt_route_src1_precision(dst), -1, nullptr, ids, -1, -1);
 +    }
 +    return dispatched;
  }
  
  // counting sort of the routed rows by expert id (row_id_i, as chosen by the router):
-@@ -5854,6 +6016,8 @@
+@@ -5854,6 +6038,8 @@
              src1_row.data = src1_original + i11*nb11 + i12*nb12;
              dst_row.data = dst_original + i1*nb1 + i2*nb2;
  
 +            bolt_route_record("MOE_PER_EXPERT_FALLBACK", ctx, &src0_row, &src1_row, &dst_row, ctx.device,
-+                              bolt_route_requested_precision(&dst_row), -1, nullptr, i02, -1);
++                              bolt_route_src1_precision(&dst_row), -1, nullptr, ids, i02, -1);
              ggml_sycl_mul_mat(ctx, &src0_row, &src1_row, &dst_row);
              }
          }
-@@ -5914,11 +6078,16 @@
+@@ -5914,11 +6100,16 @@
              }
              const bool src0_reordered =
                  src0->extra && ((const ggml_tensor_extra_gpu *) src0->extra)->optimized_feature.reorder;
 +            bolt_route_record("MOE_GROUPED_GEMM_ATTEMPT", ctx, src0, src1, dst, ctx.device,
-+                              bolt_route_requested_precision(dst), bolt_route_dynamic_effective_precision(), nullptr, -1, -1);
++                              bolt_route_src1_precision(dst), -1, nullptr, ids, -1, -1);
              grouped = ggml_sycl_grouped_dequant_gemm(src0->type, src0_reordered, src0_original, nb02,
                                                       (const float *) src1_contiguous.get(), ggml_sycl_src1_prec(dst),
                                                       (float *) dst_contiguous.get(),
                                                       expert_row_offsets.data(), n_as, ne01, ne10, n_routed_rows,
                                                       ctx.mmid_tile_schedule_host, ctx.pool(), stream);
 +            bolt_route_record("MOE_GROUPED_GEMM_RESULT", ctx, src0, src1, dst, ctx.device,
-+                              bolt_route_requested_precision(dst), bolt_route_dynamic_effective_precision(), nullptr, -1,
++                              bolt_route_src1_precision(dst), -1, nullptr, ids, -1,
 +                              grouped ? 1 : 0);
          }
  
          for (int64_t i02 = 0; i02 < n_as && !grouped; i02++) {
-@@ -5947,6 +6116,8 @@
+@@ -5947,6 +6138,8 @@
              dst_row.nb[2] = num_src1_rows*nb1;
              dst_row.nb[3] = num_src1_rows*nb1;
  
 +            bolt_route_record("MOE_PER_EXPERT_FALLBACK", ctx, &src0_row, &src1_row, &dst_row, ctx.device,
-+                              bolt_route_requested_precision(&dst_row), -1, nullptr, i02, -1);
++                              bolt_route_src1_precision(&dst_row), -1, nullptr, ids, i02, -1);
              ggml_sycl_mul_mat(ctx, &src0_row, &src1_row, &dst_row);
          }
  

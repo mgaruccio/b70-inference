@@ -24,12 +24,33 @@ FIELDS = {
 LISTS = {'tokens', 'pos', 'outputs', 'rows', 'drafts', 'emitted'}
 STRINGS = {'ctx', 'smpl', 'status', 'file', 'kind', 'seq'}
 ROUTE_FIELDS = {
-    'route', 'weight', 'aux_weight', 'op', 'src0_type', 'aux_type', 'src1_type', 'dst_type',
-    'ne0', 'ne1', 'ne2', 'ne3', 'nb0', 'nb1', 'nb2', 'nb3', 'reorder',
-    'requested_prec', 'effective_prec', 'dynamic_prec', 'device', 'backend_ctx', 'expert', 'result',
+    'route', 'weight', 'aux_weight', 'op', 'op_id', 'dst_name',
+    'src0_type', 'aux_type', 'src1_type', 'dst_type',
+    'ne0', 'ne1', 'ne2', 'ne3', 'nb0', 'nb1', 'nb2', 'nb3',
+    'src1_ne0', 'src1_ne1', 'src1_ne2', 'src1_ne3',
+    'src1_nb0', 'src1_nb1', 'src1_nb2', 'src1_nb3',
+    'dst_ne0', 'dst_ne1', 'dst_ne2', 'dst_ne3',
+    'dst_nb0', 'dst_nb1', 'dst_nb2', 'dst_nb3',
+    'ids_ne0', 'ids_ne1', 'ids_ne2', 'ids_ne3',
+    'ids_nb0', 'ids_nb1', 'ids_nb2', 'ids_nb3',
+    'reorder', 'src1_prec', 'operand_prec', 'accum_prec', 'dynamic_prec',
+    'device', 'backend_ctx', 'expert', 'result',
 }
-ROUTE_STRINGS = {'route', 'weight', 'aux_weight', 'op', 'src0_type', 'aux_type', 'src1_type', 'dst_type', 'backend_ctx'}
+ROUTE_STRINGS = {
+    'route', 'weight', 'aux_weight', 'op', 'dst_name',
+    'src0_type', 'aux_type', 'src1_type', 'dst_type', 'backend_ctx',
+}
 ROUTE_INTS = ROUTE_FIELDS - ROUTE_STRINGS
+ROUTE_NAMES = {
+    'LIBRARY_DNNL_BF16', 'LIBRARY_FUSED_DEQUANT_GEMM', 'LIBRARY_DNNL_F16',
+    'LIBRARY_MKL_F16', 'LIBRARY_DNNL_F32', 'LIBRARY_MKL_F32',
+    'F16_P021', 'F16_BATCHED_SYCL', 'F16_NC',
+    'DMMV_ESIMD', 'DMMV_REORDERED', 'DMMV_PLAIN',
+    'MMVQ_REORDERED', 'MMVQ_PLAIN', 'MMQ', 'MUL_MAT_SYCL',
+    'GATEUP_GLU_PLAIN', 'GATEUP_GLU_REORDERED',
+    'MOE_SINGLE_MMVQ_REORDERED_Q8_1', 'MOE_SINGLE_MMVQ_PLAIN_Q8_1',
+    'MOE_PER_EXPERT_FALLBACK', 'MOE_GROUPED_GEMM_ATTEMPT', 'MOE_GROUPED_GEMM_RESULT',
+}
 
 def load(path):
     return json.loads(path.read_text())
@@ -70,6 +91,7 @@ def route_records(log):
     for line in log.splitlines():
         if 'BOLT_ROUTE' not in line:
             continue
+        assert 'BOLT_VERIFY' not in line, 'mixed trace records'
         assert line.count('BOLT_ROUTE ') == 1, 'bad route trace framing'
         tail = line.split('BOLT_ROUTE ', 1)[1]
         pairs = tail.split()
@@ -84,6 +106,7 @@ def route_records(log):
                     assert re.fullmatch(r'0x[0-9a-fA-F]+', value), tail
                 elif key == 'route':
                     assert re.fullmatch(r'[A-Z0-9_]+', value), tail
+                    assert value in ROUTE_NAMES, value
                 row[key] = value
             else:
                 assert re.fullmatch(r'-?\d+', value), tail
@@ -99,6 +122,7 @@ def route_frames(log):
     active = None
     route_count = 0
     for line in log.splitlines():
+        assert not ('BOLT_VERIFY' in line and 'BOLT_ROUTE' in line), 'mixed trace records'
         if 'BOLT_VERIFY' in line:
             assert 'BOLT_VERIFY ' in line, 'malformed BOLT_VERIFY framing'
             events = records(line)
@@ -109,6 +133,8 @@ def route_frames(log):
                 active = dict(batch=event, routes=[])
             elif event['event'] == 'decoded':
                 assert active is not None, 'decoded without batch'
+                assert event['ctx'] == active['batch']['ctx'], 'decoded context mismatch'
+                assert event['ret'] == 0, 'decoded failed'
                 active['decoded'] = event
                 frames.append(active)
                 active = None
@@ -116,7 +142,7 @@ def route_frames(log):
         if 'BOLT_ROUTE' in line:
             route_count += 1
             route = route_records(line)[0]
-            if active is not None and route['backend_ctx'] != active['batch']['ctx']:
+            if active is not None:
                 active['routes'].append(route)
     assert active is None, 'unterminated BOLT_VERIFY batch'
     assert route_count, 'empty route trace'
@@ -143,7 +169,10 @@ def select_route_batches(log, label):
     selected = []
     for frame in chosen:
         assert frame['routes'], 'selected target batch has no filtered route records'
-        assert all(route['backend_ctx'] != frame['batch']['ctx'] for route in frame['routes'])
+        assert any(route['weight'] == 'output.weight' for route in frame['routes']), (
+            'output projection route missing in selected batch')
+        assert any(route['weight'].startswith('blk.0.') for route in frame['routes']), (
+            'first-block route missing in selected batch')
         selected.append(dict(batch=_route_batch_metadata(frame['batch']), routes=frame['routes']))
     routes = [route for frame in selected for route in frame['routes']]
     assert any(route['weight'] == 'output.weight' for route in routes), 'output projection route missing'
