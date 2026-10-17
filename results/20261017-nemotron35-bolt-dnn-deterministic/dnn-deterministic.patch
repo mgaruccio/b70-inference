@@ -1,0 +1,10 @@
+--- a/ggml/src/ggml-sycl/gemm.hpp
++++ b/ggml/src/ggml-sycl/gemm.hpp
+@@ -56,6 +56,7 @@
+         const auto c_md    = dnnl::memory::desc(c_dims, ct, c_strides);
+         dnnl::primitive_attr primitive_attr;
+         primitive_attr.set_scratchpad_mode(dnnl::scratchpad_mode::user);
++        primitive_attr.set_deterministic(true);
+ 
+ #ifdef GGML_SYCL_F16
+         primitive_attr.set_fpmath_mode(dnnl::fpmath_mode::f16);

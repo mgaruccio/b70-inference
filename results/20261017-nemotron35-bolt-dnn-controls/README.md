@@ -4,7 +4,7 @@ Development-only follow-up to `../20261017-nemotron35-bolt-projection-repeat` (7
 
 ## Fresh research and hypothesis
 
-Fresh official source: https://raw.githubusercontent.com/ggml-org/llama.cpp/b6334e37e6ef286fc5091a41b6561b2113d915fb/docs/backend/SYCL.md documents `GGML_SYCL_ENABLE_DNN` (default1). Saved excerpt accompanies this result. Accepted source `ggml-sycl.cpp:3145–3193` is authoritative about its effect here: the F16 operand conversion route chooses oneDNN matmul when enabled, otherwise oneMKL `dpct::gemm`. The90-column NVFP4 operation does not use MMVQ/q8_1. The exact oneDNN implementation/atomic behavior is not yet established.
+Fresh official source: https://raw.githubusercontent.com/ggml-org/llama.cpp/b6334e37e6ef286fc5091a41b6561b2113d915fb/docs/backend/SYCL.md documents `GGML_SYCL_ENABLE_DNN` (default1). Saved excerpt accompanies this result. Correction from the subsequent real-model verbose trace: this NVFP4 graph requests BF16 accumulation (`llama-graph.cpp:1626–1627`) and takes the F32 operand route (`ggml-sycl.cpp:3198–3244`), choosing oneDNN matmul when enabled, otherwise oneMKL column-major GEMM. The earlier F16/dpct description inferred the native-test route rather than the model's precision hint. The90-column NVFP4 operation does not use MMVQ/q8_1. The exact oneDNN implementation/atomic behavior is not yet established.
 
 ## Predeclared no-code control
 
