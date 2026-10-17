@@ -1,8 +1,11 @@
 # Experimental Bolt NVFP4 → F32 prefill workgroup packing
 
 **Patch artifact only. No worker GPU/build result or speed claim.** Tier: development.
-This slice changes only the NVFP4 conversion dispatch used by prefill; it does not
-change decode, GEMM arithmetic, settings, launchers, weights, or a user tuning knob.
+This slice adds a generic NVFP4 conversion dispatch intended for the prefill experiment; it does not
+modify decode/GEMM kernels, settings, launchers, or weights, and adds no user tuning knob.
+The dispatcher has no token-count discriminator, so this artifact makes no universal
+claim that the generic conversion path cannot be reached by decode/GEMV; the lead must
+verify actual Bolt prefill activation and measure decode/GEMV separately.
 
 ## Exact base and contract
 
@@ -45,7 +48,9 @@ kernel. Debug mode emits one host-side marker per conversion call:
 ## Native exactness test
 
 `tests/test-nvfp4-sycl.cpp` is built as `test-nvfp4-sycl` only for a static SYCL
-build. It calls the production `ggml_get_to_fp32_sycl` dispatch: fusion-off is
+build. The target mirrors the configured `ggml-sycl` compile definitions (including
+warp size) so this TU uses the same SYCL ABI macros. It calls the production
+`ggml_get_to_fp32_sycl` dispatch: fusion-off is
 the same-device original reference and fusion-on is the candidate path. It
 checks full-array raw F32 bits, unchanged input bytes, destination guards and
 tails, and exercises block counts `1, 7, 8, 9, 15, 17, 63, 64, 65, 127, 513`.
