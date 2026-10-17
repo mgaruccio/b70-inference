@@ -59,6 +59,9 @@ nibbles, including the zero/special raw scale encodings. It also performs finite
 CPU-reference comparisons and explicitly checks fusion-off, half, and reordered
 fallbacks.
 
+The standalone `nvfp4-native-test-definitions-fix.patch` applies this CMake-only
+fix to a host candidate that already carries `nvfp4-prefill-pack.patch`.
+
 Lead-owned build/run handoff (oneAPI `icx`/`icpx`, SYCL runtime, Intel GPU; do
 not run this in the Pi worker):
 
