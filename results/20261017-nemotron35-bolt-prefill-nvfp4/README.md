@@ -1,6 +1,6 @@
 # Experimental Bolt NVFP4 → F32 prefill workgroup packing
 
-**Patch artifact only. No worker GPU/build result or speed claim.** Tier: development.
+**R1 rejected at real-model activation; no accepted timings.** Native exactness passed, but the non-reordered-only gate misses warmed prefill. Tier: development.
 This slice adds a generic NVFP4 conversion dispatch intended for the prefill experiment; it does not
 modify decode/GEMM kernels, settings, launchers, or weights, and adds no user tuning knob.
 The dispatcher has no token-count discriminator, so this artifact makes no universal
@@ -60,8 +60,10 @@ nibbles, including the zero/special raw scale encodings. It also performs finite
 CPU-reference comparisons and explicitly checks fusion-off, half, and reordered
 fallbacks.
 
-The standalone `nvfp4-native-test-definitions-fix.patch` applies this CMake-only
-fix to a host candidate that already carries `nvfp4-prefill-pack.patch`.
+The standalone `nvfp4-native-test-definitions-fix.patch` corrects the intermediate
+candidate carrying the failed **target-property** CMake fix. Fresh archives should
+apply only the current cumulative `nvfp4-prefill-pack.patch`; historical intermediate
+patches/build logs are preserved in the sibling SYCL evidence directory.
 
 Lead-owned build/run handoff (oneAPI `icx`/`icpx`, SYCL runtime, Intel GPU; do
 not run this in the Pi worker):
@@ -123,3 +125,15 @@ Static checks performed without building or launching a GPU:
 - Remote/local SHA-256 values above matched.
 - No remote source, container, launcher, model, or persistent host configuration
   was modified. Native build/test execution is intentionally left to the lead.
+
+## Lead execution: R1 failure retained
+
+Builds ran only on inference-host. Initial native-test compilation lacked the backend directory's warp definition. A first CMake repair inherited target-private definitions instead, enabling oneDNN headers without their include path and still missing directory-level warp/F16 definitions. Both build failures are retained. The corrected directory-property integration built successfully with `icpx`, `-fsycl`, `GGML_SYCL_F16`, and `GGML_SYCL_WARP_SIZE=16`; runtime dependency precheck passed. Production kernel arithmetic and test fixtures did not change during those repairs.
+
+`nvfp4-prefill-r1-dispatch` passed the existing385 native checks plus all11 new raw cases, bitwise comparisons/canaries, finite CPU comparison, and fallback controls. Device max workgroup was1024; the standalone test produced exactly10 packed and15 original markers. These native passes did **not** qualify the candidate for timing.
+
+Actual-model smoke and uncached8270-token/output1 request completed, but the activation gate failed: only80 packed conversions appeared (40 each at76,021,760 and33,554,432 values), followed by880 original conversions. The first smoke prefill is non-reordered; decode makes the SSM projection weights' reordered representation sticky, which excludes subsequent prefill from the R1 fast path. The earlier unitrace profile warmed with one output token and thus did not execute the decode step that triggers this transition. No20/20 or timing pair was run for R1. This is an applicability failure, not a demonstrated numerical mismatch.
+
+The controller automatically restored the accepted staged-SSM baseline using `nvfp4-prefill-r1-failure-recovery`; native gates and API smoke passed. Failures, recovery, frozen controllers and raw logs are retained under `../20261016-nemotron35-bolt-sycl/nvfp4-prefill-r1-*`.
+
+R2 is a separate candidate: extend the same workgroup packing to the observed reordered F32 layout, with native bitwise original/packed checks for both layouts. R1 failure is not reclassified or retried unchanged.
