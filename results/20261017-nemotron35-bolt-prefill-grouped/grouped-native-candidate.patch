@@ -1,0 +1,201 @@
+diff --git a/tests/test-grouped-iq2-sycl.cpp b/tests/test-grouped-iq2-sycl.cpp
+index 6e9306e..243fdf4 100644
+--- a/tests/test-grouped-iq2-sycl.cpp
++++ b/tests/test-grouped-iq2-sycl.cpp
+@@ -173,30 +173,30 @@ void report_values(const char * phase, const std::string & label, const float *
+                 counts.finite, counts.infinite, counts.nan);
+ }
+ 
+-void compare_exact_bytes(const std::vector<uint8_t> & original, const uint8_t * replay, size_t payload_bytes,
++void compare_exact_bytes(const std::vector<uint8_t> & original, const uint8_t * candidate, size_t payload_bytes,
+                          const std::string & label) {
+     require(original.size() == payload_bytes, label + ": bad ORIGINAL payload size");
+-    if (std::memcmp(original.data(), replay, payload_bytes) == 0) {
++    if (std::memcmp(original.data(), candidate, payload_bytes) == 0) {
+         return;
+     }
+     size_t first_byte = 0;
+-    while (first_byte < payload_bytes && original[first_byte] == replay[first_byte]) {
++    while (first_byte < payload_bytes && original[first_byte] == candidate[first_byte]) {
+         ++first_byte;
+     }
+     const size_t element = first_byte / sizeof(float);
+     uint32_t original_bits = 0;
+-    uint32_t replay_bits = 0;
++    uint32_t candidate_bits = 0;
+     std::memcpy(&original_bits, original.data() + element * sizeof(float), sizeof(original_bits));
+-    std::memcpy(&replay_bits, replay + element * sizeof(float), sizeof(replay_bits));
++    std::memcpy(&candidate_bits, candidate + element * sizeof(float), sizeof(candidate_bits));
+     float original_value = 0.0f;
+-    float replay_value = 0.0f;
++    float candidate_value = 0.0f;
+     std::memcpy(&original_value, &original_bits, sizeof(original_value));
+-    std::memcpy(&replay_value, &replay_bits, sizeof(replay_value));
++    std::memcpy(&candidate_value, &candidate_bits, sizeof(candidate_value));
+     std::fprintf(stderr,
+-                 "%s: first ORIGINAL/REPLAY mismatch at element %zu: ORIGINAL=0x%08" PRIx32
+-                 " (%g) REPLAY=0x%08" PRIx32 " (%g)\n",
+-                 label.c_str(), element, original_bits, static_cast<double>(original_value), replay_bits,
+-                 static_cast<double>(replay_value));
++                 "%s: first ORIGINAL/CANDIDATE mismatch at element %zu: ORIGINAL=0x%08" PRIx32
++                 " (%g) CANDIDATE=0x%08" PRIx32 " (%g)\n",
++                 label.c_str(), element, original_bits, static_cast<double>(original_value), candidate_bits,
++                 static_cast<double>(candidate_value));
+     fail(label + ": full-array bitwise comparison failed");
+ }
+ 
+@@ -452,7 +452,7 @@ std::vector<float> f16_cpu_reference(const std::vector<block_iq2_xxs> & weights,
+     return expected;
+ }
+ 
+-bool run_grouped(const char * phase, const guarded_buffer & weights, size_t expert_stride,
++bool run_grouped(const char * phase, bool is_candidate, const guarded_buffer & weights, size_t expert_stride,
+                  const guarded_buffer & activations, guarded_buffer & output, const route & routing,
+                  int64_t M, int64_t K, bool reordered, guarded_pool & pool, sycl::queue * queue,
+                  size_t * tile_count) {
+@@ -460,7 +460,7 @@ bool run_grouped(const char * phase, const guarded_buffer & weights, size_t expe
+     const bool launched = ggml_sycl_grouped_dequant_gemm(
+         GGML_TYPE_IQ2_XXS, reordered, weights.payload(), expert_stride, activations.payload_as<float>(),
+         GGML_PREC_UNDEFINED, output.payload_as<float>(), routing.offsets.data(), static_cast<int64_t>(routing.widths.size()),
+-        M, K, route_rows(routing), tiles, pool, queue);
++        M, K, route_rows(routing), tiles, pool, queue, is_candidate);
+     queue->wait_and_throw();
+     *tile_count = tiles.size();
+     std::printf("IQ2 grouped %s returned=%s tiles=%zu rows=%" PRId64 " M=%" PRId64 " K=%" PRId64 "\n", phase,
+@@ -471,15 +471,15 @@ bool run_grouped(const char * phase, const guarded_buffer & weights, size_t expe
+ bool run_original(const guarded_buffer & weights, size_t expert_stride, const guarded_buffer & activations,
+                   guarded_buffer & output, const route & routing, int64_t M, int64_t K, guarded_pool & pool,
+                   sycl::queue * queue, size_t * tile_count) {
+-    return run_grouped("ORIGINAL", weights, expert_stride, activations, output, routing, M, K, false, pool, queue,
+-                       tile_count);
++    return run_grouped("ORIGINAL", false, weights, expert_stride, activations, output, routing, M, K, false, pool,
++                       queue, tile_count);
+ }
+ 
+-bool run_replay(const guarded_buffer & weights, size_t expert_stride, const guarded_buffer & activations,
+-                guarded_buffer & output, const route & routing, int64_t M, int64_t K, guarded_pool & pool,
+-                sycl::queue * queue, size_t * tile_count) {
+-    return run_grouped("REPLAY", weights, expert_stride, activations, output, routing, M, K, false, pool, queue,
+-                       tile_count);
++bool run_candidate(const guarded_buffer & weights, size_t expert_stride, const guarded_buffer & activations,
++                   guarded_buffer & output, const route & routing, int64_t M, int64_t K, guarded_pool & pool,
++                   sycl::queue * queue, size_t * tile_count) {
++    return run_grouped("CANDIDATE", true, weights, expert_stride, activations, output, routing, M, K, false, pool,
++                       queue, tile_count);
+ }
+ 
+ struct valid_case {
+@@ -543,16 +543,17 @@ void run_valid_case(const valid_case & specification, sycl::queue * queue) {
+     }
+ 
+     output.reset_f32(output_elements);
+-    size_t replay_tiles = 0;
+-    const bool replay_ok = run_replay(weights, expert_stride, activations, output, routing, specification.M,
+-                                      specification.K, pool, queue, &replay_tiles);
+-    require(replay_ok, std::string(specification.name) + ": REPLAY returned false");
+-    require(replay_tiles == original_tiles, std::string(specification.name) + ": ORIGINAL/REPLAY tile count differs");
+-    check_all_written(output, output_elements, std::string(specification.name) + " REPLAY");
+-    check_buffer_guards(output, std::string(specification.name) + " REPLAY output");
+-    check_unchanged(weights, weights_snapshot, std::string(specification.name) + " REPLAY weights");
+-    check_unchanged(activations, activations_snapshot, std::string(specification.name) + " REPLAY activations");
+-    report_values("REPLAY", specification.name, output.payload_as<float>(), output_elements);
++    size_t candidate_tiles = 0;
++    const bool candidate_ok = run_candidate(weights, expert_stride, activations, output, routing, specification.M,
++                                            specification.K, pool, queue, &candidate_tiles);
++    require(candidate_ok, std::string(specification.name) + ": CANDIDATE returned false");
++    require(candidate_tiles == original_tiles,
++            std::string(specification.name) + ": ORIGINAL/CANDIDATE tile count differs");
++    check_all_written(output, output_elements, std::string(specification.name) + " CANDIDATE");
++    check_buffer_guards(output, std::string(specification.name) + " CANDIDATE output");
++    check_unchanged(weights, weights_snapshot, std::string(specification.name) + " CANDIDATE weights");
++    check_unchanged(activations, activations_snapshot, std::string(specification.name) + " CANDIDATE activations");
++    report_values("CANDIDATE", specification.name, output.payload_as<float>(), output_elements);
+     compare_exact_bytes(original_bytes, output.payload(), output.payload_bytes, std::string(specification.name));
+     pool.assert_empty(specification.name);
+     std::printf("IQ2 grouped case=%s exact=1 rows=%" PRId64 " M=%" PRId64 " K=%" PRId64 "\n", specification.name,
+@@ -571,7 +572,7 @@ enum class negative_gate {
+ void run_negative_case(const char * name, negative_gate gate, int64_t M, int64_t K,
+                        const std::vector<int64_t> & widths, sycl::queue * queue) {
+     const route routing = make_route(widths);
+-    int64_t total_rows = route_rows(routing);
++    const int64_t total_rows = route_rows(routing);
+     const int64_t call_rows = gate == negative_gate::all_empty ? 1 : total_rows;
+     if (gate == negative_gate::all_empty) {
+         require(total_rows == 0, std::string(name) + ": all-empty route is not empty");
+@@ -589,8 +590,6 @@ void run_negative_case(const char * name, negative_gate gate, int64_t M, int64_t
+     const size_t output_elements = static_cast<size_t>(call_rows) * static_cast<size_t>(M);
+     guarded_buffer output(queue, output_elements * sizeof(float));
+     guarded_pool pool(queue);
+-    output.reset_f32(output_elements);
+-    std::vector<ggml_sycl_gg_tile> tiles;
+ 
+     const int saved_types = g_ggml_sycl_xmx_gather_types;
+     const int saved_precision = g_ggml_sycl_dynamic_precision;
+@@ -600,29 +599,37 @@ void run_negative_case(const char * name, negative_gate gate, int64_t M, int64_t
+     if (gate == negative_gate::f32_precision) {
+         g_ggml_sycl_dynamic_precision = GGML_SYCL_DYNAMIC_PRECISION_F32;
+     }
+-    const bool returned = ggml_sycl_grouped_dequant_gemm(
+-        GGML_TYPE_IQ2_XXS, gate == negative_gate::reordered, weights.payload(), expert_stride,
+-        activations.payload_as<float>(), GGML_PREC_UNDEFINED, output.payload_as<float>(), routing.offsets.data(),
+-        static_cast<int64_t>(routing.widths.size()), M, K, call_rows, tiles, pool, queue);
+-    queue->wait_and_throw();
+-    g_ggml_sycl_xmx_gather_types = saved_types;
+-    g_ggml_sycl_dynamic_precision = saved_precision;
+ 
+-    require(!returned, std::string(name) + ": negative gate returned true");
+-    require(tiles.empty(), std::string(name) + ": negative gate populated tile schedule");
+-    const uint32_t * output_bits = output.payload_as<uint32_t>();
+-    for (size_t i = 0; i < output_elements; ++i) {
+-        if (output_bits[i] != kUntouchedBits) {
+-            std::fprintf(stderr, "%s: negative gate wrote element %zu: 0x%08" PRIx32 "\n", name, i,
+-                         output_bits[i]);
+-            fail(std::string(name) + ": output was not untouched");
++    auto run_selector = [&](const char * phase, bool is_candidate) {
++        output.reset_f32(output_elements);
++        std::vector<ggml_sycl_gg_tile> tiles;
++        const bool returned = ggml_sycl_grouped_dequant_gemm(
++            GGML_TYPE_IQ2_XXS, gate == negative_gate::reordered, weights.payload(), expert_stride,
++            activations.payload_as<float>(), GGML_PREC_UNDEFINED, output.payload_as<float>(), routing.offsets.data(),
++            static_cast<int64_t>(routing.widths.size()), M, K, call_rows, tiles, pool, queue, is_candidate);
++        queue->wait_and_throw();
++
++        require(!returned, std::string(name) + " " + phase + ": negative gate returned true");
++        require(tiles.empty(), std::string(name) + " " + phase + ": negative gate populated tile schedule");
++        const uint32_t * output_bits = output.payload_as<uint32_t>();
++        for (size_t i = 0; i < output_elements; ++i) {
++            if (output_bits[i] != kUntouchedBits) {
++                std::fprintf(stderr, "%s %s: negative gate wrote element %zu: 0x%08" PRIx32 "\n", name, phase, i,
++                             output_bits[i]);
++                fail(std::string(name) + " " + phase + ": output was not untouched");
++            }
+         }
+-    }
+-    check_buffer_guards(output, std::string(name) + " output");
+-    check_unchanged(weights, weights_snapshot, std::string(name) + " weights");
+-    check_unchanged(activations, activations_snapshot, std::string(name) + " activations");
+-    pool.assert_empty(name);
+-    std::printf("IQ2 grouped negative=%s returned=false output_untouched=1\n", name);
++        check_buffer_guards(output, std::string(name) + " " + phase + " output");
++        check_unchanged(weights, weights_snapshot, std::string(name) + " " + phase + " weights");
++        check_unchanged(activations, activations_snapshot, std::string(name) + " " + phase + " activations");
++        pool.assert_empty(std::string(name) + " " + phase);
++        std::printf("IQ2 grouped negative=%s selector=%s returned=false output_untouched=1\n", name, phase);
++    };
++
++    run_selector("ORIGINAL", false);
++    run_selector("CANDIDATE", true);
++    g_ggml_sycl_xmx_gather_types = saved_types;
++    g_ggml_sycl_dynamic_precision = saved_precision;
+ }
+ 
+ bool has_size(size_t max_size, size_t exact_size, size_t required) {
+@@ -726,7 +733,7 @@ int main() {
+         queue->wait_and_throw();
+         ggml_backend_free(backend);
+         backend = nullptr;
+-        std::printf("IQ2 grouped native ORIGINAL/REPLAY PASS valid_cases=%zu negative_cases=6\n", valid_cases.size());
++        std::printf("IQ2 grouped native ORIGINAL/CANDIDATE PASS valid_cases=%zu negative_cases=6\n", valid_cases.size());
+         return 0;
+     } catch (const sycl::exception & exception) {
+         std::fprintf(stderr, "IQ2 grouped native SYCL failure: %s\n", exception.what());
