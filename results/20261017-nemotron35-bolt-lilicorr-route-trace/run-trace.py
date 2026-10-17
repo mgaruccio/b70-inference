@@ -165,8 +165,8 @@ def main():
     out.mkdir(exist_ok=False)
     (out / 'controller.py').write_bytes(Path(__file__).read_bytes())
     readme = ROOT / 'README.md'
-    if readme.is_file():
-        (out / 'declaration.md').write_bytes(readme.read_bytes())
+    assert readme.is_file(), 'declaration requires README.md at eval root'
+    (out / 'declaration.md').write_bytes(readme.read_bytes())
     save(out / 'original-container.json', original)
     save(out / 'hardware-before.json', before_hw)
     save(out / 'frozen-payload.json', payload)

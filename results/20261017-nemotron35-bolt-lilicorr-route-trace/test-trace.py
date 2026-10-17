@@ -10,6 +10,7 @@ import socket
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 assert socket.gethostname() == 'inference-host'
@@ -122,14 +123,14 @@ def route_log(missing_output=False):
     lines += [route_batch(list(range(55)), list(range(1000, 1055))),
               route_line(weight='output.weight', backend='0xabc'),
               route_line(weight='blk.0.prompt.weight'), route_decoded()]
-    lines += [route_batch([55], [1055]), route_line(weight='blk.0.attn_q.weight', backend='0xabc')]
+    lines += [route_batch([55], [1055]), route_line(weight='blk.0.ssm_in.weight', backend='0xabc')]
     if not missing_output:
-        lines.append(route_line(weight='output.weight'))
+        lines.append(route_line(weight='output.weight', backend='0xabc'))
     lines.append(route_decoded())
     lines += [route_line(weight='blk.0.after.weight'),
-              route_batch([56], [1056]), route_line(weight='blk.0.attn_k.weight'),
+              route_batch([56], [1056]), route_line(weight='blk.0.ssm_out.weight'),
               route_line(weight='output.weight'), route_decoded()]
-    lines += [route_batch([55, 56], [1055, 1056]), route_line(weight='blk.0.ffn_gate.weight'),
+    lines += [route_batch([55, 56], [1055, 1056]), route_line(weight='blk.0.ssm_in.weight'),
               route_line(weight='output.weight'), route_decoded(), route_line(weight='blk.0.after.weight')]
     return '\n'.join(lines) + '\n'
 
@@ -434,6 +435,23 @@ class Trace(unittest.TestCase):
         with self.assertRaises(AssertionError):
             A['select_route_batches'](route_log(missing_output=True), 'S0')
 
+    def test_nested_other_backend_routes_are_preserved_not_attributed(self):
+        marker = route_batch([55], [1055])
+        foreign = route_line(weight='blk.0.attn_k.weight', backend='0x999')
+        log = route_log().replace(marker, marker + '\n' + foreign)
+        first = A['select_route_batches'](log, 'S0')['selected_batches'][0]
+        self.assertEqual(first['target_backend_ctx'], '0xabc')
+        self.assertEqual(len(first['other_backend_routes']), 1)
+        self.assertEqual(first['other_backend_routes'][0]['backend_ctx'], '0x999')
+        self.assertTrue(all(row['backend_ctx'] == '0xabc' for row in first['routes']))
+        ambiguous = route_log().replace(marker, marker + '\n' + route_line(weight='blk.0.ssm_in.weight', backend='0x999'))
+        with self.assertRaisesRegex(AssertionError, 'ambiguous target'):
+            A['select_route_batches'](ambiguous, 'S0')
+        foreign_output = route_log().replace(route_line(weight='output.weight', backend='0xabc'),
+                                            route_line(weight='output.weight', backend='0x999'))
+        with self.assertRaisesRegex(AssertionError, 'output projection route missing in target'):
+            A['select_route_batches'](foreign_output, 'S0')
+
     def test_route_framing_malformed_and_empty_fail_closed(self):
         with self.assertRaises(AssertionError):
             A['route_records']('')
@@ -478,15 +496,23 @@ class Trace(unittest.TestCase):
         parent = copy.deepcopy(candidate)
         parent['capture_path'] = str(parent_capture)
         (parent_cell / 'alignment.json').write_text(json.dumps(parent))
-        old_parent_results = A['PARENT_RESULTS']
-        A['PARENT_RESULTS'] = parent_results
-        try:
+        with patch.dict(A['compare_parent_observer'].__globals__, PARENT_RESULTS=parent_results):
+            self.assertTrue(A['compare_parent_observer'](candidate, 'S0')['passed'])
             broken = bytearray((parent_capture / parent['samples'][0]['file']).read_bytes())
             broken[0] ^= 1
             (parent_capture / parent['samples'][0]['file']).write_bytes(broken)
-            with self.assertRaises(AssertionError):
+            with self.assertRaisesRegex(AssertionError, 'raw score vector bytes differ at ordinal 1'):
                 A['compare_parent_observer'](candidate, 'S0')
-        finally:
-            A['PARENT_RESULTS'] = old_parent_results
+
+    def test_analyze_arm_saved_parent_capture_wiring(self):
+        # The parent predates route logs: stub only route extraction, not score checks.
+        with patch.dict(A['analyze_arm'].__globals__, select_route_batches=lambda log, label: {'fixture_only': True}):
+            for label in ('S0', 'C0'):
+                cell = M['PARENT_RESULTS'] / 'run-r1' / label
+                result = A['analyze_arm'](cell, label, OLD)
+                self.assertEqual(result['capture_path'], str(cell / 'capture'))
+                self.assertTrue(result['parent_observer']['passed'])
+                self.assertEqual(result['parent_observer']['raw_vector_count'], 128)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -169,11 +169,19 @@ def select_route_batches(log, label):
     selected = []
     for frame in chosen:
         assert frame['routes'], 'selected target batch has no filtered route records'
-        assert any(route['weight'] == 'output.weight' for route in frame['routes']), (
-            'output projection route missing in selected batch')
-        assert any(route['weight'].startswith('blk.0.') for route in frame['routes']), (
-            'first-block route missing in selected batch')
-        selected.append(dict(batch=_route_batch_metadata(frame['batch']), routes=frame['routes']))
+        # Draft feature work may run inside the target decode call. Anchor the
+        # target backend to Bolt's first-block SSM projections, not pointer types.
+        anchors = [route for route in frame['routes'] if route['weight'] in
+                   ('blk.0.ssm_in.weight', 'blk.0.ssm_out.weight')]
+        contexts = {route['backend_ctx'] for route in anchors}
+        assert len(contexts) == 1, 'missing or ambiguous target SSM backend context'
+        target_context = next(iter(contexts))
+        target_routes = [route for route in frame['routes'] if route['backend_ctx'] == target_context]
+        other_routes = [route for route in frame['routes'] if route['backend_ctx'] != target_context]
+        assert any(route['weight'] == 'output.weight' for route in target_routes), (
+            'output projection route missing in target backend')
+        selected.append(dict(batch=_route_batch_metadata(frame['batch']), routes=target_routes,
+                             target_backend_ctx=target_context, other_backend_routes=other_routes))
     routes = [route for frame in selected for route in frame['routes']]
     assert any(route['weight'] == 'output.weight' for route in routes), 'output projection route missing'
     assert any(route['weight'].startswith('blk.0.') for route in routes), 'first-block route missing'
@@ -407,6 +415,7 @@ def analyze_arm(cell, label, old):
         load(reference / 'repeat-00.result.json'),
         load(reference / 'diagnostic.response.json'))
     result = align(records((cell / 'diagnostic-window.log').read_text()), tokens, cell / 'capture')
+    result['capture_path'] = str(cell / 'capture')
     route_analysis = select_route_batches((cell / 'diagnostic-window.log').read_text(), label)
     observer = compare_parent_observer(result, label)
     verifications = result['verifications']

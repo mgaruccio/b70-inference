@@ -15,7 +15,7 @@ exec > >(tee "$R/build-attempt-r1/build.log") 2>&1
 trap 'rc=$?; printf "%s\n" "$rc" > "$R/build-attempt-r1/exit-code.txt"' EXIT
 set -x
 test "$(cat "$PARENT/UPSTREAM_COMMIT")" = b6334e37e6ef286fc5091a41b6561b2113d915fb
-(cd "$PARENT" && patch --dry-run --batch --forward -p1 < "$R/route-trace.patch")
+(cd "$PARENT" && patch --fuzz=0 --dry-run --batch --forward -p1 < "$R/route-trace.patch")
 python3 -B - <<'PY'
 import runpy
 m=runpy.run_path('run-trace.py')
@@ -32,7 +32,7 @@ need=$(du -sk "$PARENT" | cut -f1)
 available=$(df -Pk "$(dirname "$D")" | awk 'NR==2 {print $4}')
 test "$available" -gt "$((need + 4194304))"
 cp -a --reflink=auto "$PARENT" "$D"
-(cd "$D" && patch --batch --forward -p1 < "$R/route-trace.patch")
+(cd "$D" && patch --fuzz=0 --batch --forward -p1 < "$R/route-trace.patch")
 # Install Ninja/curl build prerequisites only inside the disposable build container.
 # --no-upgrade may still upgrade curl dependencies there; Intel, oneDNN and host runtimes stay unchanged.
 docker run --rm --name bolt-route-trace-r1-build --cpus=6 -v "$D:/src" \
