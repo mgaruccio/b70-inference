@@ -1,0 +1,133 @@
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -10,6 +10,7 @@
+ 
+ #include "build-info.h"
+ #include "common.h"
++#include "debug.h"
+ #include "fit.h"
+ #include "llama.h"
+ #include "log.h"
+@@ -21,6 +22,10 @@
+ #include <algorithm>
+ #include <cstddef>
+ #include <cinttypes>
++#include <cstdlib>
++#include <cstring>
++#include <vector>
++#include <cstdint>
+ #include <exception>
+ #include <memory>
+ #include <filesystem>
+@@ -934,6 +939,88 @@
+     return true;
+ }
+ 
++struct bolt_tensor_trace_data {
++    common_debug_cb_user_data debug;
++    std::vector<uint8_t> weight;
++    std::vector<uint8_t> input;
++    std::vector<uint8_t> output;
++    size_t samples = 0;
++};
++
++static void bolt_projection_repeat(const ggml_tensor * t, bolt_tensor_trace_data & data) {
++    if (t->op != GGML_OP_MUL_MAT || t->src[0] == nullptr || t->src[1] == nullptr ||
++        std::strcmp(t->src[0]->name, "blk.0.ssm_out.weight") != 0 ||
++        t->ne[0] != 4096 || t->ne[1] != 90 || t->ne[2] != 1 || t->ne[3] != 1) {
++        return;
++    }
++    const ggml_tensor * w = t->src[0];
++    const ggml_tensor * x = t->src[1];
++    GGML_ASSERT(w->ne[0] == 8192 && w->ne[1] == 4096 && w->ne[2] == 1 && w->ne[3] == 1);
++    GGML_ASSERT(x->ne[0] == 8192 && x->ne[1] == 90 && x->ne[2] == 1 && x->ne[3] == 1);
++    GGML_ASSERT(x->type == GGML_TYPE_F32 && t->type == GGML_TYPE_F32);
++    GGML_ASSERT(ggml_is_contiguous(w) && ggml_is_contiguous(x) && ggml_is_contiguous(t));
++    std::vector<uint8_t> weight(ggml_nbytes(w));
++    std::vector<uint8_t> input(ggml_nbytes(x));
++    std::vector<uint8_t> output(ggml_nbytes(t));
++    ggml_backend_tensor_get(w, weight.data(), 0, weight.size());
++    ggml_backend_tensor_get(x, input.data(), 0, input.size());
++    ggml_backend_tensor_get(t, output.data(), 0, output.size());
++    const bool baseline = data.samples == 0;
++    auto equal = [](const std::vector<uint8_t> & a, const std::vector<uint8_t> & b) {
++        return a.size() == b.size() && std::memcmp(a.data(), b.data(), a.size()) == 0;
++    };
++    const bool weight_equal = baseline || equal(data.weight, weight);
++    const bool input_equal  = baseline || equal(data.input, input);
++    const bool output_equal = baseline || equal(data.output, output);
++    LOG_INF("BOLT_PROJECTION_REPEAT sample=%zu baseline=%d weight_equal=%d input_equal=%d output_equal=%d weight_bytes=%zu input_bytes=%zu output_bytes=%zu weight_type=%s\n",
++            data.samples, baseline, weight_equal, input_equal, output_equal,
++            weight.size(), input.size(), output.size(), ggml_type_name(w->type));
++    if (baseline) {
++        data.weight = std::move(weight);
++        data.input  = std::move(input);
++        data.output = std::move(output);
++    }
++    ++data.samples;
++}
++
++static bool bolt_tensor_trace_enabled() {
++    const char * env = std::getenv("BOLT_TRACE_TENSORS");
++    return env != nullptr && std::strcmp(env, "1") == 0;
++}
++
++static bool bolt_tensor_trace_wants_tensor(const ggml_tensor * t) {
++    const char * name = t->name;
++    const char * selected[] = {
++        "embd", "norm-0", "attn_norm-0", "mamba2_y_add_d-0",
++        "mamba_out-0", "nemotron_h_block_out-0", "result_output",
++    };
++    for (const char * candidate : selected) {
++        if (std::strcmp(name, candidate) == 0) {
++            return true;
++        }
++    }
++    const ggml_tensor * weight = nullptr;
++    switch (t->op) {
++        case GGML_OP_MUL_MAT:  weight = t->src[0]; break;
++        case GGML_OP_SSM_CONV: weight = t->src[1]; break;
++        case GGML_OP_SSM_SCAN: weight = t->src[3]; break;
++        default: break;
++    }
++    return weight != nullptr && std::strncmp(weight->name, "blk.0.", 6) == 0;
++}
++
++static bool bolt_tensor_trace_cb_eval(struct ggml_tensor * t, bool ask, void * user_data) {
++    if (ask) {
++        return bolt_tensor_trace_wants_tensor(t);
++    }
++    if (!bolt_tensor_trace_wants_tensor(t)) {
++        return true;
++    }
++    auto * data = static_cast<bolt_tensor_trace_data *>(user_data);
++    bolt_projection_repeat(t, *data);
++    return common_debug_cb_eval(t, false, &data->debug);
++}
++
+ //
+ // server_context_impl (private implementation)
+ //
+@@ -987,6 +1074,8 @@
+     // use server_context methods instead
+ 
+     common_params params_base;
++
++    bolt_tensor_trace_data bolt_tensor_trace_cb_user_data;
+ 
+     // note: keep these alive - they determine the lifetime of the model, context, etc.
+     common_init_result_ptr llama_init;
+@@ -1212,6 +1301,13 @@
+         {
+             params_base.load_progress_callback = load_progress_callback;
+             params_base.load_progress_callback_user_data = &load_progress_text;
++        }
++
++        if (bolt_tensor_trace_enabled()) {
++            params_base.cb_eval_user_data = &bolt_tensor_trace_cb_user_data;
++            params_base.cb_eval           = bolt_tensor_trace_cb_eval;
++            SRV_WRN("%s\n",
++                    "BOLT_TENSOR_TRACE_ENABLED: graph eval callback active; timing and numerics may differ (observer effect)");
+         }
+ 
+         llama_init = common_init_from_params(params_base);
