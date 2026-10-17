@@ -1,0 +1,252 @@
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -972,8 +972,7 @@
+         fflush(stdout);
+ 
+         if (!result.supported) {
+-            printf("not supported [%s] ", result.backend_name.c_str());
+-            printf("\n");
++            printf("not supported [%s]%s\n", result.backend_name.c_str(), result.passed ? " (expected)" : "");
+             return;
+         }
+ 
+@@ -1031,10 +1030,16 @@
+         fflush(stdout);
+ 
+         if (result.supported) {
+-            printf("\033[1;32mSUPPORTED\033[0m\n");
++            printf("\033[1;32mSUPPORTED\033[0m");
+         } else {
+-            printf("\033[1;31mNOT SUPPORTED\033[0m\n");
++            printf("\033[1;31mNOT SUPPORTED\033[0m");
+         }
++        if (result.error_message == "expected") {
++            printf(" (expected)");
++        } else if (result.error_message == "unexpected") {
++            printf(" (UNEXPECTED)");
++        }
++        printf("\n");
+     }
+ };
+ 
+@@ -1224,6 +1229,12 @@
+         return max_nmse_err();
+     }
+ 
++    virtual bool expected_support(ggml_backend_t backend, bool & expected) {
++        GGML_UNUSED(backend);
++        GGML_UNUSED(expected);
++        return false;
++    }
++
+     virtual double max_maa_err() {
+         return 1e-4;
+     }
+@@ -1428,6 +1439,18 @@
+             }
+         }
+ 
++        bool expected_supported = true;
++        if (expected_support(backend1, expected_supported)) {
++            const bool expectation_met = supported == expected_supported;
++            test_result result(unsupported_str, current_op_name, vars(), "test",
++                               supported, expectation_met,
++                               expectation_met ? "" : "unexpected support result");
++
++            print_test_result_locked(output_printer, result);
++
++            return expectation_met ? test_status_t::OK : test_status_t::FAIL;
++        }
++
+         if (!supported) {
+             test_result result(unsupported_str, current_op_name, vars(), "test",
+                              false, false, "not supported");
+@@ -1746,12 +1769,18 @@
+         std::string device_desc = ggml_backend_dev_description(ggml_backend_get_device(backend));
+         std::string backend_reg_name = ggml_backend_reg_name(ggml_backend_dev_backend_reg(ggml_backend_get_device(backend)));
+ 
+-        test_result result(ggml_backend_name(backend), current_op_name, vars(), "support", supported, supported,
+-                           supported ? "yes" : "no", 0.0, 0.0, 0.0, 0, 0, device_desc, backend_reg_name);
++        bool expected_supported = true;
++        const bool has_expectation = expected_support(backend, expected_supported);
++        const bool expectation_met = !has_expectation || supported == expected_supported;
++        const bool result_passed = has_expectation ? expectation_met : supported;
++        const std::string result_message = has_expectation ?
++            (expectation_met ? "expected" : "unexpected") : (supported ? "yes" : "no");
++        test_result result(ggml_backend_name(backend), current_op_name, vars(), "support", supported, result_passed,
++                           result_message, 0.0, 0.0, 0.0, 0, 0, device_desc, backend_reg_name);
+ 
+         output_printer->print_test_result(result);
+ 
+-        return true;
++        return !has_expectation || expectation_met;
+     }
+ 
+     bool eval_grad(ggml_backend_t backend, const char * op_names_filter, printer * output_printer) {
+@@ -5949,32 +5978,112 @@
+     const std::array<int64_t, 2> bs; // dims 3 and 4
+     const std::array<int64_t, 2> nr; // repeat in dims 3 and 4
+     const bool trans_b;
++    const std::string layout;
++
++    ggml_tensor * a_storage = nullptr;
++    ggml_tensor * b_storage = nullptr;
+ 
+     std::string vars() override {
+-        return VARS_TO_STR8(type_a, type_b, m, n, k, bs, nr, trans_b);
++        return VARS_TO_STR9(type_a, type_b, m, n, k, bs, nr, trans_b, layout);
+     }
+ 
+     double max_nmse_err() override {
+-        return 5e-4;
++        return layout == "qkv_view" ? 1e-4 : 5e-4;
++    }
++
++    double err(const float * a, const float * b, size_t n) override {
++        if (layout != "qkv_view") {
++            return test_case::err(a, b, n);
++        }
++
++        double max_abs_err = 0.0;
++        for (size_t i = 0; i < n; ++i) {
++            max_abs_err = std::max(max_abs_err, (double) fabsf(a[i] - b[i]));
++        }
++        return max_abs_err;
++    }
++
++    bool expected_support(ggml_backend_t backend, bool & expected) override {
++        if (layout != "bad_stride0" && layout != "bad_column" && layout != "bad_src1") {
++            return false;
++        }
++
++        const char * backend_reg_name = ggml_backend_reg_name(
++            ggml_backend_dev_backend_reg(ggml_backend_get_device(backend)));
++        if (backend_reg_name == nullptr || strncmp(backend_reg_name, "SYCL", 4) != 0) {
++            return false;
++        }
++
++        expected = false;
++        return true;
+     }
+ 
+     test_out_prod(ggml_type type_a = GGML_TYPE_F32, ggml_type type_b = GGML_TYPE_F32,
+             int64_t m = 32, int64_t n = 32, int64_t k = 32,
+             std::array<int64_t, 2> bs = {10, 10},
+             std::array<int64_t, 2> nr = {2, 2},
+-            bool trans_b = false)
+-        : type_a(type_a), type_b(type_b), m(m), n(n), k(k), bs(bs), nr(nr), trans_b(trans_b) {}
++            bool trans_b = false,
++            std::string layout = "contiguous")
++        : type_a(type_a), type_b(type_b), m(m), n(n), k(k), bs(bs), nr(nr), trans_b(trans_b), layout(std::move(layout)) {}
++
++    void initialize_tensors(ggml_context * ctx) override {
++        if (layout != "qkv_view") {
++            test_case::initialize_tensors(ctx);
++            return;
++        }
++
++        GGML_UNUSED(ctx);
++        auto fill = [](ggml_tensor * tensor, float base) {
++            const size_t nels = ggml_nelements(tensor);
++            std::vector<float> data(nels);
++            for (size_t i = 0; i < nels; ++i) {
++                data[i] = base + 0.001f * ((int) (i % 17) - 8);
++            }
++            ggml_backend_tensor_set(tensor, data.data(), 0, nels * sizeof(float));
++        };
++
++        fill(a_storage, -0.25f);
++        fill(b_storage,  0.25f);
++    }
+ 
+     ggml_tensor * build_graph(ggml_context * ctx) override {
+-        ggml_tensor * a = ggml_new_tensor_4d(ctx, type_a, m, k, bs[0], bs[1]);
++        ggml_tensor * a;
++        if (layout == "qkv_view") {
++            GGML_ASSERT(type_a == GGML_TYPE_F32);
++            a_storage = ggml_new_tensor_3d(ctx, type_a, 3*m*bs[0], k, bs[1]);
++            ggml_set_name(a_storage, "a_qkv_backing");
++            a = ggml_view_4d(ctx, a_storage, m, k, bs[0], bs[1],
++                             a_storage->nb[1], m*sizeof(float), a_storage->nb[2],
++                             2*m*bs[0]*sizeof(float));
++        } else if (layout == "bad_stride0") {
++            GGML_ASSERT(type_a == GGML_TYPE_F32 && bs[0] == 2);
++            ggml_tensor * base = ggml_new_tensor_4d(ctx, type_a, 2, m, k, bs[1]);
++            ggml_set_name(base, "a_stride0_backing");
++            a = ggml_permute(ctx, base, 1, 2, 0, 3);
++        } else if (layout == "bad_column") {
++            GGML_ASSERT(type_a == GGML_TYPE_F32);
++            ggml_tensor * base = ggml_new_tensor_4d(ctx, type_a, m, k, bs[0], bs[1]);
++            ggml_set_name(base, "a_column_backing");
++            a = ggml_view_4d(ctx, base, m, k, bs[0], bs[1],
++                             2*sizeof(float), base->nb[2], base->nb[3], 0);
++        } else {
++            a = ggml_new_tensor_4d(ctx, type_a, m, k, bs[0], bs[1]);
++        }
+         ggml_set_name(a, "a");
+ 
+         ggml_tensor * b;
+         if (trans_b) {
+-            b = ggml_new_tensor_4d(ctx, type_b, k, n, bs[0]*nr[0], bs[1]*nr[1]);
+-            b = ggml_transpose(ctx, b);
++            b_storage = ggml_new_tensor_4d(ctx, type_b, k, n, bs[0]*nr[0], bs[1]*nr[1]);
++            b = ggml_transpose(ctx, b_storage);
+         } else {
+-            b = ggml_new_tensor_4d(ctx, type_b, n, k, bs[0]*nr[0], bs[1]*nr[1]);
++            if (layout == "bad_src1") {
++                GGML_ASSERT(type_b == GGML_TYPE_F32 && bs[0]*nr[0] == 2);
++                b_storage = ggml_new_tensor_4d(ctx, type_b, 2, n, k, bs[1]*nr[1]);
++                b = ggml_permute(ctx, b_storage, 1, 2, 0, 3);
++            } else {
++                b_storage = ggml_new_tensor_4d(ctx, type_b, n, k, bs[0]*nr[0], bs[1]*nr[1]);
++                b = b_storage;
++            }
+         }
+         ggml_set_name(b, "b");
+ 
+@@ -11847,6 +11956,31 @@
+         }
+     }
+ 
++    // Exact LiLiCorr QKV view: [3*m*bs0,k,bs1] -> [m,k,bs0,bs1].
++    for (bool trans_b : {false, true}) {
++        test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
++                                                  128, 56, 56, {8, 1}, {1, 1}, trans_b, "qkv_view"));
++    }
++
++    // Irregular F32 tails with repeats/broadcasting, for both src1 layouts.
++    for (bool trans_b : {false, true}) {
++        test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
++                                                  37, 11, 19, {3, 2}, {2, 3}, trans_b));
++    }
++
++    // Contiguous Q1_0 regression with the same irregular repeat geometry.
++    for (bool trans_b : {false, true}) {
++        test_cases.emplace_back(new test_out_prod(GGML_TYPE_Q1_0, GGML_TYPE_F32,
++                                                  64, 11, 19, {3, 2}, {2, 3}, trans_b));
++    }
++
++    // These layouts must be reported unsupported by SYCL, not silently skipped as passes.
++    test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
++                                              32, 11, 19, {2, 2}, {1, 1}, false, "bad_stride0"));
++    test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
++                                              32, 11, 19, {3, 2}, {1, 1}, false, "bad_column"));
++    test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
++                                              32, 11, 19, {2, 2}, {1, 1}, false, "bad_src1"));
+     // ne2 sweep to cover the cublasSgemmStridedBatched path (dps2 == 1, ne2 > 1)
+     for (int64_t ne2 : {1, 8, 16, 32}) {
+         test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,
+@@ -13633,10 +13767,11 @@
+             test_cases.end()
+         );
+ 
++        bool support_tests_passed = true;
+         for (auto & test : test_cases) {
+-            test->eval_support(backend, op_names_filter, output_printer);
++            support_tests_passed = test->eval_support(backend, op_names_filter, output_printer) && support_tests_passed;
+         }
+-        return true;
++        return support_tests_passed;
+     }
+ 
+     GGML_ABORT("fatal error");
