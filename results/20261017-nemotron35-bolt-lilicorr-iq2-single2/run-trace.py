@@ -106,7 +106,7 @@ def check_iq2_native_output(log):
     assert summaries == [('6', '6')], summaries
     cases = re.findall(
         r'(?m)^\s*MUL_MAT_ID\(type_a=iq2_xxs,type_b=f32,n_mats=16,n_used=9,'
-        r'b=(\d+),m=(\d+),n=(\d+),k=(\d+),amax=1,m_v=0,ids_offset=0\): OK\s*$', log)
+        r'b=(\d+),m=(\d+),n=(\d+),k=(\d+),amax=1(?:\.0+)?,m_v=0,ids_offset=0\): OK\s*$', log)
     keys = [tuple(map(int, case)) for case in cases]
     assert len(keys) == 6 and set(keys) == IQ2_NATIVE_CASES, keys
     assert re.findall(r'(?m)^Backend \d+/\d+: (\S+)\s*$', log) == ['SYCL0', 'CPU']
@@ -231,7 +231,7 @@ def check_q8_native_gate(log):
 
 
 
-# Exactly thirteen named CPU-reference fixtures added by iq2-single2.patch.
+# Exactly thirteen inherited attention CPU-reference fixtures.
 ATTENTION_NATIVE_CASES = {
     **{
         (weight, m, n, k): ('DMMV_ESIMD' if n <= 2 else 'MMVQ_REORDERED')

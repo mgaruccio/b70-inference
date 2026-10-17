@@ -59,7 +59,7 @@ def iq2_native_output(grouped_success=True):
                         lines.append(iq2_route_line(weight, n, route='MOE_PER_EXPERT_FALLBACK', expert=expert, **extra))
                         extra.update({f'ids_{field}{i}': 0 for field in ('ne', 'nb') for i in range(4)})
                         lines.append(iq2_route_line(weight, n, route='MMVQ_PLAIN', **extra))
-            lines.append(f'  MUL_MAT_ID(type_a=iq2_xxs,type_b=f32,n_mats=16,n_used=9,b={b},m={m},n={n},k={k},amax=1,m_v=0,ids_offset=0): \x1b[1;32mOK\x1b[0m')
+            lines.append(f'  MUL_MAT_ID(type_a=iq2_xxs,type_b=f32,n_mats=16,n_used=9,b={b},m={m},n={n},k={k},amax=1.000000,m_v=0,ids_offset=0): \x1b[1;32mOK\x1b[0m')
     return ('\n'.join(lines) + '\n  6/6 tests passed\n'
             '  Backend SYCL0: OK\nBackend 2/2: CPU\n  Skipping\n2/2 backends passed\nOK\n')
 
@@ -1548,6 +1548,37 @@ class Trace(unittest.TestCase):
         for n in (1, 2, 3):
             for b, m, k, spacing in (('true', 2048, 1024, '  '), ('false', 1024, 2048, ' ')):
                 self.assertIn(f'new test_mul_mat_id_iq2_single2(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, {b},{spacing}{m}, {n}, {k})', source)
+
+    def test_pair_r2_preserves_controller_and_analyzer_logic(self):
+        retry = runpy.run_path('run-pair-r2.py')
+        for name, original in (('run-trace.py', M), ('analyze-trace.py', A)):
+            source = retry['rewritten'](name)
+            namespace = {'__name__': 'r2_preview', '__file__': str(retry['NEXT'] / name)}
+            exec(compile(source, namespace['__file__'], 'exec'), namespace)
+            self.assertEqual(namespace['ROOT'], retry['NEXT'])
+            for key in ('WIDTH1', 'PARENT_RESULTS'):
+                self.assertEqual(namespace[key], original[key])
+            if name == 'run-trace.py':
+                self.assertEqual(namespace['ORDER'], ('S0', 'C0'))
+                self.assertNotEqual(namespace['PREFIX'], M['PREFIX'])
+                for key in ('CANDIDATE', 'PARENT', 'ACCEPTED', 'SOURCE_SCOPE', 'IQ2_NATIVE_COMMAND',
+                            'Q8_NATIVE_COMMAND', 'ATTENTION_NATIVE_COMMAND', 'ATTENTION_VIEW_NATIVE_COMMAND'):
+                    self.assertEqual(namespace[key], M[key])
+            old_functions = [ast.dump(n) for n in ast.parse(Path(name).read_text()).body if isinstance(n, ast.FunctionDef)]
+            new_functions = [ast.dump(n) for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)]
+            self.assertEqual(old_functions, new_functions)
+
+    def test_iq2_actual_saved_numeric_format(self):
+        saved = (M['ROOT'] / 'run-r1/S0/server.log').read_text()
+        output = saved.split('BOLT_LILICORR_OUTPROD_NATIVE_PASSED', 1)[1].split('Traceback (most recent call last):', 1)[0]
+        self.assertIn('amax=1.000000,', output)
+        M['check_iq2_native_output'](output)
+        M['check_iq2_native_output'](output.replace('amax=1.000000,', 'amax=1,'))
+        for value in ('1.000001', '0.999999', 'nan', 'inf'):
+            bad = output.replace('amax=1.000000,', f'amax={value},')
+            self.assertNotEqual(bad, output)
+            with self.subTest(value=value), self.assertRaises(AssertionError):
+                M['check_iq2_native_output'](bad)
 
     def test_iq2_native_routes_grouped_and_fallback_with_valid_timestamps(self):
         for grouped in (True, False):
