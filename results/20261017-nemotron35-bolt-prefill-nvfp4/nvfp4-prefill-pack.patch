@@ -92,7 +92,7 @@ diff --git a/ggml/src/ggml-sycl/dequantize.hpp b/ggml/src/ggml-sycl/dequantize.h
 diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
 --- a/tests/CMakeLists.txt
 +++ b/tests/CMakeLists.txt
-@@ -315,6 +315,20 @@
+@@ -315,6 +315,19 @@
  
  llama_build(test-backend-ops.cpp LINK ggml)
  
@@ -104,10 +104,9 @@ diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
 +        ${PROJECT_SOURCE_DIR}/ggml/src/ggml-sycl)
 +    target_compile_options(test-nvfp4-sycl PRIVATE -fsycl)
 +    target_link_options(test-nvfp4-sycl PRIVATE -fsycl)
-+    get_target_property(_ggml_sycl_compile_definitions ggml-sycl COMPILE_DEFINITIONS)
-+    if (_ggml_sycl_compile_definitions)
-+        target_compile_definitions(test-nvfp4-sycl PRIVATE ${_ggml_sycl_compile_definitions})
-+    endif()
++    get_directory_property(_ggml_sycl_directory_definitions
++        DIRECTORY ${PROJECT_SOURCE_DIR}/ggml/src/ggml-sycl COMPILE_DEFINITIONS)
++    target_compile_definitions(test-nvfp4-sycl PRIVATE ${_ggml_sycl_directory_definitions})
 +endif()
 +
  llama_build_and_test(test-tiled-mulmat.cpp LINK ggml)
