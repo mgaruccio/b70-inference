@@ -128,8 +128,20 @@ def align(events, tokens, capture, prompt_tokens=55):
                     assert pos >= 0 and (pos not in prompt or prompt[pos] == token)
                     prompt[pos] = token
             continue
-        if kind == 'remove' and context is None:
-            assert e['kind'] == 'prompt' and e['rollback'] == 0
+        if kind == 'remove' and e['kind'] == 'prompt':
+            # Server clears the unprocessed tail between prompt chunks too.
+            # Permit only the boundary immediately after the decoded prefix,
+            # before any sample; this is not speculative rollback.
+            assert not samples and not pending and not to_emit
+            assert e['rollback'] == 0 and e['p1'] == -1
+            assert sorted(prompt) == list(range(len(prompt)))
+            assert e['p0'] == len(prompt) < prompt_tokens
+            if context is None:
+                assert current is None and e['p0'] == 0
+            else:
+                assert e['ctx'] == context and e['slot'] == slot_id
+                assert current['decoded'] and not any(current['outputs'])
+                assert e['p0'] == current['pos'][-1] + 1
             removals.append(e)
             continue
         assert current is not None and e['ctx'] == context, 'unmapped context/sample'

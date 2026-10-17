@@ -20,7 +20,7 @@ BASE = json.loads((OLD['OLD'] / 'nvfp4-prefill-r2-no-gain-recovery/create-argv.j
 IMAGE = 'intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04'
 
 
-def fixture(directory, speculative=False, diverge=False):
+def fixture(directory, speculative=False, diverge=False, chunked_prompt=False):
     directory.mkdir()
     tokens = list(range(1000, 1128))
     tokens[115] = 4618 if diverge else 6833
@@ -46,9 +46,18 @@ def fixture(directory, speculative=False, diverge=False):
     def emit(i):
         log('emit', ctx='0xabc', slot=0, ordinal=i + 1, token=tokens[i])
     log('remove', ctx='0xabc', slot=0, kind='prompt', p0=0, p1=-1, rollback=0)
-    batch(list(range(55)), list(range(55)), [0] * 54 + [1])
-    sample(0, 54)
-    log('single', ctx='0xabc', smpl='0xdef', slot=0, row=54, id=tokens[0])
+    if chunked_prompt:
+        for start, end in ((0, 5), (5, 51), (51, 55)):
+            if start:
+                log('remove', ctx='0xabc', slot=0, kind='prompt', p0=start, p1=-1, rollback=0)
+            batch(list(range(start, end)), list(range(start, end)),
+                  [int(p == 54) for p in range(start, end)])
+        first_row = 3
+    else:
+        batch(list(range(55)), list(range(55)), [0] * 54 + [1])
+        first_row = 54
+    sample(0, first_row)
+    log('single', ctx='0xabc', smpl='0xdef', slot=0, row=first_row, id=tokens[0])
     emit(0)
     i = 1
     while i < 128:
@@ -102,6 +111,26 @@ class Trace(unittest.TestCase):
         self.assertNotIn('llama_get_logits_ith(ctx, idx)', '\n'.join(
             l for l in patch.read_text().splitlines() if l.startswith('+')))
 
+    def test_missing_c0_changes_only_five_controller_constants(self):
+        continuation = runpy.run_path('continue-c0.py')
+        original = ast.parse((M['ROOT'] / 'run-trace.py').read_text())
+        generated = ast.parse(continuation['controller_source']())
+        self.assertEqual(len(original.body), len(generated.body))
+        changed = {}
+        for before, after in zip(original.body, generated.body):
+            if ast.dump(before) != ast.dump(after):
+                self.assertIsInstance(before, ast.Assign)
+                self.assertIsInstance(after, ast.Assign)
+                self.assertEqual(len(after.targets), 1)
+                self.assertEqual(ast.dump(before.targets[0]), ast.dump(after.targets[0]))
+                changed[after.targets[0].id] = after.value
+        self.assertEqual(set(changed), {'ROOT', 'WIDTH1', 'PARENT_RESULTS', 'ORDER', 'PREFIX'})
+        self.assertEqual(ast.literal_eval(changed['ORDER']), ('C0',))
+        self.assertEqual(ast.literal_eval(changed['PREFIX']), 'bolt-lilicorr-verify-trace-c0-r1-')
+        for key, expected in (('ROOT', M['ROOT'] / 'continuation-c0'),
+                              ('WIDTH1', M['WIDTH1']), ('PARENT_RESULTS', M['PARENT_RESULTS'])):
+            self.assertEqual(changed[key].args[0].value, str(expected))
+
     def test_exact128_rows_real_positions_and_raw_argmax(self):
         result = self.aligned()
         self.assertEqual(len(result['samples']), 128)
@@ -109,6 +138,29 @@ class Trace(unittest.TestCase):
         self.assertEqual(result['samples'][115]['position'], 169)
         self.assertEqual(result['samples'][115]['raw_argmax'], 6833)
         self.assertEqual(result['samples'][0]['selected'], 1000)  # raw != post-sampler is allowed
+
+    def test_prompt_chunk_tail_boundaries(self):
+        log, tokens = fixture(self.root / 'chunked', chunked_prompt=True)
+        events = A['records'](log)
+        result = self.aligned('chunked', events, tokens)
+        self.assertEqual([b['n'] for b in result['batches'][:3]], [5, 46, 4])
+        self.assertEqual(result['prompt_ids'], list(range(55)))
+        self.assertEqual(result['samples'][0]['batch_row'], 3)
+        self.assertEqual([r['p0'] for r in result['removals']], [0, 5, 51])
+        second = [i for i, e in enumerate(events) if e['event'] == 'remove'][1]
+        for key, value in (('p0', 4), ('p0', 6), ('p1', 9), ('rollback', 1),
+                           ('ctx', '0xbad'), ('slot', 1)):
+            bad = copy.deepcopy(events)
+            bad[second][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(AssertionError):
+                self.aligned('chunked', bad, tokens)
+        bad = copy.deepcopy(events)
+        boundary = copy.deepcopy(bad[second])
+        boundary['p0'] = 55
+        first_emit = next(i for i, e in enumerate(bad) if e['event'] == 'emit')
+        bad.insert(first_emit + 1, boundary)
+        with self.assertRaises(AssertionError):
+            self.aligned('chunked', bad, tokens)
 
     def test_greedy_verification_acceptance_and_actual_removal(self):
         log, tokens = fixture(self.root / 'C0', speculative=True)

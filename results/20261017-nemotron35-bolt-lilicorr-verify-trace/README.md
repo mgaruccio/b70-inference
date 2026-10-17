@@ -1,0 +1,60 @@
+# Bolt LiLiCorr target-score / verification diagnostic
+
+Development-only continuation after depth1 reproduced depth4's stable token116 mismatch. No timing, promotion, persistent launcher changes, or edits to accepted source/weights/settings. The next question is whether target scores diverge before any rollback, or whether matching target scores lead to different emission/acceptance. Inspect from the first sampled position, not only token116.
+
+## Fresh research and bounded instrumentation
+
+Freshly fetched on inference-host and byte-compared with the combined candidate: https://raw.githubusercontent.com/ggml-org/llama.cpp/b6334e37e6ef286fc5091a41b6561b2113d915fb/common/sampling.cpp . `common_sampler_sample` synchronizes before reading logits, copies candidates via set_logits, and has distinct backend/CPU return paths. The greedy verifier compares target samples against draft IDs and returns a matching prefix plus target bonus. The preceding source audit and pinned speculative.cpp fetch establish that n_max1/n_min2 discards proposals while retaining block8 drafting and n_rs_seq1.
+
+Create one isolated clone of `/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-deterministic-r1` at `/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-trace-r1`. Patch only `common/sampling.cpp` and `tools/server/server-context.cpp`. Keep GGML kernels, deterministic attribute and existing tensor callback untouched. Temporary default-off diagnostics are enabled only by a capture-directory environment variable in owned experiment containers; no new public API/CLI, service, framework, persistent deployment or generalized observability infrastructure.
+
+Capture the existing CPU sampler's unmodified full F32 logits row in a unique raw file, with checked writes and log metadata identifying context, sampler, requested logits row, selected ID, vocabulary length and filename. Do not force CPU readback on backend-sampling paths; mark such samples as uncaptured. Frozen diagnostic requests already explicitly disable backend sampling. Use the existing synchronization; no tensor-evaluation callback or graph-output changes. Log actual target decode batch IDs/positions/output flags and greedy verification row indices, draft/emitted IDs, acceptance/rollback counts and actual rollback boundaries. Only record; do not alter sampling, acceptance, state operations or dispatch. Capture files are temporary experiment evidence, not a new runtime interface. Raw arrays remain remote; compare their actual bytes, not hashes or printed sums.
+
+Build in Intel2026/oneDNN3.14 with six jobs. Verify only the two source files differ from the combined parent. Protect the existing four binary artifacts plus `libllama-common.so` for original, combined parent and trace candidate, since the sampling implementation lives in that additional library. Candidate backend library/test must remain unchanged; preserve full build/dependency evidence. Confirm the capture-disabled build still uses the unchanged runtime settings. No package/runtime changes in Pi.
+
+## Paired real-API process
+
+Two fixed fresh launches, **S0 then C0**, using the same trace candidate:
+
+- S0: serial target path with LiLiCorr n_max1/n_min2; proposals always discarded.
+- C0: active LiLiCorr n_max1/n_min0.
+
+Both retain n_rs_seq1/K2, block8 drafter, feature capture, output capacity2, and the same prefill reservation. This holds those settings constant across the pair; S0 is not draft-off. Its output must be compared with the established draft-off/suppressed baseline. Only n_min differs between the pair.
+
+Keep p_min0, greedy draft sampling, no draft backend sampling, draft GPU layers999; tensor callbacks0, oneDNN verbosity0, DNN1; FUSION1/ESIMD1/OPT1/VMM1,graphs0,q8 KV,F32 recurrent,ctx65536,batch/ubatch1024,parallel1. Preserve original container/hardware, model and drafter bytes. Preflight sufficient free capture space (at least20GiB); writes confined to fresh per-launch capture directories mounted at /capture. Raw files must be readable by the host analysis user. No deletion of originals or existing evidence.
+
+All builds/CPU tests/analysis/GPU/API work executes on mike@inference-host through explicit local AND remote Bash, SSH BatchMode=yes,ConnectTimeout=8,ControlMaster=no,ControlPath=none,ForwardAgent=no. Local operations are editing/git only. Commands: `bash build-candidate.sh`, `python3 -B test-trace.py`, `python3 -B run-trace.py`, `python3 -B analyze-trace.py`, in remote `/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-verify-trace`.
+
+Each launch: native385 plus190 numerical/9 support checks; actual-model activation and API20/20; unchanged frozen55/128 warmup; one ordinary streamed55/128 reference response; one separate nonstream55/128 diagnostic using the preceding width1 matrix's exact diagnostic payload (backend_sampling=false, token IDs/logprobs requested). Store a bounded diagnostic log window and the raw sampler files it references. The ordinary and diagnostic text/IDs must reproduce their respective existing reference outputs: S0 matches width1 A0, C0 matches width1 C0. Any trajectory mismatch blocks attribution and must be preserved. S0's max1/min2 configuration has not previously been observed uninstrumented, so an S0 mismatch alone does not prove instrumentation caused it. API checks in these launches are instrumented diagnostics, not a new non-debug timing gate.
+
+Analyze exactly128 sampled CPU rows per frozen diagnostic, align selected IDs to response token IDs and actual batch rows/positions, and validate complete F32 file sizes/vocabulary. Compare raw vectors only where prior emitted token history is identical (through the first differing emitted token). Report first byte-differing score row, affected batch shape, whether any rollback preceded it, raw argmax and both IDs6833/4618 near token116. Include acceptance/rollback boundaries and exact selected row mapping. Equality of reported top-five scores or emitted text alone is insufficient to establish full-logit equality. Distinguish raw logits from post-sampler probabilities/EOS masking.
+
+Stop on native/API/count/capture/alignment/observer failures, preserve every failure, no retry-until-match. Nested finally must stop owned containers and restore the original nemotron-bolt-probe, independently verifying ID/config/all mounts/five artifacts/hardware/health/READY. Retain source patch, build log, exact launch arguments, declarations, requests/responses, analysis and lossless server logs; keep large raw vectors remote with exact paths recorded. Commit/push only this result scope. Timing remains blocked.
+
+## Recorded analyzer failure and bounded continuation
+
+The first S0 launch passed native385/190/9 and API20, and both ordinary/diagnostic outputs matched the established baseline. It saved128 CPU logit rows. The analyzer then incorrectly rejected normal prompt-tail clears between the actual5/46/4-token prefill chunks (boundaries0,5,51). C0 was never launched. Original `run-r1/summary.json` remains failed; original analyzer/tests are retained there, and original runtime restoration was independently verified across all five artifacts/config/mounts/hardware/health/READY.
+
+The parser correction permits only zero-rollback tail clears exactly after a contiguous, decoded, output-free prompt prefix, before any sample. Regression tests reject prefix deletion, gaps, wrong context/slot, rollback flags and post-sampling prompt clears. Remote18/18 CPU tests passed; reanalysis of the existing S0 files validated all128 rows and zero proposals without new inference.
+
+`continue-c0.py` is a single-use continuation of the missing C0 arm, not a retry of S0 or a new runtime feature. It creates a fresh `continuation-c0/` output namespace, derives the unchanged controller with only fixed output/root/reference/order/name constants changed, and copies the same checked build/hash receipts and analyzer. It must validate the saved S0 before launching C0, preserve the failed original run, and enforce the same native/API/observer/alignment/restoration gates for C0. Compare original S0 with the new C0 only after both validate; retain explicit source paths. The accepted service's intervening restoration is recorded, and no timing inference is permitted.
+
+## Observed paired result: scores diverge before rollback
+
+The missing C0 continuation completed and passed attribution/restoration gates. Original S0 was **not rerun**; its failed controller summary remains preserved. `continuation-comparison.json` records the two exact source directories and successful comparison. Lead remote regression tests now pass **19/19**, including prefill-boundary rejection cases and proof that the generated C0 controller changes only five fixed constants.
+
+Both real launches passed native385 plus190 numerical/9 support checks and instrumented API20 (**40/40** total). Ordinary/diagnostic outputs reproduce prior unlogged references. Exactly128 CPU sample rows per diagnostic align to emitted IDs, actual batch output rows and positions; full raw captures have131072 F32 values each. S0 has zero proposals; C0 has58 accepted/69 proposed and11 rejections in the diagnostic.
+
+- Token1's entire raw score vector is byte-identical.
+- The **first raw score difference is generated token2**, position55. S0 evaluates input `[47789]` in a one-row batch. C0 evaluates `[47789,1302]` at positions55/56 in a two-row batch. Both sample row0 and emit1302. **Neither path has performed any rollback before this difference.**
+- All131072 finite values at token2 differ. C0-minus-S0 mean delta0.5610281054, max absolute delta0.9760169983, centered RMS0.0922225203 (`first-score-difference-stats.json`). This is not merely a constant offset, and is not established to be benign rounding.
+- Every compared score vector from token2 through116 differs, while prior emitted token history is identical. Comparisons stop at116 because the emitted histories then diverge.
+- At116, S0's raw argmax is6833 (` primary`): primary66.9967880 versus original66.3710480. C0's raw argmax is4618 (` original`): original66.8689728 versus primary66.6949005. Each path emits its own raw argmax. The visible mismatch is therefore present in computed target scores, not an acceptance shortcut at that position.
+
+This narrows the earliest divergence to batch-dependent target computation before rollback. It does not yet identify a kernel, establish precision as the cause, prove all internal prefill state identical, or exclude later rollback effects. Next inspect concrete one-row/two-row backend dispatch differences; do not perform further depth sweeps or timing.
+
+Build r1 succeeded but contained diagnostic printf-type mismatches; its exact patch/hashes/log are retained in `build-attempt-r1/`. R2 corrected only those format strings, rebuilt successfully without compiler-format warnings, and preserved accepted/parent five-artifact hashes. Final trace common library SHA256 `934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812`; server implementation `43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede`. Backend library/test remain identical to the combined parent. Build-container curl dependencies were updated while installing prerequisites; host, Intel and oneDNN runtimes were unchanged.
+
+Original accepted container `7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e` was independently verified restored against both launches: config/HostConfig/all mounts/five artifacts/hardware, health OK and READY. Both trace containers remain stopped.
+
+Large raw arrays intentionally remain remote: `run-r1/S0/capture/` (253755392bytes including non-diagnostic requests) and `continuation-c0/run-r1/C0/capture/` (257949696bytes), under this result basename in `/home/mike/b70-evals/`. Each alignment record names its exact raw file. Repository evidence includes losslessly compressed server logs, exact requests/responses, the original failure, revised parser/tests, one-off continuation, build attempts, and comparison metadata—not raw vector copies. No timing or promotion.

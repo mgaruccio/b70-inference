@@ -1,0 +1,308 @@
+--- a/common/sampling.cpp
++++ b/common/sampling.cpp
+@@ -16,6 +16,48 @@
+ #include <unordered_map>
+ #include <vector>
+ 
++#include <cerrno>
++#include <cstdlib>
++#include <sys/stat.h>
++#include <unistd.h>
++
++// Temporary, default-off CPU-logits diagnostic. Never request a backend readback.
++static std::string bolt_verify_write(const char * dir, const float * logits, int n_vocab) {
++    if (!logits) {
++        return "-";
++    }
++    std::string path = std::string(dir) + "/row-XXXXXX";
++    std::vector<char> name(path.begin(), path.end());
++    name.push_back('\0');
++    const int fd = mkstemp(name.data());
++    if (fd < 0) {
++        LOG_ERR("BOLT_VERIFY error op=mkstemp errno=%d\n", errno);
++        return "-";
++    }
++    bool ok = fchmod(fd, 0644) == 0; // host user can read container-owned files
++    const char * bytes = reinterpret_cast<const char *>(logits);
++    size_t left = size_t(n_vocab) * sizeof(float);
++    while (ok && left) {
++        const ssize_t n = write(fd, bytes, left);
++        if (n < 0 && errno == EINTR) {
++            continue;
++        }
++        if (n <= 0) {
++            ok = false;
++            break;
++        }
++        bytes += n;
++        left -= size_t(n);
++    }
++    const int saved_errno = errno;
++    if (close(fd) != 0 || !ok) {
++        LOG_ERR("BOLT_VERIFY error op=write_close errno=%d\n", ok ? errno : saved_errno);
++        return "-"; // keep any partial file as failed-run evidence
++    }
++    path = name.data();
++    return path.substr(path.find_last_of('/') + 1);
++}
++
+ // the ring buffer works similarly to std::deque, but with a fixed capacity
+ // TODO: deduplicate with llama-impl.h
+ template<typename T>
+@@ -131,7 +173,7 @@
+         llama_sampler_reset(chain);
+     }
+ 
+-    void set_logits(struct llama_context * ctx, int idx) {
++    void set_logits(struct llama_context * ctx, int idx, const float ** raw_logits = nullptr) {
+         const float *       sampled_probs  = llama_get_sampled_probs_ith     (ctx, idx);
+         const float *       sampled_logits = llama_get_sampled_logits_ith    (ctx, idx);
+         const llama_token * sampled_ids    = llama_get_sampled_candidates_ith(ctx, idx);
+@@ -156,6 +198,9 @@
+         } else {
+             const auto * logits = llama_get_logits_ith(ctx, idx);
+             GGML_ASSERT(logits != nullptr);
++            if (raw_logits) {
++                *raw_logits = logits;
++            }
+             cur.resize(n_vocab);
+             for (llama_token token_id = 0; token_id < n_vocab; token_id++) {
+                 cur[token_id] = llama_token_data{token_id, logits[token_id], 0.0f};
+@@ -616,7 +661,11 @@
+     auto & chain = gsmpl->chain;
+     auto & cur_p = gsmpl->cur_p; // initialized by set_logits
+ 
+-    gsmpl->set_logits(ctx, idx);
++    const char * trace_dir = std::getenv("BOLT_VERIFY_CAPTURE_DIR");
++    const bool trace = trace_dir && trace_dir[0];
++    const int trace_vocab = trace ? llama_vocab_n_tokens(llama_model_get_vocab(llama_get_model(ctx))) : 0;
++    const float * raw_logits = nullptr;
++    gsmpl->set_logits(ctx, idx, trace ? &raw_logits : nullptr);
+ 
+     // Check if a backend sampler has already sampled a token in which case we
+     // return that token id directly.
+@@ -636,10 +685,24 @@
+                 }
+             }
+ 
++            if (trace) {
++                LOG_INF("BOLT_VERIFY sample ctx=%p smpl=%p idx=%d selected=%d vocab=%d status=backend file=-\n",
++                        (void *) ctx, (void *) gsmpl, idx, id, trace_vocab);
++            }
++
+             return id;
+         }
+     }
+ 
++    const std::string trace_file = trace ? bolt_verify_write(trace_dir, raw_logits, trace_vocab) : "-";
++    auto trace_return = [&](llama_token selected) {
++        if (trace) {
++            LOG_INF("BOLT_VERIFY sample ctx=%p smpl=%p idx=%d selected=%d vocab=%d status=%s file=%s\n",
++                    (void *) ctx, (void *) gsmpl, idx, selected, trace_vocab,
++                    trace_file == "-" ? "uncaptured" : "cpu", trace_file.c_str());
++        }
++        return selected;
++    };
+     // apply reasoning budget first
+     llama_sampler_apply(rbudget, &cur_p);
+ 
+@@ -652,7 +715,7 @@
+     id = cur_p.data[cur_p.selected].id;
+ 
+     if (grammar_first || !grammar_should_apply(gsmpl)) {
+-        return id;
++        return trace_return(id);
+     }
+ 
+     // check if it the sampled token fits the grammar (grammar-based rejection sampling)
+@@ -664,7 +727,7 @@
+ 
+         const bool is_valid = single_token_data_array.data[0].logit != -INFINITY;
+         if (is_valid) {
+-            return id;
++            return trace_return(id);
+         }
+     }
+ 
+@@ -684,7 +747,7 @@
+ 
+     id = cur_p.data[cur_p.selected].id;
+ 
+-    return id;
++    return trace_return(id);
+ }
+ 
+ std::vector<llama_token> common_sampler_sample_and_accept_n(struct common_sampler * gsmpl, struct llama_context * ctx, const std::vector<int> & idxs, const llama_tokens & draft, bool grammar_first) {
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -44,6 +44,36 @@
+ 
+ constexpr int HTTP_POLLING_SECONDS = 1;
+ 
++static bool bolt_verify_enabled() {
++    const char * dir = std::getenv("BOLT_VERIFY_CAPTURE_DIR");
++    return dir && dir[0];
++}
++
++static std::string bolt_verify_ids(const std::vector<int32_t> & ids) {
++    std::string result;
++    for (auto id : ids) {
++        if (!result.empty()) { result += ','; }
++        result += std::to_string(id);
++    }
++    return result.empty() ? "-" : result;
++}
++
++static void bolt_verify_batch(llama_context * ctx, const common_batch & b, int off) {
++    if (!bolt_verify_enabled()) { return; }
++    std::string tokens, pos, outputs, seq;
++    for (int i = 0; i < b.size(); ++i) {
++        if (i) { tokens += ','; pos += ','; outputs += ','; seq += ','; }
++        const auto & t = b.tokens[i];
++        tokens += std::to_string(t.id);
++        pos += std::to_string(t.pos[0]);
++        outputs += std::to_string(int(t.output));
++        seq += std::to_string(t.seq_id);
++        for (auto id : t.seq_ids_extra) { seq += '/' + std::to_string(id); }
++    }
++    LOG_INF("BOLT_VERIFY batch ctx=%p off=%d n=%d tokens=%s pos=%s outputs=%s seq=%s\n",
++            (void *) ctx, off, b.size(), tokens.c_str(), pos.c_str(), outputs.c_str(), seq.c_str());
++}
++
+ static common_speculative_output_limits server_output_limits(const common_params & params) {
+     if (params.embedding ||
+             (params.pooling_type != LLAMA_POOLING_TYPE_UNSPECIFIED && params.pooling_type != LLAMA_POOLING_TYPE_NONE)) {
+@@ -3505,6 +3535,10 @@
+ 
+                 SLT_WRN(slot, "slot context shift, n_keep = %d, n_left = %d, n_discard = %d\n", n_keep, n_left, n_discard);
+ 
++                if (bolt_verify_enabled()) {
++                    LOG_INF("BOLT_VERIFY remove ctx=%p slot=%d kind=shift p0=%d p1=%d rollback=0\n",
++                            (void *) slot.ctx_tgt, slot.id, n_keep, n_keep + n_discard);
++                }
+                 slot.mem.seq_rm (slot.id, n_keep            , n_keep + n_discard);
+                 slot.mem.seq_add(slot.id, n_keep + n_discard, slot.prompt.tokens.pos_next(), -n_discard);
+ 
+@@ -3853,6 +3887,10 @@
+ 
+                                             const int64_t kv_shift = (int64_t) head_p - (int64_t) head_c;
+ 
++                                            if (bolt_verify_enabled()) {
++                                                LOG_INF("BOLT_VERIFY remove ctx=%p slot=%d kind=cache p0=%d p1=%d rollback=0\n",
++                                                        (void *) slot.ctx_tgt, slot.id, head_p, head_c);
++                                            }
+                                             slot.mem.seq_rm (slot.id, head_p, head_c);
+                                             slot.mem.seq_add(slot.id, head_c, head_c + n_match, kv_shift);
+ 
+@@ -4042,6 +4080,10 @@
+ 
+                     SLT_TRC(slot, "cached n_tokens = %d, memory_seq_rm [%d, end)\n", slot.prompt.n_tokens(), p0);
+ 
++                    if (bolt_verify_enabled()) {
++                        LOG_INF("BOLT_VERIFY remove ctx=%p slot=%d kind=prompt p0=%d p1=-1 rollback=0\n",
++                                (void *) slot.ctx_tgt, slot.id, p0);
++                    }
+                     slot.mem.seq_rm(slot.id, p0, -1);
+ 
+                     // shared prompt prefix: once it is processed, the children continue from it with their own prompt
+@@ -4377,6 +4419,7 @@
+         // yield to the queue, so we can still handle metrics tasks while decoding
+         // note: the sync is done here too, so that the wait is also covered by the yield
+         int ret = 0;
++        bolt_verify_batch(ctx_tgt, batch.view, off);
+         queue_tasks.yield_to_queue([&]() {
+             ret = llama_process(ctx_tgt, LLAMA_PROCESS_TYPE_DECODE, batch.view.get());
+             if (ret == 0 && has_output) {
+@@ -4384,6 +4427,10 @@
+             }
+         });
+ 
++        if (bolt_verify_enabled()) {
++            LOG_INF("BOLT_VERIFY decoded ctx=%p ret=%d\n", (void *) ctx_tgt, ret);
++        }
++
+         if (ret != 0) {
+             {
+                 std::string err;
+@@ -4564,6 +4611,10 @@
+                 id = common_sampler_sample(slot.smpl.get(), slot.ctx_tgt, tok_idx);
+             }
+ 
++            if (bolt_verify_enabled()) {
++                LOG_INF("BOLT_VERIFY single ctx=%p smpl=%p slot=%d row=%d id=%d\n",
++                        (void *) slot.ctx_tgt, (void *) slot.smpl.get(), slot.id, tok_idx, id);
++            }
+             slot.i_batch = -1;
+ 
+             common_sampler_accept(slot.smpl.get(), id, true);
+@@ -4572,6 +4623,10 @@
+             const int64_t t_now = ggml_time_us();
+ 
+             slot.stats.n_gen += 1;
++            if (bolt_verify_enabled()) {
++                LOG_INF("BOLT_VERIFY emit ctx=%p slot=%d ordinal=%d token=%d\n",
++                        (void *) slot.ctx_tgt, slot.id, slot.stats.n_gen, id);
++            }
+ 
+             if (slot.stats.n_gen == 1) {
+                 slot.stats.update_prompt_last();
+@@ -4638,6 +4693,15 @@
+                 } else {
+                     accepted = common_sampler_sample_and_accept_n(slot.smpl.get(), slot.ctx_tgt, slot.spec_i_batch, slot.spec_draft);
+                 }
++                if (bolt_verify_enabled()) {
++                    LOG_INF("BOLT_VERIFY verify ctx=%p smpl=%p slot=%d rows=%s drafts=%s emitted=%s accepted=%d rollback=%d replay=%d rejection=%d synth=%d\n",
++                            (void *) slot.ctx_tgt, (void *) slot.smpl.get(), slot.id,
++                            bolt_verify_ids(slot.spec_i_batch).c_str(), bolt_verify_ids(slot.spec_draft).c_str(),
++                            bolt_verify_ids(accepted).c_str(), int(accepted.size()) - 1,
++                            int(slot.spec_draft.size() + 1 - accepted.size()),
++                            int(slot.spec_is_replay), int(use_rejection), int(!synth_probs.empty()));
++                }
++
+                 slot.spec_i_batch.clear();
+ 
+                 GGML_ASSERT(accepted.size() >= 1);
+@@ -4663,12 +4727,21 @@
+ 
+                         SLT_DBG(slot, "restoring speculative checkpoint (pos_min = %d, pos_max = %d, size = %zu)\n", ckpt.pos_min, ckpt.pos_max, ckpt.size());
+ 
++                        if (bolt_verify_enabled()) {
++                            LOG_INF("BOLT_VERIFY checkpoint ctx=%p slot=%d p0=%d p1=%d rollback=%u\n",
++                                    (void *) slot.ctx_tgt, slot.id, ckpt.pos_min, ckpt.pos_max, n_rollback);
++                        }
++
+                         GGML_ASSERT(ckpt.load_tgt(slot.ctx_tgt, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY));
+ 
+                         if (slot.ctx_dft) {
+                             GGML_ASSERT(ckpt.load_dft(slot.ctx_dft, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY));
+                         }
+ 
++                        if (bolt_verify_enabled()) {
++                            LOG_INF("BOLT_VERIFY remove ctx=%p slot=%d kind=checkpoint p0=%d p1=-1 rollback=%u\n",
++                                    (void *) slot.ctx_tgt, slot.id, ckpt.pos_max + 1, n_rollback);
++                        }
+                         slot.mem.seq_rm(slot.id, ckpt.pos_max + 1, -1);
+ 
+                         slot.prompt.tokens.keep_first(ckpt.n_tokens);
+@@ -4716,6 +4789,10 @@
+             slot.sampled = ids.back(); // last accepted token
+             SLT_DBG(slot, "add accepted tokens: sampled=%d, ids.size=%zu, n_draft=%zu\n", slot.sampled, ids.size(), n_draft);
+ 
++            if (bolt_verify_enabled()) {
++                LOG_INF("BOLT_VERIFY remove ctx=%p slot=%d kind=verify p0=%d p1=-1 rollback=%d\n",
++                        (void *) slot.ctx_tgt, slot.id, slot.prompt.tokens.pos_next(), int(n_draft - n_accepted));
++            }
+             slot.mem.seq_rm(slot.id, slot.prompt.tokens.pos_next(), -1);
+ 
+             for (size_t i = 0; i < ids.size(); ++i) {
+@@ -4728,6 +4805,10 @@
+                 // TODO: set result.probs
+ 
+                 slot.stats.n_gen += 1;
++                if (bolt_verify_enabled()) {
++                    LOG_INF("BOLT_VERIFY emit ctx=%p slot=%d ordinal=%d token=%d\n",
++                            (void *) slot.ctx_tgt, slot.id, slot.stats.n_gen, ids[i]);
++                }
+ 
+                 if (!process_token(result, slot)) {
+                     slot.print_timings();
