@@ -193,8 +193,8 @@ def select_route_batches(log, label):
 
 BLOCK7_ATTENTION_WEIGHTS = (
     ('blk.7.attn_q.weight', 4096, 4096),
-    ('blk.7.attn_k.weight', 256, 4096),
-    ('blk.7.attn_v.weight', 256, 4096),
+    ('blk.7.attn_k.weight', 4096, 256),
+    ('blk.7.attn_v.weight', 4096, 256),
     ('blk.7.attn_output.weight', 4096, 4096),
 )
 

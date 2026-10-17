@@ -165,8 +165,8 @@ def block7_route_lines(backend='0xabc', head_ne1=1):
     rows = []
     for weight, k, m in (
             ('blk.7.attn_q.weight', 4096, 4096),
-            ('blk.7.attn_k.weight', 256, 4096),
-            ('blk.7.attn_v.weight', 256, 4096),
+            ('blk.7.attn_k.weight', 4096, 256),
+            ('blk.7.attn_v.weight', 4096, 256),
             ('blk.7.attn_output.weight', 4096, 4096)):
         rows.append(route_line(weight=weight, backend=backend, src0_type='q8_0',
                                route='MMVQ_PLAIN', reorder=0, src1_ne1=head_ne1,
@@ -969,6 +969,15 @@ class Trace(unittest.TestCase):
                 report = A['report_parent_comparison'](candidate, label, ordinary, diagnostic)
                 with self.assertRaises(AssertionError):
                     A['assert_parent_observer_invariant'](report)
+
+    def test_attention_shapes_match_actual_gguf_header(self):
+        header = json.loads((M['ROOT'] / 'attention-header.json').read_text())
+        tensors = {row['name']: row for row in header['tensors']}
+        for weight, k, m in A['BLOCK7_ATTENTION_WEIGHTS']:
+            self.assertEqual(tensors[weight]['type'], 8)
+            self.assertEqual(tensors[weight]['dimensions'], [k, m])
+        for label in ('S0', 'C0'):
+            A['assert_actual_route_gates'](A['select_route_batches'](route_log(label), label), label)
 
     def test_block7_route_presence_and_type_fail_closed(self):
         log = route_log(missing_block7=True)
