@@ -1,0 +1,138 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -3813,6 +3813,50 @@
+     peer_access_enabled = enable_peer_access;
+ }
+ 
++// Bounded Q8_0 latent two-column control. Ordinary leaf weights only; no views,
++// split buffers, mutable graph inputs, or layouts requiring an activation copy.
++static bool should_reorder_tensor(ggml_backend_sycl_context & ctx, const ggml_tensor * dst);
++
++static bool ggml_sycl_latent_dmmv2_eligible(ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
++                                          const ggml_tensor * src1, const ggml_tensor * dst) {
++#ifdef GGML_SYCL_DMMV_HAS_ESIMD
++    if (dst->op != GGML_OP_MUL_MAT || dst->src[0] != src0 || dst->src[1] != src1 ||
++        src0->type != GGML_TYPE_Q8_0 || src1->type != GGML_TYPE_F32 || dst->type != GGML_TYPE_F32 ||
++        src1->ne[1] != 2 || dst->ne[1] != 2 || src0->ne[0] <= 0 || src0->ne[1] <= 0 ||
++        src0->ne[0] % GGML_SYCL_DMMV_X != 0 || src0->ne[0] % QK8_0 != 0 ||
++        ggml_nelements(src0) > INT_MAX || src1->ne[0] != src0->ne[0] || dst->ne[0] != src0->ne[1] ||
++        src0->ne[2] != 1 || src0->ne[3] != 1 || src1->ne[2] != 1 || src1->ne[3] != 1 ||
++        dst->ne[2] != 1 || dst->ne[3] != 1 ||
++        src0->op != GGML_OP_NONE || (src0->flags & (GGML_TENSOR_FLAG_INPUT | GGML_TENSOR_FLAG_OUTPUT | GGML_TENSOR_FLAG_COMPUTE)) ||
++        src0->view_src || src1->view_src || dst->view_src || src0->view_offs || src1->view_offs || dst->view_offs ||
++        !ggml_is_contiguous(src0) || !ggml_is_contiguous(src1) || !ggml_is_contiguous(dst) ||
++        !src0->buffer || ggml_backend_buffer_is_sycl_split(src0->buffer) || !ggml_backend_buffer_is_sycl(src0->buffer) ||
++        !src0->buffer->context || !src0->extra || !src0->data || (uintptr_t) src0->data % 16 != 0 ||
++        static_cast<ggml_backend_sycl_buffer_context *>(src0->buffer->context)->device != ctx.device ||
++        !g_ggml_sycl_enable_esimd || !g_ggml_sycl_enable_optimize || !ctx.opt_feature.reorder ||
++        !should_reorder_tensor(ctx, dst)) {
++        return false;
++    }
++#ifdef GGML_SYCL_F16
++    // Preserve the dispatcher's precision guard even though this path reads F32.
++    if (!ggml_sycl_src1_f16_ok(dst)) {
++        return false;
++    }
++#endif
++    constexpr char down[] = ".ffn_latent_down.weight";
++    constexpr char up[] = ".ffn_latent_up.weight";
++    const size_t len = std::strlen(src0->name);
++    return (len >= sizeof(down) - 1 && std::strcmp(src0->name + len - (sizeof(down) - 1), down) == 0) ||
++           (len >= sizeof(up) - 1 && std::strcmp(src0->name + len - (sizeof(up) - 1), up) == 0);
++#else
++    GGML_UNUSED(ctx);
++    GGML_UNUSED(src0);
++    GGML_UNUSED(src1);
++    GGML_UNUSED(dst);
++    return false;
++#endif
++}
++
+ template <template <int> typename quantize_f>
+ static void ggml_sycl_op_mul_mat(ggml_backend_sycl_context & ctx, const ggml_tensor *src0,
+                                  const ggml_tensor *src1, ggml_tensor *dst,
+@@ -4059,8 +4103,21 @@
+                     src1_padded_col_size = (i0 * ne11 + src1_col_0) * ne10;
+                 }
+                 // do the computation
+-                SYCL_CHECK(CHECK_TRY_ERROR(op(ctx, src0, src1, dst, src0_dd_i, src1_ddf_i, src1_ddq_i, dst_dd_i,
+-                    dev[i].row_low, dev[i].row_high, src1_ncols, src1_padded_col_size, stream)));
++                if (op == ggml_sycl_op_dequantize_mul_mat_vec && src1_ncols == 2 &&
++                    ggml_sycl_latent_dmmv2_eligible(ctx, src0, src1, dst)) {
++                    // The DMMV callback ignores ncols. Keep its F32 ESIMD arithmetic,
++                    // row-low offset and queue ordering, but launch once per column.
++                    GGML_ASSERT(src0_extra && src0_extra->optimized_feature.reorder);
++                    for (int64_t col = 0; col < src1_ncols; ++col) {
++                        SYCL_CHECK(CHECK_TRY_ERROR(op(ctx, src0, src1, dst, src0_dd_i,
++                            src1_ddf_i + col * ne10, src1_ddq_i,
++                            dst_dd_i + col * (dst_on_device ? ne0 : row_diff),
++                            dev[i].row_low, dev[i].row_high, 1, src1_padded_col_size, stream)));
++                    }
++                } else {
++                    SYCL_CHECK(CHECK_TRY_ERROR(op(ctx, src0, src1, dst, src0_dd_i, src1_ddf_i, src1_ddq_i, dst_dd_i,
++                        dev[i].row_low, dev[i].row_high, src1_ncols, src1_padded_col_size, stream)));
++                }
+ 
+                 // copy dst to host or other device if necessary
+                 if (!dst_on_device) {
+@@ -5533,7 +5590,15 @@
+     }
+ 
+     // check data types and tensor shapes for custom matrix multiplication kernels:
+-    bool use_dequantize_mul_mat_vec = can_use_dequantize_mul_mat_vec(src0, src1, dst);
++    bool use_latent_dmmv2 = ggml_sycl_latent_dmmv2_eligible(ctx, src0, src1, dst);
++    if (use_latent_dmmv2) {
++        // Fresh native/model weights must bootstrap the SAME existing reorder.
++        // A denied/failed reorder must retain the old MMVQ route, never F16 DMMV.
++        opt_for_reorder(&ctx, src0, src1, dst, mul_mat_algo::DMMV);
++        const auto * extra = static_cast<const ggml_tensor_extra_gpu *>(src0->extra);
++        use_latent_dmmv2 = extra && extra->optimized_feature.reorder;
++    }
++    bool use_dequantize_mul_mat_vec = can_use_dequantize_mul_mat_vec(src0, src1, dst) || use_latent_dmmv2;
+ #ifdef GGML_SYCL_F16
+     // dmmv may convert src1 to f16 in this build [TAG_GGML_PREC]
+     use_dequantize_mul_mat_vec = use_dequantize_mul_mat_vec && ggml_sycl_src1_f16_ok(dst);
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5590,6 +5590,27 @@
+     }
+ };
+ 
++// Named Q8_0/F32 CPU-reference regressions for the bounded latent DMMV control.
++// Each case starts with fresh weights, including n=2 (no singleton warmup).
++// Inherit test_mul_mat's unchanged 5e-4 tolerance and tensor initialization.
++struct test_mul_mat_latent_dmmv2 : public test_mul_mat {
++    const char * weight;
++
++    test_mul_mat_latent_dmmv2(const char * weight, int64_t m, int64_t n, int64_t k) :
++        test_mul_mat(GGML_TYPE_Q8_0, GGML_TYPE_F32, m, n, k, {1, 1}, {1, 1}), weight(weight) {}
++
++    std::string vars() override {
++        return std::string("latent_dmmv2=1,weight=") + weight + "," + test_mul_mat::vars();
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * a = ggml_new_tensor_2d(ctx, GGML_TYPE_Q8_0, k, m);
++        ggml_set_name(a, weight);
++        ggml_tensor * b = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, n);
++        return ggml_mul_mat(ctx, a, b);
++    }
++};
++
+ // GGML_HINT_SRC0_IS_HADAMARD
+ struct test_mul_mat_hadamard : public test_mul_mat {
+     test_mul_mat_hadamard(ggml_type type_a = GGML_TYPE_F32, ggml_type type_b = GGML_TYPE_F32,
+@@ -11520,6 +11541,13 @@
+         test_cases.emplace_back(new test_mul_mat(type_a,    GGML_TYPE_F32, 16,  8, 16*256, { 1,  1}, {1, 1}));
+     }
+ 
++    // Exactly seven cases, selected by -p '^latent_dmmv2=1,'.
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_latent_dmmv2("blk.1.ffn_latent_down.weight", 1024, n, 4096));
++        test_cases.emplace_back(new test_mul_mat_latent_dmmv2("blk.1.ffn_latent_up.weight", 4096, n, 1024));
++    }
++    test_cases.emplace_back(new test_mul_mat_latent_dmmv2("output.weight", 1024, 2, 4096));
++
+     // Experimental NVFP4 reorder lifetime/scale regressions. Filter with -p nvfp4_reorder=1.
+     for (bool f32 : {false, true}) {
+         for (int64_t k : {64, 192}) {
