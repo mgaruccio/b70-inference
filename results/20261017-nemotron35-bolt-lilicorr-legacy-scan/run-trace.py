@@ -50,6 +50,14 @@ def spec_for_arm(label):
             '--spec-draft-ngl', '999', '--spec-draft-model',
             '/draft/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr.gguf']
 
+def legacy_native_prefix(prefix):
+    # Only the dispatch contract changes; all numerical/state/canary checks remain.
+    old = ("count=$(grep -Fc 'call ggml_sycl_ssm_scan_prefill:' "
+           '/tmp/ssm-prefill-fusion1.log || true); test "$count" -eq 23')
+    assert prefix.count(old) == 1, 'unexpected inherited prefill dispatch guard'
+    return prefix.replace(old, old.removesuffix('23') + '0', 1)
+
+
 
 def make_create(base, label, image, capture, old):
     assert label in ORDER
@@ -67,6 +75,7 @@ def make_create(base, label, image, capture, old):
     argv[argv.index(image):argv.index(image)] = extra
     prefix, server = argv[-1].rsplit('exec ', 1)
     assert 'BOLT_SSM_PREFILL_NUMERICAL_PASSED' in prefix and '--spec-type' not in server
+    prefix = legacy_native_prefix(prefix)
     for flag, value in (('--ctx-size', '65536'), ('--parallel', '1'), ('--batch-size', '1024'),
                         ('--ubatch-size', '1024'), ('--cache-type-k', 'q8_0'), ('--cache-type-v', 'q8_0')):
         words = shlex.split(server)
@@ -82,6 +91,7 @@ def make_create(base, label, image, capture, old):
 def check_startup(log, label, old, native):
     assert label in ORDER and MARKER in log
     native['parse_native_gate'](log, 'C0')  # BOTH arms require native385 and focused190/support9
+    assert 'call ggml_sycl_ssm_scan_prefill:' not in log.split(MARKER, 1)[0], 'custom prefill ran in legacy-only native gate'
     model = log.split(MARKER, 1)[1]
     old['check_model_log'](model, 'C')
     values = [int(x.group(1)) for x in old['N_RS_SEQ_RE'].finditer(model)]

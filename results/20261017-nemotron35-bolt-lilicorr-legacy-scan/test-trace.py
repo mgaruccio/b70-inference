@@ -301,8 +301,21 @@ class Trace(unittest.TestCase):
         self.assertEqual(OLD['diagnostic_payload'](payload), diag)
         self.assertFalse(diag['backend_sampling'])
 
+    def test_legacy_native_dispatch_guard_only(self):
+        prefix = BASE[-1].rsplit('exec ', 1)[0]
+        changed = M['legacy_native_prefix'](prefix)
+        self.assertEqual(prefix.count('test "$count" -eq 23'), 1)
+        self.assertEqual(changed, prefix.replace('test "$count" -eq 23', 'test "$count" -eq 0', 1))
+        for malformed in (changed, prefix + prefix):
+            with self.assertRaises(AssertionError):
+                M['legacy_native_prefix'](malformed)
+
     def test_native_and_startup_guards_on_saved_real_log(self):
         log = (M['WIDTH1'] / 'run-r1/C0/native-and-startup.log').read_text().replace(OLD['SERVER_MARKER'], M['MARKER'])
+        # Adapt only dispatch lines in this saved fixture; it is not a new-binary run.
+        with self.assertRaises(AssertionError):
+            M['check_startup'](log, 'C0', OLD, NATIVE)
+        log = '\n'.join(line for line in log.split('\n') if 'call ggml_sycl_ssm_scan_prefill:' not in line)
         M['check_startup'](log, 'C0', OLD, NATIVE)
         suppressed = log.replace('n_max=1, n_min=0,', 'n_max=1, n_min=2,')
         M['check_startup'](suppressed, 'S0', OLD, NATIVE)
