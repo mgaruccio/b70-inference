@@ -4,6 +4,7 @@ import array
 import ast
 import copy
 import json
+import re
 import runpy
 import shlex
 import shutil
@@ -307,6 +308,13 @@ class Trace(unittest.TestCase):
         subprocess.run(['patch', '--batch', '--forward', '--fuzz=0', '-p1'], cwd=scratch,
                        input=Path('attention-dmmv2.patch').read_bytes(), check=True, capture_output=True)
         return [(scratch / name).read_text() for name in M['SOURCE_SCOPE']]
+
+    def test_build_controller_paths_match(self):
+        script = (M['ROOT'] / 'build-candidate.sh').read_text()
+        assignments = dict(re.findall(r'^(R|PARENT|D)=(.+)$', script, re.M))
+        self.assertEqual(assignments, {'R': str(M['ROOT']), 'PARENT': str(M['PARENT']),
+                                       'D': str(M['CANDIDATE'])})
+        self.assertNotEqual(M['PARENT'], M['CANDIDATE'])
 
     def test_syntax_and_patch_scope(self):
         for path in Path('.').glob('*.py'):
