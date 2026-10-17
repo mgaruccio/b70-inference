@@ -3,7 +3,7 @@
 set -euo pipefail
 test "$(hostname)" = inference-host
 R=/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-attention-dmmv2
-PARENT=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-attention-dmmv2-r1
+PARENT=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-attention-route-r1
 D=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-attention-dmmv2-r1
 IMAGE=intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04
 cd "$R"
