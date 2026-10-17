@@ -1,0 +1,330 @@
+#include "ggml.h"
+#include "ggml-backend.h"
+#include "ggml-common.h"
+#include "ggml-quants.h"
+#include "ggml-sycl.h"
+#include "ggml-sycl/common.hpp"
+#include "ggml-sycl/convert.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cinttypes>
+#include <cstdio>
+#include <cstring>
+#include <exception>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace {
+
+constexpr size_t kGuardBytes = 128;
+constexpr size_t kTailBytes = 128;
+constexpr uint8_t kCanary = 0xA5;
+
+[[noreturn]] void fail(const std::string & message) {
+    throw std::runtime_error(message);
+}
+
+void require(bool condition, const std::string & message) {
+    if (!condition) {
+        fail(message);
+    }
+}
+
+struct guarded_bytes {
+    sycl::queue * queue;
+    uint8_t * base;
+    size_t payload_bytes;
+
+    guarded_bytes(sycl::queue * q, size_t payload) :
+        queue(q),
+        base(sycl::malloc_shared<uint8_t>(kGuardBytes + payload + kTailBytes, *q)),
+        payload_bytes(payload) {
+        require(base != nullptr, "sycl::malloc_shared returned null");
+        reset();
+    }
+
+    guarded_bytes(const guarded_bytes &) = delete;
+    guarded_bytes & operator=(const guarded_bytes &) = delete;
+
+    ~guarded_bytes() {
+        if (base != nullptr) {
+            sycl::free(base, *queue);
+        }
+    }
+
+    size_t total_bytes() const {
+        return kGuardBytes + payload_bytes + kTailBytes;
+    }
+
+    void reset() {
+        std::memset(base, kCanary, total_bytes());
+    }
+
+    void copy_payload(const void * source) {
+        std::memcpy(base + kGuardBytes, source, payload_bytes);
+    }
+
+    template <typename T>
+    T * payload() {
+        return reinterpret_cast<T *>(base + kGuardBytes);
+    }
+
+    bool canaries_intact() const {
+        uint8_t expected[kGuardBytes];
+        std::memset(expected, kCanary, sizeof(expected));
+        if (std::memcmp(base, expected, sizeof(expected)) != 0) {
+            return false;
+        }
+        return std::memcmp(base + kGuardBytes + payload_bytes, expected, kTailBytes) == 0;
+    }
+};
+
+std::vector<block_nvfp4> make_blocks(size_t block_count, bool valid_scales) {
+    std::vector<block_nvfp4> blocks(block_count);
+    for (size_t block = 0; block < block_count; ++block) {
+        for (size_t sub = 0; sub < QK_NVFP4 / QK_NVFP4_SUB; ++sub) {
+            if (valid_scales) {
+                // Avoid the two zero encodings while keeping every scale finite.
+                blocks[block].d[sub] = static_cast<uint8_t>(0x20 + ((block * 4 + sub) % 0x5D));
+            } else {
+                // 64 blocks exercise all 256 raw scale bytes, including 0x00/0x7f.
+                blocks[block].d[sub] = static_cast<uint8_t>(block * 4 + sub);
+            }
+        }
+        for (size_t byte = 0; byte < QK_NVFP4 / 2; ++byte) {
+            // The low and high nibbles together cover all 16 NVFP4 values.
+            blocks[block].qs[byte] = static_cast<uint8_t>(block * (QK_NVFP4 / 2) + byte);
+        }
+    }
+    return blocks;
+}
+
+void check_coverage(const std::vector<block_nvfp4> & blocks) {
+    bool seen_scale[256] = {};
+    bool seen_nibble[16] = {};
+    for (const block_nvfp4 & block : blocks) {
+        for (const uint8_t scale : block.d) {
+            seen_scale[scale] = true;
+        }
+        for (const uint8_t packed : block.qs) {
+            seen_nibble[packed & 0x0F] = true;
+            seen_nibble[packed >> 4] = true;
+        }
+    }
+    for (bool seen : seen_scale) {
+        require(seen, "NVFP4 scale coverage is incomplete");
+    }
+    for (bool seen : seen_nibble) {
+        require(seen, "NVFP4 nibble coverage is incomplete");
+    }
+}
+
+std::vector<uint8_t> reorder_blocks(const std::vector<block_nvfp4> & blocks) {
+    const size_t q_bytes = blocks.size() * (QK_NVFP4 / 2);
+    const size_t d_bytes = blocks.size() * (QK_NVFP4 / QK_NVFP4_SUB);
+    std::vector<uint8_t> reordered(q_bytes + d_bytes);
+    for (size_t block = 0; block < blocks.size(); ++block) {
+        std::memcpy(reordered.data() + block * (QK_NVFP4 / 2),
+                    blocks[block].qs, QK_NVFP4 / 2);
+        std::memcpy(reordered.data() + q_bytes + block * (QK_NVFP4 / QK_NVFP4_SUB),
+                    blocks[block].d, QK_NVFP4 / QK_NVFP4_SUB);
+    }
+    return reordered;
+}
+
+std::vector<float> cpu_reference(const std::vector<block_nvfp4> & blocks) {
+    std::vector<float> reference(blocks.size() * QK_NVFP4);
+    dequantize_row_nvfp4(blocks.data(), reference.data(), static_cast<int64_t>(reference.size()));
+    return reference;
+}
+
+void check_input(const guarded_bytes & input, const std::vector<uint8_t> & snapshot,
+                 const std::string & label) {
+    require(snapshot.size() == input.total_bytes(), label + ": bad input snapshot size");
+    require(std::memcmp(input.base, snapshot.data(), snapshot.size()) == 0,
+            label + ": input payload or canary changed");
+}
+
+void check_output_guards(const guarded_bytes & output, const std::string & label) {
+    require(output.canaries_intact(), label + ": destination canary or tail changed");
+}
+
+void compare_bits(const guarded_bytes & output, const std::vector<uint8_t> & expected,
+                  const std::string & label) {
+    require(output.payload_bytes == expected.size(), label + ": bad expected payload size");
+    require(std::memcmp(output.base + kGuardBytes, expected.data(), expected.size()) == 0,
+            label + ": packed output differs from original bitwise");
+}
+
+void compare_cpu(const float * actual, const std::vector<float> & expected,
+                 const std::string & label) {
+    for (size_t i = 0; i < expected.size(); ++i) {
+        const float want = expected[i];
+        const float got = actual[i];
+        const float tolerance = 1e-5f * std::max(1.0f, std::fabs(want));
+        require(std::isfinite(got) && std::fabs(got - want) <= tolerance,
+                label + ": CPU comparison failed at element " + std::to_string(i));
+    }
+}
+
+void run_f32_dispatch(const void * input, guarded_bytes & output, int64_t k,
+                      sycl::queue * queue, bool fusion, bool reordered) {
+    g_ggml_sycl_enable_fusion = fusion ? 1 : 0;
+
+    ggml_tensor source = {};
+    ggml_tensor destination = {};
+    ggml_tensor_extra_gpu extra = {};
+    if (reordered) {
+        extra.optimized_feature.reorder = true;
+        source.extra = &extra;
+    }
+    destination.src[0] = &source;
+
+    const to_fp32_sycl_t convert = ggml_get_to_fp32_sycl(GGML_TYPE_NVFP4, &destination);
+    require(convert != nullptr, "F32 NVFP4 dispatch returned null");
+    convert(input, output.payload<float>(), k, queue);
+    queue->wait_and_throw();
+}
+
+void run_half_dispatch(const void * input, guarded_bytes & output, int64_t k,
+                       sycl::queue * queue) {
+    g_ggml_sycl_enable_fusion = 1;
+
+    ggml_tensor source = {};
+    ggml_tensor destination = {};
+    destination.src[0] = &source;
+
+    const to_fp16_sycl_t convert = ggml_get_to_fp16_sycl(GGML_TYPE_NVFP4, &destination);
+    require(convert != nullptr, "F16 NVFP4 dispatch returned null");
+    convert(input, output.payload<sycl::half>(), k, queue);
+    queue->wait_and_throw();
+}
+
+void run_case(size_t block_count, sycl::queue * queue) {
+    const std::vector<block_nvfp4> blocks = make_blocks(block_count, false);
+    if (block_count == 64) {
+        check_coverage(blocks);
+    }
+    const int64_t k = static_cast<int64_t>(block_count * QK_NVFP4);
+    const size_t payload_bytes = blocks.size() * sizeof(block_nvfp4);
+    const std::vector<uint8_t> original_layout(
+        reinterpret_cast<const uint8_t *>(blocks.data()),
+        reinterpret_cast<const uint8_t *>(blocks.data()) + payload_bytes);
+
+    for (const bool reordered : {false, true}) {
+        const std::vector<uint8_t> input_bytes = reordered ? reorder_blocks(blocks) : original_layout;
+        guarded_bytes input(queue, payload_bytes);
+        input.copy_payload(input_bytes.data());
+        const std::vector<uint8_t> input_snapshot(input.base, input.base + input.total_bytes());
+        guarded_bytes output(queue, static_cast<size_t>(k) * sizeof(float));
+        const std::string label = "blocks=" + std::to_string(block_count) +
+                                  " layout=" + (reordered ? "reordered" : "original");
+
+        run_f32_dispatch(input.payload<uint8_t>(), output, k, queue, false, reordered);
+        check_output_guards(output, label + " original");
+        check_input(input, input_snapshot, label + " original");
+        const std::vector<uint8_t> original(output.base + kGuardBytes,
+                                             output.base + kGuardBytes + output.payload_bytes);
+
+        output.reset();
+        run_f32_dispatch(input.payload<uint8_t>(), output, k, queue, true, reordered);
+        check_output_guards(output, label + " packed");
+        check_input(input, input_snapshot, label + " packed");
+        compare_bits(output, original, label);
+
+        std::printf("NVFP4 case layout=%s blocks=%zu k=%" PRId64 " exact=1\n",
+                    reordered ? "reordered" : "original", block_count, k);
+    }
+}
+
+void run_valid_and_fallback_cases(sycl::queue * queue) {
+    constexpr size_t block_count = 17;
+    const std::vector<block_nvfp4> blocks = make_blocks(block_count, true);
+    const std::vector<float> reference = cpu_reference(blocks);
+    const int64_t k = static_cast<int64_t>(reference.size());
+    guarded_bytes input(queue, blocks.size() * sizeof(block_nvfp4));
+    input.copy_payload(blocks.data());
+    const std::vector<uint8_t> input_snapshot(input.base, input.base + input.total_bytes());
+
+    guarded_bytes f32_output(queue, reference.size() * sizeof(float));
+    run_f32_dispatch(input.payload<uint8_t>(), f32_output, k, queue, true, false);
+    check_output_guards(f32_output, "valid packed");
+    check_input(input, input_snapshot, "valid packed");
+    compare_cpu(f32_output.payload<float>(), reference, "valid packed");
+
+    guarded_bytes half_output(queue, reference.size() * sizeof(sycl::half));
+    run_half_dispatch(input.payload<uint8_t>(), half_output, k, queue);
+    check_output_guards(half_output, "half fallback");
+    check_input(input, input_snapshot, "half fallback");
+    const sycl::half * half_values = half_output.payload<sycl::half>();
+    for (size_t i = 0; i < reference.size(); ++i) {
+        const float got = static_cast<float>(half_values[i]);
+        const float tolerance = 0.01f * std::max(1.0f, std::fabs(reference[i]));
+        require(std::isfinite(got) && std::fabs(got - reference[i]) <= tolerance,
+                "half fallback: CPU comparison failed at element " + std::to_string(i));
+    }
+
+    const std::vector<uint8_t> reordered = reorder_blocks(blocks);
+    guarded_bytes reordered_input(queue, reordered.size());
+    reordered_input.copy_payload(reordered.data());
+    const std::vector<uint8_t> reordered_snapshot(reordered_input.base,
+                                                   reordered_input.base + reordered_input.total_bytes());
+    guarded_bytes reordered_original_output(queue, reference.size() * sizeof(float));
+    run_f32_dispatch(reordered_input.payload<uint8_t>(), reordered_original_output, k, queue, false, true);
+    check_output_guards(reordered_original_output, "reordered original");
+    check_input(reordered_input, reordered_snapshot, "reordered original");
+    const std::vector<uint8_t> reordered_original(
+        reordered_original_output.base + kGuardBytes,
+        reordered_original_output.base + kGuardBytes + reordered_original_output.payload_bytes);
+
+    guarded_bytes reordered_output(queue, reference.size() * sizeof(float));
+    run_f32_dispatch(reordered_input.payload<uint8_t>(), reordered_output, k, queue, true, true);
+    check_output_guards(reordered_output, "reordered packed");
+    check_input(reordered_input, reordered_snapshot, "reordered packed");
+    compare_bits(reordered_output, reordered_original, "reordered packed");
+    compare_cpu(reordered_output.payload<float>(), reference, "reordered packed");
+
+    std::printf("NVFP4 fallback/packed cases fusion_off=1 half=1 reordered=1 reordered_packed=1 cpu=1\n");
+}
+
+} // namespace
+
+int main() {
+    ggml_backend_t backend = nullptr;
+    try {
+        backend = ggml_backend_sycl_init(0);
+        require(backend != nullptr, "ggml_backend_sycl_init(0) returned null");
+
+        sycl::queue * queue = &dpct::get_device(0).default_queue();
+        const size_t max_work_group_size =
+            queue->get_device().get_info<sycl::info::device::max_work_group_size>();
+        std::printf("NVFP4 device max_work_group_size=%zu\n", max_work_group_size);
+        if (max_work_group_size < 256) {
+            std::printf("NVFP4 packed cases are ineligible on this device; testing original fallbacks only\n");
+        }
+
+        const int saved_fusion = g_ggml_sycl_enable_fusion;
+        for (const size_t block_count : { size_t(1), size_t(7), size_t(8), size_t(9),
+                                          size_t(15), size_t(17), size_t(63), size_t(64),
+                                          size_t(65), size_t(127), size_t(513) }) {
+            run_case(block_count, queue);
+        }
+        run_valid_and_fallback_cases(queue);
+        g_ggml_sycl_enable_fusion = saved_fusion;
+        ggml_backend_free(backend);
+        std::printf("NVFP4 native exactness PASS\n");
+        return 0;
+    } catch (const sycl::exception & exception) {
+        std::fprintf(stderr, "NVFP4 native exactness SYCL failure: %s\n", exception.what());
+    } catch (const std::exception & exception) {
+        std::fprintf(stderr, "NVFP4 native exactness failure: %s\n", exception.what());
+    }
+
+    if (backend != nullptr) {
+        ggml_backend_free(backend);
+    }
+    return 1;
+}
