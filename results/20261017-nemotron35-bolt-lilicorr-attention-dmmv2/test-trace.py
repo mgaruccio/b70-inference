@@ -309,6 +309,57 @@ class Trace(unittest.TestCase):
                        input=Path('attention-dmmv2.patch').read_bytes(), check=True, capture_output=True)
         return [(scratch / name).read_text() for name in M['SOURCE_SCOPE']]
 
+    def test_missing_c0_continuation_reuses_valid_s0_only(self):
+        continuation = runpy.run_path('continue-c0.py')
+        runner = runpy.run_path(str(OLD['OLD'] / 'run-bolt-cell-ssm-prefill-r1.py'))
+        result = continuation['validate_saved_s0'](M, A, OLD, NATIVE, runner)
+        self.assertTrue(result['s0_parent_invariant_passed'])
+        out = M['ROOT'] / 'run-r1'
+        saved = M['load'](out / 'summary.json')
+        variants = []
+        for key, value in (('restored', False), ('status', 'completed'), ('error', 'different failure'),
+                           ('phases', {}), ('order', ['C0'])):
+            changed = copy.deepcopy(saved)
+            changed[key] = value
+            variants.append((out / 'summary.json', changed))
+        missing = copy.deepcopy(saved)
+        del missing['phases']['S0']['cpu_rows']
+        variants.append((out / 'summary.json', missing))
+        variants += [(out / 'candidate-binaries.json', {}), (out / 'frozen-payload.json', {}),
+                     (out / 'S0/create-argv.json', []), (out / 'S0/quality/summary.json', {'pass': False})]
+        for path, value in variants:
+            def altered_load(request, path=path, value=value):
+                return copy.deepcopy(value) if Path(request) == path else M['load'](request)
+            with self.subTest(path=str(path)), self.assertRaises((AssertionError, KeyError)):
+                continuation['validate_saved_s0'](dict(M, load=altered_load), A, OLD, NATIVE, runner)
+        def missing_summary(request):
+            if Path(request) == out / 'summary.json':
+                raise FileNotFoundError(request)
+            return M['load'](request)
+        with self.assertRaises(FileNotFoundError):
+            continuation['validate_saved_s0'](dict(M, load=missing_summary), A, OLD, NATIVE, runner)
+
+    def test_missing_c0_controller_preserves_gates_and_finally(self):
+        continuation = runpy.run_path('continue-c0.py')
+        source = continuation['controller_source']()
+        namespace = {'__name__': 'continuation_test', '__file__': str(continuation['NEXT'] / 'run-trace.py')}
+        exec(compile(source, namespace['__file__'], 'exec'), namespace)
+        self.assertEqual(namespace['ORDER'], ('C0',))
+        self.assertEqual(namespace['ROOT'], continuation['NEXT'])
+        self.assertNotEqual(namespace['PREFIX'], M['PREFIX'])
+        for key in ('WIDTH1', 'PARENT_RESULTS', 'PARENT', 'CANDIDATE', 'ACCEPTED', 'SOURCE_SCOPE',
+                    'IQ2_NATIVE_COMMAND', 'Q8_NATIVE_COMMAND', 'ATTENTION_NATIVE_COMMAND'):
+            self.assertEqual(namespace[key], M[key])
+        original_main = next(n for n in ast.parse(Path('run-trace.py').read_text()).body
+                             if isinstance(n, ast.FunctionDef) and n.name == 'main')
+        continued_main = next(n for n in ast.parse(source).body
+                              if isinstance(n, ast.FunctionDef) and n.name == 'main')
+        self.assertEqual(ast.dump(original_main), ast.dump(continued_main))
+        tree = ast.parse(Path('test-trace.py').read_text())
+        tests = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'Trace')
+        names = [n.name for n in tests.body if isinstance(n, ast.FunctionDef)]
+        self.assertEqual(len(names), len(set(names)), 'shadowed test method')
+
     def test_build_controller_paths_match(self):
         script = (M['ROOT'] / 'build-candidate.sh').read_text()
         assignments = dict(re.findall(r'^(R|PARENT|D)=(.+)$', script, re.M))
@@ -1028,6 +1079,12 @@ class Trace(unittest.TestCase):
             for label in ('S0', 'C0'):
                 cell = M['PARENT_RESULTS'] / 'run-r1' / label
                 result = A['analyze_arm'](cell, label, OLD)
+                controller = ast.parse(Path('run-trace.py').read_text())
+                consumed_keys = {node.slice.value for node in ast.walk(controller)
+                                 if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name)
+                                 and node.value.id == 'checked' and isinstance(node.slice, ast.Constant)
+                                 and isinstance(node.slice.value, str)}
+                self.assertTrue(consumed_keys <= result.keys(), consumed_keys - result.keys())
                 self.assertEqual(result['capture_path'], str(cell / 'capture'))
                 if label == 'S0':
                     self.assertTrue(result['s0_parent_invariant_passed'])
@@ -1134,79 +1191,7 @@ class Trace(unittest.TestCase):
                     (parent_capture / parent['samples'][0]['file']).write_bytes(broken)
                     report = A['report_parent_comparison'](candidate, label, ordinary, diagnostic)
                     self.assertFalse(report['comparisons'][0]['raw_bytes_equal'])
-    def test_block1_route_presence_and_type_fail_closed(self):
-        log = route_log(missing_block1=True)
-        with self.assertRaisesRegex(AssertionError, 'first MoE block route missing'):
-            A['select_route_batches'](log, 'S0')
-        metadata = A['select_route_batches'](route_log(), 'S0')
-        bad = copy.deepcopy(metadata)
-        bad['selected_batches'][0]['routes'] = [
-            route for route in bad['selected_batches'][0]['routes']
-            if route['weight'] != 'blk.1.ffn_up_exps.weight'
-        ]
-        with self.assertRaises(AssertionError):
-            A['assert_actual_route_gates'](bad, 'S0')
-        bad = copy.deepcopy(metadata)
-        for route in bad['selected_batches'][0]['routes']:
-            if route['weight'] == 'blk.1.ffn_down_exps.weight':
-                route['src0_type'] = 'nvfp4'
-        with self.assertRaises(AssertionError):
-            A['assert_actual_route_gates'](bad, 'S0')
 
-    def test_analyze_arm_parent_gates_through_full_wiring(self):
-        def prepare(label, parent_results):
-            source_cell = M['PARENT_RESULTS'] / 'run-r1' / label
-            parent_cell = parent_results / 'run-r1' / label
-            parent_cell.mkdir(parents=True)
-            parent = json.loads((source_cell / 'alignment.json').read_text())
-            parent_capture = parent_cell / 'capture'
-            parent_capture.mkdir()
-            for sample in parent['samples']:
-                shutil.copy2(source_cell / 'capture' / sample['file'], parent_capture / sample['file'])
-            parent['capture_path'] = str(parent_capture)
-            (parent_cell / 'alignment.json').write_text(json.dumps(parent))
-            ordinary = json.loads((source_cell / 'ordinary.result.json').read_text())
-            diagnostic = json.loads((source_cell / 'diagnostic.response.json').read_text())
-            (parent_cell / 'ordinary.result.json').write_text(json.dumps(ordinary))
-            (parent_cell / 'diagnostic.response.json').write_text(json.dumps(diagnostic))
-            return source_cell, parent_cell, parent, ordinary, diagnostic
-
-        s0_parent_results = self.root / 'parent-results-s0-negative'
-        s0_cell, s0_parent_cell, s0_parent, s0_ordinary, s0_diagnostic = prepare('S0', s0_parent_results)
-        with patch.dict(A['analyze_arm'].__globals__, PARENT_RESULTS=s0_parent_results,
-                        select_route_batches=lambda log, label: A['select_route_batches'](route_log(label), label)):
-            result = A['analyze_arm'](s0_cell, 'S0', OLD)
-            self.assertTrue(result['s0_parent_invariant_passed'])
-            broken = bytearray((s0_parent_cell / 'capture' / s0_parent['samples'][0]['file']).read_bytes())
-            broken[0] ^= 1
-            (s0_parent_cell / 'capture' / s0_parent['samples'][0]['file']).write_bytes(broken)
-            with self.assertRaises(AssertionError):
-                A['analyze_arm'](s0_cell, 'S0', OLD)
-            (s0_parent_cell / 'capture' / s0_parent['samples'][0]['file']).write_bytes(
-                (s0_cell / 'capture' / s0_parent['samples'][0]['file']).read_bytes())
-            s0_parent = json.loads((s0_parent_cell / 'alignment.json').read_text())
-            s0_parent['batches'][1]['tokens'][0] ^= 1
-            (s0_parent_cell / 'alignment.json').write_text(json.dumps(s0_parent))
-            report = A['report_parent_comparison'](result, 'S0', s0_ordinary, s0_diagnostic)
-            self.assertFalse(report['actual_batch_inputs_match'])
-            with self.assertRaises(AssertionError):
-                A['analyze_arm'](s0_cell, 'S0', OLD)
-
-        c0_parent_results = self.root / 'parent-results-c0-report-only'
-        c0_cell, c0_parent_cell, c0_parent, c0_ordinary, c0_diagnostic = prepare('C0', c0_parent_results)
-        with patch.dict(A['analyze_arm'].__globals__, PARENT_RESULTS=c0_parent_results,
-                        select_route_batches=lambda log, label: A['select_route_batches'](route_log(label), label)):
-            result = A['analyze_arm'](c0_cell, 'C0', OLD)
-            self.assertTrue(result['c0_parent_report_only'])
-            c0_parent['batches'][1]['tokens'][0] ^= 1
-            (c0_parent_cell / 'alignment.json').write_text(json.dumps(c0_parent))
-            changed = A['analyze_arm'](c0_cell, 'C0', OLD)
-            self.assertTrue(changed['c0_parent_report_only'])
-            self.assertFalse(changed['parent_comparison']['actual_batch_inputs_match'])
-            c0_parent['prompt_ids'][0] ^= 1
-            (c0_parent_cell / 'alignment.json').write_text(json.dumps(c0_parent))
-            with self.assertRaisesRegex(AssertionError, 'prompt IDs differ'):
-                A['analyze_arm'](c0_cell, 'C0', OLD)
 
     def test_attention_shapes_match_actual_gguf_header(self):
         header = json.loads((M['PARENT_RESULTS'] / 'attention-header.json').read_text())

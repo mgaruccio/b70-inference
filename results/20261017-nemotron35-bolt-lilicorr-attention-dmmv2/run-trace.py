@@ -412,7 +412,6 @@ def main():
             save(cell / 'alignment.json', checked)
             data.update(status='completed', within_arm_text_passed=True,
                         cpu_rows=len(checked['samples']), **checked['prior_reference'])
-            data['parent_observer_passed'] = checked['parent_observer_passed']
             data['s0_parent_invariant_passed'] = checked['s0_parent_invariant_passed']
             data['c0_parent_report_only'] = checked['c0_parent_report_only']
             save(cell / 'summary.json', data)
