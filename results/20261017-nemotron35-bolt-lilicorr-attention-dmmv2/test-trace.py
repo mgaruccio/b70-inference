@@ -771,33 +771,105 @@ class Trace(unittest.TestCase):
         M['check_attention_native_output'](output)
         log = M['Q8_NATIVE_MARKER'] + '\n' + output + M['ATTENTION_NATIVE_MARKER'] + '\n'
         M['check_attention_native_gate']('BOLT_VERIFY_IQ2_NATIVE_PASSED\n' + log)
+        for stamp in ('2026-10-17T20:10:00Z ', '2026-10-17T20:10:00.123456789Z '):
+            stamped = ''.join(stamp + line + '\n' for line in log.splitlines())
+            M['check_attention_native_gate']('BOLT_VERIFY_IQ2_NATIVE_PASSED\n' + stamped)
+        for broken in (log.replace(M['ATTENTION_NATIVE_MARKER'], 'missing'), log + M['ATTENTION_NATIVE_MARKER'],
+                       log.replace(M['Q8_NATIVE_MARKER'], 'missing')):
+            with self.assertRaises(AssertionError):
+                M['check_attention_native_gate']('BOLT_VERIFY_IQ2_NATIVE_PASSED\n' + broken)
 
     def test_attention_native_gate_counts_failures_and_backend_skips(self):
         good = attention_native_output()
         M['check_attention_native_output'](good)
         first_case = next(line for line in good.splitlines(True) if '  MUL_MAT(' in line)
-        for bad in (good.replace(first_case, ''), good + '  13/13 tests passed\n'):
-            with self.assertRaises(AssertionError):
+        for bad in (good.replace(first_case, ''), good + first_case,
+                    good + '  13/13 tests passed\n', good.replace('13/13 tests passed', '12/13 tests passed'),
+                    good.replace('\x1b[1;32mOK', 'FAIL', 1),
+                    good.replace('\x1b[1;32mOK', 'not supported [SYCL0] (expected)', 1),
+                    good + 'skipping large tensors for speed\n', good + 'UNSUPPORTED\n',
+                    good + 'UNEXPECTED\n', good + 'ERR = 0.1\n', good + 'failed\n',
+                    good.replace('Backend 2/2: CPU', 'Backend 2/2: OTHER_GPU'),
+                    good + 'Backend 3/3: CPU\n  Skipping\n',
+                    good.replace('Backend SYCL0: OK', 'Backend SYCL0: FAIL'),
+                    good.replace('2/2 backends passed', '1/2 backends passed'),
+                    good.replace('type_a=q8_0', 'type_a=q4_0', 1),
+                    good.replace('m=4096,n=1,k=4096', 'm=4096,n=4,k=4096', 1)):
+            with self.subTest(bad=bad[-160:]), self.assertRaises(AssertionError):
                 M['check_attention_native_output'](bad)
+
+    def test_attention_native_actual_route_type_column_reorder_and_coverage(self):
+        good = attention_native_output()
+        M['check_attention_native_output'](good)
+        native_routes = [line for line in good.splitlines(True) if line.startswith('BOLT_ROUTE ')]
+        self.assertEqual(len(native_routes), 13)
+        for line in native_routes:
+            with self.subTest(missing=line[:100]), self.assertRaises(AssertionError):
+                M['check_attention_native_output'](good.replace(line, ''))
+            for key, value in (('src0_type', 'q4_0'), ('src1_type', 'f16'), ('dst_type', 'f16'),
+                               ('src1_ne1', '4'), ('reorder', '0'), ('op', 'MUL_MAT_ID'),
+                               ('operand_prec', '0'), ('src1_ne2', '2'), ('src1_nb1', '1'),
+                               ('dst_nb1', '1'), ('device', '1')):
+                fields = line.split()
+                changed = ' '.join(f'{key}={value}' if field.startswith(key + '=') else field
+                                   for field in fields) + '\n'
+                with self.subTest(key=key, route=line[:100]), self.assertRaises(AssertionError):
+                    M['check_attention_native_output'](good.replace(line, changed))
+            wrong_route = (line.replace('route=DMMV_ESIMD', 'route=MMVQ_REORDERED')
+                           if 'route=DMMV_ESIMD' in line else line.replace('route=MMVQ_REORDERED', 'route=DMMV_ESIMD'))
+            with self.assertRaises(AssertionError):
+                M['check_attention_native_output'](good.replace(line, wrong_route))
+        self.assertRaises(AssertionError, M['check_attention_native_output'],
+                          ''.join(line for line in good.splitlines(True) if not line.startswith('BOLT_ROUTE ')))
+        n3_route = next(line for line in native_routes if 'blk.7.attn_q.weight' in line and 'src1_ne1=3' in line)
+        with self.assertRaises(AssertionError):
+            M['check_attention_native_output'](good.replace(n3_route, n3_route.replace('route=MMVQ_REORDERED', 'route=DMMV_ESIMD')))
+        n2_attn_route = next(line for line in native_routes
+                             if 'blk.7.attn_k.weight' in line and 'src1_ne1=2' in line)
+        with self.assertRaises(AssertionError):
+            M['check_attention_native_output'](good.replace(n2_attn_route,
+                                                             n2_attn_route.replace('route=DMMV_ESIMD', 'route=MMVQ_REORDERED')))
+        unrelated_route = next(line for line in native_routes if 'blk.7.unrelated.weight' in line)
+        with self.assertRaises(AssertionError):
+            M['check_attention_native_output'](good.replace(unrelated_route,
+                                                             unrelated_route.replace('route=MMVQ_REORDERED', 'route=DMMV_ESIMD')))
 
     def test_attention_native_shell_pipeline_blocks_server_on_failure(self):
         transcript = self.root / 'attn-native-input.log'
         captured = self.root / 'attn-native-captured.log'
         stub = self.root / 'test-backend-ops-attn-stub'
         good = attention_native_output()
+        first_case = next(line for line in good.splitlines(True) if '  MUL_MAT(' in line)
+        first_route = next(line for line in good.splitlines(True) if line.startswith('BOLT_ROUTE '))
         command = M['ATTENTION_NATIVE_COMMAND'].replace('/src/build-sycl/bin/test-backend-ops', shlex.quote(str(stub)))
         command = command.replace('/tmp/q8-attention-dmmv2-native.log', str(captured))
         command = command.replace('/attention-dmmv2-gate/run-trace.py', str(Path('run-trace.py').resolve()))
-        transcript.write_text(good)
-        stub.write_text('#!/usr/bin/env bash\nset -euo pipefail\n'
-                        'test "$#" -eq 7; test "$1" = test; test "$3" = SYCL0; '
-                        'test "$5" = MUL_MAT; test "$7" = "^attention_dmmv2=1,"\n'
-                        f'cat {shlex.quote(str(transcript))}\nexit 0\n')
-        stub.chmod(0o700)
-        result = subprocess.run(['bash', '-c', 'set -euo pipefail; ' + command + 'echo SERVER_WOULD_START'],
-                              capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0)
-        self.assertIn('SERVER_WOULD_START', result.stdout)
+        for output, status, succeeds in (
+                (good, 0, True), (good, 1, False),
+                (good.replace(first_case, ''), 0, False), (good + first_case, 0, False),
+                (good + '  13/13 tests passed\n', 0, False),
+                (good.replace('13/13 tests passed', '12/13 tests passed'), 0, False),
+                (good + 'not supported\n', 0, False), (good + 'SKIPPED\n', 0, False),
+                (good.replace('Backend 2/2: CPU', 'Backend 2/2: GPU1'), 0, False),
+                (good.replace(first_route, ''), 0, False),
+                (good.replace('src1_type=f32', 'src1_type=f16', 1), 0, False),
+                (good.replace('src1_ne1=2 ', 'src1_ne1=4 ', 1), 0, False)):
+            transcript.write_text(output)
+            stub.write_text('#!/usr/bin/env bash\nset -euo pipefail\n'
+                            'test "$#" -eq 7; test "$1" = test; test "$3" = SYCL0; '
+                            'test "$5" = MUL_MAT; test "$7" = "^attention_dmmv2=1,"\n'
+                            f'cat {shlex.quote(str(transcript))}\nexit {status}\n')
+            stub.chmod(0o700)
+            result = subprocess.run(['bash', '-c', 'set -euo pipefail; ' + command + 'echo SERVER_WOULD_START'],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode == 0, succeeds, result.stdout + result.stderr)
+            if succeeds:
+                self.assertEqual(result.stdout.count('13/13 tests passed'), 1)
+                self.assertIn('SERVER_WOULD_START', result.stdout)
+                M['check_attention_native_gate'](M['Q8_NATIVE_MARKER'] + '\n' + result.stdout)
+            else:
+                self.assertNotIn(M['ATTENTION_NATIVE_MARKER'], result.stdout)
+                self.assertNotIn('SERVER_WOULD_START', result.stdout)
 
     def test_restoration_identity_config_all_mounts_and_hostconfig(self):
         original = dict(Id='original-id', State=dict(Running=True), Config=dict(Env=['x=1']),
