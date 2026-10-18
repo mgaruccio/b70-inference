@@ -34,6 +34,8 @@ before = dict(hashes=c['code_hashes'](h), references=c['reference_hashes'](h))
 c['save'](attempt / 'hash-checks-before.json', before)
 sys.argv = [str(root / 'test-width-sweep.py')]
 runpy.run_path(sys.argv[0], run_name='__main__')
+sys.argv = [str(root / 'test-qualification-analysis.py')]
+runpy.run_path(sys.argv[0], run_name='__main__')
 after = dict(hashes=c['code_hashes'](h), references=c['reference_hashes'](h))
 assert before == after, 'source/helper/reference drift during CPU fixtures'
 c['save'](attempt / 'hash-checks.json', after['hashes'])

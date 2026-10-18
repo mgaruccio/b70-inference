@@ -37,6 +37,7 @@ HTTP_LIMIT = 4 * 1024**2
 LOCAL_FILES = (
     'contracts.py', 'controller.py', 'run-qualify.py', 'analyze-qualify.py',
     'run-timing.py', 'analyze-timing.py', 'test-width-sweep.py',
+    'test-qualification-analysis.py',
     'cpu-checks.sh', 'README.md', 'preparation-results.md',
 )
 METRICS = (

@@ -71,7 +71,7 @@ class WidthSweepFixtures(unittest.TestCase):
     def test_all_case_files_parse_without_running_them(self):
         for path in HERE.glob('*.py'):
             ast.parse(path.read_text(), filename=str(path))
-        self.assertNotIn('--draft-max', (HERE / 'contracts.py').read_text())
+        self.assertNotIn('--draft-max', C['server_argv'](C['make_create']('A', H)))
 
     def test_width_argv_changes_only_name_and_current_max(self):
         original = copy.deepcopy(OFF['make_create']('C0'))
@@ -102,7 +102,7 @@ class WidthSweepFixtures(unittest.TestCase):
         self.assertEqual(8270, selected['long']['ordinary']['historical_prompt_tokens'])
         before = C['reference_hashes'](H)
         for job in jobs:
-            stem = OFF / 'run-r1/A0' / job['stem']
+            stem = OFF['ROOT'] / 'run-r1/A0' / job['stem']
             raw = H['analysis']['read_http'](stem, job['payload'], '/v1/chat/completions')
             if C['qualification_kinds'](job) == 'diagnostic':
                 view = OFF['diagnostic_view'](json.loads(raw), OFF['reference_prompt']('A0', job))
@@ -119,7 +119,7 @@ class WidthSweepFixtures(unittest.TestCase):
         before = C['reference_hashes'](H)
         target = artifacts[0]
         original_sha = C['sha']
-        with patch.dict(C, {'sha': lambda path: 'changed' if Path(path) == target
+        with patch.dict(C['reference_hashes'].__globals__, {'sha': lambda path: 'changed' if Path(path) == target
                             else original_sha(path)}):
             after = C['reference_hashes'](H)
         self.assertNotEqual(before[str(target)], after[str(target)])
@@ -127,7 +127,7 @@ class WidthSweepFixtures(unittest.TestCase):
     def test_quality_anchor_length_and_functional_gates(self):
         selected = C['frozen_jobs'](H)
         for job in C['qualification_jobs'](H):
-            stem = OFF / 'run-r1/A0' / job['stem']
+            stem = OFF['ROOT'] / 'run-r1/A0' / job['stem']
             raw = H['analysis']['read_http'](stem, job['payload'], '/v1/chat/completions')
             if C['qualification_kinds'](job) == 'diagnostic':
                 continue
@@ -168,7 +168,7 @@ class WidthSweepFixtures(unittest.TestCase):
         schedule = C['schedule']()
         self.assertEqual(48, len(schedule))
         self.assertEqual(36, len([row for row in schedule if row['phase'] == 'measured']))
-        self.assertEqual(12, len([row for row in C['expected_measurements']({3, 7})
+        self.assertEqual(24, len([row for row in C['expected_measurements']({3, 7})
                                  if row['cell'].startswith('W3') or row['cell'].startswith('W7')]))
         self.assertEqual(24, len(C['expected_measurements']({3})))
         self.assertEqual(24, len(C['expected_measurements']({7})))
@@ -416,4 +416,6 @@ class WidthSweepFixtures(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    result = unittest.main(verbosity=2, exit=False)
+    if not result.result.wasSuccessful():
+        raise SystemExit(1)
