@@ -1,0 +1,204 @@
+--- /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-single2-r1/ggml/src/ggml-sycl/ggml-sycl.cpp	2026-10-17 21:27:32.693754361 -0400
++++ /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/worker-scratch/patch-check-r8/ggml/src/ggml-sycl/ggml-sycl.cpp	2026-10-18 01:25:22.872934481 -0400
+@@ -32,6 +32,11 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <regex>
++#include <cerrno>
++#include <fcntl.h>
++#include <mutex>
++#include <sys/stat.h>
++#include <unistd.h>
+ 
+ #include <sycl/sycl.hpp>
+ #include <sycl/backend.hpp>
+@@ -161,6 +166,8 @@
+     return std::strncmp(weight->name, "blk.0.", 6) == 0 ||
+            std::strncmp(weight->name, "blk.1.", 6) == 0 ||
+            std::strncmp(weight->name, "blk.7.", 6) == 0 ||
++           std::strcmp(weight->name, "blk.8.ffn_gate_inp.weight") == 0 ||
++           std::strcmp(weight->name, "blk.8.ffn_latent_down.weight") == 0 ||
+            std::strcmp(weight->name, "output.weight") == 0;
+ }
+ 
+@@ -6550,6 +6557,162 @@
+             << ", line:" << __LINE__ << std::endl;
+   std::exit(1);
+ }
++// Temporary, default-off block8 MoE observer. No dispatch/reorder/math changes.
++// The controller arms exactly one diagnostic; subsequent decode calls are ignored.
++struct bolt_moe_capture {
++    const ggml_tensor * tensors[3] = {};
++    const void * data[3] = {};
++    size_t bytes[3] = {};
++    queue_ptr queue = nullptr;
++    const char * stem = nullptr;
++    std::string directory;
++    bool reordered = false;
++    int n = 0;
++};
++
++static void bolt_moe_require(bool ok, const char * reason) {
++    if (!ok) GGML_ABORT("BOLT_MOE_OPERAND error=%s", reason);
++}
++
++static size_t bolt_moe_span(const ggml_backend_sycl_context & ctx, const ggml_tensor * t,
++                            int64_t rows, int64_t columns, bool weight, bool reordered) {
++    // Exact bounded shapes before products, sizes or buffer pointer arithmetic.
++    bolt_moe_require(t && t->ne[0] == rows && t->ne[1] == columns &&
++                     t->ne[2] == 1 && t->ne[3] == 1, "shape");
++    const bool q8_weight = weight && reordered;
++    bolt_moe_require(t->type == (q8_weight ? GGML_TYPE_Q8_0 : GGML_TYPE_F32), "type");
++    if (q8_weight) bolt_moe_require(rows % QK8_0 == 0, "q8_rows");
++    const size_t block = q8_weight ? sizeof(block_q8_0) : sizeof(float);
++    const size_t row = q8_weight ? rows / QK8_0 * block : rows * block;
++    const size_t bytes = row * columns;
++    bolt_moe_require(t->nb[0] == block && t->nb[1] == row && t->nb[2] == bytes &&
++                     t->nb[3] == bytes && ggml_is_contiguous(t), "layout");
++    bolt_moe_require(t->data && t->buffer && ggml_backend_buffer_is_sycl(t->buffer) &&
++                     t->buffer->context &&
++                     static_cast<const ggml_backend_sycl_buffer_context *>(t->buffer->context)->device == ctx.device,
++                     "device_buffer");
++    const uintptr_t base = (uintptr_t) ggml_backend_buffer_get_base(t->buffer);
++    const uintptr_t data = (uintptr_t) t->data;
++    const size_t size = ggml_backend_buffer_get_size(t->buffer);
++    bolt_moe_require(base && data % (q8_weight ? 16 : 4) == 0 && data >= base &&
++                     data - base <= size && bytes <= size - (data - base), "span");
++    return bytes;
++}
++
++static void bolt_moe_copy(const bolt_moe_capture & capture, ggml_backend_sycl_context & ctx, int index) {
++    const char * roles[] = {"weight", "src1", "dst"};
++    const ggml_tensor * t = capture.tensors[index];
++    const size_t bytes = capture.bytes[index];
++    const std::string file = std::string(capture.stem) + "." + roles[index] + ".bin";
++    const std::string path = capture.directory + "/" + file;
++    // Exclusive creation makes stale/partial paths fatal, never a silent overwrite.
++    const int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0644);
++    bolt_moe_require(fd >= 0, "exclusive_file");
++    try {
++        std::vector<uint8_t> host(bytes);
++        try {
++            capture.queue->memcpy(host.data(), capture.data[index], bytes).wait_and_throw();
++        } catch (...) {
++            // Even on a submission/async exception, host storage survives queue completion.
++            capture.queue->wait();
++            throw;
++        }
++        size_t done = 0;
++        while (done < bytes) {
++            const ssize_t n = write(fd, host.data() + done, bytes - done);
++            if (n < 0 && errno == EINTR) continue;
++            bolt_moe_require(n > 0, "write");
++            done += (size_t) n;
++        }
++    } catch (...) {
++        close(fd);
++        throw;
++    }
++    bolt_moe_require(close(fd) == 0, "close");
++    const uintptr_t base = (uintptr_t) ggml_backend_buffer_get_base(t->buffer);
++    GGML_LOG_INFO("BOLT_MOE_OPERAND phase=%s weight=%s role=%s backend_ctx=%p queue=%p device=%d n=%d "
++                  "type=%s reorder=%d ne0=%" PRId64 " ne1=%" PRId64 " ne2=%" PRId64 " ne3=%" PRId64 " "
++                  "nb0=%zu nb1=%zu nb2=%zu nb3=%zu data=%p base=%p buffer_bytes=%zu offset=%zu bytes=%zu file=%s\n",
++                  index == 2 ? "after" : "before", capture.tensors[0]->name, roles[index],
++                  (void *) &ctx, (void *) capture.queue, ctx.device, capture.n,
++                  ggml_type_name(t->type), capture.reordered ? 1 : 0,
++                  t->ne[0], t->ne[1], t->ne[2], t->ne[3], t->nb[0], t->nb[1], t->nb[2], t->nb[3],
++                  t->data, (void *) base, ggml_backend_buffer_get_size(t->buffer),
++                  (size_t) ((uintptr_t) t->data - base), bytes, file.c_str());
++}
++
++static bolt_moe_capture bolt_moe_before(ggml_backend_sycl_context & ctx, ggml_tensor * dst) {
++    bolt_moe_capture capture;
++    const char * directory = std::getenv("BOLT_MOE_OPERAND_DIR");
++    if (!directory || !*directory) return capture;
++    const ggml_tensor * w = dst->src[0];
++    const ggml_tensor * x = dst->src[1];
++    const bool router = std::strcmp(w->name, "blk.8.ffn_gate_inp.weight") == 0;
++    const bool latent_down = std::strcmp(w->name, "blk.8.ffn_latent_down.weight") == 0;
++    if (!router && !latent_down) return capture;
++    if (x->ne[1] < 1 || x->ne[1] > 2) return capture; // Never prefill.
++    bolt_moe_require(std::strcmp(directory, "/moe-operands") == 0, "directory");
++    const std::string marker = std::string(directory) + "/armed";
++    const int fd = open(marker.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
++    if (fd < 0 && errno == ENOENT) return capture; // Native, warmup, ordinary: unarmed.
++    bolt_moe_require(fd >= 0, "marker_open");
++    struct stat st;
++    char width[3] = {};
++    const bool valid = fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_size == 2 &&
++                       read(fd, width, sizeof(width)) == 2;
++    const int closed = close(fd);
++    bolt_moe_require(valid && closed == 0 && width[1] == '\n' &&
++                     (width[0] == '1' || width[0] == '2'), "marker_contents");
++    static std::mutex mutex;
++    std::lock_guard<std::mutex> lock(mutex);
++    static bool seen[2] = {false, false};
++    static const ggml_backend_sycl_context * backend = nullptr;
++    static int n = 0;
++    const int slot = router ? 0 : 1;
++    if (seen[slot]) return capture;
++    bolt_moe_require(x->ne[1] == width[0] - '0', "armed_width");
++    bolt_moe_require(!backend || (backend == &ctx && n == x->ne[1]), "backend_changed");
++    bolt_moe_require(router ? !seen[1] : seen[0], "projection_order");
++    const bool reordered = latent_down;
++    bolt_moe_require(bolt_route_reordered(w) == reordered, "reorder_expectation");
++    const int64_t k = 4096;
++    const int64_t m = router ? 304 : 1024;
++    capture.bytes[0] = bolt_moe_span(ctx, w, k, m, true, reordered);
++    capture.bytes[1] = bolt_moe_span(ctx, x, k, x->ne[1], false, false);
++    capture.bytes[2] = bolt_moe_span(ctx, dst, m, x->ne[1], false, false);
++    capture.queue = ctx.stream(); // Actual one-device consumer queue for both selected routes.
++    bolt_moe_require(capture.queue && capture.queue->is_in_order(), "queue_order");
++    capture.stem = router ? "router" : "latent_down";
++    capture.directory = directory;
++    capture.reordered = reordered;
++    capture.n = (int) x->ne[1];
++    capture.tensors[0] = w;
++    capture.tensors[1] = x;
++    capture.tensors[2] = dst;
++    for (int i = 0; i < 3; ++i) capture.data[i] = capture.tensors[i]->data;
++    backend = &ctx;
++    n = capture.n;
++    seen[slot] = true; // Once even if a copy fails; failures abort, never retry.
++    // The installed non-split contiguous consumer uses src0->data, src1->data and dst->data.
++    bolt_moe_copy(capture, ctx, 0);
++    bolt_moe_copy(capture, ctx, 1);
++    return capture;
++}
++
++static void bolt_moe_after(const bolt_moe_capture & capture, ggml_backend_sycl_context & ctx) {
++    if (!capture.stem) return;
++    bolt_moe_require(capture.queue == ctx.stream(), "queue_changed");
++    bolt_moe_require(bolt_route_reordered(capture.tensors[0]) == capture.reordered, "reorder_changed");
++    const bool router = std::strcmp(capture.stem, "router") == 0;
++    for (int i = 0; i < 3; ++i) {
++        const int64_t rows = i == 2 ? (router ? 304 : 1024) : 4096;
++        const int64_t cols = i == 0 ? (router ? 304 : 1024) : capture.n;
++        bolt_moe_require(capture.tensors[i]->data == capture.data[i] &&
++                         bolt_moe_span(ctx, capture.tensors[i], rows, cols, i == 0, i == 0 && capture.reordered) == capture.bytes[i],
++                         "operand_changed");
++    }
++    bolt_moe_copy(capture, ctx, 2); // Completion on the SAME queue before host storage release.
++}
+ 
+ static bool ggml_sycl_compute_forward(ggml_backend_sycl_context & ctx, struct ggml_tensor * dst) try {
+     GGML_SYCL_DEBUG("[SYCL] ggml_sycl_compute_forward: dst=%s, op=%s\n", dst->name, ggml_op_name(dst->op));
+@@ -6765,13 +6928,16 @@
+         case GGML_OP_L2_NORM:
+             ggml_sycl_l2_norm(ctx, dst);
+             break;
+-        case GGML_OP_MUL_MAT:
++        case GGML_OP_MUL_MAT: {
+             if (dst->src[0]->ne[3] != dst->src[1]->ne[3]) {
+                 return false;
+             }
+             /* ggml_sycl_mul_mat_id is dependent on ggml_sycl_mul_mat */
++            const auto capture = bolt_moe_before(ctx, dst);
+             ggml_sycl_mul_mat(ctx, dst->src[0], dst->src[1], dst);
++            bolt_moe_after(capture, ctx);
+             break;
++        }
+         case GGML_OP_MUL_MAT_ID:
+             if (dst->src[0]->ne[3] != dst->src[1]->ne[3]) {
+                 return false;

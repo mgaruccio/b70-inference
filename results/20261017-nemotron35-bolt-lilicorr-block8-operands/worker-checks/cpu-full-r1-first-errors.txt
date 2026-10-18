@@ -1,0 +1,100 @@
+86-
+87-======================================================================
+88:ERROR: test_actual_route_gate_head_and_ssm (__main__.Trace.test_actual_route_gate_head_and_ssm)
+89-----------------------------------------------------------------------
+90-Traceback (most recent call last):
+91-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 1424, in test_actual_route_gate_head_and_ssm
+92-    metadata = A['select_route_batches'](route_log(label), label)
+93-                                         ~~~~~~~~~^^^^^^^
+94-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 297, in route_log
+95-    lines += [route_batch([55], [1055])] + target_routes()
+--
+101-
+102-======================================================================
+103:ERROR: test_actual_saved_projection_reorder_for_every_role (__main__.Trace.test_actual_saved_projection_reorder_for_every_role)
+104-----------------------------------------------------------------------
+105-Traceback (most recent call last):
+106-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 2371, in test_actual_saved_projection_reorder_for_every_role
+107-    root, _ = operand_cell(self.root / ('saved-' + label), label)
+108-              ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+109-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 442, in operand_cell
+110-    log = inject_block8_routes((source/'diagnostic-window.log').read_text(), label)
+--
+113-
+114-======================================================================
+115:ERROR: test_analyze_arm_parent_gates_through_full_wiring (__main__.Trace.test_analyze_arm_parent_gates_through_full_wiring)
+116-----------------------------------------------------------------------
+117-Traceback (most recent call last):
+118-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 1504, in test_analyze_arm_parent_gates_through_full_wiring
+119-    cell, _ = full_operand_cell(self.root/('gates-'+label),label)
+120-              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+121-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 471, in full_operand_cell
+122-    cell, alignment = operand_cell(cell, label)
+--
+128-
+129-======================================================================
+130:ERROR: test_analyze_arm_rejects_changed_reordered_or_missing_prefill (__main__.Trace.test_analyze_arm_rejects_changed_reordered_or_missing_prefill)
+131-----------------------------------------------------------------------
+132-Traceback (most recent call last):
+133-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 1903, in test_analyze_arm_rejects_changed_reordered_or_missing_prefill
+134-    base_log = inject_block8_routes((source / 'diagnostic-window.log').read_text(), 'S0')
+135-               ^^^^^^^^^^^^^^^^^^^^
+136-NameError: name 'inject_block8_routes' is not defined. Did you mean: 'inject_block7_routes'?
+137-
+138-======================================================================
+139:ERROR: test_analyze_arm_saved_parent_capture_wiring (__main__.Trace.test_analyze_arm_saved_parent_capture_wiring)
+140-----------------------------------------------------------------------
+141-Traceback (most recent call last):
+142-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 1372, in test_analyze_arm_saved_parent_capture_wiring
+143-    cell, _ = full_operand_cell(self.root/('wiring-'+label),label)
+144-              ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+145-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 471, in full_operand_cell
+146-    cell, alignment = operand_cell(cell, label)
+--
+152-
+153-======================================================================
+154:ERROR: test_attention_shapes_match_actual_gguf_header (__main__.Trace.test_attention_shapes_match_actual_gguf_header)
+155-----------------------------------------------------------------------
+156-Traceback (most recent call last):
+157-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 1469, in test_attention_shapes_match_actual_gguf_header
+158-    A['assert_actual_route_gates'](A['select_route_batches'](route_log(label), label), label)
+159-                                                             ~~~~~~~~~^^^^^^^
+160-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 297, in route_log
+161-    lines += [route_batch([55], [1055])] + target_routes()
+--
+167-
+168-======================================================================
+169:ERROR: test_block1_route_presence_and_type_fail_closed (__main__.Trace.test_block1_route_presence_and_type_fail_closed)
+170-----------------------------------------------------------------------
+171-Traceback (most recent call last):
+172-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 1484, in test_block1_route_presence_and_type_fail_closed
+173-    log = route_log(missing_block1=True)
+174-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 297, in route_log
+175-    lines += [route_batch([55], [1055])] + target_routes()
+176-                                           ~~~~~~~~~~~~~^^
+--
+181-
+182-======================================================================
+183:ERROR: test_block7_route_presence_and_type_fail_closed (__main__.Trace.test_block7_route_presence_and_type_fail_closed)
+184-----------------------------------------------------------------------
+185-Traceback (most recent call last):
+186-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 1472, in test_block7_route_presence_and_type_fail_closed
+187-    log = route_log(missing_block7=True)
+188-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 297, in route_log
+189-    lines += [route_batch([55], [1055])] + target_routes()
+190-                                           ~~~~~~~~~~~~~^^
+--
+195-
+196-======================================================================
+197:ERROR: test_block8_full_width2_routes_correlate_with_capture (__main__.Trace.test_block8_full_width2_routes_correlate_with_capture)
+198-----------------------------------------------------------------------
+199-Traceback (most recent call last):
+200-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 2415, in test_block8_full_width2_routes_correlate_with_capture
+201-    cell, alignment = operand_cell(self.root/'c0-full-width', 'C0')
+202-                      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+203-  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block8-operands/test-trace.py", line 442, in operand_cell
+204-    log = inject_block8_routes((source/'diagnostic-window.log').read_text(), label)
+--
+207-
+208-======================================================================
+209:ERROR: test_block8_route_extension_is_strict_and_full_width (__main__.Trace.test_block8_route_extension_is_strict_and_full_width)
