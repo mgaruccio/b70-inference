@@ -85,3 +85,23 @@ Observed on `mike@inference-host` in the separate parser scratch `/home/mike/b70
 - `continue-c0.py` was CPU-tested against saved S0 only. Its continuation `main()` was not run. No C0, native/model, fidelity, timing, or promotion result is claimed; timing and promotion remain false.
 
 The parser/continuation implementation used the official Python contracts for ordered JSON decoding, argument-list subprocess execution, and unittest assertions: https://docs.python.org/3/library/json.html, https://docs.python.org/3/library/subprocess.html, and https://docs.python.org/3/library/unittest.html.
+
+## Lead result — router control is not a fidelity fix
+
+Executed on `mike@inference-host`, through explicit local/remote Bash with the SSH flags above:
+
+1. `bash build-candidate.sh` — real IntelLLVM/SYCL build, dependency checks, protected-source and five-binary checks passed; only SYCL and native-test binaries changed. `python3 -B test-trace.py` then passed66 tests (`lead-cpu-r1.log.gz`). Unified-diff blank context lines were retained verbatim; the initial Git whitespace check flagged those patch-format lines, not changed C++ whitespace. Fuzz-zero application and compilation passed.
+2. `python3 -B run-trace.py` — initial S0 passed native/API/request gates, but all-frame route attribution failed at position70. The failed `run-r1/summary.json`, controller log and full saved capture are preserved. C0 had not started. Source/recovery review is recorded in `review-notes.md`.
+3. After parser-only correction, `python3 -B test-trace.py` passed **70 tests** (`lead-cpu-parser-r2.log.gz`). `python3 -B continue-c0.py` revalidated SAVED S0, ran only missing C0 once under `continuation-c0/run-r1/C0`, and completed strict comparison/restoration (`continuation-c0.log.gz`, `continuation-comparison.json`). No rebuild or S0 inference rerun occurred.
+
+Both arms passed the inherited native385, OUT_PROD190/9, IQ2six, latent7, attention13, attention-view6 and the new router6 numerical/actual-route cases, followed by fresh API20/20. Both ordinary and diagnostic responses agree within their arm. S0 preserves all128 IQ2-parent raw vectors, text/IDs/batch inputs/positions/rows. The corrected router gate covers all127 S0 singleton batches and **all67 C0 two-token batches**, each C0 router operation represented by two real singleton outer/inner pairs with retained original-two-column strides. C0 accepted60 of67 proposed draft tokens.
+
+**Fidelity remains unresolved.** The first S0/C0 raw-vector difference is still output2/position55, before any rollback. Cross-arm raw comparison stops at and includes the first emitted-token difference, now ordinal41: S0 selects3367 and C0 selects1032, each its own raw argmax. The IQ2 parent differed at40. This one-token shift is not evidence of improved quality or performance. C0 also differs from its own IQ2 parent in raw scores from2 and emitted IDs from40; that comparison ends at40. No comparison beyond equal prior history is used for attribution.
+
+Candidate SYCL SHA256: `b2b3b7950c471bb5658f8474eb1866157fd3311a183e07d03a665842a8cad3d9`; native test: `5f43858b1cbd1083ced719a8700f93c30a0e68e94f307541f0bee9e43f5e8389`. Wrapper, implementation and common libraries remain identical to the computational parent. Full manifests are retained.
+
+The continuation checked restoration against BOTH runs. A separate read-only `check_restoration` invocation rechecked the live original container identity/config/HostConfig/all mounts, all five binaries, protected sources, hardware, retained READY responses, live health and sole-running-original condition; see `post-run-verification.log.gz`. The original accepted archive/container remains unchanged. An auxiliary metadata-print command initially used the nonexistent sample key `token` and exited with KeyError; it was corrected to `selected` and rerun on saved JSON only, not inference.
+
+Raw logits remain remotely under `run-r1/S0/capture` and `continuation-c0/run-r1/C0/capture`. S0's validated alignment is `reanalysis-S0.json`; its original failed cell is not rewritten. Local Git includes scoped metadata and lossless gzip logs (mtime0), plus worker/parser CPU logs under `worker-checks/` and `parser-checks/`; no full scratch source, weights or raw logits. Timing and promotion remain prohibited.
+
+Next bounded step: reuse the established router/latent-down operand observer on this new computational parent, with BOTH-arm all128 observer parity required. Directly test whether the actual router outputs now match; dispatch activation alone is not proof. Do not change further arithmetic until that observation is available.
