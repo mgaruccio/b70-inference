@@ -1,0 +1,10 @@
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -65,5 +65,5 @@
+         auto init_thread = [&](size_t start, size_t end) {
+-            thread_local std::default_random_engine gen(std::random_device{}());
++            thread_local std::default_random_engine gen(static_cast<unsigned int>(0x5A17u + start));
+             std::uniform_real_distribution<float> distribution(min, max);
+             for (size_t i = start; i < end; i++) {
+                 data[i] = distribution(gen);
