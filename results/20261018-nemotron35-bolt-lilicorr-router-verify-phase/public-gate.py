@@ -1,0 +1,617 @@
+#!/usr/bin/env python3
+"""LEAD/REMOTE ONLY: candidate public qualification, then independent restored analysis.
+
+Reuse the frozen width-sweep lifecycle and public exchange, not its timing path.
+No helper globals, actual PID records, or runtime log bytes are rewritten.
+"""
+import argparse
+import hashlib
+import itertools
+import json
+import re
+import runpy
+import shlex
+import socket
+import subprocess
+from pathlib import Path
+
+if not __debug__:
+    raise RuntimeError('qualification requires assertions')
+ROOT = Path('/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase')
+OLD = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-width-sweep'
+N9_ROOT = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-n9-control'
+N9_TEST_TREE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2')
+N9_EXPECTED_TEST_TREE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1')
+N9_TEST_ARTIFACTS = ('llama-server', 'libllama-server-impl.so', 'libggml-sycl.so.0',
+                    'test-backend-ops', 'libllama-common.so')
+for filename, digest in (
+    ('contracts.py', '80547ac6ca7689e259e9a9e70f3d0f7dc0fbb8248e763e99f7bbc0d6606a877f'),
+    ('controller.py', 'e8f4a537b355b5315a08fdb410682f4ac5aef13878a723f51ca4c7812bd931d8'),
+):
+    assert hashlib.sha256((OLD / filename).read_bytes()).hexdigest() == digest, filename
+K = runpy.run_path(str(OLD / 'controller.py'))
+C = K['C']  # Inherited run_job's exception identity is essential.
+N = runpy.run_path(str(ROOT / 'run-trace.py'))
+A = runpy.run_path(str(ROOT / 'analyze-trace.py'))
+N9 = runpy.run_path(str(N9_ROOT / 'n9-equivalence.py'))
+OUT = ROOT / 'qualification-r1'
+MODE = 'router-verify-phase-qualification-r1'
+ROLES = {'RVP-A': 'A', 'RVP-W3': 'W3', 'RVP-W7': 'W7'}
+CELLS = tuple(ROLES)
+R3_MARKER = 'BOLT_VERIFY_ROUTER_VERIFY_PHASE_NATIVE_PASSED'
+MARKER = R3_MARKER
+NATIVE_LOGS = {'router_single2': 'originalrouter-single2-native.log',
+               'router_columns8_r3': 'router-verify-phase-native.log',
+               'router_prefill': 'router-prefill-native.log'}
+FILES = ('public-gate.py', 'test-public-gate.py', 'cpu-public-gate.sh', 'qualification.md',
+         'run-trace.py', 'analyze-trace.py', 'test-trace.py', 'build-candidate.sh',
+         'router-verify-phase.patch', 'source-hashes.json', 'README.md')
+BUILD_FILES = ('protected-source-hashes.json', 'accepted-binaries.json', 'parent-binaries.json',
+               'candidate-binaries.json', 'source-diff.json', 'build-attempt-r1/exit-code.txt',
+               'post-build-verification.log', 'runtime-precheck.log')
+HTTP_SUFFIXES = ('.request.json', '.request-body', '.http-request.json', '.http.json', '.http-body')
+NEW_NATIVE = (
+    "GGML_SYCL_DEBUG=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT "
+    "-p '^router_columns8=1,(?!router_single2=1,weight=blk\\.48\\.ffn_gate_inp\\.weight,layout=0,type_a=f32,type_b=f32,m=496,n=9,)' > /tmp/router-verify-phase-native.log 2>&1; "
+    "grep -Fqx '  61/61 tests passed' /tmp/router-verify-phase-native.log; "
+    "count=$(grep -Fc '  61/61 tests passed' /tmp/router-verify-phase-native.log || true); test \"$count\" -eq 1; "
+    "python3 -B /router-verify-phase/analyze-trace.py --tag router_columns8_r3 /tmp/router-verify-phase-native.log; "
+    "GGML_SYCL_DEBUG=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT "
+    "-p '^router_prefill=1,' > /tmp/router-prefill-native.log 2>&1; "
+    "grep -Fqx '  2/2 tests passed' /tmp/router-prefill-native.log; "
+    "count=$(grep -Fc '  2/2 tests passed' /tmp/router-prefill-native.log || true); test \"$count\" -eq 1; "
+    "python3 -B /router-verify-phase/analyze-trace.py --tag router_prefill /tmp/router-prefill-native.log; "
+    "echo " + R3_MARKER + "; "
+)
+
+def name(cell):
+    assert cell in ROLES
+    return C['PREFIX'] + cell.lower()
+
+
+def jobs(h):
+    selected = C['qualification_jobs'](h)
+    assert len(selected) == len({j['stem'] for j in selected}) == 25
+    assert [C['qualification_kinds'](j) for j in selected].count('quality') == 20
+    return selected
+
+
+def check_names(existing):
+    planned = [name(cell) for cell in CELLS]
+    assert len(set(planned)) == 3 and not (set(planned) & set(existing)), 'new cell collision; no reuse'
+    return dict(mode=MODE, planned_cells=list(CELLS), planned_names=planned, collisions=[])
+
+
+def positional_diff(base, derived):
+    # Inserting a bind changes length; retain EVERY positional difference, including the tail.
+    return [dict(index=i, base=a, derived=b)
+            for i, (a, b) in enumerate(itertools.zip_longest(base, derived)) if a != b]
+
+
+def make_create(cell, h):
+    base = C['make_create'](ROLES[cell], h)
+    argv = list(base)
+    argv[argv.index('--name') + 1] = name(cell)
+    mount = str(N['PARENT']) + ':/src:ro'
+    assert argv.count(mount) == 1 and argv[argv.index(mount) - 1] == '-v'
+    argv[argv.index(mount)] = str(N['CANDIDATE']) + ':/src:ro'
+    p, off = h['off']['P'], h['off']
+    validator = 'python3 -B -c ' + shlex.quote(
+        "import pathlib,runpy; runpy.run_path('/iq2-single2-gate/run-trace.py')['check_router_native_output']("
+        "pathlib.Path('/tmp/router-single2-native.log').read_text())") + '; '
+    old_native = p['ROUTER_NATIVE_COMMAND']
+    old_native_log = '/tmp/router-single2-native.log'
+    copied_native_log = '/tmp/originalrouter-single2-native.log'
+    assert old_native.count(validator) == 1
+    assert "-p '^router_single2=1,' 2>&1 | tee " + old_native_log + '; ' in old_native
+    updated = old_native.replace(validator,
+        'python3 -B /router-verify-phase/analyze-trace.py --tag router_single2 ' + old_native_log + '; ')
+    copy_original = 'cp ' + old_native_log + ' ' + copied_native_log + '; '
+    assert base[-1].count(old_native + off['OFF_BOUNDARY']) == 1
+    argv[-1] = base[-1].replace(old_native + off['OFF_BOUNDARY'],
+                                 updated + copy_original + NEW_NATIVE + off['OFF_BOUNDARY'])
+    assert argv[-1].startswith(off['NATIVE_ON'])
+    assert argv[-3:-1] == ['bash', '-lc']
+    argv[-4:-4] = ['-v', str(ROOT) + ':/router-verify-phase:ro']
+    assert C['server_argv'](argv) == C['expected_pid_argv'](ROLES[cell], h)
+    C['diagnostics_off_server'](argv[-1])
+    # Reverse precisely the four allowed changes; no other argv/env/cap/model change is allowed.
+    reverse = list(argv)
+    del reverse[-6:-4]
+    reverse[reverse.index('--name') + 1] = base[base.index('--name') + 1]
+    reverse[reverse.index(str(N['CANDIDATE']) + ':/src:ro')] = mount
+    reverse[-1] = base[-1]
+    assert reverse == base
+    return argv
+
+
+def check_container(record, cell, h):
+    assert record['Name'] == '/' + name(cell)
+    assert record['Config']['Cmd'] == make_create(cell, h)[-3:]
+    for destination, source in (('/src', N['CANDIDATE']), ('/router-verify-phase', ROOT)):
+        mounts = [m for m in record['Mounts'] if m['Destination'] == destination]
+        assert len(mounts) == 1
+        mount = mounts[0]
+        assert mount['Type'] == 'bind' and mount['Source'] == str(source) and mount['RW'] is False
+        assert 'ro' in mount['Mode'].split(',')
+        assert record['HostConfig']['Binds'].count(str(source) + ':' + destination + ':ro') == 1
+
+
+def check_startup(log, cell, h):
+    # RAW docker stdout/stderr, without --timestamps. Never strip/normalize actual evidence.
+    off, p, old = h['off'], h['off']['P'], h['off']['OLD']
+    off['check_off_log'](log)
+    native = runpy.run_path(str(p['WIDTH1'] / 'analyze-controls.py'))
+    native['parse_native_gate'](log, 'C0')
+    for gate in ('iq2', 'q8', 'attention', 'attention_view'):
+        p['check_' + gate + '_native_gate'](log)
+    markers = (p['ATTENTION_VIEW_NATIVE_MARKER'], p['ROUTER_NATIVE_MARKER'], MARKER, p['MARKER'])
+    assert all(log.count(marker) == 1 for marker in markers)
+    assert [log.index(marker) for marker in markers] == sorted(log.index(marker) for marker in markers)
+    segment = log.split(markers[0], 1)[1].split(markers[1], 1)[0]
+    router = A['check_router_native_output'](segment, 'router_single2')
+    assert 'router_columns8=1,' not in log, '61-case output must stay in its raw native file'
+    assert 'router_prefill=1,' not in log, 'prefill output must stay in its raw native file'
+    assert 'call ggml_sycl_ssm_scan_prefill:' not in log.split(p['MARKER'], 1)[0]
+    model = log.split(p['MARKER'], 1)[1]
+    width = C['width_for'](ROLES[cell])
+    if width is None:
+        result = off['N']['check_model_startup'](model)
+    else:
+        old['check_model_log'](model, 'C')
+        assert [int(m.group(1)) for m in old['N_RS_SEQ_RE'].finditer(model)][:2] == [width, 0]
+        params, block = old['DFLASH_PARAMS_RE'].search(model), old['DFLASH_BLOCK_RE'].search(model)
+        assert params and params.groups() == (str(width), '0')
+        assert block and block.group(1) == '8'
+        spec = model.split('common_speculative_impl_draft_dflash', 1)[1].split('speculative decoding context', 1)[0]
+        assert 'clamp' not in spec.lower()
+        assert 'R (f32)' in model and 'S (f32)' in model
+        for key in ('n_outputs_max', 'n_outputs_max_per_seq'):
+            match = re.search(r'llama_context: ' + key + r'\s*=\s*(\d+)', model)
+            assert match and match.group(1) == str(width + 1), (key, match)
+        for key, value in (('DNN', 1), ('FUSION', 1), ('ESIMD', 1), ('OPT', 1), ('VMM', 1), ('GRAPH', 0)):
+            assert f'GGML_SYCL_ENABLE_{key}: {value}' in model
+        result = dict(width=width, target_n_rs_seq=width, draft_n_rs_seq=0,
+                      n_max=width, n_min=0, block_size=8, n_outputs_max=width + 1, n_outputs_max_per_seq=width + 1)
+    assert 'BOLT_VERIFY error' not in log
+    return dict(result, router_single2=router, evidence='unaltered raw startup and actual PID1')
+
+
+def candidate_proof():
+    assert (ROOT / 'build-attempt-r1/exit-code.txt').read_text().strip() == '0', 'candidate build not successful'
+    assert 'BOLT_VERIFY_BUILD_PASSED' in (ROOT / 'post-build-verification.log').read_text()
+    assert 'BOLT_VERIFY_DEPENDENCIES_PASSED' in (ROOT / 'runtime-precheck.log').read_text()
+    N['check_protected_sources']()
+    N['check_protected_binaries']()
+    source, binaries = N['source_hashes'](N['CANDIDATE']), N['binaries'](N['CANDIDATE'])
+    assert binaries == C['load'](ROOT / 'candidate-binaries.json')
+    assert set(binaries) == set(N['ARTIFACTS']) and len(N['ARTIFACTS']) == 6
+    assert {key for key in binaries if binaries[key] != N['PARENT_EXPECTED'][key]} == {
+        'libggml-sycl.so.0', 'libllama.so.0.7.0', 'test-backend-ops'}
+    assert C['load'](ROOT / 'source-diff.json')['changed_relative_to_parent'] == N['SOURCE_SCOPE']
+    return dict(source=source, binaries=binaries)
+
+
+def check_n9_equivalence(h):
+    proof_path = N9_ROOT / 'run-r3/equivalence.json'
+    proof = C['load'](proof_path)
+    restoration = C['load'](N9_ROOT / 'run-r3/independent-restoration.json')
+    assert restoration['passed'] and not restoration['errors']
+    assert restoration['seeded_test_inputs_unchanged']
+    assert (N9_ROOT / 'build-attempt-r2/exit-code.txt').read_text().strip() == '0'
+    assert 'BOLT_VERIFY_BUILD_PASSED' in (N9_ROOT / 'build-attempt-r2/post-build-verification.log').read_text()
+    assert 'BOLT_VERIFY_DEPENDENCIES_PASSED' in (N9_ROOT / 'build-attempt-r2/runtime-precheck.log').read_text()
+    backend_hashes = {'parent': N['binaries'](N['PARENT']),
+                      'candidate': N['binaries'](N['CANDIDATE'])}
+    test_sources = N['source_hashes'](N9_TEST_TREE)
+    test_manifest = C['load'](N9_ROOT / 'r2/candidate-binaries.json')
+    assert set(test_manifest) == set(N9_TEST_ARTIFACTS)
+    test_binaries = {name: N['sha256'](N9_TEST_TREE / 'build-sycl/bin' / name)
+                     for name in N9_TEST_ARTIFACTS}
+    assert test_binaries == test_manifest
+    expected_sources = N['source_hashes'](N9_EXPECTED_TEST_TREE)
+    original = (N9_EXPECTED_TEST_TREE / 'tests/test-backend-ops.cpp').read_bytes()
+    expected_test = N9['expected_test_source'](original)
+    assert (N9_TEST_TREE / 'tests/test-backend-ops.cpp').read_bytes() == expected_test
+    expected_sources['tests/test-backend-ops.cpp'] = hashlib.sha256(expected_test).hexdigest()
+    assert test_sources == expected_sources
+    artifacts = {}
+    for cell in ('R8N9R3-PARENT', 'R8N9R3-CANDIDATE'):
+        directory = N9_ROOT / 'run-r3' / cell
+        artifacts[cell] = {stream: (directory / (stream + '.log')).read_bytes()
+                           for stream in ('stdout', 'stderr')}
+        for streams in artifacts.values():
+            combined = (streams['stdout'] + streams['stderr']).decode('utf-8')
+            routes = A['route_records'](combined)
+            assert len(routes) == 2
+            assert all(route['dst_name'] == N9['TARGET_ROUTE'] for route in routes)
+            A['assert_router_operations'](routes, ('blk.48.ffn_gate_inp.weight', 496, 0, 9))
+    raw_hashes = {cell: {stream: N9['sha256_bytes'](value) for stream, value in streams.items()}
+                  for cell, streams in artifacts.items()}
+    N9['check_proof'](
+        proof,
+        artifacts['R8N9R3-PARENT']['stdout'] + artifacts['R8N9R3-PARENT']['stderr'],
+        artifacts['R8N9R3-CANDIDATE']['stdout'] + artifacts['R8N9R3-CANDIDATE']['stderr'],
+        backend_hashes, test_binaries, test_sources,
+        N9['sha256_bytes']((N9_ROOT / 'run-control.py').read_bytes()), raw_hashes)
+    return proof
+
+
+def freeze(h):
+    check_n9_equivalence(h)
+    hashes = C['code_hashes'](h)
+    hashes.update({str(ROOT / file): C['sha'](ROOT / file) for file in FILES + BUILD_FILES})
+    hashes.update({str(N9_ROOT / file): C['sha'](N9_ROOT / file) for file in
+                   ('n9-equivalence.py', 'run-control.py', 'seeded-test.patch',
+                    'smallbuildhelper.py', 'build-test.sh', 'test-control.py')})
+    refs = C['reference_hashes'](h)
+    paths = [C['QUALIFY_DIR'] / file for file in ('summary.json', 'qualification.json')]
+    for role in ROLES.values():
+        directory = C['QUALIFY_DIR'] / role
+        paths += [directory / file for file in ('pid-before.json', 'pid-after.json', 'create-argv.json',
+                                                 'container-before.json', 'native-and-startup.stdout.log',
+                                                 'native-and-startup.stderr.log')]
+        for job in jobs(h):
+            paths += [C['artifact'](directory / job['stem'], suffix) for suffix in HTTP_SUFFIXES]
+    n9_run = N9_ROOT / 'run-r3'
+    paths += [n9_run / 'equivalence.json', n9_run / 'analysis.json', n9_run / 'inputs-before.json',
+              n9_run / 'independent-restoration.json', n9_run / 'summary.json',
+              n9_run / 'paired-argv-difference.json',
+              N9_ROOT / 'r2/candidate-binaries.json', N9_ROOT / 'r2/protected-source-hashes.json',
+              N9_ROOT / 'build-attempt-r2/exit-code.txt', N9_ROOT / 'build-attempt-r2/post-build-verification.log',
+              N9_ROOT / 'build-attempt-r2/runtime-precheck.log']
+    for cell in ('R8N9R3-PARENT', 'R8N9R3-CANDIDATE'):
+        paths += [n9_run / cell / 'create-argv.json']
+        paths += [n9_run / cell / (stream + '.log') for stream in ('stdout', 'stderr')]
+        paths += [n9_run / cell / 'native-result.json']
+    refs.update({str(path): C['sha'](path) for path in paths})
+    # Keep the legacy accepted/parent FULL source and binary checks, not just new-candidate checks.
+    return dict(hashes=hashes, references=refs, source_binaries=C['source_binary_hashes'](h),
+                candidate=candidate_proof())
+
+
+def check_tested(h):
+    tested = C['load'](ROOT / 'preparation/public-tested-code.json')
+    assert tested['tests_passed'] is True and tested['freeze'] == freeze(h), 'CPU-frozen code/reference/source/binary drift'
+    return tested
+
+
+class Runtime(K['Runtime']):
+    def preflight(self):
+        self.capacity('initial')
+        check_tested(self.h)
+        check_n9_equivalence(self.h)
+        self.hashes = C['source_binary_hashes'](self.h)
+        self.before_hw = self.h['runner']['hardware']()
+        assert self.before_hw == C['load'](self.off['REFERENCE'] / 'run-r1/hardware-before.json')
+        live = self.inspect(self.original_name)
+        assert C['same_container'](C['load'](self.off['ROOT'] / 'run-r1/original-container.json'), live)
+        assert live['State']['Running']
+        self.original, self.original_was_running = live, True
+        C['save'](self.out / 'original-container.json', live)
+        C['save'](self.out / 'hash-checks-before.json', self.hashes)
+        C['save'](self.out / 'hardware-before.json', self.before_hw)
+        assert self.h['api']['request'](self.off['OLD']['URL'], '/health')['status'] == 'ok'
+        existing = self.command('docker', 'ps', '-a', '--format', '{{.Names}}').splitlines()
+        C['save'](self.out / 'planned-containers.json', check_names(existing))
+        C['save'](self.out / 'source-contracts.json', C['source_evidence'](self.h))
+        C['save'](self.out / 'environment.json', dict(
+            kernel=self.command('uname', '-a'), os_release=Path('/etc/os-release').read_text(),
+            cpu=self.command('lscpu'), memory=Path('/proc/meminfo').read_text(), driver=self.command('modinfo', 'xe'),
+            source_ids={str(source): (source / 'UPSTREAM_COMMIT').read_text()
+                        for source in (N['ACCEPTED'], N['PARENT'], N['CANDIDATE'])}))
+        C['save'](self.out / 'original-live.json', live)
+        self.observe('run-before', self.original_name)
+
+    def pid(self, cell, phase):
+        record = json.loads(self.command('docker', 'exec', name(cell), 'python3', '-B', '-c', C['PID_PROBE']))
+        C['save'](self.out / cell / ('pid-' + phase + '.json'), record)
+        C['check_pid'](record, ROLES[cell], self.h)  # Pass the ACTUAL record, unchanged.
+        maps = self.command('docker', 'exec', name(cell), 'cat', '/proc/1/maps')
+        (self.out / cell / ('libraries-' + phase + '.txt')).write_text(
+            '\n'.join(sorted({line.split()[-1] for line in maps.splitlines() if '.so' in line})) + '\n')
+        return record
+
+    def preserve_native(self, cell, phase, required=False):
+        errors = []
+        for tag, filename in NATIVE_LOGS.items():
+            destination = self.out / cell / (phase + '-' + filename)
+            try:
+                assert not destination.exists()
+                self.command('docker', 'cp', name(cell) + ':/tmp/' + filename, str(destination))
+            except Exception as exc:
+                errors.append(dict(tag=tag, error=repr(exc)))
+        C['save'](self.out / cell / (phase + '-native-copy.json'), dict(errors=errors))
+        if required:
+            assert not errors, errors
+            for tag, filename in NATIVE_LOGS.items():
+                A['check_router_native_output']((self.out / cell / (phase + '-' + filename)).read_bytes().decode(), tag)
+
+    def begin(self, cell):
+        assert cell in ROLES and self.active is None
+        self.capacity(cell)
+        if not self.prefixes:
+            self._stop_original_for_case()
+        else:
+            assert not self.inspect(self.original_name)['State']['Running']
+            self.ownership(None)
+        directory = self.out / cell
+        directory.mkdir()
+        argv = make_create(cell, self.h)
+        C['save'](directory / 'create-argv.json', argv)
+        C['save'](directory / 'argv-diff.json', positional_diff(C['make_create'](ROLES[cell], self.h), argv))
+        self.created.append(cell)
+        self.command(*argv, timeout=60)
+        check_container(self.inspect(name(cell)), cell, self.h)
+        self.command('docker', 'start', name(cell))
+        C['save'](directory / 'models.json', self.ready(self.h['api'], name(cell)))
+        self.save_logs(cell, 'native-and-startup')  # Preserve inherited timestamped evidence too.
+        raw = subprocess.run(['docker', 'logs', name(cell)], capture_output=True, timeout=90, check=True)
+        for stream in ('stdout', 'stderr'):
+            (directory / ('native-and-startup.raw.' + stream + '.log')).write_bytes(getattr(raw, stream))
+        startup = (raw.stdout + raw.stderr).decode('utf-8')
+        contract = check_startup(startup, cell, self.h)
+        self.preserve_native(cell, 'ready', required=True)
+        contract['pid_argv'] = self.pid(cell, 'before')['argv']
+        C['save'](directory / 'startup.json', contract)
+        self.observe(cell + '-ready', name(cell))
+        C['save'](directory / 'startup-buffers.json', [line for line in startup.splitlines()
+                  if any(word in line.lower() for word in ('buffer size', 'kv cache size', 'recurrent'))])
+        live = self.inspect(name(cell))
+        check_container(live, cell, self.h)
+        C['save'](directory / 'container-before.json', live)
+        self.active = cell
+
+    def end(self, cell):
+        try:
+            super().end(cell)
+        finally:
+            check_tested(self.h)
+
+    def _preserve_restore_log(self, cell, container_name):
+        try:
+            super()._preserve_restore_log(cell, container_name)
+        finally:
+            # docker cp works on stopped containers, including failed native/startup runs.
+            # Missing files are recorded, never a reason to skip original restoration.
+            self.preserve_native(cell, 'restored')
+
+    def verify_restored(self, destination):
+        errors = []
+        try:
+            record = super().verify_restored(destination)
+        except Exception as exc:
+            record = C['load'](destination)
+            errors.append(dict(check='legacy-restoration', error=repr(exc)))
+        for key, fn in (
+            ('cpu_frozen_candidate', lambda: check_tested(self.h)['freeze']['candidate']),
+            ('paired_n9_equivalence', lambda: check_n9_equivalence(self.h)),
+            ('preserved_cells', self.stopped_cells),
+        ):
+            try:
+                record[key] = fn()
+            except Exception as exc:
+                errors.append(dict(check=key, error=repr(exc)))
+        record['errors'] += errors
+        record['passed'] = not record['errors']
+        C['save'](destination, record)
+        if not record['passed']:
+            raise C['InfraFailure']('restoration/candidate proof failed: ' + repr(record['errors']))
+        return record
+
+    def stopped_cells(self):
+        result = {}
+        for cell in CELLS:
+            directory = self.out / cell
+            if not directory.exists():
+                continue  # A failed preflight/begin need not have created every arm.
+            live = self.inspect(name(cell))
+            check_container(live, cell, self.h)
+            assert not live['State']['Running']
+            if (directory / 'container-before.json').exists():
+                assert C['same_container'](C['load'](directory / 'container-before.json'), live)
+            result[cell] = live
+        return result
+
+
+def read_public(h, directory, job):
+    stem = directory / 'public' / job['stem']
+    read_http, artifact = h['analysis']['read_http'], C['artifact']
+    template = h['off']['L']['apply_request'](job['payload'])
+    rendered = json.loads(read_http(artifact(stem, '.template'), template, '/apply-template'))
+    assert rendered == C['load'](artifact(stem, '.template.response.json'))
+    tokenize = h['off']['L']['tokenize_request'](rendered)
+    response = json.loads(read_http(artifact(stem, '.tokenize'), tokenize, '/tokenize'))
+    assert response == C['load'](artifact(stem, '.tokenize.response.json'))
+    ids, expected = h['off']['L']['token_ids'](response), h['off']['reference_prompt']('A0', job)
+    assert ids == expected, 'public prompt ID mismatch/corrupt input; abort, never retry'
+    assert C['load'](artifact(stem, '.prompt-comparison.json')) == dict(
+        actual_ids=ids, expected_ids=expected, comparison=C['first_difference'](ids, expected),
+        retokenized_output_as_ids_claimed=False)
+    return ids
+
+
+def read_result(h, directory, job):
+    prompt = h['off']['reference_prompt']('A0', job)
+    raw = h['analysis']['read_http'](directory / job['stem'], job['payload'], '/v1/chat/completions')
+    kind = C['qualification_kinds'](job)
+    if kind == 'diagnostic':
+        actual = h['off']['diagnostic_view'](json.loads(raw), prompt)
+        return dict(kind=kind, actual=actual, speculation=C['check_speculation_counts'](actual))
+    result = h['analysis']['normalize'](raw, job['payload'])
+    C['check_output'](result, job, prompt_ids=prompt)
+    return dict(kind=kind, actual=C['result_view'](result), result=result,
+                functional=C['check_functional'](h, job, result))
+
+
+def compare(kind, actual, expected):
+    if kind == 'diagnostic':
+        return C['diagnostic_compare'](actual, expected)
+    return dict(passed=C['result_view'](actual) == C['result_view'](expected),
+                actual=C['result_view'](actual), expected=C['result_view'](expected))
+
+
+def new_report(cell):
+    return dict(cell=cell, role=ROLES[cell], width=C['width_for'](ROLES[cell]), baseline=(cell == 'RVP-A'),
+                passed=False, jobs=[], errors=[], fidelity_failures=[],
+                behavior=dict(natural_stop_cases=0, fixed_length_cases=0, diagnostics_exercised=0,
+                              rejected_draft_observed=0, not_exercised=[]))
+
+
+def add_result(report, job, result, frozen, fresh):
+    kind, actual = result['kind'], result['actual']
+    comparisons = {key: compare(kind, actual, expected['actual']) for key, expected in
+                   (('frozen_a', frozen), ('fresh_a', fresh))}
+    functional = result.get('functional', True)
+    row = dict(stem=job['stem'], kind=kind, actual=actual, functional=functional, comparisons=comparisons,
+               passed=bool(functional and all(c['passed'] for c in comparisons.values())))
+    behavior = report['behavior']
+    if kind == 'diagnostic':
+        # Count valid diagnostics/rejections BEFORE considering equality. Mismatch is not missing behavior.
+        row['speculation'] = result['speculation']
+        behavior['diagnostics_exercised'] += 1
+        behavior['rejected_draft_observed'] += int(result['speculation']['rejected_draft_observed'])
+    else:
+        row['proposal_acceptance_counts'] = {key: result['result']['timings'][key]
+            for key in ('draft_n', 'draft_n_accepted') if key in result['result']['timings']}
+        if functional:
+            behavior['natural_stop_cases' if kind in ('quality', 'anchor') else 'fixed_length_cases'] += 1
+    report['jobs'].append(row)
+    if not row['passed']:
+        report['fidelity_failures'].append(dict(stem=job['stem'], functional=functional, comparisons=comparisons))
+    return row
+
+
+def finish_report(report):
+    behavior = report['behavior']
+    for key, expected in (('natural_stop_cases', 21), ('fixed_length_cases', 2), ('diagnostics_exercised', 2)):
+        if behavior[key] != expected:
+            behavior['not_exercised'].append(key)
+    if report['width'] is not None and not behavior['rejected_draft_observed']:
+        behavior['not_exercised'].append('real rejected draft count')
+    report['passed'] = (len(report['jobs']) == 25 and not report['errors'] and not report['fidelity_failures']
+                        and not behavior['not_exercised'])
+    return report
+
+
+def collect(rt, cell):
+    report = new_report(cell)
+    try:
+        for job in jobs(rt.h):
+            try:
+                result = rt.run_job(cell, job, expected_for_compare=False)
+            except C['FidelityFailure']:
+                # A valid functional failure still has raw HTTP evidence. A prompt failure
+                # has no response and fails closed here; neither case is retried.
+                read_public(rt.h, rt.out / cell, job)
+                result = read_result(rt.h, rt.out / cell, job)
+            frozen = read_result(rt.h, rt.off['ROOT'] / 'run-r1/A0', job)
+            fresh = result if cell == 'RVP-A' else read_result(rt.h, rt.out / 'RVP-A', job)
+            C['save'](rt.out / cell / 'qualification.json', report)
+            if report['baseline'] and not row['passed']:
+                raise C['InfraFailure']('fresh no-draft A failed frozen output/functional gate')
+        finish_report(report)
+        if report['baseline'] and not report['passed']:
+            raise C['InfraFailure']('fresh no-draft A incomplete/invalid')
+    except BaseException as exc:
+        report['errors'].append(dict(error=repr(exc)))
+        raise C['InfraFailure']('qualification aborted: ' + repr(exc)) from exc
+    finally:
+        C['save'](rt.out / cell / 'qualification.json', report)
+    return []  # Never measurements; inherited capture mode also forbids timing.
+
+
+def check_cell_evidence(h, directory, cell):
+    argv = make_create(cell, h)
+    assert C['load'](directory / 'create-argv.json') == argv
+    assert C['load'](directory / 'argv-diff.json') == positional_diff(C['make_create'](ROLES[cell], h), argv)
+    for phase in ('before', 'after'):
+        C['check_pid'](C['load'](directory / ('pid-' + phase + '.json')), ROLES[cell], h)
+        check_container(C['load'](directory / ('container-' + phase + '.json')), cell, h)
+    assert C['same_container'](C['load'](directory / 'container-before.json'), C['load'](directory / 'container-after.json'))
+    logs = {}
+    for phase in ('native-and-startup', 'server', 'restored-final'):
+        logs[phase] = [(directory / (phase + '.' + stream + '.log')).read_bytes() for stream in ('stdout', 'stderr')]
+        h['off']['check_off_log'](b''.join(logs[phase]).decode())
+    for i in range(2):
+        assert logs['server'][i].startswith(logs['native-and-startup'][i])
+        assert logs['restored-final'][i].startswith(logs['server'][i])
+    raw = b''.join((directory / ('native-and-startup.raw.' + stream + '.log')).read_bytes()
+                   for stream in ('stdout', 'stderr')).decode()
+    startup = check_startup(raw, cell, h)
+    startup['pid_argv'] = C['load'](directory / 'pid-before.json')['argv']
+    assert C['load'](directory / 'startup.json') == startup
+    for tag, filename in NATIVE_LOGS.items():
+        native = (directory / ('ready-' + filename)).read_bytes()
+        assert native == (directory / ('restored-' + filename)).read_bytes()
+        A['check_router_native_output'](native.decode(), tag)
+        if tag == 'router_single2':
+            assert native.decode() in raw, 'raw old-30 log absent from startup stream'
+    return C['log_duration_stats'](b''.join(logs['restored-final']).decode())
+
+
+def analyze(h):
+    summary = C['load'](OUT / 'summary.json')
+    assert summary['status'] == 'captured' and summary['restored'] and summary['mode'] == MODE
+    assert summary['order'] == summary['completed'] == list(CELLS)
+    assert summary['timing_permitted'] is False and summary['measured_attempts'] == []
+    # A separate CLI invocation, with fresh live checks BEFORE any qualification claim.
+    Runtime(h, OUT, MODE).verify_restored(OUT / 'independent-restoration.json')
+    check_tested(h)
+    assert C['load'](OUT / 'tested-code.json') == C['load'](ROOT / 'preparation/public-tested-code.json')
+    assert C['load'](OUT / 'restoration.json')['passed']
+    smoke = C['load'](OUT / 'restored-smoke.result.json')
+    assert smoke['text'].strip() == 'READY' and smoke['finish_reason'] == 'stop'
+    analysis = dict(status='failed', independently_restored=True, reports={}, qualified_widths=[],
+                    timing_permitted=False, promotion_permitted=False, probabilities_compared=False,
+                    raw_f32_equality_claimed=False, retokenized_output_as_ids_claimed=False)
+    try:
+        for cell in CELLS:
+            directory, report = OUT / cell, new_report(cell)
+            stats = check_cell_evidence(h, directory, cell)
+            captured = C['load'](directory / 'qualification.json')
+            assert [row['stem'] for row in captured['jobs']] == [job['stem'] for job in jobs(h)]
+            assert captured['errors'] == []
+            analysis['reports'][cell] = report
+            for job in jobs(h):
+                read_public(h, directory, job)
+                actual = read_result(h, directory, job)
+                frozen = read_result(h, h['off']['ROOT'] / 'run-r1/A0', job)
+                fresh = actual if cell == 'RVP-A' else read_result(h, OUT / 'RVP-A', job)
+                add_result(report, job, actual, frozen, fresh)
+            finish_report(report)
+            assert report == captured, 'capture bookkeeping differs from independently reread raw evidence'
+            report['cumulative_server_statistics'] = stats
+            if cell == 'RVP-A':
+                assert report['passed'], 'fresh baseline failed'
+        analysis['qualified_widths'] = [r['width'] for r in analysis['reports'].values() if r['width'] and r['passed']]
+        analysis['status'] = 'analyzed'
+    except BaseException as exc:
+        analysis['error'] = repr(exc)
+        raise
+    finally:
+        C['save'](OUT / 'analysis.json', analysis)
+    print('ANALYZED_AFTER_RESTORE qualified_widths=' + repr(analysis['qualified_widths']) + ' timing_permitted=False', flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument('--lead-run-qualification', action='store_true')
+    action.add_argument('--lead-after-restore', action='store_true')
+    args = parser.parse_args()
+    assert socket.gethostname() == 'inference-host' and Path(__file__).resolve().parent == ROOT
+    h = C['helpers']()
+    if args.lead_run_qualification:
+        tested = check_tested(h)
+        OUT.mkdir(exist_ok=False)
+        (OUT / 'declaration.md').write_bytes((ROOT / 'qualification.md').read_bytes())
+        C['save'](OUT / 'tested-code.json', tested)
+        K['capture'](Runtime(h, OUT, MODE), CELLS, collect)
+        print('CAPTURED_RESTORED analysis_pending=True timing_permitted=False', flush=True)
+    else:
+        analyze(h)
+
+
+if __name__ == '__main__':
+    main()
