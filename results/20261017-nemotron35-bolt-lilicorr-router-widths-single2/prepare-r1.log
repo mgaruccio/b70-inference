@@ -1,0 +1,33 @@
++ uname -sr
+Linux 7.2.0-1-cachyos
++ python3 --version
+Python 3.14.7
++ g++ --version
+g++ (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
++ df -h /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p2  462G  448G   12G  98% /home
++ python3 -B /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/inputs-r1/prepare.py prepare-r1
+PINNED_PARENT_SOURCE_AND_FIVE_BINARIES_OK
+COMMAND ['git', 'apply', '--check', '--verbose', '/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/router-widths-single2.patch']
+Checking patch ggml/src/ggml-sycl/ggml-sycl.cpp...
+Checking patch tests/test-backend-ops.cpp...
+COMMAND ['patch', '--dry-run', '--batch', '--forward', '--fuzz=0', '-p1']
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
+checking file tests/test-backend-ops.cpp
+COMMAND ['patch', '--batch', '--forward', '--fuzz=0', '-p1']
+patching file ggml/src/ggml-sycl/ggml-sycl.cpp
+patching file tests/test-backend-ops.cpp
+COMMAND ['git', 'apply', '--check', '--reverse', '--verbose', '/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/router-widths-single2.patch']
+Checking patch tests/test-backend-ops.cpp...
+Checking patch ggml/src/ggml-sycl/ggml-sycl.cpp...
+COMMAND ['patch', '--batch', '--reverse', '--fuzz=0', '-p1']
+patching file ggml/src/ggml-sycl/ggml-sycl.cpp
+patching file tests/test-backend-ops.cpp
+FULL_PATCH_FORWARD_AND_REVERSE_EXACT_OK
+RETAINED_70_COMPUTATIONAL_TESTS; 85 exclusions per width + 17 new negatives = 510 total
+PREPARED /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1

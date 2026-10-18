@@ -1,0 +1,10 @@
+Lead-reported launch failure (no SSH or CPU tests started):
+background task: b141cc75d
+fish: Expected a string, but found a redirection
+bash <<'LOCAL'
+     ^
+
+The outer heredoc was rejected by the inherited Fish shell before SSH.
+Lead relaunched using explicit bash -c in bg_run task b5de4a2af; that task
+executed worker-scratch/cpu-checks-r1.sh prepare-r1 r1 and retained cpu-r1.log.
+This is a preparation command-launch failure, not an inference/model failure.

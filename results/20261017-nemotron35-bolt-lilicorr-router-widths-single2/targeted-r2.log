@@ -1,0 +1,43 @@
++ cd /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2
++ python3 -B test-trace.py Trace.test_parameters_mounts_frozen_payload_and_order Trace.test_route_gate_with_synthetic_runtime_metadata
+test_parameters_mounts_frozen_payload_and_order (__main__.Trace.test_parameters_mounts_frozen_payload_and_order) ... ok
+test_route_gate_with_synthetic_runtime_metadata (__main__.Trace.test_route_gate_with_synthetic_runtime_metadata) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.028s
+
+OK
++ for f in router-widths-single2.patch run-trace.py analyze-trace.py build-candidate.sh source-proof.json test-widths.py
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/router-widths-single2.patch /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/router-widths-single2.patch
++ for f in router-widths-single2.patch run-trace.py analyze-trace.py build-candidate.sh source-proof.json test-widths.py
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/run-trace.py /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/run-trace.py
++ for f in router-widths-single2.patch run-trace.py analyze-trace.py build-candidate.sh source-proof.json test-widths.py
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/analyze-trace.py /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/analyze-trace.py
++ for f in router-widths-single2.patch run-trace.py analyze-trace.py build-candidate.sh source-proof.json test-widths.py
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/build-candidate.sh /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/build-candidate.sh
++ for f in router-widths-single2.patch run-trace.py analyze-trace.py build-candidate.sh source-proof.json test-widths.py
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/source-proof.json /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/source-proof.json
++ for f in router-widths-single2.patch run-trace.py analyze-trace.py build-candidate.sh source-proof.json test-widths.py
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/test-widths.py /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/test-widths.py
++ diff -u /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/test-trace.py /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/test-trace.py
+--- /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r1/test-trace.py	2026-10-18 02:18:07.591687514 -0400
++++ /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/test-trace.py	2026-10-18 02:24:22.418383356 -0400
+@@ -776,7 +776,7 @@
+     def test_parameters_mounts_frozen_payload_and_order(self):
+         before = copy.deepcopy(BASE)
+         self.assertEqual(M['ORDER'], ('S0', 'C0'))
+-        self.assertEqual(M['PREFIX'], 'bolt-lilicorr-router-single2-r1-')
++        self.assertEqual(M['PREFIX'], 'bolt-lilicorr-router-widths-single2-r1-')
+         for label in M['ORDER']:
+             capture = M['ROOT'] / 'run-r1' / label / 'capture'
+             argv = M['make_create'](BASE, label, IMAGE, capture, OLD)
+@@ -1333,7 +1333,7 @@
+         latent = ('blk.1.ffn_latent_down.weight', 'blk.1.ffn_latent_up.weight')
+         for label in ('S0', 'C0'):
+             cell = A['parent_reference'](label)[0]
+-            metadata = json.loads((cell / 'alignment.json').read_text())['route_analysis']
++            metadata = json.loads(A['parent_reference'](label)[1].read_text())['route_analysis']
+             A['assert_actual_route_gates'](metadata, label)  # IQ2 computational parent is already aligned
+             inject_block7_routes(metadata)
+             if label == 'C0':
++ test 1 -eq 1

@@ -1,0 +1,52 @@
++ sed -n 145,195p /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-single2-r1/ggml/src/ggml-sycl/ggml-sycl.cpp
+int g_ggml_sycl_enable_sparse_fa = 0;
+int g_ggml_sycl_debug_sparse_fa = 0;
+int g_ggml_sycl_sparse_fa_margin = 256;
+
+// Temporary, default-off host-only dispatch diagnostics.  The capture environment is
+// already owned by the BOLT_VERIFY observer; this logger never reads device memory or
+// changes a dispatch decision.  Tensor copies used by MUL_MAT_ID retain the source name.
+static bool bolt_route_enabled() {
+    const char * dir = std::getenv("BOLT_VERIFY_CAPTURE_DIR");
+    return dir && dir[0];
+}
+
+static bool bolt_route_selected_weight(const ggml_tensor * weight) {
+    if (!weight || !weight->name[0]) {
+        return false;
+    }
+    return std::strncmp(weight->name, "blk.0.", 6) == 0 ||
+           std::strncmp(weight->name, "blk.1.", 6) == 0 ||
+           std::strncmp(weight->name, "blk.7.", 6) == 0 ||
+           std::strcmp(weight->name, "output.weight") == 0;
+}
+
+static const char * bolt_route_name(const ggml_tensor * tensor) {
+    return tensor && tensor->name[0] ? tensor->name : "-";
+}
+
+static const char * bolt_route_type_name(const ggml_tensor * tensor) {
+    return tensor ? ggml_type_name(tensor->type) : "-";
+}
+
+static const char * bolt_route_op_name(const ggml_tensor * tensor) {
+    return tensor ? ggml_op_name(tensor->op) : "-";
+}
+
+static int64_t bolt_route_ne(const ggml_tensor * tensor, int dim) {
+    return tensor ? tensor->ne[dim] : 0;
+}
+
+static size_t bolt_route_nb(const ggml_tensor * tensor, int dim) {
+    return tensor ? tensor->nb[dim] : 0;
+}
+
+static bool bolt_route_reordered(const ggml_tensor * weight) {
+    const auto * extra = weight ? static_cast<const ggml_tensor_extra_gpu *>(weight->extra) : nullptr;
+    return extra && extra->optimized_feature.reorder;
+}
+
+static int32_t bolt_route_src1_precision(const ggml_tensor * dst) {
+    // This is the activation precision tag (op_params[3]), not accumulation precision.
+    return dst ? ggml_sycl_src1_prec(dst) : -1;
+}

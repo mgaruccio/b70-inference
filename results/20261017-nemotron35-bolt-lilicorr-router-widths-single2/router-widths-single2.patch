@@ -1,0 +1,72 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -161,6 +161,10 @@
+     return std::strncmp(weight->name, "blk.0.", 6) == 0 ||
+            std::strncmp(weight->name, "blk.1.", 6) == 0 ||
+            std::strncmp(weight->name, "blk.7.", 6) == 0 ||
++           std::strcmp(weight->name, "blk.8.ffn_gate_inp.weight") == 0 ||
++           std::strcmp(weight->name, "blk.21.ffn_gate_inp.weight") == 0 ||
++           std::strcmp(weight->name, "blk.37.ffn_gate_inp.weight") == 0 ||
++           std::strcmp(weight->name, "blk.48.ffn_gate_inp.weight") == 0 ||
+            std::strcmp(weight->name, "output.weight") == 0;
+ }
+ 
+@@ -5606,8 +5610,10 @@
+         ggml_get_op_params_i32(dst, 1) != 0 || src0->op != GGML_OP_NONE ||
+         (src0->flags & (GGML_TENSOR_FLAG_INPUT | GGML_TENSOR_FLAG_OUTPUT | GGML_TENSOR_FLAG_COMPUTE)) ||
+         src0->type != GGML_TYPE_F32 || src1->type != GGML_TYPE_F32 || dst->type != GGML_TYPE_F32 ||
+-        src0->ne[0] != 4096 || src0->ne[1] != 240 ||
+-        src1->ne[0] != 4096 || src1->ne[1] != 2 || dst->ne[0] != 240 || dst->ne[1] != 2) {
++        src0->ne[0] != 4096 ||
++        (src0->ne[1] != 240 && src0->ne[1] != 304 && src0->ne[1] != 368 &&
++         src0->ne[1] != 432 && src0->ne[1] != 496) ||
++        src1->ne[0] != 4096 || src1->ne[1] != 2 || dst->ne[0] != src0->ne[1] || dst->ne[1] != 2) {
+         return false;
+     }
+     constexpr char suffix[] = ".ffn_gate_inp.weight";
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5666,8 +5666,8 @@
+     const char * weight;
+     const int layout; // 0: ordinary; 1: offset view; 2: padded-column view
+ 
+-    test_mul_mat_router_single2(const char * weight, int64_t n, int layout = 0) :
+-        test_mul_mat(GGML_TYPE_F32, GGML_TYPE_F32, 240, n, 4096, {1, 1}, {1, 1}),
++    test_mul_mat_router_single2(const char * weight, int64_t n, int layout = 0, int64_t m = 240) :
++        test_mul_mat(GGML_TYPE_F32, GGML_TYPE_F32, m, n, 4096, {1, 1}, {1, 1}),
+         weight(weight), layout(layout) {}
+ 
+     std::string vars() override {
+@@ -11679,6 +11679,32 @@
+     test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.ffn_gate_inp.weight", 2, 1));
+     test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.ffn_gate_inp.weight", 2, 2));
+ 
++    // Six identical profiles per additional actual-model width: 30 router cases total.
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_router_single2("blk.8.ffn_gate_inp.weight", n, 0, 304));
++    }
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.width304.unrelated.weight", 2, 0, 304));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.8.ffn_gate_inp.weight", 2, 1, 304));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.8.ffn_gate_inp.weight", 2, 2, 304));
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_router_single2("blk.21.ffn_gate_inp.weight", n, 0, 432));
++    }
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.width432.unrelated.weight", 2, 0, 432));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.21.ffn_gate_inp.weight", 2, 1, 432));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.21.ffn_gate_inp.weight", 2, 2, 432));
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_router_single2("blk.37.ffn_gate_inp.weight", n, 0, 368));
++    }
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.width368.unrelated.weight", 2, 0, 368));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.37.ffn_gate_inp.weight", 2, 1, 368));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.37.ffn_gate_inp.weight", 2, 2, 368));
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_router_single2("blk.48.ffn_gate_inp.weight", n, 0, 496));
++    }
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.width496.unrelated.weight", 2, 0, 496));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.48.ffn_gate_inp.weight", 2, 1, 496));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.48.ffn_gate_inp.weight", 2, 2, 496));
++
+     // Experimental NVFP4 reorder lifetime/scale regressions. Filter with -p nvfp4_reorder=1.
+     for (bool f32 : {false, true}) {
+         for (int64_t k : {64, 192}) {

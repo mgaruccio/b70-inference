@@ -1,0 +1,27 @@
++ cd /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r3
++ python3 -B test-widths.py Widths.test_only_four_exact_logging_selectors_added Widths.test_actual_native_generator_yields_exact_thirty_profiles Widths.test_native_old_six_and_partial_widths_cannot_pass
+test_only_four_exact_logging_selectors_added (__main__.Widths.test_only_four_exact_logging_selectors_added) ... ok
+test_actual_native_generator_yields_exact_thirty_profiles (__main__.Widths.test_actual_native_generator_yields_exact_thirty_profiles) ... ok
+test_native_old_six_and_partial_widths_cannot_pass (__main__.Widths.test_native_old_six_and_partial_widths_cannot_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.339s
+
+OK
+actual compiled route selector: all 10 native weight names selected; 16 off-scope names rejected
++ python3 -B test-trace.py Trace.test_router_shell_gate_blocks_partial_or_failed_native_before_server Trace.test_router_compiled_actual_preflight_offsets_metadata_and_no_partial_launch
+test_router_shell_gate_blocks_partial_or_failed_native_before_server (__main__.Trace.test_router_shell_gate_blocks_partial_or_failed_native_before_server) ... ok
+test_router_compiled_actual_preflight_offsets_metadata_and_no_partial_launch (__main__.Trace.test_router_compiled_actual_preflight_offsets_metadata_and_no_partial_launch) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.034s
+
+OK
+router width=240 preflight: 102 exclusions; distinct columns, metadata, canaries, late-preflight no-partial-launch OK
+router width=304 preflight: 102 exclusions; distinct columns, metadata, canaries, late-preflight no-partial-launch OK
+router width=368 preflight: 102 exclusions; distinct columns, metadata, canaries, late-preflight no-partial-launch OK
+router width=432 preflight: 102 exclusions; distinct columns, metadata, canaries, late-preflight no-partial-launch OK
+router width=496 preflight: 102 exclusions; distinct columns, metadata, canaries, late-preflight no-partial-launch OK
+all five widths: 510 exclusions OK
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/analyze-trace.py analyze-trace.py
++ cmp /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/worker-scratch/prepare-r2/test-trace.py test-trace.py
