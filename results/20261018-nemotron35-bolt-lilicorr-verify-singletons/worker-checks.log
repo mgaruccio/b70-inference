@@ -1,0 +1,128 @@
++ pwd -P
+/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons
++ uname -a
+Linux desktop 7.2.9-2-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 08 Oct 2026 15:06:16 +0000 x86_64 GNU/Linux
++ python3 --version
+Python 3.14.7
++ g++ --version
++ head -1
+g++ (GCC) 16.2.1 20260810
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/check-source.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate
+{
+  "source_scope": [
+    "ggml/src/ggml-sycl/ggml-sycl.cpp",
+    "src/llama-graph.cpp",
+    "src/models/nemotron-h.cpp",
+    "tests/test-backend-ops.cpp"
+  ],
+  "patch_sha256": "df09643806327b583527b428669371e400b24a63344ab8ccb3f9e59036901f91",
+  "source_hashes": {
+    "ggml/src/ggml-sycl/ggml-sycl.cpp": {
+      "parent": "8d6c1f9314a0ba8be51f5ed7ac3e3c79321e8dd3a950ab6a6ba1a0b5d8b4211d",
+      "candidate": "eabede714b1c2fbb3e578af7fe9dd43999b3b63c4f229b27f3f563a7caa57664"
+    },
+    "src/llama-graph.cpp": {
+      "parent": "c28d647b7c9b552089259431eb7f671e9d1409cdeaf64f66d47f33de981a4abc",
+      "candidate": "d530c7dd51948c95f721bf70d4b1fd996cf780af44e1cae997b618282a665cdc"
+    },
+    "src/models/nemotron-h.cpp": {
+      "parent": "a3858c2c00cac43665f1fb22824a39ec7f94190bb10f77fe51cf8e3630d6bd38",
+      "candidate": "daf5f927c0668fb0d1dd691c15ecd87f5c9fcadb2e1fdfb2b26e87610a3861e3"
+    },
+    "tests/test-backend-ops.cpp": {
+      "parent": "6a5835efbcae4d313272303fb7be3d3751a599778db1831fd7029bba1e77b728",
+      "candidate": "df854d115d784a8adb7322811cfe7f2912747372eede1627e8f3dd26111d3197"
+    }
+  },
+  "candidate_checked": true,
+  "native_and_public_fidelity": "NOT_TESTED",
+  "rejected_patch_mutations": [
+    "width9",
+    "width1",
+    "mark",
+    "graph-count",
+    "output-count",
+    "architecture",
+    "identity",
+    "mtp",
+    "all-column-preflight",
+    "stride-overflow",
+    "alias"
+  ]
+}
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/test-guards.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate
+CPU_GUARDS_PASSED cases=313 (stubs; no GPU execution)
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/test-native.py -v
+test_command_is_inherited_plus_new_selectors (__main__.NativeTests.test_command_is_inherited_plus_new_selectors) ... ok
+test_complete_and_colored (__main__.NativeTests.test_complete_and_colored) ... ok
+test_rejects_bad_evidence (__main__.NativeTests.test_rejects_bad_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.861s
+
+OK
++ bash -n /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/build-candidate.sh
++ python3 -B - /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons
+PYTHON_AND_EMBEDDED_BUILD_SYNTAX_PASSED
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/native.py --print-native-command
++ bash -n /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/native-command.sh
++ g++ -std=c++17 -fsyntax-only -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/ggml/include /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate/tests/test-backend-ops.cpp
++ for file in src/llama-graph.cpp src/models/nemotron-h.cpp
++ g++ -std=c++17 -fsyntax-only -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/ggml/include -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/include -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/src -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/src/models /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate/src/llama-graph.cpp
++ for file in src/llama-graph.cpp src/models/nemotron-h.cpp
++ g++ -std=c++17 -fsyntax-only -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/ggml/include -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/include -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/src -I/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/headers/src/models /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate/src/models/nemotron-h.cpp
++ patch --directory=/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent --fuzz=0 --dry-run --batch --forward -p1
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
+checking file src/llama-graph.cpp
+checking file src/models/nemotron-h.cpp
+checking file tests/test-backend-ops.cpp
++ patch --directory=/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate --fuzz=0 --dry-run --batch --reverse -p1
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
+checking file src/llama-graph.cpp
+checking file src/models/nemotron-h.cpp
+checking file tests/test-backend-ops.cpp
++ printf 'WORKER_CPU_CLOSE_GATE_PASSED; no native SYCL build, GPU/model or HTTP run\n'
+WORKER_CPU_CLOSE_GATE_PASSED; no native SYCL build, GPU/model or HTTP run
+
+Final staging whitespace checks:
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:7: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:32: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:155: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:160: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:167: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:191: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:195: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:210: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:222: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:236: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:253: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:258: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:262: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:269: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:277: trailing whitespace.
++ 
+results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch:418: trailing whitespace.
++ 
+NON_PATCH_AND_ADDED_SOURCE_WHITESPACE_PASSED; outer warnings are literal unified-diff context only
+test_command_is_inherited_plus_new_selectors (__main__.NativeTests.test_command_is_inherited_plus_new_selectors) ... ok
+test_complete_and_colored (__main__.NativeTests.test_complete_and_colored) ... ok
+test_rejects_bad_evidence (__main__.NativeTests.test_rejects_bad_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.877s
+
+OK
