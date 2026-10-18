@@ -1,0 +1,12 @@
+Read-only source inspection attempt1 (exit2): Bash printf format began with --- and was parsed as an option:
+bash: line 3: printf: --: invalid option
+printf: usage: printf [-v var] format [arguments]
+No source read after the failing printf; no files or runtime state changed.
+
+Read-only source inspection attempt2 (exit127): outer Bash -lc single-quote wrapper incorrectly nested heredoc quotes:
+/bin/bash: line 12: llama_log_set: command not found
+/bin/bash: line 12: common_log_add: command not found
+/bin/bash: line 13: log_callback "$P/src/llama.cpp" "$P/common/common.cpp" "$P/common/log.cpp" "$P/tools/server/server.cpp" | head -n 40
+REMOTE: No such file or directory
+source: line 4: warning: here-document at line 1 delimited by end-of-file (wanted `REMOTE')
+No files or runtime state changed. Corrected to explicit local `bash <<'LOCAL'` and SSH remote `'bash -s' <<'REMOTE'`; source inspection succeeded.

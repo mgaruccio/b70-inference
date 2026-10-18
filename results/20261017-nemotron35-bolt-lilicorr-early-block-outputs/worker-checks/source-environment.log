@@ -1,0 +1,35 @@
+Worker read-only environment and parent checks; NO candidate build or live inference
+2026-10-18T03:35:22Z
+inference-host
+Linux 7.2.0-1-cachyos x86_64
+Python 3.14.7
+g++ (GCC) 16.2.1 20260810
+parent /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-single2-r1
+candidate /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-early-block-outputs-r1
+parent_binary libggml-sycl.so.0 b2b3b7950c471bb5658f8474eb1866157fd3311a183e07d03a665842a8cad3d9
+parent_binary libllama-common.so 934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812
+parent_binary libllama-server-impl.so 43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede
+parent_binary llama-server 22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d
+parent_binary test-backend-ops 5f43858b1cbd1083ced719a8700f93c30a0e68e94f307541f0bee9e43f5e8389
+parent_source ggml/src/ggml-sycl/ggml-sycl.cpp 430c67f15a938601611cc5e73a3d25b07fb4fe35b688782833a875ebd522c920
+parent_source tests/test-backend-ops.cpp f694ba3793ff6cd511fae0b3edfe92ef1037d5236a925ac940d484df5e2e5672
+parent_reference S0 /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-single2/run-r1/S0 /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-single2/reanalysis-S0.json
+parent_reference C0 /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-single2/continuation-c0/run-r1/C0 /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-single2/continuation-c0/run-r1/C0/alignment.json
+prepared_asset early-block-outputs.patch 9e7868502e0f89df9e6bdaec8337f194c2d08c22243e18ce42aba9a7d1e60531
+prepared_asset build-candidate.sh 3e5e0189274f5a78a0917387479c7c88650405cc3e0f526db977dc3def0bb984
+prepared_asset run-trace.py a77d2110cf71ffdb044786c3b4696eb422189bcf90bab2c79ac161c5ac449868
+prepared_asset analyze-trace.py 588a1463ebf66ac017619f1b28e98b41367753107f0f0385d948b28adaa955ea
+prepared_asset test-trace.py 0bba09e55f3e235a65a7cda6e406f3c351ede94051515d8d98f474a635458559
+prepared_asset test-observer.cpp 4dfa2bab768d7f40e4ed5e412c4ea375976e7201112d470a3e8e247da946a999
+Read-only parent five hashes/source hashes/mapping passed; candidate and real run absent
+Fresh research URL: https://github.khronos.org/SYCL_Reference/iface/queue.html
+<section class="api-class" id="sycl-property-queue-in-order">
+<h3><code class="docutils literal notranslate"><span class="pre">sycl::property::queue::in_order</span></code><a class="headerlink" href="#sycl-property-queue-in-order" title="Link to this heading">#</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">in_order</span></code> property adds the requirement that a <code class="docutils literal notranslate"><span class="pre">sycl::queue</span></code> provides
+in-order semantics whereby commands submitted to said <code class="docutils literal notranslate"><span class="pre">sycl::queue</span></code> are
+executed in the order in which they are submitted.
+Commands submitted in this fashion can be viewed as-if having an implicit
+dependence on the previous command submitted to that <code class="docutils literal notranslate"><span class="pre">sycl::queue</span></code>.
+Using the <code class="docutils literal notranslate"><span class="pre">in_order</span></code> property makes no guarantees about the ordering
+of commands submitted to different queues with respect to each other.</p>
+<section id="id6">
