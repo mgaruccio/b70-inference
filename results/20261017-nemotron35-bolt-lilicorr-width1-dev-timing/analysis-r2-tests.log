@@ -1,0 +1,39 @@
+9fa2389696921754f8f65a18a1b170806fafc388f7b51c5b69a327de14881bef  analyze-timing.py
+8c5f115f62e3ca5f1866f26c68ffb1dd3b8f714565e70d451359a22f045feef6  analyze-timing-r2.py
+fde934a5a9b28aa0fab2ed89dd776a3eb4f30cfbcd6ba09a93258b4ded01e652  test-analysis-r2.py
+--- analyze-timing.py	2026-10-18 08:47:50.000000000 -0400
++++ analyze-timing-r2.py	2026-10-18 09:10:14.000000000 -0400
+@@ -43,8 +43,12 @@
+         C['check_original_log'](log, C['original_contract'](original, h))
+         for phase in ('before', 'after'):
+             current = load(cell / ('container-' + phase + '.json'))
+-            for key in ('Id', 'Config', 'HostConfig', 'Mounts'):
++            for key in ('Id', 'Config', 'HostConfig'):
+                 assert current[key] == original[key], ('original mutated', key)
++            # Docker may reorder Mounts on inspect/restart. Preserve every field
++            # and duplicate count; only list ordering is irrelevant.
++            canonical_mounts = lambda mounts: sorted(json.dumps(m, sort_keys=True) for m in mounts)
++            assert canonical_mounts(current['Mounts']) == canonical_mounts(original['Mounts']), ('original mutated', 'Mounts')
+         assert load(cell / 'stopped-log-prefix.json')
+     quality = []
+     for job in pre:
+@@ -158,7 +162,7 @@
+     h = C['helpers']()
+     C['check_frozen'](h)
+     out = ROOT / 'run-r1'
+-    analysis = out / 'analysis-r1'
++    analysis = out / 'analysis-r2'
+     analysis.mkdir(exist_ok=False)
+     runner = runpy.run_path(str(ROOT / 'run-timing.py'))
+     # Independent fresh live health, exact original, ownership, hardware, sources/five hashes
+test_all_saved_cells_pass_without_changing_any_measurement_row (__main__.MountOrderTests.test_all_saved_cells_pass_without_changing_any_measurement_row) ... ok
+test_every_mount_field_and_multiplicity_remain_protected (__main__.MountOrderTests.test_every_mount_field_and_multiplicity_remain_protected) ... ok
+test_frozen_capture_code_and_references_unchanged (__main__.MountOrderTests.test_frozen_capture_code_and_references_unchanged) ... ok
+test_original_failure_reproduces (__main__.MountOrderTests.test_original_failure_reproduces) ... ok
+test_other_original_fields_still_exact (__main__.MountOrderTests.test_other_original_fields_still_exact) ... ok
+test_reordered_complete_mount_objects_pass (__main__.MountOrderTests.test_reordered_complete_mount_objects_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 27.838s
+
+OK

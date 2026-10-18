@@ -1,0 +1,13 @@
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+lspci -Dnn -s 0000:0b:00.0
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-width1-dev-timing/analyze-timing.py", line 174, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-width1-dev-timing/analyze-timing.py", line 169, in main
+    assert report['status'] == 'passed', report['errors']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: [{'cell': 'O1', 'scope': 'prevalidation', 'error': "AssertionError(('original mutated', 'Mounts'))"}, {'cell': 'O2', 'scope': 'prevalidation', 'error': "AssertionError(('original mutated', 'Mounts'))"}]

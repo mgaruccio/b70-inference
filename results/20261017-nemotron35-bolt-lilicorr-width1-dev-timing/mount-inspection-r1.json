@@ -1,0 +1,108 @@
+{
+  "failure": [
+    {
+      "cell": "O1",
+      "scope": "prevalidation",
+      "error": "AssertionError(('original mutated', 'Mounts'))"
+    },
+    {
+      "cell": "O2",
+      "scope": "prevalidation",
+      "error": "AssertionError(('original mutated', 'Mounts'))"
+    }
+  ],
+  "mount_inspection": [
+    {
+      "cell": "O1",
+      "phase": "before",
+      "running": true,
+      "same_id": true,
+      "same_config": true,
+      "same_hostconfig": true,
+      "mount_list_equal": false,
+      "all_complete_mount_objects_equal_unordered": true,
+      "original_destinations": [
+        "/src",
+        "/models",
+        "/opt/onednn",
+        "/dev/dri"
+      ],
+      "current_destinations": [
+        "/dev/dri",
+        "/src",
+        "/models",
+        "/opt/onednn"
+      ],
+      "existing_live_restoration_contract_passed": true
+    },
+    {
+      "cell": "O1",
+      "phase": "after",
+      "running": false,
+      "same_id": true,
+      "same_config": true,
+      "same_hostconfig": true,
+      "mount_list_equal": false,
+      "all_complete_mount_objects_equal_unordered": true,
+      "original_destinations": [
+        "/src",
+        "/models",
+        "/opt/onednn",
+        "/dev/dri"
+      ],
+      "current_destinations": [
+        "/dev/dri",
+        "/src",
+        "/models",
+        "/opt/onednn"
+      ]
+    },
+    {
+      "cell": "O2",
+      "phase": "before",
+      "running": true,
+      "same_id": true,
+      "same_config": true,
+      "same_hostconfig": true,
+      "mount_list_equal": false,
+      "all_complete_mount_objects_equal_unordered": true,
+      "original_destinations": [
+        "/src",
+        "/models",
+        "/opt/onednn",
+        "/dev/dri"
+      ],
+      "current_destinations": [
+        "/dev/dri",
+        "/src",
+        "/models",
+        "/opt/onednn"
+      ],
+      "existing_live_restoration_contract_passed": true
+    },
+    {
+      "cell": "O2",
+      "phase": "after",
+      "running": true,
+      "same_id": true,
+      "same_config": true,
+      "same_hostconfig": true,
+      "mount_list_equal": false,
+      "all_complete_mount_objects_equal_unordered": true,
+      "original_destinations": [
+        "/src",
+        "/models",
+        "/opt/onednn",
+        "/dev/dri"
+      ],
+      "current_destinations": [
+        "/opt/onednn",
+        "/dev/dri",
+        "/src",
+        "/models"
+      ],
+      "existing_live_restoration_contract_passed": true
+    }
+  ],
+  "initial_inspection_note": "First inspection mistakenly applied the live Running assertion to the intentionally stopped O1 after-snapshot; it exited before writing this file. No inference was repeated."
+}
