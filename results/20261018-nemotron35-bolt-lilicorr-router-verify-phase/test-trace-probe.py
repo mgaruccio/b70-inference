@@ -5,6 +5,7 @@ import os
 import runpy
 import socket
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -48,6 +49,61 @@ class TraceProbeFixtures(unittest.TestCase):
             self.assertIn('export LLAMA_TRACE=1', derived[-1])
             self.assertIn('BOLT_TRACE_TENSORS=0', derived)
             self.assertIn('ONEDNN_VERBOSE=0', derived)
+
+    def test_fresh_container_identity_without_relaxing_launch_contract(self):
+        for cell in T['CELLS']:
+            record = copy.deepcopy(T['_base_container'](T['role_for'](cell)))
+            capture = T['capture_path'](cell, self.tmp)
+            record['Id'] = 'a' * 64
+            record['Name'] = '/' + T['trace_name'](cell)
+            record['Config']['Hostname'] = record['Id'][:12]
+            record['Config']['Cmd'] = T['make_create'](cell, self.tmp)[-3:]
+            record['Config']['Env'] += [key + '=' + value for key, value in T['TRACE_ENV'].items()]
+            record['HostConfig']['Binds'].append(str(capture) + ':/capture')
+            record['Mounts'].append(dict(Type='bind', Source=str(capture), Destination='/capture',
+                                         Mode='', RW=True, Propagation='rprivate'))
+            untouched = copy.deepcopy(record)
+            self.assertTrue(T['check_trace_container'](record, cell, self.tmp))
+            self.assertEqual(record, untouched)
+            for value in (None, False):
+                default_oom = copy.deepcopy(record)
+                default_oom['HostConfig']['OomKillDisable'] = value
+                unchanged = copy.deepcopy(default_oom)
+                self.assertTrue(T['check_trace_container'](default_oom, cell, self.tmp))
+                self.assertEqual(default_oom, unchanged)
+            disabled_oom = copy.deepcopy(record)
+            disabled_oom['HostConfig']['OomKillDisable'] = True
+            with self.assertRaises(AssertionError):
+                T['check_trace_container'](disabled_oom, cell, self.tmp)
+            for key, value in (('Hostname', 'wrong-host'), ('Image', 'wrong-image')):
+                bad = copy.deepcopy(record)
+                bad['Config'][key] = value
+                with self.assertRaises(AssertionError):
+                    T['check_trace_container'](bad, cell, self.tmp)
+            bad = copy.deepcopy(record)
+            self.assertTrue(bad['HostConfig']['PortBindings'])
+            bad['HostConfig']['PortBindings'] = {}
+            with self.assertRaises(AssertionError):
+                T['check_trace_container'](bad, cell, self.tmp)
+
+    def test_trace_warmup_routes_preserve_native_and_model_startup_gates(self):
+        h = C['helpers']()
+        for cell in T['CELLS']:
+            baseline_cell = T['BASE_CELLS'][T['role_for'](cell)]
+            directory = T['ROOT'] / 'qualification-r1' / baseline_cell
+            raw = ''.join((directory / ('native-and-startup.raw.' + stream + '.log')).read_text()
+                          for stream in ('stdout', 'stderr'))
+            route = next(line for line in raw.splitlines() if 'BOLT_ROUTE route=' in line)
+            # Synthetic fixture only: append a retained native route as a warmup log.
+            traced = raw + '\n' + route + '\n'
+            with self.assertRaises(AssertionError):
+                P['check_startup'](traced, baseline_cell, h)
+            self.assertTrue(T['check_trace_startup'](traced, cell, h))
+            for bad in (traced.replace(P['MARKER'], 'MISSING_NATIVE_GATE', 1),
+                        traced + '\nBOLT_TENSOR_TRACE_ENABLED\n',
+                        traced + '\nSYCL exception\n'):
+                with self.assertRaises(AssertionError):
+                    T['check_trace_startup'](bad, cell, h)
 
     def test_raw_pid_trace_expectations_are_strict_and_non_mutating(self):
         baseline = dict(
@@ -118,7 +174,7 @@ class TraceProbeFixtures(unittest.TestCase):
         })()
         with self.assertRaises(RuntimeError):
             K['capture'](runtime, T['CELLS'], Mock())
-        self.assertEqual(['preflight', 'begin-TRACE-A', 'restore'], events)
+        self.assertEqual(['preflight', 'begin-TRACE3-A', 'restore'], events)
         summary = C['load'](self.tmp / 'summary.json')
         self.assertEqual('failed', summary['status'])
         self.assertFalse(summary['restored'])
@@ -134,12 +190,32 @@ class TraceProbeFixtures(unittest.TestCase):
             'restore': lambda self: events.append('restore') or [],
         })()
         with self.assertRaises(RuntimeError):
-            K['capture'](runtime, ('TRACE-A',),
+            K['capture'](runtime, ('TRACE3-A',),
                          lambda rt, cell: (_ for _ in ()).throw(RuntimeError('fixture callback')))
-        self.assertEqual(['preflight', 'begin-TRACE-A', 'end-TRACE-A', 'restore'], events)
+        self.assertEqual(['preflight', 'begin-TRACE3-A', 'end-TRACE3-A', 'restore'], events)
         summary = C['load'](runtime.out / 'summary.json')
         self.assertEqual('failed', summary['status'])
         self.assertTrue(summary['restored'])
+
+    def test_docker_port_conflict_uses_inherited_failure_cleanup(self):
+        events = []
+        command = ['docker', 'start', T['trace_name']('TRACE3-A')]
+        def begin(cell):
+            events.append('created-' + cell)
+            raise subprocess.CalledProcessError(1, command, stderr=b'address already in use')
+        runtime = type('PortConflictFixture', (), {
+            'out': self.tmp, 'mode': T['MODE'],
+            'preflight': lambda self: None,
+            'begin': staticmethod(begin),
+            'restore': lambda self: events.extend(['stop-created', 'restore-original']) or [],
+        })()
+        with self.assertRaises(subprocess.CalledProcessError):
+            K['capture'](runtime, ('TRACE3-A',), Mock())
+        self.assertEqual(['created-TRACE3-A', 'stop-created', 'restore-original'], events)
+        summary = C['load'](self.tmp / 'summary.json')
+        self.assertEqual('failed', summary['status'])
+        self.assertTrue(summary['restored'])
+        self.assertEqual(command, C['load'](self.tmp / 'failed-command.json')['argv'])
 
     def test_independent_restore_failure_blocks_raw_analysis(self):
         C['save'](self.tmp / 'summary.json', dict(
@@ -152,7 +228,7 @@ class TraceProbeFixtures(unittest.TestCase):
                              side_effect=C['InfraFailure']('fixture restore')), \
                 patch.dict(T['analyze'].__globals__, check_cell_evidence=evidence):
             with self.assertRaises(C['InfraFailure']):
-                T['analyze'](None)
+                T['analyze'](C['helpers']())
         evidence.assert_not_called()
         self.assertFalse((self.tmp / 'analysis.json').exists())
 

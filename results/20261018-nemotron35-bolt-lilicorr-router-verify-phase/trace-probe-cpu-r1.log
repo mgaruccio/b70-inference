@@ -1,0 +1,39 @@
+test_create_argv_only_declared_trace_delta (__main__.TraceProbeFixtures.test_create_argv_only_declared_trace_delta) ... FAIL
+test_failed_restore_is_fail_closed_and_callback_cleanup_runs (__main__.TraceProbeFixtures.test_failed_restore_is_fail_closed_and_callback_cleanup_runs) ... ok
+test_independent_restore_failure_blocks_raw_analysis (__main__.TraceProbeFixtures.test_independent_restore_failure_blocks_raw_analysis) ... ERROR
+test_job_selection_preserves_exact_23_payloads_and_reproduction_contract (__main__.TraceProbeFixtures.test_job_selection_preserves_exact_23_payloads_and_reproduction_contract) ... ok
+test_raw_pid_trace_expectations_are_strict_and_non_mutating (__main__.TraceProbeFixtures.test_raw_pid_trace_expectations_are_strict_and_non_mutating) ... ok
+
+======================================================================
+ERROR: test_independent_restore_failure_blocks_raw_analysis (__main__.TraceProbeFixtures.test_independent_restore_failure_blocks_raw_analysis)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase/test-trace-probe.py", line 155, in test_independent_restore_failure_blocks_raw_analysis
+    T['analyze'](None)
+    ~~~~~~~~~~~~^^^^^^
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase/trace-probe.py", line 652, in analyze
+    Runtime(h, OUT, MODE).verify_restored(OUT / 'independent-restoration.json')
+    ~~~~~~~^^^^^^^^^^^^^^
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-width-sweep/controller.py", line 97, in __init__
+    self.off = h['off']
+               ~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+
+======================================================================
+FAIL: test_create_argv_only_declared_trace_delta (__main__.TraceProbeFixtures.test_create_argv_only_declared_trace_delta)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase/test-trace-probe.py", line 40, in test_create_argv_only_declared_trace_delta
+    derived = T['make_create'](cell, self.tmp / 'trace')
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase/trace-probe.py", line 112, in make_create
+    assert_trace_argv(base, argv, cell, output)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase/trace-probe.py", line 157, in assert_trace_argv
+    assert derived[derived.index(str(ROOT) + ':/router-verify-phase:ro') - 1] == '-v'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.266s
+
+FAILED (failures=1, errors=1)

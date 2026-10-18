@@ -9,7 +9,7 @@ The adapter uses the completed `qualification-r1/RVP-A/create-argv.json` and
 `qualification-r1/RVP-W3/create-argv.json` as launch sources. It preserves the
 source mount, image, native commands, model/target/drafter arguments, cache and
 hardware settings, and all other argv positions. Its only launch delta is a
-fresh `C.PREFIX` container name (`TRACE-A` / `TRACE-W3`), a fresh read/write
+fresh `C.PREFIX` container name (`TRACE3-A` / `TRACE3-W3`), a fresh read/write
 host bind at `/capture`, the two trace environment entries, and the final
 server boundary:
 
@@ -52,13 +52,13 @@ Before the live window, the lead confirms:
 - the accepted `nemotron-bolt-probe` has the exact original Config, HostConfig,
   complete mounts, model/image, and is healthy with the original as sole live
   service and DRM owner;
-- the published port is free after the original is stopped, both trace names
-  are absent from `docker ps -a`, and the output filesystem has at least the
-  inherited 4 GiB reserve plus its evidence allowance before every request;
+- Docker successfully reserves the unchanged published port after the original
+  is stopped; both trace names were absent from `docker ps -a`, and the output
+  filesystem retains the inherited 4 GiB reserve plus evidence allowance;
 - no trace output directory from a prior attempt is reused.
 
 The public boundary is the existing template/tokenize/chat path. Each arm runs
-sequentially, first `TRACE-A`, then `TRACE-W3`, with the same frozen request
+sequentially, first `TRACE3-A`, then `TRACE3-W3`, with the same frozen request
 payloads and order:
 
 1. 20 quality prompts;
@@ -83,6 +83,32 @@ prefix; immediately after it, it saves the full after snapshot and the bounded
 suffix returned by the existing `fresh_logs` prefix check. This keeps the window
 limited to the real request rather than a guessed log substring.
 
+## Preserved pre-launch failures
+
+`trace-short55-r1` failed before any diagnostic container was created: the
+standalone test socket returned `EADDRINUSE` after the original was stopped.
+The cause was not conclusively identified from that errno alone. Its original
+service restoration passed, including the READY smoke check, with no errors.
+The retry uses Docker's existing atomic port reservation and failure cleanup,
+not another check/use race. The failed attempt's existing records are not overwritten.
+
+The [Linux socket manual](https://man7.org/linux/man-pages/man7/socket.7.html)
+distinguishes address reuse from an active listening socket; a bare bind test
+is not equivalent to the actual listener's reuse behavior. No port owner is
+killed and no port or launcher configuration is changed.
+
+`trace-short55-r2` created but never started its A container. Validation found
+one HostConfig difference: baseline `OomKillDisable=null`, newly created
+`OomKillDisable=false`. Restoration passed with no errors. The raw records and
+stopped container are preserved; the next attempt uses fresh `TRACE3-*` names.
+Only unset/false OOM-disable representations are now accepted; `true` remains
+forbidden, and all other resource fields remain strict. Records are not rewritten.
+[Moby's resource validation](https://raw.githubusercontent.com/moby/moby/master/daemon/daemon_unix.go)
+explicitly resets a non-null `OomKillDisable` value to null on unsupported systems;
+[Docker documents](https://docs.docker.com/engine/containers/resource_constraints/)
+that the OOM killer is enabled by default. This does not establish when the
+normalization occurs on this host.
+
 ## Commands (lead only)
 
 The CPU fixture suite is also remote-only and must not be run in the interactive
@@ -91,20 +117,20 @@ worktree. Use a fresh scratch directory beneath this case's `worker-scratch/`:
 ```bash
 set -euo pipefail
 ROOT=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase
-export BOLT_ROUTER_TRACE_PROBE_CPU_SCRATCH="$ROOT/worker-scratch/trace-probe-cpu-r1"
+export BOLT_ROUTER_TRACE_PROBE_CPU_SCRATCH="$ROOT/worker-scratch/trace-probe-cpu-r5"
 mkdir "$BOLT_ROUTER_TRACE_PROBE_CPU_SCRATCH"
-python3 -B "$ROOT/test-trace-probe.py" 2>&1 | tee "$ROOT/trace-probe-cpu-r1.log"
+python3 -B "$ROOT/test-trace-probe.py" 2>&1 | tee "$ROOT/trace-probe-cpu-r5.log"
 ```
 
 After the existing current-phase CPU/native gates and the exclusive-window
 preflight pass, run the live capture as a separate command. It creates a fresh
-`trace-short55-r1/` directory and leaves trace containers stopped:
+`trace-short55-r3/` directory and leaves trace containers stopped:
 
 ```bash
 set -euo pipefail
 ROOT=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase
-test ! -e "$ROOT/trace-short55-r1"
-python3 -B "$ROOT/trace-probe.py" --lead-run-trace 2>&1 | tee "$ROOT/trace-short55-r1.log"
+test ! -e "$ROOT/trace-short55-r3"
+python3 -B "$ROOT/trace-probe.py" --lead-run-trace 2>&1 | tee "$ROOT/trace-short55-r3.log"
 ```
 
 Only after that command reports `CAPTURED_RESTORED` run independent restoration
@@ -113,17 +139,29 @@ and raw-evidence analysis in a separate process:
 ```bash
 set -euo pipefail
 ROOT=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase
-test -d "$ROOT/trace-short55-r1"
-python3 -B "$ROOT/trace-probe.py" --lead-after-restore 2>&1 | tee "$ROOT/trace-short55-r1-analysis.log"
+test -d "$ROOT/trace-short55-r3"
+python3 -B "$ROOT/trace-probe.py" --lead-after-restore 2>&1 | tee "$ROOT/trace-short55-r3-analysis.log"
 ```
 
-No timing, throughput, promotion, or launcher update is allowed in either
-command.
+After both cells reproduce their same-role controls, compare the first real
+verification row with the existing strict route and F32 readers:
+
+```bash
+python3 -B "$ROOT/analyze-first-frame.py" | tee "$ROOT/trace-first-frame.log"
+```
+
+This checks the complete 55-token logical prefix, actual first emission IDs,
+first post-prompt batch shapes (A: 1; W3: 4), target backend context, and raw
+prefill/verification logit rows. It does not claim equal internal operator inputs
+or identify a causal operator solely from a differing route.
+
+No timing, throughput, promotion, or launcher update is allowed in these
+diagnostic steps.
 
 ## Evidence and cleanup
 
-Retain the ordinary raw artifacts under `trace-short55-r1/TRACE-A/` and
-`TRACE-W3/`: source launch argv and positional delta, actual PID and library
+Retain the ordinary raw artifacts under `trace-short55-r3/TRACE3-A/` and
+`TRACE3-W3/`: source launch argv and positional delta, actual PID and library
 records, inspected Config/HostConfig/mounts, raw and timestamped startup/server/
 restored logs, native route files, all template/tokenize/HTTP request and
 response files, same-role trace reports, short-diagnostic log prefix/after/
@@ -139,3 +177,12 @@ health and the `READY` smoke response, verify sole service/DRM ownership,
 hardware, and protected source/binary hashes, and fail closed if independent
 restoration fails. No raw result analysis is accepted before that independent
 restoration check passes.
+
+## Observed outcome
+
+R3 completed both 23-request arms and reproduced both untraced controls.
+Independent restoration passed. Prefill F32 rows matched exactly; first-verification
+rows did not. The intended router precision mark remained inactive because the
+Nemotron target constructs its router outside the generic guarded branch. See
+[RESULTS.md](RESULTS.md#real-aw3-trace-follow-up) and the retained R3 raw records.
+This is an integration finding, not a demonstrated cause of the remaining drift.

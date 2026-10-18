@@ -23,12 +23,11 @@ K = P['K']
 N = P['N']
 A = P['A']
 
-OUT = ROOT / 'trace-short55-r1'
-MODE = 'router-trace-short55-r1'
-CELLS = ('TRACE-A', 'TRACE-W3')
-ROLES = {'TRACE-A': 'A', 'TRACE-W3': 'W3'}
+OUT = ROOT / 'trace-short55-r3'
+MODE = 'router-trace-short55-r3'
+CELLS = ('TRACE3-A', 'TRACE3-W3')
+ROLES = {'TRACE3-A': 'A', 'TRACE3-W3': 'W3'}
 BASE_CELLS = {'A': 'RVP-A', 'W3': 'RVP-W3'}
-PORT = 18098
 TRACE_ENV = {
     'BOLT_VERIFY_CAPTURE_DIR': '/capture',
     'LLAMA_TRACE': '1',
@@ -99,7 +98,8 @@ def make_create(cell, output=OUT):
     capture = str(capture_path(cell, output)) + ':/capture'
     case_mount = str(ROOT) + ':/router-verify-phase:ro'
     case_index = argv.index(case_mount)
-    argv[case_index:case_index] = ['-v', capture]
+    assert argv[case_index - 1] == '-v'
+    argv[case_index - 1:case_index - 1] = ['-v', capture]
 
     env_indices = [index for index, value in enumerate(argv) if value == '-e']
     assert env_indices
@@ -249,8 +249,11 @@ def check_trace_container(record, cell, output=OUT):
     assert record['Config']['Cmd'] == argv[-3:]
     assert record['Config']['Image'] == base['Config']['Image']
 
+    assert '--hostname' not in argv and '-h' not in argv
+    assert P['re'].fullmatch(r'[0-9a-f]{64}', record['Id'])
+    assert record['Config']['Hostname'] == record['Id'][:12], 'unexpected Docker-generated hostname'
     for key, value in base['Config'].items():
-        if key not in ('Cmd', 'Env'):
+        if key not in ('Cmd', 'Env', 'Hostname'):
             assert record['Config'].get(key) == value, ('Config', key)
     base_env = _env_map(base['Config'].get('Env', []))
     trace_env = _env_map(record['Config'].get('Env', []))
@@ -258,6 +261,11 @@ def check_trace_container(record, cell, output=OUT):
 
     base_host = dict(base['HostConfig'])
     trace_host = dict(record['HostConfig'])
+    # Docker resource validation may discard an unset/false OOM-disable value
+    # on unsupported systems. Both leave the OOM killer enabled; True is forbidden.
+    for host in (base_host, trace_host):
+        oom_disable = host.pop('OomKillDisable')
+        assert oom_disable is None or oom_disable is False, 'OOM killer must remain enabled'
     base_binds = list(base_host.pop('Binds', []) or [])
     trace_binds = list(trace_host.pop('Binds', []) or [])
     assert trace_host == base_host
@@ -292,6 +300,54 @@ def check_trace_names(existing):
                 collisions=collisions)
 
 
+def check_trace_startup(log, cell, h):
+    """Preserve P's native/model checks on raw logs, but permit trace warmup routes."""
+    off, p, old = h['off'], h['off']['P'], h['off']['OLD']
+    assert log.count(p['MARKER']) == 1
+    native_log, model = log.split(p['MARKER'])
+    assert 'BOLT_ROUTE route=' in native_log
+    assert 'GGML_SYCL_DEBUG: 0' in model
+    for forbidden in ('BOLT_TENSOR_TRACE_ENABLED', 'BOLT_PROJECTION_REPEAT',
+                      'common_debug_cb_eval', 'onednn_verbose'):
+        assert forbidden not in model, forbidden
+    for forbidden in ('GGML_ASSERT', 'SYCL exception', 'BOLT_VERIFY error'):
+        assert forbidden not in log, forbidden
+    native = runpy.run_path(str(p['WIDTH1'] / 'analyze-controls.py'))
+    native['parse_native_gate'](log, 'C0')
+    for gate in ('iq2', 'q8', 'attention', 'attention_view'):
+        p['check_' + gate + '_native_gate'](log)
+    markers = (p['ATTENTION_VIEW_NATIVE_MARKER'], p['ROUTER_NATIVE_MARKER'],
+               P['MARKER'], p['MARKER'])
+    assert all(log.count(marker) == 1 for marker in markers)
+    assert [log.index(marker) for marker in markers] == sorted(log.index(marker) for marker in markers)
+    segment = log.split(markers[0], 1)[1].split(markers[1], 1)[0]
+    router = A['check_router_native_output'](segment, 'router_single2')
+    assert 'router_columns8=1,' not in log
+    assert 'router_prefill=1,' not in log
+    assert 'call ggml_sycl_ssm_scan_prefill:' not in native_log
+    width = C['width_for'](role_for(cell))
+    if width is None:
+        result = off['N']['check_model_startup'](model)
+    else:
+        old['check_model_log'](model, 'C')
+        assert [int(m.group(1)) for m in old['N_RS_SEQ_RE'].finditer(model)][:2] == [width, 0]
+        params, block = old['DFLASH_PARAMS_RE'].search(model), old['DFLASH_BLOCK_RE'].search(model)
+        assert params and params.groups() == (str(width), '0')
+        assert block and block.group(1) == '8'
+        spec = model.split('common_speculative_impl_draft_dflash', 1)[1].split('speculative decoding context', 1)[0]
+        assert 'clamp' not in spec.lower()
+        assert 'R (f32)' in model and 'S (f32)' in model
+        for key in ('n_outputs_max', 'n_outputs_max_per_seq'):
+            match = P['re'].search(r'llama_context: ' + key + r'\s*=\s*(\d+)', model)
+            assert match and match.group(1) == str(width + 1), (key, match)
+        for key, value in (('DNN', 1), ('FUSION', 1), ('ESIMD', 1), ('OPT', 1), ('VMM', 1), ('GRAPH', 0)):
+            assert f'GGML_SYCL_ENABLE_{key}: {value}' in model
+        result = dict(width=width, target_n_rs_seq=width, draft_n_rs_seq=0,
+                      n_max=width, n_min=0, block_size=8, n_outputs_max=width + 1,
+                      n_outputs_max_per_seq=width + 1)
+    return dict(result, router_single2=router, evidence='unaltered raw startup and actual trace PID1')
+
+
 def check_trace_server_log(log):
     """Check the serving stream while allowing the requested trace lines."""
     marker = P['MARKER']
@@ -301,6 +357,9 @@ def check_trace_server_log(log):
     assert 'GGML_SYCL_DEBUG: 0' in serving
     for forbidden in ('GGML_ASSERT', 'SYCL exception', 'BOLT_VERIFY error'):
         assert forbidden not in log, forbidden
+    for forbidden in ('BOLT_TENSOR_TRACE_ENABLED', 'BOLT_PROJECTION_REPEAT',
+                      'common_debug_cb_eval', 'onednn_verbose'):
+        assert forbidden not in serving, forbidden
     assert 'BOLT_VERIFY sample ' in serving
     return True
 
@@ -418,18 +477,9 @@ class Runtime(K['Runtime']):
         save(directory / 'create-argv.json', argv)
         save(directory / 'argv-diff.json', P['positional_diff'](base, argv))
 
-        # Once the original is stopped, the inherited published port must be
-        # free before a fresh container is created.  Docker remains the final
-        # authority when it installs the bind.
-        sock = socket.socket()
-        try:
-            sock.bind(('127.0.0.1', PORT))
-        except OSError as exc:
-            sock.close()
-            raise C['InfraFailure']('trace port is not free: ' + repr(exc)) from exc
-        else:
-            sock.close()
-            save(directory / 'port-check.json', dict(host='127.0.0.1', port=PORT, free=True))
+        # Docker reserves the unchanged published port atomically at start.
+        # A separate bind without reuse can reject lingering socket state and
+        # adds a check/use race; preserve the inherited Docker failure/cleanup path.
         self.created.append(cell)
 
         self.command(*argv, timeout=60)
@@ -445,8 +495,7 @@ class Runtime(K['Runtime']):
             (directory / ('native-and-startup.raw.' + stream + '.log')).write_bytes(
                 getattr(raw, stream))
         raw_startup = (raw.stdout + raw.stderr).decode('utf-8')
-        baseline_cell = BASE_CELLS[role_for(cell)]
-        startup_contract = P['check_startup'](raw_startup, baseline_cell, self.h)
+        startup_contract = check_trace_startup(raw_startup, cell, self.h)
         startup_contract['trace_role'] = role_for(cell)
         startup_contract['evidence'] = 'raw startup and actual trace PID1 below; no evidence rewriting'
         startup_contract['pid_argv'] = self.pid(cell, 'before')['argv']
@@ -618,7 +667,7 @@ def check_cell_evidence(h, cell):
 
     startup_raw = ''.join((directory / ('native-and-startup.raw.' + stream + '.log')).read_text()
                           for stream in ('stdout', 'stderr'))
-    P['check_startup'](startup_raw, BASE_CELLS[role], h)
+    check_trace_startup(startup_raw, cell, h)
     check_trace_server_log(''.join((directory / ('server.' + stream + '.log')).read_text(errors='replace')
                                    for stream in ('stdout', 'stderr')))
     check_trace_server_log(''.join((directory / ('restored-final.' + stream + '.log')).read_text(errors='replace')

@@ -1,0 +1,73 @@
+{
+  "pid": 1,
+  "origin": "/proc/1/environ",
+  "diagnostics": [
+    [
+      "LLAMA_TRACE",
+      "1"
+    ],
+    [
+      "BOLT_VERIFY_CAPTURE_DIR",
+      "/capture"
+    ],
+    [
+      "GGML_SYCL_DEBUG",
+      "0"
+    ],
+    [
+      "BOLT_TRACE_TENSORS",
+      "0"
+    ]
+  ],
+  "argv": [
+    "/src/build-sycl/bin/llama-server",
+    "--verbosity",
+    "4",
+    "--model",
+    "/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB.gguf",
+    "--alias",
+    "nemotron-bolt",
+    "-ngl",
+    "999",
+    "--ctx-size",
+    "65536",
+    "--parallel",
+    "1",
+    "--batch-size",
+    "1024",
+    "--ubatch-size",
+    "1024",
+    "--cache-type-k",
+    "q8_0",
+    "--cache-type-v",
+    "q8_0",
+    "--flash-attn",
+    "on",
+    "--jinja",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "18098",
+    "--temp",
+    "0",
+    "--load-mode",
+    "none",
+    "--spec-type",
+    "draft-dflash",
+    "--spec-draft-n-max",
+    "3",
+    "--spec-draft-n-min",
+    "0",
+    "--spec-draft-p-min",
+    "0",
+    "--spec-draft-sampling",
+    "greedy",
+    "--no-spec-draft-backend-sampling",
+    "--spec-draft-ngl",
+    "999",
+    "--spec-draft-model",
+    "/draft/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr.gguf"
+  ],
+  "exe": "/src/build-sycl/bin/llama-server",
+  "scoped_tmp_rows": []
+}
