@@ -22,7 +22,7 @@ Run only on `inference-host`, using the existing Intel 2026.0.0 image and oneDNN
 mount, with no host installs or GPU mounts:
 
 ```text
-bash /home/mike/code/.pi-worktrees/b70-inference/bolt-router-n9-control/results/20261018-nemotron35-bolt-lilicorr-router-n9-control/build-test.sh
+bash /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/build-test.sh
 ```
 
 The script privately copies the router-columns8 parent with reflink, applies
@@ -40,5 +40,69 @@ same path. Retain actual route, error/summary, raw logs, mounts, and dependency
 output. A numerical failure is retained as data; infrastructure aborts are not
 rerolled. Parent and candidate both failing does not qualify the runtime.
 
-No native execution, SSH, Docker, build, API, or test was performed during this
-preparation. This is not standard-compliant performance evidence.
+The public boundary is the native `test-backend-ops` CLI, not a mock or model
+request. Prerequisites: a successful test-only build, frozen protected sources
+and binaries, unchanged B70 hardware, fresh container names, and the accepted
+service as sole DRM owner. `run-control.py` reuses the frozen restoration
+lifecycle, stops that service for the two native arms, and requires no DRM owner
+between arms. It preserves raw logs, actual container bindings, dependency
+resolution, dispatch pairs and the numerical verdict. A valid numerical failure
+is data, not an infrastructure success claim or a qualification waiver.
+
+Run on `inference-host`:
+
+```sh
+R=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control
+python3 -B "$R/test-control.py"
+python3 -B "$R/run-control.py" --lead-run-control
+python3 -B "$R/run-control.py" --lead-after-restore
+```
+
+Expected: exactly one M=496/N=9 fixture per backend, the same seeded executable,
+unsplit `MUL_MAT_SYCL` + `LIBRARY_DNNL_F32` dispatch, and the unchanged `1e-7`
+tolerance. The original random operands cannot be replayed; no raw output byte
+equality is claimed. Cleanup restores the exact accepted container's identity,
+configuration, mounts, health, READY/stop smoke and exclusive DRM ownership;
+it leaves the two completed diagnostic containers stopped. Evidence stays in
+`run-r1/`, including `analysis.json` and `independent-restoration.json`.
+No timing or promotion is permitted.
+
+## Observed result — blocked, not qualified
+
+The lead completed the CPU-only build, dependency precheck, eight remote CPU
+checks, and both native arms on `inference-host` / Intel Arc Pro B70. Only the
+private `test-backend-ops` executable changed; protected runtime sources and
+binaries remained unchanged.
+
+Both parent and candidate exited 1 with reported NMSE **0.000000140 >
+0.000000100**, using the same unsplit oneDNN route. The runner exited 0 because
+it captured both numerical failures and restored the accepted service; that
+is **not** a qualification pass. This establishes parent reproduction under the
+predeclared seed, not byte-identical outputs or replay of the original random
+operands. No seed retry or tolerance change was made.
+
+- Paired results: `run-r1/analysis.json`; raw per-arm `stdout.log` / `stderr.log`.
+- Exact commands and bindings: each arm's `create-argv.json` and `container-before.json`.
+- Test executable and protected backend hashes: `candidate-binaries.json`,
+  `run-r1/inputs-before.json`, and `run-r1/hash-checks-before.json`.
+- Build and CPU checks: `build-attempt-r1/build.log`, `post-build-verification.log`,
+  `runtime-precheck.log`, and `cpu-tests-r2.log`.
+- Independent restoration: `run-r1/independent-restoration.json` passed with no
+  errors. `final-container-state.txt` confirms the accepted service running and
+  both native diagnostic containers stopped.
+
+The original router-columns8 R2 attempt remains **61/62**, with all 404 route
+records validated and 35 split cases observed. Its sole numerical failure was
+this M=496/N=9 control; no candidate model qualification requests ran. See
+`../20261018-nemotron35-bolt-lilicorr-router-columns8/qualification-r2/failure-analysis.json`.
+
+Public qualification, timing, and promotion remain blocked. Resolving the
+inherited oneDNN failure or changing the out-of-scope control's acceptance
+criterion requires a separate scope decision. These are diagnostic results,
+not standard-compliant performance evidence.
+
+Repository archival follows the existing gzip convention for the two large
+`ORIGINAL/stopped-prefix.stdout.log` files (this control and router-columns8
+R2). Their `.gz` files decompress to the bytes and SHA-256 recorded in each
+`stopped-log-prefix.json`. The uncompressed originals remain on
+`inference-host`; no runtime evidence was truncated or normalized.

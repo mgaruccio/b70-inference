@@ -2,6 +2,7 @@
 """Small case-local checks for the seeded test executable build."""
 import hashlib
 import json
+import runpy
 from pathlib import Path
 
 ROOT = Path('/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control')
@@ -11,6 +12,7 @@ ACCEPTED = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-pref
 ARTIFACTS = ('llama-server', 'libllama-server-impl.so', 'libggml-sycl.so.0',
              'test-backend-ops', 'libllama-common.so')
 SOURCE_SCOPE = ('tests/test-backend-ops.cpp',)
+BASE = runpy.run_path(str(ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-columns8/run-trace.py'))
 
 
 def sha256(path):
@@ -31,12 +33,19 @@ def save(path, value):
 
 
 def check_consumed(source, label):
-    expected = json.loads((ROOT / 'source-hashes.json').read_text())[label]
-    actual = {name: sha256(source / name) for name in SOURCE_SCOPE}
-    assert actual == expected, (label, actual, expected)
+    BASE['check_consumed_sources'](PARENT, 'candidate')
+    original = (PARENT / SOURCE_SCOPE[0]).read_bytes()
+    old = b'thread_local std::default_random_engine gen(std::random_device{}());'
+    new = b'std::default_random_engine gen(static_cast<unsigned int>(0x5A17u + start));'
+    assert original.count(old) == 1 and label in ('parent', 'candidate')
+    expected = original if label == 'parent' else original.replace(old, new)
+    assert (source / SOURCE_SCOPE[0]).read_bytes() == expected, label
 
 
-def check_protected(candidate=False):
+def check_protected(candidate=True):
+    BASE['check_protected_sources']()
+    BASE['check_protected_binaries']()
+    assert binaries(PARENT) == json.loads((BASE['ROOT'] / 'candidate-binaries.json').read_text())
     expected = json.loads((ROOT / 'protected-source-hashes.json').read_text())
     assert source_hashes(ACCEPTED) == expected['accepted']
     assert source_hashes(PARENT) == expected['parent']
@@ -52,5 +61,5 @@ def check_protected(candidate=False):
 def check_protected_binaries():
     for label, source in (('accepted', ACCEPTED), ('parent', PARENT)):
         manifest = json.loads((ROOT / (label + '-binaries.json')).read_text())
-        assert tuple(manifest) == ARTIFACTS, label
+        assert set(manifest) == set(ARTIFACTS), label
         assert binaries(source) == manifest, label

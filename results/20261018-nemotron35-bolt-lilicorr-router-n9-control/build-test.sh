@@ -45,22 +45,21 @@ python3 -B - <<'PY'
 import runpy
 m = runpy.run_path('smallbuildhelper.py')
 m['check_consumed'](m['PARENT'], 'parent')
+m['BASE']['check_protected_sources']()
+m['BASE']['check_protected_binaries']()
 protected = {}
 for label, source in [('accepted', m['ACCEPTED']), ('parent', m['PARENT'])]:
     actual = m['binaries'](source)
-    sibling = m['ROOT'].parent / '20261018-nemotron35-bolt-lilicorr-router-columns8' / (label + '-binaries.json')
-    if label == 'accepted':
-        sibling = m['ROOT'].parent / '20261018-nemotron35-bolt-lilicorr-router-columns8' / 'accepted-binaries.json'
-    elif not sibling.exists():
-        sibling = m['ROOT'].parent / '20261018-nemotron35-bolt-lilicorr-router-columns8' / 'parent-binaries.json'
+    sibling_name = 'accepted-binaries.json' if label == 'accepted' else 'candidate-binaries.json'
+    sibling = m['BASE']['ROOT'] / sibling_name
     expected = __import__('json').loads(sibling.read_text())
     assert actual == expected, label
     m['save'](m['ROOT'] / (label + '-binaries.json'), actual)
     protected[label] = m['source_hashes'](source)
 m['save'](m['ROOT'] / 'protected-source-hashes.json', protected)
 for label, source in [('accepted', m['ACCEPTED']), ('parent', m['PARENT'])]:
-    m['save'](m['ROOT'] / (label + '-before-build.sha256'),
-              ''.join(f'{h}  {source}/build-sycl/bin/{name}\n' for name, h in m['binaries'](source).items()))
+    (m['ROOT'] / (label + '-before-build.sha256')).write_text(
+        ''.join(f'{h}  {source}/build-sycl/bin/{name}\n' for name, h in m['binaries'](source).items()))
 m['save'](m['ROOT'] / 'protected-source-hashes.json', protected)
 PY
 (cd "$PARENT" && git apply --check --verbose "$ROOT/seeded-test.patch")

@@ -1,0 +1,137 @@
++ uname -a
+Linux inference-host 7.2.0-1-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 20 Aug 2026 16:18:38 +0000 x86_64 GNU/Linux
++ docker version
+Client:
+ Version:           29.7.2
+ API version:       1.55
+ Go version:        go1.26.5-X:nodwarf5
+ Git commit:        a7dcaa6fdb
+ Built:             Thu Aug  6 16:36:45 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server:
+ Engine:
+  Version:          29.7.2
+  API version:      1.55 (minimum version 1.40)
+  Go version:       go1.26.5-X:nodwarf5
+  Git commit:       6a43e3d5af
+  Built:            Thu Aug  6 16:36:45 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.3.4
+  GitCommit:        db8809540e1a7a9da5d518876894933ff55692ab.m
+ runc:
+  Version:          1.5.1
+  GitCommit:        1.5.1-1-0-gce23c4c-dirty
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
++ docker image inspect intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-router-n9-control-r1-build
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-router-n9-control-r1-precheck
+++ cat /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/UPSTREAM_COMMIT
++ test b6334e37e6ef286fc5091a41b6561b2113d915fb = b6334e37e6ef286fc5091a41b6561b2113d915fb
++ test -f /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/build-sycl/CMakeCache.txt
++ grep -Fx CMAKE_HOME_DIRECTORY:INTERNAL=/src /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/build-sycl/CMakeCache.txt
+CMAKE_HOME_DIRECTORY:INTERNAL=/src
++ python3 -B -
++ cd /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1
++ git apply --check --verbose /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/seeded-test.patch
+Checking patch tests/test-backend-ops.cpp...
++ cd /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1
++ patch --fuzz=0 --dry-run --batch --forward -p1
+checking file tests/test-backend-ops.cpp
+++ du -sk /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1
+++ cut -f1
++ need=464568
+++ awk 'NR==2 {print $4}'
++++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1
+++ df -Pk /home/mike/inference/src
++ available=10366920
++ test 10366920 -gt 4658872
+++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1
++ df -Pk /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control /home/mike/inference/src
+Filesystem     1024-blocks      Used Available Capacity Mounted on
+/dev/nvme0n1p2   484190196 470570488  10366920      98% /home
+/dev/nvme0n1p2   484190196 470570488  10366920      98% /home
++ cp -a --reflink=auto /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1 /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1
++ cd /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1
++ patch --fuzz=0 --batch --forward -p1
+patching file tests/test-backend-ops.cpp
++ cd /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1
++ git apply --reverse --check --verbose /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/seeded-test.patch
+Checking patch tests/test-backend-ops.cpp...
++ python3 -B -
+++ df -Pk /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1
+++ awk 'NR==2 {print $4}'
++ test 10366580 -gt 4194304
++ docker run --rm --name bolt-lilicorr-router-n9-control-r1-build --cpus=6 -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1:/src -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro -w /src intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04 bash -lc $'\nset -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\napt-get update -qq\nDEBIAN_FRONTEND=noninteractive apt-get install --no-upgrade -y -qq ninja-build libcurl4-openssl-dev pkg-config\ncmake --build /src/build-sycl --config Release -j6 --target test-backend-ops\n'
+ 
+:: initializing oneAPI environment ...
+   bash: BASH_VERSION = 5.2.21(1)-release
+   args: Using "$@" for setvars.sh arguments: --force
+:: ccl -- latest
+:: compiler -- latest
+:: debugger -- latest
+:: dev-utilities -- latest
+:: dpl -- latest
+:: mkl -- latest
+:: mpi -- latest
+:: pti -- latest
+:: tbb -- latest
+:: tcm -- latest
+:: umf -- latest
+:: oneAPI environment initialized ::
+ 
+debconf: delaying package configuration, since apt-utils is not installed
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 28099 files and directories currently installed.)
+Preparing to unpack .../curl_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking curl (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Preparing to unpack .../libcurl4t64_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl4t64:amd64 (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Preparing to unpack .../libcurl3t64-gnutls_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl3t64-gnutls:amd64 (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Selecting previously unselected package libcurl4-openssl-dev:amd64.
+Preparing to unpack .../libcurl4-openssl-dev_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl4-openssl-dev:amd64 (8.5.0-2ubuntu10.16) ...
+Selecting previously unselected package ninja-build.
+Preparing to unpack .../ninja-build_1.11.1-2_amd64.deb ...
+Unpacking ninja-build (1.11.1-2) ...
+Setting up libcurl4t64:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up libcurl3t64-gnutls:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up ninja-build (1.11.1-2) ...
+Setting up libcurl4-openssl-dev:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up curl (8.5.0-2ubuntu10.16) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+[1/2] Building CXX object tests/CMakeFiles/test-backend-ops.dir/test-backend-ops.cpp.o
+[2/2] Linking CXX executable bin/test-backend-ops
++ docker run --rm --network none --name bolt-lilicorr-router-n9-control-r1-precheck -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1:/src:ro -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04 bash -lc $'\nset -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\nexport LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\nfor f in llama-server libllama-server-impl.so libggml-sycl.so.0 test-backend-ops libllama-common.so; do ldd "/src/build-sycl/bin/$f"; done | tee /tmp/dependencies.log\nif grep -F "not found" /tmp/dependencies.log; then exit 1; fi\necho BOLT_VERIFY_DEPENDENCIES_PASSED\n'
++ sha256sum -c /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/accepted-before-build.sha256
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1/build-sycl/bin/llama-server: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1/build-sycl/bin/libllama-server-impl.so: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1/build-sycl/bin/libggml-sycl.so.0: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1/build-sycl/bin/test-backend-ops: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1/build-sycl/bin/libllama-common.so: OK
++ sha256sum -c /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/parent-before-build.sha256
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/build-sycl/bin/llama-server: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/build-sycl/bin/libllama-server-impl.so: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/build-sycl/bin/libggml-sycl.so.0: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/build-sycl/bin/test-backend-ops: OK
+/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1/build-sycl/bin/libllama-common.so: OK
++ python3 -B -
++ tee /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/post-build-verification.log
+BOLT_VERIFY_BUILD_PASSED
++ finish
++ rc=0
++ trap - EXIT
++ set +e
++ test -f /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/protected-source-hashes.json
++ python3 -B -
+BOLT_VERIFY_PROTECTED_AFTER_BUILD_ATTEMPT_PASSED
++ test 0 -eq 0
++ printf '%s\n' 0
++ exit 0
