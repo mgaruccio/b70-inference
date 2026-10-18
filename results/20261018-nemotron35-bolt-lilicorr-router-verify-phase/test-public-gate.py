@@ -57,6 +57,7 @@ def synthetic_container(cell):
         if mount['Destination'] == '/src':
             mount['Source'] = str(N['CANDIDATE'])
     result['Mounts'].append(dict(Type='bind', Source=str(HERE), Destination='/router-verify-phase', Mode='ro', RW=False))
+    return result
 
 
 def synthetic_startup(cell):
@@ -174,7 +175,8 @@ class PublicGateFixtures(unittest.TestCase):
         r3 = a['check_router_native_output'](FIXTURE('router_columns8_r3'), 'router_columns8_r3')
         self.assertEqual((61, 402, 35), (r3['cases'], r3['route_records'], r3['split_cases']))
         old = a['check_router_native_output'](FIXTURE('router_single2'), 'router_single2')
-        self.assertEqual(old['route_records'], a['check_router_native_output'](FIXTURE('router_single2'), 'router_single2')['route_records'])
+        self.assertEqual((30, 70, 5), (old['cases'], old['route_records'], old['split_cases']))
+        self.assertTrue(all(row['accum_prec'] == 0 for row in a['route_records'](FIXTURE('router_single2'))))
         prefill = a['check_router_native_output'](FIXTURE('router_prefill'), 'router_prefill')
         self.assertEqual((2, 4, 0), (prefill['cases'], prefill['route_records'], prefill['split_cases']))
         key = ('blk.1.ffn_gate_inp.weight', 240, 0, 3)

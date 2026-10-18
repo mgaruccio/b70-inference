@@ -1,0 +1,333 @@
+{
+  "Id": "bf045c7d9c1075b935721420c90b6b2e863065f85d468214bd3c414984ef3d02",
+  "Created": "2026-10-18T18:52:13.27422248Z",
+  "Path": "bash",
+  "Args": [
+    "-lc",
+    "set -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\nexport LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\nexport GGML_SYCL_ENABLE_DNN=1 GGML_SYCL_ENABLE_OPT=1 GGML_SYCL_ENABLE_VMM=1\nexport GGML_SYCL_ENABLE_ESIMD=1 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_ENABLE_GRAPH=0\nexport BOLT_TRACE_TENSORS=0 ONEDNN_VERBOSE=0 GGML_SYCL_DEBUG=1\nmkdir /tmp/router-n9-capture\nexport BOLT_VERIFY_CAPTURE_DIR=/tmp/router-n9-capture\nldd /src/build-sycl/bin/test-backend-ops\nexec /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p '^router_columns8=1,router_single2=1,weight=blk\\.48\\.ffn_gate_inp\\.weight,layout=0,type_a=f32,type_b=f32,m=496,n=9,'"
+  ],
+  "State": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 1,
+    "Error": "",
+    "StartedAt": "2026-10-18T18:52:13.561209529Z",
+    "FinishedAt": "2026-10-18T18:52:14.388453841Z"
+  },
+  "Image": "sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0",
+  "ResolvConfPath": "/var/lib/docker/containers/bf045c7d9c1075b935721420c90b6b2e863065f85d468214bd3c414984ef3d02/resolv.conf",
+  "HostnamePath": "/var/lib/docker/containers/bf045c7d9c1075b935721420c90b6b2e863065f85d468214bd3c414984ef3d02/hostname",
+  "HostsPath": "/var/lib/docker/containers/bf045c7d9c1075b935721420c90b6b2e863065f85d468214bd3c414984ef3d02/hosts",
+  "LogPath": "/var/lib/docker/containers/bf045c7d9c1075b935721420c90b6b2e863065f85d468214bd3c414984ef3d02/bf045c7d9c1075b935721420c90b6b2e863065f85d468214bd3c414984ef3d02-json.log",
+  "Name": "/bolt-lilicorr-width-sweep-r1-r8n9r3-parent",
+  "RestartCount": 0,
+  "Driver": "overlayfs",
+  "Platform": "linux",
+  "MountLabel": "",
+  "ProcessLabel": "",
+  "AppArmorProfile": "",
+  "ExecIDs": null,
+  "HostConfig": {
+    "Binds": [
+      "/home/mike/inference/src/oneDNN/install:/opt/onednn:ro",
+      "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh:/native-outprod.sh:ro",
+      "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py:/iq2-single2-gate/run-trace.py:ro",
+      "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py:/iq2-single2-gate/analyze-trace.py:ro",
+      "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2/build-sycl/bin/test-backend-ops:/src/build-sycl/bin/test-backend-ops:ro",
+      "/dev/dri:/dev/dri:ro",
+      "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-widths-single2-r1:/src:ro",
+      "/home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF:/models:ro"
+    ],
+    "ContainerIDFile": "",
+    "LogConfig": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "NetworkMode": "bridge",
+    "PortBindings": {
+      "18098/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18098"
+        }
+      ]
+    },
+    "RestartPolicy": {
+      "Name": "no",
+      "MaximumRetryCount": 0
+    },
+    "AutoRemove": false,
+    "VolumeDriver": "",
+    "VolumesFrom": null,
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "CapAdd": null,
+    "CapDrop": null,
+    "CgroupnsMode": "private",
+    "Dns": null,
+    "DnsOptions": [],
+    "DnsSearch": [],
+    "ExtraHosts": null,
+    "GroupAdd": [
+      "987"
+    ],
+    "IpcMode": "host",
+    "Cgroup": "",
+    "Links": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyRootfs": false,
+    "SecurityOpt": [
+      "label=disable"
+    ],
+    "UTSMode": "",
+    "UsernsMode": "",
+    "ShmSize": 67108864,
+    "Runtime": "runc",
+    "Isolation": "",
+    "CpuShares": 0,
+    "Memory": 0,
+    "NanoCpus": 0,
+    "CgroupParent": "",
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": [],
+    "BlkioDeviceReadBps": [],
+    "BlkioDeviceWriteBps": [],
+    "BlkioDeviceReadIOps": [],
+    "BlkioDeviceWriteIOps": [],
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "Devices": [
+      {
+        "PathOnHost": "/dev/dri",
+        "PathInContainer": "/dev/dri",
+        "CgroupPermissions": "rwm"
+      }
+    ],
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "OomKillDisable": null,
+    "PidsLimit": null,
+    "Ulimits": [],
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "IOMaximumIOps": 0,
+    "IOMaximumBandwidth": 0,
+    "MaskedPaths": [
+      "/proc/acpi",
+      "/proc/asound",
+      "/proc/interrupts",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/sys/devices/virtual/powercap",
+      "/sys/firmware"
+    ],
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ]
+  },
+  "Storage": {
+    "RootFS": {
+      "Snapshot": {
+        "Name": "overlayfs"
+      }
+    }
+  },
+  "Mounts": [
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF",
+      "Destination": "/models",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/oneDNN/install",
+      "Destination": "/opt/onednn",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh",
+      "Destination": "/native-outprod.sh",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py",
+      "Destination": "/iq2-single2-gate/run-trace.py",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py",
+      "Destination": "/iq2-single2-gate/analyze-trace.py",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2/build-sycl/bin/test-backend-ops",
+      "Destination": "/src/build-sycl/bin/test-backend-ops",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/dev/dri",
+      "Destination": "/dev/dri",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-widths-single2-r1",
+      "Destination": "/src",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    }
+  ],
+  "Config": {
+    "Hostname": "bf045c7d9c10",
+    "Domainname": "",
+    "User": "",
+    "AttachStdin": false,
+    "AttachStdout": true,
+    "AttachStderr": true,
+    "ExposedPorts": {
+      "18098/tcp": {}
+    },
+    "Tty": false,
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Env": [
+      "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+      "ONEAPI_DEVICE_SELECTOR=level_zero:0",
+      "GGML_SYCL_ENABLE_ESIMD=1",
+      "GGML_SYCL_ENABLE_FUSION=1",
+      "GGML_SYCL_ENABLE_GRAPH=0",
+      "GGML_SYCL_ENABLE_DNN=1",
+      "ZE_AFFINITY_MASK=0",
+      "BOLT_TRACE_TENSORS=0",
+      "ONEDNN_VERBOSE=0",
+      "GGML_SYCL_ENABLE_OPT=1",
+      "GGML_SYCL_ENABLE_VMM=1",
+      "PATH=/opt/intel/oneapi/mpi/2021.18/bin:/opt/intel/oneapi/mkl/2026.0/bin:/opt/intel/oneapi/dev-utilities/2026.0/bin:/opt/intel/oneapi/debugger/2026.0/opt/debugger/bin:/opt/intel/oneapi/compiler/2026.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LANG=C.UTF-8",
+      "CCL_CONFIGURATION=cpu_gpu_dpcpp",
+      "CCL_CONFIGURATION_PATH=",
+      "CCL_ROOT=/opt/intel/oneapi/ccl/2022.0",
+      "CLASSPATH=/opt/intel/oneapi/mpi/2021.18/share/java/mpi.jar",
+      "CMAKE_PREFIX_PATH=/opt/intel/oneapi/tbb/2023.0/env/..:/opt/intel/oneapi/pti/0.17/lib/cmake/pti:/opt/intel/oneapi/mkl/2026.0/lib/cmake:/opt/intel/oneapi/dpl/2022.12/lib/cmake/oneDPL:/opt/intel/oneapi/compiler/2026.0:/opt/intel/oneapi/ccl/2022.0/lib/cmake/oneCCL",
+      "CMPLR_ROOT=/opt/intel/oneapi/compiler/2026.0",
+      "CPATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/dev-utilities/2026.0/include:/opt/intel/oneapi/ccl/2022.0/include",
+      "CPLUS_INCLUDE_PATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/tbb/2023.0/env/../include:/opt/intel/oneapi/pti/0.17/include:/opt/intel/oneapi/mpi/2021.18/include:/opt/intel/oneapi/mkl/2026.0/include:/opt/intel/oneapi/dpl/2022.12/include",
+      "C_INCLUDE_PATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/tbb/2023.0/env/../include:/opt/intel/oneapi/pti/0.17/include:/opt/intel/oneapi/mpi/2021.18/include:/opt/intel/oneapi/mkl/2026.0/include",
+      "DIAGUTIL_PATH=/opt/intel/oneapi/compiler/2026.0/etc/compiler/sys_check/sys_check.sh",
+      "DPLROOT=/opt/intel/oneapi/dpl/2022.12",
+      "DPL_ROOT=/opt/intel/oneapi/dpl/2022.12",
+      "FI_PROVIDER_PATH=/opt/intel/oneapi/mpi/2021.18/opt/mpi/libfabric/lib/prov:/usr/lib/x86_64-linux-gnu/libfabric",
+      "GDB_INFO=/opt/intel/oneapi/debugger/2026.0/share/info/",
+      "INFOPATH=/opt/intel/oneapi/debugger/2026.0/share/info",
+      "INTEL_PYTHONHOME=/opt/intel/oneapi/debugger/2026.0/opt/debugger",
+      "I_MPI_ROOT=/opt/intel/oneapi/mpi/2021.18",
+      "LD_LIBRARY_PATH=/opt/intel/oneapi/tcm/1.5/lib:/opt/intel/oneapi/umf/1.1/lib:/opt/intel/oneapi/tcm/1.5/env/../lib:/opt/intel/oneapi/tbb/2023.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.17/lib:/opt/intel/oneapi/mpi/2021.18/opt/mpi/libfabric/lib:/opt/intel/oneapi/mpi/2021.18/lib:/opt/intel/oneapi/mkl/2026.0/lib:/opt/intel/oneapi/debugger/2026.0/opt/debugger/lib:/opt/intel/oneapi/compiler/2026.0/opt/compiler/lib:/opt/intel/oneapi/compiler/2026.0/lib:/opt/intel/oneapi/ccl/2022.0/lib/",
+      "LIBRARY_PATH=/opt/intel/oneapi/tcm/1.5/lib:/opt/intel/oneapi/umf/1.1/lib:/opt/intel/oneapi/tbb/2023.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.17/lib:/opt/intel/oneapi/mpi/2021.18/lib:/opt/intel/oneapi/mkl/2026.0/lib:/opt/intel/oneapi/compiler/2026.0/lib:/opt/intel/oneapi/ccl/2022.0/lib/",
+      "MANPATH=/opt/intel/oneapi/mpi/2021.18/share/man:/opt/intel/oneapi/debugger/2026.0/share/man:/opt/intel/oneapi/compiler/2026.0/share/man:",
+      "MKLROOT=/opt/intel/oneapi/mkl/2026.0",
+      "NLSPATH=/opt/intel/oneapi/compiler/2026.0/lib/compiler/locale/%l_%t/%N",
+      "OCL_ICD_FILENAMES=/opt/intel/oneapi/compiler/2026.0/lib/libintelocl.so",
+      "ONEAPI_ROOT=/opt/intel/oneapi",
+      "PKG_CONFIG_PATH=/opt/intel/oneapi/tbb/2023.0/env/../lib/pkgconfig:/opt/intel/oneapi/mpi/2021.18/lib/pkgconfig:/opt/intel/oneapi/mkl/2026.0/lib/pkgconfig:/opt/intel/oneapi/dpl/2022.12/lib/pkgconfig:/opt/intel/oneapi/compiler/2026.0/lib/pkgconfig:/opt/intel/oneapi/ccl/2022.0/lib/pkgconfig/",
+      "Pti_DIR=/opt/intel/oneapi/pti/0.17/lib/cmake/pti",
+      "SETVARS_COMPLETED=1",
+      "TBBROOT=/opt/intel/oneapi/tbb/2023.0/env/..",
+      "TCMROOT=/opt/intel/oneapi/tcm/1.5/env/..",
+      "TCM_ROOT=/opt/intel/oneapi/tcm/1.5",
+      "UMF_ROOT=/opt/intel/oneapi/umf/1.1"
+    ],
+    "Cmd": [
+      "bash",
+      "-lc",
+      "set -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\nexport LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\nexport GGML_SYCL_ENABLE_DNN=1 GGML_SYCL_ENABLE_OPT=1 GGML_SYCL_ENABLE_VMM=1\nexport GGML_SYCL_ENABLE_ESIMD=1 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_ENABLE_GRAPH=0\nexport BOLT_TRACE_TENSORS=0 ONEDNN_VERBOSE=0 GGML_SYCL_DEBUG=1\nmkdir /tmp/router-n9-capture\nexport BOLT_VERIFY_CAPTURE_DIR=/tmp/router-n9-capture\nldd /src/build-sycl/bin/test-backend-ops\nexec /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p '^router_columns8=1,router_single2=1,weight=blk\\.48\\.ffn_gate_inp\\.weight,layout=0,type_a=f32,type_b=f32,m=496,n=9,'"
+    ],
+    "Image": "intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04",
+    "Volumes": null,
+    "WorkingDir": "",
+    "Entrypoint": null,
+    "Labels": {
+      "b70.experiment": "bolt-fusion",
+      "org.opencontainers.image.version": "24.04"
+    }
+  },
+  "NetworkSettings": {
+    "SandboxID": "",
+    "SandboxKey": "",
+    "Ports": {},
+    "Networks": {
+      "bridge": {
+        "IPAMConfig": null,
+        "Links": null,
+        "Aliases": null,
+        "DriverOpts": null,
+        "GwPriority": 0,
+        "NetworkID": "50dfd4e1162270e8aa4b5d5415ac066a0ae038c381f2c33f8413192ace398018",
+        "EndpointID": "",
+        "Gateway": "",
+        "IPAddress": "",
+        "MacAddress": "",
+        "IPPrefixLen": 0,
+        "IPv6Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "DNSNames": null
+      }
+    }
+  },
+  "ImageManifestDescriptor": {
+    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+    "digest": "sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0",
+    "size": 1377,
+    "platform": {
+      "architecture": "amd64",
+      "os": "linux"
+    }
+  }
+}

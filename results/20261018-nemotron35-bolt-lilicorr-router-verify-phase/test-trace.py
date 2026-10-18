@@ -285,4 +285,6 @@ class SourcePatch(unittest.TestCase):
 
 if __name__ == '__main__':
     assert socket.gethostname() == 'inference-host', 'remote CPU execution only'
-    unittest.main(verbosity=2)
+    result = unittest.main(verbosity=2, exit=False).result
+    if not result.wasSuccessful():
+        raise SystemExit(1)

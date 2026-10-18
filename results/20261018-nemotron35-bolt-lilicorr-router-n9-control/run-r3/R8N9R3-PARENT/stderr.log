@@ -1,0 +1,115 @@
+[SYCL] call ggml_check_sycl
+Build with Macros:
+  GGML_SYCL_DNNL: yes
+  GGML_SYCL_F16: yes
+  GGML_SYCL_FORCE_MMQ: no
+  GGML_SYCL_GRAPH: yes
+  GGML_SYCL_SUPPORT_LEVEL_ZERO_API: yes
+  GGML_SYCL_SUPPORT_VMM: yes
+Running with Environment Variables:
+  GGML_SYCL_DEBUG: 1
+  GGML_SYCL_DEV_DEBUG: 0
+  GGML_SYCL_DEV2DEV_MEMCPY: 0 (SYCL API)
+  GGML_SYCL_GET_MEM_API: 0 (Level Zero API)
+  GGML_SYCL_ENABLE_DNN: 1
+  GGML_SYCL_FA_ONEDNN: 1
+  GGML_SYCL_FA_ONEDNN_MAX_KV: 0
+  GGML_SYCL_ENABLE_MKL_FA: 1
+  GGML_SYCL_MEMTRACE: 0
+  GGML_SYCL_MEMTRACE_STEP: 64
+  GGML_SYCL_ENABLE_FLASH_ATTN: 1
+  GGML_SYCL_ENABLE_GRAPH: 0
+  GGML_SYCL_ENABLE_OPT: 1
+  GGML_SYCL_XMX_GATHER_TYPES: -1
+  GGML_SYCL_XMX_GATHER_SHAPES: 255
+  GGML_SYCL_DYNAMIC_PRECISION: F16
+  GGML_SYCL_DYNAMIC_REQUIRED_PRECISION: F32
+  GGML_SYCL_ENABLE_VMM: 1
+  GGML_SYCL_ENABLE_FUSION: 1
+  GGML_SYCL_UPLOAD_STAGING_SLOTS: 4
+  GGML_SYCL_ENABLE_ESIMD: 1
+  GGML_SYCL_MMVQ_WIDE: 1
+  GGML_SYCL_PRIORITIZE_DMMV: 0
+  GGML_SYCL_USE_ASYNC_MEM_OP: 1
+  GGML_SYCL_USE_LEVEL_ZERO_API: 1
+  GGML_SYCL_USM_SYSTEM: 0
+  GGML_SYCL_ENABLE_HOST_PINNED_MEM: 1
+  GGML_SYCL_HOST_PINNED_MEM_2G: 0
+  GGML_SYCL_SPARSE_FA: 0
+  GGML_SYCL_SPARSE_FA_DEBUG: 0
+  GGML_SYCL_SPARSE_FA_MARGIN: 256
+[SYCL] call ggml_backend_sycl_print_sycl_devices
+Found 1 SYCL devices:
+|  |                   |                                       |       |Max    |        |Max  |Global |                     |
+|  |                   |                                       |       |compute|Max work|sub  |mem    |                     |
+|ID|        Device Type|                                   Name|Version|units  |group   |group|size   |       Driver version|
+|--|-------------------|---------------------------------------|-------|-------|--------|-----|-------|---------------------|
+| 0| [level_zero:gpu:0]|                Intel Graphics [0xe223]|   20.2|    256|    1024|   32| 32530M|         1.14.37020+3|
+SYCL Optimization Feature:
+|ID|        Device Type|Reorder|
+|--|-------------------|-------|
+[SYCL] call ggml_sycl_init
+| 0| [level_zero:gpu:0]|      Y|
+[SYCL] call ggml_backend_sycl_init
+[SYCL] ggml_check_sycl()
+[SYCL] call ggml_backend_sycl_reg
+[SYCL] call ggml_backend_sycl_device_get_memory
+[SYCL] [sycl_get_mem_info] g_ggml_sycl_get_mem_api=0
+[SYCL] call get_zes_init_res: zesInit result: 0
+[get_memory_size]GPU Name:          Intel(R) Graphics [0xe223]
+[get_memory_size]GPU Vendor:        Intel(R) Corporation
+[get_memory_size] Querying free memory using Level Zero API.
+[SYCL] call query_free_memory_by_ze: Querying free memory using Level Zero API.
+[SYCL] [sycl_get_mem_info] total = 34242297856 free = 33950752768
+[SYCL] call ggml_backend_sycl_device_get_memory total 34242297856 free 33950752768
+[SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+[SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+[SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+[SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+[SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+[SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+[SYCL] call ggml_backend_sycl_reg
+[SYCL] call ggml_backend_sycl_buffer_type_alloc_buffer: size=8308224
+[SYCL] ggml_check_sycl()
+[SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+[SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='blk.48.ffn_gate_inp.weight':type=f32;ne=[4096, 496, 1, 1];nb=[4, 16384, 8126464, 8126464]
+[SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+[SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='router.input':type=f32;ne=[4096, 9, 1, 1];nb=[4, 16384, 147456, 147456]
+[SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+[SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='router_columns8-m496-l0-n9':type=f32;ne=[496, 9, 1, 1];nb=[4, 1984, 17856, 17856]
+[SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='blk.48.ffn_gate_inp.weight':type=f32;ne=[4096, 496, 1, 1];nb=[4, 16384, 8126464, 8126464] size=8126464 offset=0
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='router.input':type=f32;ne=[4096, 9, 1, 1];nb=[4, 16384, 147456, 147456] size=147456 offset=0
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='router_columns8-m496-l0-n9':type=f32;ne=[496, 9, 1, 1];nb=[4, 1984, 17856, 17856] size=17856 offset=0
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='router.input':type=f32;ne=[4096, 9, 1, 1];nb=[4, 16384, 147456, 147456] size=147456 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='router_columns8-m496-l0-n9':type=f32;ne=[496, 9, 1, 1];nb=[4, 1984, 17856, 17856] size=17856 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='blk.48.ffn_gate_inp.weight':type=f32;ne=[4096, 496, 1, 1];nb=[4, 16384, 8126464, 8126464] size=8126464 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='router.input':type=f32;ne=[4096, 9, 1, 1];nb=[4, 16384, 147456, 147456] size=147456 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] ggml_sycl_compute_forward: dst=router_columns8-m496-l0-n9, op=MUL_MAT
+[SYCL][OP] call ggml_sycl_mul_mat: dst='router_columns8-m496-l0-n9':type=f32;ne=[496, 9, 1, 1];nb=[4, 1984, 17856, 17856]	src0='blk.48.ffn_gate_inp.weight':type=f32;ne=[4096, 496, 1, 1];nb=[4, 16384, 8126464, 8126464]	src1='router.input':type=f32;ne=[4096, 9, 1, 1];nb=[4, 16384, 147456, 147456]
+BOLT_ROUTE route=MUL_MAT_SYCL weight=blk.48.ffn_gate_inp.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=router_columns8-m496-l0-n9 src0_type=f32 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=496 ne2=1 ne3=1 nb0=4 nb1=16384 nb2=8126464 nb3=8126464 src1_ne0=4096 src1_ne1=9 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=147456 src1_nb3=147456 dst_ne0=496 dst_ne1=9 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1984 dst_nb2=17856 dst_nb3=17856 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=0 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x729f8b0 expert=-1 result=-1
+BOLT_ROUTE route=LIBRARY_DNNL_F32 weight=blk.48.ffn_gate_inp.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=router_columns8-m496-l0-n9 src0_type=f32 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=496 ne2=1 ne3=1 nb0=4 nb1=16384 nb2=8126464 nb3=8126464 src1_ne0=4096 src1_ne1=9 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=147456 src1_nb3=147456 dst_ne0=496 dst_ne1=9 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1984 dst_nb2=17856 dst_nb3=17856 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=0 src1_prec=0 operand_prec=10 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x729f8b0 expert=-1 result=-1
+[SYCL][OP] call ggml_sycl_mul_mat done
+[SYCL] call ggml_backend_sycl_synchronize
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='router_columns8-m496-l0-n9':type=f32;ne=[496, 9, 1, 1];nb=[4, 1984, 17856, 17856] size=17856 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='router_columns8-m496-l0-n9':type=f32;ne=[496, 9, 1, 1];nb=[4, 1984, 17856, 17856] size=17856 offset=0
+[SYCL] call ggml_backend_sycl_synchronize
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_synchronize
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_synchronize
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_synchronize
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+[SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0

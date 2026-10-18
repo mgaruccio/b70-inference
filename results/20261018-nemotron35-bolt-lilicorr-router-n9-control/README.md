@@ -70,7 +70,7 @@ binary hashes, and the preserved raw logs. A missing, malformed, duplicate, or
 different marker fails closed. Cleanup restores the exact accepted container's
 identity, configuration, mounts, health, READY/stop smoke and exclusive DRM
 ownership; it leaves the two completed diagnostic containers stopped. Evidence
-stays in `run-r2/`, including `equivalence.json`, `analysis.json` and
+stays in `run-r3/` for the phase recheck (`run-r2/` is preserved), including `equivalence.json`, `analysis.json` and
 `independent-restoration.json`. No timing or promotion is permitted.
 
 ## Preserved r1 result — blocked, not qualified
@@ -118,3 +118,35 @@ Repository archival follows the existing gzip convention for the two large
 R2). Their `.gz` files decompress to the bytes and SHA-256 recorded in each
 `stopped-log-prefix.json`. The uncompressed originals remain on
 `inference-host`; no runtime evidence was truncated or normalized.
+
+
+## Phase-candidate recheck (r3; completed)
+
+The completed r2 pair established literal equality of all 17,856 output bytes
+for the earlier columns8 candidate. Its public run then exposed an independent
+no-draft fidelity regression; the 55-token prompt was processed in 5/46/4-token
+checkpoint chunks, which the unconditional small-N router rule can also match.
+
+`run-control.py` now targets the separate `router-verify-phase-r1` candidate.
+It reuses the **unchanged** seeded `router-n9-control-r2` executable and checks
+its source against its original `router-columns8-r1` build base, not against the
+new model graph. Only that executable is overlaid; runtime libraries come from
+the selected reference-parent or phase-candidate tree. The new runtime proof
+includes `libllama.so.0.7.0` as a sixth artifact because graph construction now
+changes intentionally. The private test executable retains its original
+five-artifact build manifest.
+
+Run the existing CPU checks, then `python3 -B run-control.py --lead-run-control`
+and `python3 -B run-control.py --lead-after-restore` on `inference-host` under the
+existing exclusive-GPU/restoration lifecycle. Fresh artifacts go to `run-r3/`
+with cells `R8N9R3-PARENT` and `R8N9R3-CANDIDATE`. Require matched raw output
+bytes, current source/binary bindings, stopped diagnostic containers, and
+independent accepted-service restoration before the phase public gate. No new
+native tolerance or performance criterion is introduced.
+
+The completed r3 pair matched all 17,856 device-output bytes. Both arms retained
+an inherited `0.000000140` CPU-reference error against `1e-7`; this is not a CPU
+numerical pass. `run-r3/equivalence.json` records exact baseline equivalence and
+`run-r3/independent-restoration.json` passed with no errors. The subsequent
+phase public run restored all 25 no-draft comparisons but did not qualify W3/W7;
+see `../20261018-nemotron35-bolt-lilicorr-router-verify-phase/RESULTS.md`.

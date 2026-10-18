@@ -87,7 +87,7 @@ def assert_tensor(route, prefix, shape, strides):
     assert tuple(route[f'{prefix}nb{i}'] for i in range(4)) == strides, route
 
 
-def assert_router_operations(routes, key, tag):
+def assert_router_operations(routes, key, tag='router_columns8_r3'):
     weight, m, layout, n = key
     split = split_case(key, tag)
     calls, view_n = (n, 1) if split else (1, n)

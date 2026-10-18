@@ -8,7 +8,7 @@ from pathlib import Path
 assert __debug__ and socket.gethostname() == 'inference-host'
 ROOT = Path(__file__).resolve().parent
 M = runpy.run_path(str(ROOT / 'run-control.py'))
-F = runpy.run_path(str(M['SOURCE'] / 'test-trace.py'))
+F = runpy.run_path(str(ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-columns8' / 'test-trace.py'))
 N9 = M['N9']
 
 def fixture(passed=False):
@@ -89,6 +89,8 @@ class ControlTests(unittest.TestCase):
 
     def test_restore_implementation_is_inherited(self):
         self.assertIs(M['Runtime'].restore, M['K']['Runtime'].restore)
+        self.assertEqual(M['Runtime'].__bases__, (M['K']['Runtime'],))
+        self.assertIs(M['Runtime']._preserve_restore_log, M['K']['Runtime']._preserve_restore_log)
 
 
 if __name__ == '__main__':

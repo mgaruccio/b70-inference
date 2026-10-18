@@ -135,6 +135,7 @@ def check_container(record, cell, h):
         assert mount['Type'] == 'bind' and mount['Source'] == str(source) and mount['RW'] is False
         assert 'ro' in mount['Mode'].split(',')
         assert record['HostConfig']['Binds'].count(str(source) + ':' + destination + ':ro') == 1
+    return True
 
 
 def check_startup(log, cell, h):
@@ -186,7 +187,9 @@ def candidate_proof():
     source, binaries = N['source_hashes'](N['CANDIDATE']), N['binaries'](N['CANDIDATE'])
     assert binaries == C['load'](ROOT / 'candidate-binaries.json')
     assert set(binaries) == set(N['ARTIFACTS']) and len(N['ARTIFACTS']) == 6
-    assert {key for key in binaries if binaries[key] != N['PARENT_EXPECTED'][key]} == {
+    parent_binaries = C['load'](ROOT / 'parent-binaries.json')
+    assert set(parent_binaries) == set(binaries)
+    assert {key for key in binaries if binaries[key] != parent_binaries[key]} == {
         'libggml-sycl.so.0', 'libllama.so.0.7.0', 'test-backend-ops'}
     assert C['load'](ROOT / 'source-diff.json')['changed_relative_to_parent'] == N['SOURCE_SCOPE']
     return dict(source=source, binaries=binaries)
@@ -507,6 +510,7 @@ def collect(rt, cell):
                 result = read_result(rt.h, rt.out / cell, job)
             frozen = read_result(rt.h, rt.off['ROOT'] / 'run-r1/A0', job)
             fresh = result if cell == 'RVP-A' else read_result(rt.h, rt.out / 'RVP-A', job)
+            row = add_result(report, job, result, frozen, fresh)
             C['save'](rt.out / cell / 'qualification.json', report)
             if report['baseline'] and not row['passed']:
                 raise C['InfraFailure']('fresh no-draft A failed frozen output/functional gate')

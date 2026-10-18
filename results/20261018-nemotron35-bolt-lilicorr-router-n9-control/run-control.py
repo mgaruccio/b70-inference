@@ -10,15 +10,17 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path('/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control')
-SOURCE = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-columns8'
+SOURCE = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-verify-phase'
 TEST_TREE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2')
+# Reuse the already-built seeded executable; its libraries are never mounted.
+TEST_BASE_TREE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-columns8-r1')
 BUILD_PROOF = ROOT / 'r2'
 BUILD_ATTEMPT = ROOT / 'build-attempt-r2'
 P = runpy.run_path(str(SOURCE / 'public-gate.py'))
 C, K, N, A = (P[key] for key in ('C', 'K', 'N', 'A'))
 N9 = runpy.run_path(str(ROOT / 'n9-equivalence.py'))
-OUT = ROOT / 'run-r2'
-BACKENDS = {'R8N9R2-PARENT': N['PARENT'], 'R8N9R2-CANDIDATE': N['CANDIDATE']}
+OUT = ROOT / 'run-r3'
+BACKENDS = {'R8N9R3-PARENT': N['PARENT'], 'R8N9R3-CANDIDATE': N['CANDIDATE']}
 TEST_BINARY = TEST_TREE / 'build-sycl/bin/test-backend-ops'
 FILTER = N9['FILTER']
 COMMAND = r'''set -eo pipefail
@@ -43,23 +45,22 @@ def inputs(h):
     # the new paired proof; the public CPU freeze is intentionally a later gate.
     candidate = P['candidate_proof']()
     N['check_consumed_sources'](N['CANDIDATE'], 'candidate')
-    original = (N['CANDIDATE'] / 'tests/test-backend-ops.cpp').read_bytes()
+    original = (TEST_BASE_TREE / 'tests/test-backend-ops.cpp').read_bytes()
     expected = N9['expected_test_source'](original)
     assert (TEST_TREE / 'tests/test-backend-ops.cpp').read_bytes() == expected
     test_sources = N['source_hashes'](TEST_TREE)
-    before, after = N['source_hashes'](N['CANDIDATE']), test_sources
+    before, after = N['source_hashes'](TEST_BASE_TREE), test_sources
     assert sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k)) == [
         'tests/test-backend-ops.cpp']
-    test_binaries = N['binaries'](TEST_TREE)
     build_binaries = C['load'](BUILD_PROOF / 'candidate-binaries.json')
+    test_binaries = {key: N9['sha256_bytes']((TEST_TREE / 'build-sycl/bin' / key).read_bytes()) for key in build_binaries}
     assert test_binaries == build_binaries
     backend_hashes = {
         'parent': N['binaries'](N['PARENT']),
         'candidate': N['binaries'](N['CANDIDATE']),
     }
-    assert {key for key in backend_hashes['parent'] if
-            backend_hashes['parent'][key] != backend_hashes['candidate'][key]} == {
-        'libggml-sycl.so.0', 'test-backend-ops'}
+    # The phase candidate intentionally also changes libllama's graph builder.
+    # Its six runtime artifacts are pinned by candidate_proof(), not assumed equal.
     assert (BUILD_ATTEMPT / 'exit-code.txt').read_text().strip() == '0'
     assert 'BOLT_VERIFY_BUILD_PASSED' in (BUILD_ATTEMPT / 'post-build-verification.log').read_text()
     assert 'BOLT_VERIFY_DEPENDENCIES_PASSED' in (BUILD_ATTEMPT / 'runtime-precheck.log').read_text()
@@ -111,7 +112,7 @@ def analyze_native(raw, exit_code):
                 raw_output_byte_equality_claimed=False, qualification_waiver=False)
 
 
-class Runtime(P['Runtime']):
+class Runtime(K['Runtime']):
     def preflight(self):
         self.capacity('initial')
         self.input_snapshot = inputs(self.h)
@@ -170,11 +171,6 @@ class Runtime(P['Runtime']):
         assert inputs(self.h) == self.input_snapshot
         self.active = None
 
-    def preserve_native(self, cell, phase, required=False):
-        # The inherited restoration already preserves complete docker stdout/stderr.
-        # There are no model-era /tmp native fixture files in these native-only arms.
-        pass
-
     def stopped_cells(self):
         result = {}
         for cell in BACKENDS:
@@ -192,6 +188,7 @@ class Runtime(P['Runtime']):
     def verify_restored(self, destination):
         record = super().verify_restored(destination)
         try:
+            record['preserved_cells'] = self.stopped_cells()
             assert inputs(self.h) == C['load'](self.out / 'inputs-before.json')
             record['seeded_test_inputs_unchanged'] = True
         except Exception as exc:
@@ -219,12 +216,12 @@ def main():
     if args.lead_run_control:
         inputs(h)
         OUT.mkdir(exist_ok=False)
-        K['capture'](Runtime(h, OUT, 'native-n9-control-r2'), tuple(BACKENDS), lambda rt, cell: [])
+        K['capture'](Runtime(h, OUT, 'native-n9-control-r3'), tuple(BACKENDS), lambda rt, cell: [])
     else:
         summary = C['load'](OUT / 'summary.json')
         assert summary['status'] == 'captured' and summary['restored']
         assert summary['completed'] == list(BACKENDS) and not summary['timing_permitted']
-        Runtime(h, OUT, 'native-n9-control-r2').verify_restored(OUT / 'independent-restoration.json')
+        Runtime(h, OUT, 'native-n9-control-r3').verify_restored(OUT / 'independent-restoration.json')
         reports = {}
         raw = {}
         for cell in BACKENDS:
@@ -239,8 +236,8 @@ def main():
         raw_hashes = {cell: {stream: N9['sha256_bytes'](value) for stream, value in artifacts.items()}
                       for cell, artifacts in raw.items()}
         equivalence = N9['make_proof'](
-            raw['R8N9R2-PARENT']['stdout'] + raw['R8N9R2-PARENT']['stderr'],
-            raw['R8N9R2-CANDIDATE']['stdout'] + raw['R8N9R2-CANDIDATE']['stderr'],
+            raw['R8N9R3-PARENT']['stdout'] + raw['R8N9R3-PARENT']['stderr'],
+            raw['R8N9R3-CANDIDATE']['stdout'] + raw['R8N9R3-CANDIDATE']['stderr'],
             snapshot['backend_hashes'], snapshot['test_binaries'], snapshot['test_sources'],
             snapshot['controller_sha256'], raw_hashes)
         C['save'](OUT / 'equivalence.json', equivalence)
