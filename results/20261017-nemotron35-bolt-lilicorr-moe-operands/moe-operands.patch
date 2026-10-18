@@ -9,10 +9,10 @@
 +#include <mutex>
 +#include <sys/stat.h>
 +#include <unistd.h>
-
+ 
  #include <sycl/sycl.hpp>
  #include <sycl/backend.hpp>
-@@ -6470,6 +6475,164 @@
+@@ -6470,6 +6475,162 @@
              << ", line:" << __LINE__ << std::endl;
    std::exit(1);
  }
@@ -132,9 +132,8 @@
 +    bolt_moe_require(x->ne[1] == width[0] - '0', "armed_width");
 +    bolt_moe_require(!backend || (backend == &ctx && n == x->ne[1]), "backend_changed");
 +    bolt_moe_require(router ? !seen[1] : seen[0], "projection_order");
-+    const auto * extra = static_cast<const ggml_tensor_extra_gpu *>(w->extra);
 +    const bool reordered = latent_down;
-+    bolt_moe_require(extra && extra->optimized_feature.reorder == reordered, "reorder_expectation");
++    bolt_moe_require(bolt_route_reordered(w) == reordered, "reorder_expectation");
 +    const int64_t k = 4096;
 +    const int64_t m = router ? 240 : 1024;
 +    capture.bytes[0] = bolt_moe_span(ctx, w, k, m, true, reordered);
@@ -162,8 +161,7 @@
 +static void bolt_moe_after(const bolt_moe_capture & capture, ggml_backend_sycl_context & ctx) {
 +    if (!capture.stem) return;
 +    bolt_moe_require(capture.queue == ctx.stream(), "queue_changed");
-+    const auto * extra = static_cast<const ggml_tensor_extra_gpu *>(capture.tensors[0]->extra);
-+    bolt_moe_require(extra && extra->optimized_feature.reorder == capture.reordered, "reorder_changed");
++    bolt_moe_require(bolt_route_reordered(capture.tensors[0]) == capture.reordered, "reorder_changed");
 +    const bool router = std::strcmp(capture.stem, "router") == 0;
 +    for (int i = 0; i < 3; ++i) {
 +        const int64_t rows = i == 2 ? (router ? 240 : 1024) : 4096;
@@ -177,7 +175,7 @@
  
  static bool ggml_sycl_compute_forward(ggml_backend_sycl_context & ctx, struct ggml_tensor * dst) try {
      GGML_SYCL_DEBUG("[SYCL] ggml_sycl_compute_forward: dst=%s, op=%s\n", dst->name, ggml_op_name(dst->op));
-@@ -6685,13 +6848,16 @@
+@@ -6685,13 +6846,16 @@
          case GGML_OP_L2_NORM:
              ggml_sycl_l2_norm(ctx, dst);
              break;
@@ -195,5 +193,3 @@
          case GGML_OP_MUL_MAT_ID:
              if (dst->src[0]->ne[3] != dst->src[1]->ne[3]) {
                  return false;
-             }
-*** End of File

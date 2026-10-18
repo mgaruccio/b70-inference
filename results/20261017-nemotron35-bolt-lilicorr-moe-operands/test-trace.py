@@ -1735,6 +1735,32 @@ class Trace(unittest.TestCase):
                          'dev[i].dst_dd = (float *) dst->data;', 'const int64_t is = split ?',
                          'queue_ptr stream = ctx.stream(i, is);'):
             self.assertIn(required, wrapper)
+    def test_reorder_guard_null_safe_for_f32_and_q8(self):
+        source, _ = self.patched_sources()
+        helper = cpp_body(source, 'bolt_route_reordered')
+        before = cpp_body(source, 'bolt_moe_before')
+        after = cpp_body(source, 'bolt_moe_after')
+        self.assertIn('weight ? static_cast<const ggml_tensor_extra_gpu *>(weight->extra) : nullptr', helper)
+        self.assertIn('return extra && extra->optimized_feature.reorder;', helper)
+        self.assertIn('bolt_route_reordered(w) == reordered', before)
+        self.assertIn('bolt_route_reordered(capture.tensors[0]) == capture.reordered', after)
+        self.assertNotIn('extra && extra->optimized_feature.reorder ==', before + after)
+
+        def helper_result(extra):
+            return bool(extra is not None and extra.get('reorder', False))
+
+        cases = (
+            ('F32 null extra', None, False, False, True),
+            ('F32 installed reorder', {'reorder': True}, True, False, False),
+            ('Q8 null extra', None, False, True, False),
+            ('Q8 unset reorder', {'reorder': False}, False, True, False),
+            ('Q8 reordered', {'reorder': True}, True, True, True),
+        )
+        for label, extra, helper_expected, guard_expected, accepted in cases:
+            actual = helper_result(extra)
+            self.assertEqual(actual, helper_expected, label)
+            self.assertEqual(actual == guard_expected, accepted, label)
+
     def test_iq2_singleton_body_plain_support_and_width3_fallback_unchanged(self):
         source, _ = self.patched_sources()
         parent = (M['PARENT'] / M['SOURCE_SCOPE'][0]).read_text()
