@@ -181,6 +181,9 @@ def candidate_proof():
 def check_n9_equivalence(h):
     proof_path = N9_ROOT / 'run-r2/equivalence.json'
     proof = C['load'](proof_path)
+    restoration = C['load'](N9_ROOT / 'run-r2/independent-restoration.json')
+    assert restoration['passed'] and not restoration['errors']
+    assert restoration['seeded_test_inputs_unchanged']
     assert (N9_ROOT / 'build-attempt-r2/exit-code.txt').read_text().strip() == '0'
     assert 'BOLT_VERIFY_BUILD_PASSED' in (N9_ROOT / 'build-attempt-r2/post-build-verification.log').read_text()
     assert 'BOLT_VERIFY_DEPENDENCIES_PASSED' in (N9_ROOT / 'build-attempt-r2/runtime-precheck.log').read_text()
@@ -192,7 +195,7 @@ def check_n9_equivalence(h):
     original = (N['CANDIDATE'] / 'tests/test-backend-ops.cpp').read_bytes()
     assert (N9_TEST_TREE / 'tests/test-backend-ops.cpp').read_bytes() == N9['expected_test_source'](original)
     artifacts = {}
-    for cell in ('R8N9-PARENT', 'R8N9-CANDIDATE'):
+    for cell in ('R8N9R2-PARENT', 'R8N9R2-CANDIDATE'):
         directory = N9_ROOT / 'run-r2' / cell
         artifacts[cell] = {stream: (directory / (stream + '.log')).read_bytes()
                            for stream in ('stdout', 'stderr')}
@@ -206,8 +209,8 @@ def check_n9_equivalence(h):
                   for cell, streams in artifacts.items()}
     N9['check_proof'](
         proof,
-        artifacts['R8N9-PARENT']['stdout'] + artifacts['R8N9-PARENT']['stderr'],
-        artifacts['R8N9-CANDIDATE']['stdout'] + artifacts['R8N9-CANDIDATE']['stderr'],
+        artifacts['R8N9R2-PARENT']['stdout'] + artifacts['R8N9R2-PARENT']['stderr'],
+        artifacts['R8N9R2-CANDIDATE']['stdout'] + artifacts['R8N9R2-CANDIDATE']['stderr'],
         backend_hashes, test_binaries, test_sources,
         N9['sha256_bytes']((N9_ROOT / 'run-control.py').read_bytes()), raw_hashes)
     return proof
@@ -231,11 +234,12 @@ def freeze(h):
             paths += [C['artifact'](directory / job['stem'], suffix) for suffix in HTTP_SUFFIXES]
     n9_run = N9_ROOT / 'run-r2'
     paths += [n9_run / 'equivalence.json', n9_run / 'analysis.json', n9_run / 'inputs-before.json',
+              n9_run / 'independent-restoration.json', n9_run / 'summary.json',
               n9_run / 'paired-argv-difference.json',
               N9_ROOT / 'r2/candidate-binaries.json', N9_ROOT / 'r2/protected-source-hashes.json',
               N9_ROOT / 'build-attempt-r2/exit-code.txt', N9_ROOT / 'build-attempt-r2/post-build-verification.log',
               N9_ROOT / 'build-attempt-r2/runtime-precheck.log']
-    for cell in ('R8N9-PARENT', 'R8N9-CANDIDATE'):
+    for cell in ('R8N9R2-PARENT', 'R8N9R2-CANDIDATE'):
         paths += [n9_run / cell / 'create-argv.json']
         paths += [n9_run / cell / (stream + '.log') for stream in ('stdout', 'stderr')]
         paths += [n9_run / cell / 'native-result.json']

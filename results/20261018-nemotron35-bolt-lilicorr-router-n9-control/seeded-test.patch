@@ -1,12 +1,13 @@
 diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 --- a/tests/test-backend-ops.cpp
 +++ b/tests/test-backend-ops.cpp
-@@ -66 +66 @@
+@@ -65,3 +65,3 @@
+         auto init_thread = [&](size_t start, size_t end) {
 -            thread_local std::default_random_engine gen(std::random_device{}());
 +            std::default_random_engine gen(static_cast<unsigned int>(0x5A17u + start));
-@@ -1558,0 +1559,14 @@
-+            }
-+
+             std::uniform_real_distribution<float> distribution(min, max);
+@@ -1561,2 +1561,16 @@
+-            double err = ud->tc->err(f1.data(), f2.data(), f1.size());
 +            if (strcmp(bn1, "SYCL0") == 0 && strcmp(bn2, "CPU") == 0 &&
 +                    strcmp(t1->name, "router_columns8-m496-l0-n9") == 0 &&
 +                    t1->type == GGML_TYPE_F32 && ggml_is_contiguous(t1) &&
@@ -20,3 +21,6 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +                }
 +                printf("\n");
 +            }
++
++            double err = ud->tc->err(f1.data(), f2.data(), f1.size());
+             if (err > ud->tc->max_err(ud->backend1)) {

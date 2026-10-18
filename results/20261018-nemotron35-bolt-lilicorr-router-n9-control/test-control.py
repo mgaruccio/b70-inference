@@ -63,7 +63,8 @@ class ControlTests(unittest.TestCase):
                         raw.replace(marker, wrong_length, 1)):
             with self.subTest(changed=changed[:len(N9['MARKER'])]), self.assertRaises(AssertionError):
                 M['analyze_native'](changed, 1)
-        one_byte_mismatch = N9['MARKER'] + '01' + '00' * (2 * N9['EXPECTED_BYTES'] - 2)
+        self.assertTrue(N9['check_pair'](raw, raw)['baseline_equivalent'])
+        one_byte_mismatch = N9['MARKER'] + '01' + '00' * (N9['EXPECTED_BYTES'] - 1)
         with self.assertRaises(AssertionError):
             N9['check_pair'](raw, raw.replace(marker, one_byte_mismatch, 1))
     def test_wrong_route_or_duplicate_rejected(self):

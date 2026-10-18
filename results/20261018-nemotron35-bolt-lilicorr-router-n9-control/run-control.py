@@ -18,7 +18,7 @@ P = runpy.run_path(str(SOURCE / 'public-gate.py'))
 C, K, N, A = (P[key] for key in ('C', 'K', 'N', 'A'))
 N9 = runpy.run_path(str(ROOT / 'n9-equivalence.py'))
 OUT = ROOT / 'run-r2'
-BACKENDS = {'R8N9-PARENT': N['PARENT'], 'R8N9-CANDIDATE': N['CANDIDATE']}
+BACKENDS = {'R8N9R2-PARENT': N['PARENT'], 'R8N9R2-CANDIDATE': N['CANDIDATE']}
 TEST_BINARY = TEST_TREE / 'build-sycl/bin/test-backend-ops'
 FILTER = N9['FILTER']
 COMMAND = r'''set -eo pipefail
@@ -59,7 +59,7 @@ def inputs(h):
     }
     assert {key for key in backend_hashes['parent'] if
             backend_hashes['parent'][key] != backend_hashes['candidate'][key]} == {
-        'libggml-sycl.so.0'}
+        'libggml-sycl.so.0', 'test-backend-ops'}
     assert (BUILD_ATTEMPT / 'exit-code.txt').read_text().strip() == '0'
     assert 'BOLT_VERIFY_BUILD_PASSED' in (BUILD_ATTEMPT / 'post-build-verification.log').read_text()
     assert 'BOLT_VERIFY_DEPENDENCIES_PASSED' in (BUILD_ATTEMPT / 'runtime-precheck.log').read_text()
@@ -239,8 +239,8 @@ def main():
         raw_hashes = {cell: {stream: N9['sha256_bytes'](value) for stream, value in artifacts.items()}
                       for cell, artifacts in raw.items()}
         equivalence = N9['make_proof'](
-            raw['R8N9-PARENT']['stdout'] + raw['R8N9-PARENT']['stderr'],
-            raw['R8N9-CANDIDATE']['stdout'] + raw['R8N9-CANDIDATE']['stderr'],
+            raw['R8N9R2-PARENT']['stdout'] + raw['R8N9R2-PARENT']['stderr'],
+            raw['R8N9R2-CANDIDATE']['stdout'] + raw['R8N9R2-CANDIDATE']['stderr'],
             snapshot['backend_hashes'], snapshot['test_binaries'], snapshot['test_sources'],
             snapshot['controller_sha256'], raw_hashes)
         C['save'](OUT / 'equivalence.json', equivalence)

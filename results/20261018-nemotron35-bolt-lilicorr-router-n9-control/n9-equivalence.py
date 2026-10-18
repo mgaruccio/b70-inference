@@ -24,7 +24,7 @@ SOURCE_REPLACEMENTS = (
                     ggml_nbytes(t1) == 17856) {
                 std::vector<uint8_t> device_output(ggml_nbytes(t1));
                 ggml_backend_tensor_get(t1, device_output.data(), 0, device_output.size());
-                printf("\nBOLT_N9_OUTPUT_HEX=");
+                printf("\\nBOLT_N9_OUTPUT_HEX=");
                 for (uint8_t byte : device_output) {
                     printf("%02x", byte);
                 }
