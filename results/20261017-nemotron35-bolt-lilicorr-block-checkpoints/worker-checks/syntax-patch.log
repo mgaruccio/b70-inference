@@ -1,0 +1,9 @@
+host=inference-host
+cwd=/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block-checkpoints/worker-scratch/assets
+command: bash -n build-candidate.sh
+BASH_SYNTAX_OK
+command: python3 -B -m py_compile run-trace.py analyze-trace.py test-trace.py
+PY_COMPILE_OK
+command: patch --dry-run --batch --fuzz=0 --forward -p1
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
+PATCH_DRY_RUN_OK

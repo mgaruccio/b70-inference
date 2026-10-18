@@ -1,0 +1,41 @@
+host=inference-host
+cwd=/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block-checkpoints/worker-scratch/assets
+command: python3 -B test-trace.py Trace.test_compiled_actual_block_observer_cpu_spy Trace.test_syntax_and_patch_scope Trace.test_block_source_guards_queue_lifetime_logger_and_complete_boundary Trace.test_block_records_closed_names_metadata_bounds_and_consumer_name Trace.test_block_file_exact_finite_no_links_or_traversal Trace.test_block_attribution_same_first_frame_order_backend_queue_and_all_seven Trace.test_compare_all_seven_token0_only_after_both_parent128
+test_compiled_actual_block_observer_cpu_spy (__main__.Trace.test_compiled_actual_block_observer_cpu_spy) ... ok
+test_syntax_and_patch_scope (__main__.Trace.test_syntax_and_patch_scope) ... ok
+test_block_source_guards_queue_lifetime_logger_and_complete_boundary (__main__.Trace.test_block_source_guards_queue_lifetime_logger_and_complete_boundary) ... ok
+test_block_records_closed_names_metadata_bounds_and_consumer_name (__main__.Trace.test_block_records_closed_names_metadata_bounds_and_consumer_name) ... ok
+test_block_file_exact_finite_no_links_or_traversal (__main__.Trace.test_block_file_exact_finite_no_links_or_traversal) ... ok
+test_block_attribution_same_first_frame_order_backend_queue_and_all_seven (__main__.Trace.test_block_attribution_same_first_frame_order_backend_queue_and_all_seven) ... ok
+test_compare_all_seven_token0_only_after_both_parent128 (__main__.Trace.test_compare_all_seven_token0_only_after_both_parent128) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 15.509s
+
+OK
+block CPU spy: span span: 28 metadata/overflow/ownership/view exclusions passed
+block CPU spy: names names: exact physical closed set; no copied/view/internal aliases passed
+block CPU spy: full1 source snapshot, unchanged tensors/output, same queue, full bytes and once-only128 passed
+block CPU spy: full2 source snapshot, unchanged tensors/output, same queue, full bytes and once-only128 passed
+block CPU spy: noenv excluded before copy
+block CPU spy: unarmed excluded before copy
+block CPU spy: prefill excluded before copy
+block CPU spy: wrongop excluded before copy
+block CPU spy: copyname excluded before copy
+block CPU spy: nullsource excluded before copy
+block CPU spy: wrongpath rejected wrongpath: directory
+block CPU spy: width rejected width: armed_width
+block CPU spy: order rejected order: block_order
+block CPU spy: queue rejected queue: queue_order
+block CPU spy: nullqueue rejected nullqueue: queue_order
+block CPU spy: stale rejected stale: exclusive_file
+block CPU spy: filelink rejected filelink: exclusive_file
+block CPU spy: markerlink rejected markerlink: marker_open
+block CPU spy: markerhardlink rejected markerhardlink: marker_contents
+block CPU spy: markerbad rejected markerbad: marker_contents
+block CPU spy: markerfifo rejected markerfifo: marker_contents
+block CPU spy: duplicate rejected duplicate: block_order
+block CPU spy: backend rejected backend: backend_queue_changed
+block CPU spy: changequeue rejected changequeue: backend_queue_changed
+block CPU spy: async exception completion with host alive and descriptor closed passed
+block CPU spy: submit exception completion with host alive and descriptor closed passed

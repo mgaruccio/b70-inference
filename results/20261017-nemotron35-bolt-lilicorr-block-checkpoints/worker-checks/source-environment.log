@@ -1,0 +1,14 @@
+host=inference-host
+scratch=/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-block-checkpoints/worker-scratch/assets
+parent=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-single2-r1
+candidate=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-block-checkpoints-r1
+source_scope=ggml/src/ggml-sycl/ggml-sycl.cpp
+physical_checkpoint_ids=7,15,31,47,63,79,86
+capture_mount=/block-checkpoints
+sourcegen=remote-scratch-only
+external_research=https://github.khronos.org/SYCL_Reference/iface/queue.html
+queue_terms_seen:
+     13 in_order
+     11 memcpy
+      7 wait_and_throw
+no_docker_build_or_gpu_api_run=worker-boundary

@@ -1,0 +1,137 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -34,0 +35,5 @@
++#include <cerrno>
++#include <fcntl.h>
++#include <mutex>
++#include <sys/stat.h>
++#include <unistd.h>
+@@ -7152,0 +7158,125 @@
++// Temporary, default-off observer of seven sparse later-checkpoint outputs.
++// The next RMS_NORM consumes the materialized final ADD, including ADD+ADD fusion.
++static void bolt_block_require(bool ok, const char * reason) {
++    if (!ok) GGML_ABORT("BOLT_BLOCK_OUTPUT error=%s", reason);
++}
++
++static const int bolt_block_ids[] = {7, 15, 31, 47, 63, 79, 86};
++
++static int bolt_block_slot(const ggml_tensor * source) {
++    static const char * names[] = {
++        "nemotron_h_block_out-7", "nemotron_h_block_out-15",
++        "nemotron_h_block_out-31", "nemotron_h_block_out-47",
++        "nemotron_h_block_out-63", "nemotron_h_block_out-79",
++        "nemotron_h_block_out-86",
++    };
++    if (source) for (int slot = 0; slot < 7; ++slot) {
++        if (std::strcmp(source->name, names[slot]) == 0) return slot;
++    }
++    return -1; // Do not strip backend-copy names or chase views/copies.
++}
++
++static size_t bolt_block_span(const ggml_backend_sycl_context & ctx, const ggml_tensor * source, int n) {
++    // Closed, bounded dimensions BEFORE products, backend metadata or pointer arithmetic.
++    bolt_block_require(source && (n == 1 || n == 2) && source->op == GGML_OP_ADD &&
++                       source->type == GGML_TYPE_F32 && source->ne[0] == 4096 && source->ne[1] == n &&
++                       source->ne[2] == 1 && source->ne[3] == 1, "source_shape_type_op");
++    bolt_block_require(!source->view_src && source->view_offs == 0, "source_view");
++    const size_t row = 4096 * sizeof(float);
++    const size_t bytes = row * n;
++    bolt_block_require(source->nb[0] == sizeof(float) && source->nb[1] == row &&
++                       source->nb[2] == bytes && source->nb[3] == bytes &&
++                       ggml_is_contiguous(source), "source_layout");
++    // Ownership MUST precede the device-context cast and buffer base/size access.
++    bolt_block_require(source->data && source->buffer && source->buffer->buft &&
++                       ggml_backend_buffer_is_sycl(source->buffer), "source_buffer_owner");
++    bolt_block_require(source->buffer->context &&
++                       static_cast<const ggml_backend_sycl_buffer_context *>(source->buffer->context)->device == ctx.device,
++                       "source_device");
++    const uintptr_t base = (uintptr_t) ggml_backend_buffer_get_base(source->buffer);
++    const uintptr_t data = (uintptr_t) source->data;
++    const size_t size = ggml_backend_buffer_get_size(source->buffer);
++    bolt_block_require(base && base % alignof(float) == 0 && data % alignof(float) == 0 &&
++                       size <= UINTPTR_MAX - base && data >= base && data - base <= size &&
++                       bytes <= size - (data - base), "source_span");
++    return bytes; // F32 extra is intentionally never consulted.
++}
++
++static void bolt_block_observe(ggml_backend_sycl_context & ctx, const ggml_tensor * node) {
++    const char * directory = std::getenv("BOLT_BLOCK_OUTPUT_DIR");
++    if (!directory || !*directory || node->op != GGML_OP_RMS_NORM) return;
++    const ggml_tensor * source = node->src[0]; // Snapshot SOURCE, never the norm output.
++    const int slot = bolt_block_slot(source);
++    if (slot < 0) return;
++    if (source->ne[1] > 2) return; // Prefill widths 5/46/4 are never captured.
++    static std::mutex mutex;
++    std::lock_guard<std::mutex> lock(mutex);
++    static int next = 0;
++    static const ggml_backend_sycl_context * backend = nullptr;
++    static queue_ptr queue = nullptr;
++    static int width = 0;
++    if (next == 7) return; // Once per diagnostic process; no later decode recapture.
++    bolt_block_require(std::strcmp(directory, "/block-checkpoints") == 0, "directory");
++    struct stat dir_stat;
++    bolt_block_require(lstat(directory, &dir_stat) == 0 && S_ISDIR(dir_stat.st_mode), "directory_type");
++    const std::string marker = std::string(directory) + "/armed";
++    const int marker_fd = open(marker.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
++    if (marker_fd < 0 && errno == ENOENT) return; // Native/API/warmup/ordinary: unarmed.
++    bolt_block_require(marker_fd >= 0, "marker_open");
++    struct stat st;
++    char arm[3] = {};
++    const bool valid = fstat(marker_fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_nlink == 1 &&
++                       st.st_size == 2 && read(marker_fd, arm, sizeof(arm)) == 2;
++    const int closed = close(marker_fd);
++    bolt_block_require(valid && closed == 0 && arm[1] == '\n' &&
++                       (arm[0] == '1' || arm[0] == '2'), "marker_contents");
++    const int n = arm[0] - '0';
++    bolt_block_require(source->ne[1] == n, "armed_width");
++    bolt_block_require(slot == next, "block_order");
++    const size_t bytes = bolt_block_span(ctx, source, n);
++    const queue_ptr stream = ctx.stream(); // Existing producer/consumer in-order queue only.
++    bolt_block_require(stream && stream->is_in_order(), "queue_order");
++    bolt_block_require(!backend || (backend == &ctx && queue == stream && width == n), "backend_queue_changed");
++    backend = &ctx;
++    queue = stream;
++    width = n;
++    ++next; // Slot/order cursor; failure aborts with no retry for agreement.
++    const std::string file = "block-" + std::to_string(bolt_block_ids[slot]) + ".f32.bin";
++    const std::string path = std::string(directory) + "/" + file;
++    const int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0644);
++    bolt_block_require(fd >= 0, "exclusive_file");
++    try {
++        std::vector<uint8_t> host(bytes);
++        try {
++            stream->memcpy(host.data(), source->data, bytes).wait_and_throw();
++        } catch (...) {
++            // Host remains live through completion even on a submission/async error.
++            stream->wait();
++            throw;
++        }
++        size_t done = 0;
++        while (done < bytes) {
++            const ssize_t written = write(fd, host.data() + done, bytes - done);
++            if (written < 0 && errno == EINTR) continue;
++            bolt_block_require(written > 0, "write");
++            done += (size_t) written;
++        }
++    } catch (...) {
++        close(fd);
++        throw;
++    }
++    bolt_block_require(close(fd) == 0, "close");
++    const uintptr_t base = (uintptr_t) ggml_backend_buffer_get_base(source->buffer);
++    // ggml logger is installed on the SAME async common logger as BOLT_VERIFY.
++    GGML_LOG_INFO("BOLT_BLOCK_OUTPUT block=%d source=%s producer=%s consumer=%s consumer_op=%s consumer_type=%s "
++                  "backend_ctx=%p queue=%p device=%d n=%d type=%s "
++                  "ne0=%" PRId64 " ne1=%" PRId64 " ne2=%" PRId64 " ne3=%" PRId64 " "
++                  "nb0=%zu nb1=%zu nb2=%zu nb3=%zu data=%p base=%p buffer_bytes=%zu offset=%zu bytes=%zu file=%s\n",
++                  bolt_block_ids[slot], source->name, ggml_op_name(source->op), node->name, ggml_op_name(node->op), ggml_type_name(node->type),
++                  (void *) &ctx, (void *) stream, ctx.device, n, ggml_type_name(source->type),
++                  source->ne[0], source->ne[1], source->ne[2], source->ne[3],
++                  source->nb[0], source->nb[1], source->nb[2], source->nb[3], source->data,
++                  (void *) base, ggml_backend_buffer_get_size(source->buffer),
++                  (size_t) ((uintptr_t) source->data - base), bytes, file.c_str());
++}
++
+@@ -7163,0 +7294,2 @@
++
++        bolt_block_observe(*sycl_ctx, node);
