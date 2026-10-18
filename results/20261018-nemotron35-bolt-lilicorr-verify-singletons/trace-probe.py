@@ -316,13 +316,14 @@ def check_trace_startup(log, cell, h):
     for gate in ('iq2', 'q8', 'attention', 'attention_view'):
         p['check_' + gate + '_native_gate'](log)
     markers = (p['ATTENTION_VIEW_NATIVE_MARKER'], p['ROUTER_NATIVE_MARKER'],
-               P['MARKER'], p['MARKER'])
+               P['MARKER'], P['SINGLETON_MARKER'], p['MARKER'])
     assert all(log.count(marker) == 1 for marker in markers)
     assert [log.index(marker) for marker in markers] == sorted(log.index(marker) for marker in markers)
     segment = log.split(markers[0], 1)[1].split(markers[1], 1)[0]
     router = A['check_router_native_output'](segment, 'router_single2')
     assert 'router_columns8=1,' not in log
     assert 'router_prefill=1,' not in log
+    assert 'verify_singletons=1,' not in log
     assert 'call ggml_sycl_ssm_scan_prefill:' not in native_log
     width = C['width_for'](role_for(cell))
     if width is None:
@@ -465,8 +466,7 @@ class Runtime(K['Runtime']):
         if required:
             assert not errors, errors
             for tag, filename in NATIVE_LOGS.items():
-                A['check_router_native_output'](
-                    (self.out / cell / (phase + '-' + filename)).read_text(), tag)
+                P['check_native_log'](tag, (self.out / cell / (phase + '-' + filename)).read_bytes().decode())
         return errors
 
     def begin(self, cell):
@@ -693,7 +693,7 @@ def check_cell_evidence(h, cell):
         ready = (directory / ('ready-' + filename)).read_bytes()
         restored = (directory / ('restored-' + filename)).read_bytes()
         assert ready == restored
-        A['check_router_native_output'](ready.decode(), tag)
+        P['check_native_log'](tag, ready.decode())
     _check_window(directory)
     manifest = load(directory / 'capture-files.json')
     assert manifest == _capture_manifest(directory / 'capture', require=True)

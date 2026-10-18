@@ -56,10 +56,13 @@ def synthetic_container(cell):
     binds = result['HostConfig']['Binds']
     binds[binds.index(old)] = str(P['CANDIDATE']) + ':/src:ro'
     binds.append(str(P['PHASE']) + ':/router-verify-phase:ro')
+    binds.append(str(P['ROOT']) + ':/verify-singletons:ro')
     for mount in result['Mounts']:
         if mount['Destination'] == '/src':
             mount['Source'] = str(P['CANDIDATE'])
     result['Mounts'].append(dict(Type='bind', Source=str(P['PHASE']), Destination='/router-verify-phase',
+                                 Mode='ro', RW=False, Propagation='rprivate'))
+    result['Mounts'].append(dict(Type='bind', Source=str(P['ROOT']), Destination='/verify-singletons',
                                  Mode='ro', RW=False, Propagation='rprivate'))
     return result
 
@@ -73,7 +76,7 @@ def synthetic_startup(cell):
     _, right = rest.split(p['ROUTER_NATIVE_MARKER'], 1)
     # ONLY an in-memory CPU fixture. Never write this as runtime evidence.
     synthetic = left + p['ATTENTION_VIEW_NATIVE_MARKER'] + '\n' + FIXTURE('router_single2') + p['ROUTER_NATIVE_MARKER'] + right
-    return synthetic.replace(p['MARKER'], P['MARKER'] + '\n' + p['MARKER'])
+    return synthetic.replace(p['MARKER'], P['MARKER'] + '\n' + P['SINGLETON_MARKER'] + '\n' + p['MARKER'])
 
 
 class PublicGateFixtures(unittest.TestCase):
@@ -113,8 +116,9 @@ class PublicGateFixtures(unittest.TestCase):
             self.assertEqual(P['name'](cell), argv[argv.index('--name') + 1])
             self.assertNotIn(str(N['PARENT']) + ':/src:ro', argv)
             self.assertEqual(1, argv.count(str(P['CANDIDATE']) + ':/src:ro'))
-            self.assertEqual(['-v', str(P['PHASE']) + ':/router-verify-phase:ro'], argv[-6:-4])
-            self.assertEqual(len(base) + 2, len(argv))
+            self.assertEqual(['-v', str(P['PHASE']) + ':/router-verify-phase:ro',
+                              '-v', str(P['ROOT']) + ':/verify-singletons:ro'], argv[-8:-4])
+            self.assertEqual(len(base) + 4, len(argv))
             diff = P['positional_diff'](base, argv)
             self.assertEqual(len(argv) - 1, diff[-1]['index'])
             self.assertIsNone(diff[-1]['base'])
@@ -132,7 +136,7 @@ class PublicGateFixtures(unittest.TestCase):
             self.assertEqual(1, command.count('--tag router_prefill /tmp/router-prefill-native.log'))
             self.assertEqual(1, command.count(P['NEW_NATIVE']))
             boundary = H['off']['OFF_BOUNDARY']
-            self.assertIn(P['NEW_NATIVE'] + boundary, command)
+            self.assertIn(P['NEW_NATIVE'] + P['singleton_native_command']() + boundary, command)
             self.assertTrue(command.startswith(H['off']['NATIVE_ON']))
             C['diagnostics_off_server'](command)
             for gate in ('IQ2', 'Q8', 'ATTENTION', 'ATTENTION_VIEW'):
@@ -201,6 +205,8 @@ class PublicGateFixtures(unittest.TestCase):
             expected_old = P['A']['check_router_native_output'](FIXTURE('router_single2'), 'router_single2')
             self.assertEqual(expected_old['route_records'], result['router_single2']['route_records'])
             for bad in (log.replace(P['MARKER'], ''), log + P['MARKER'],
+                        log.replace(P['SINGLETON_MARKER'], ''), log + P['SINGLETON_MARKER'],
+                        log + 'verify_singletons=1,',
                         log + 'router_columns8=1,', log + 'router_prefill=1,',
                         log + 'BOLT_ROUTE route=MODEL_LEAK',
                         log.replace('GGML_SYCL_DEBUG: 0', 'GGML_SYCL_DEBUG: 1')):
@@ -250,10 +256,20 @@ class PublicGateFixtures(unittest.TestCase):
             self.assertEqual(55 if job['stem'].startswith('short') else 8270,
                              len(H['off']['reference_prompt']('A0', job)))
 
-    def test_native_contract_is_pending(self):
-        with self.assertRaisesRegex(RuntimeError,
-                                    'LEAD_NATIVE_INTEGRATION pending: singleton source/build proof'):
-            P['candidate_proof']()
+    def test_native_contract_and_raw_parsers(self):
+        proof = P['candidate_proof']()
+        self.assertEqual(proof['source'], N['source_hashes'](P['CANDIDATE']))
+        self.assertEqual(proof['binaries'], N['binaries'](P['CANDIDATE']))
+        fixture = runpy.run_path(str(HERE / 'test-native.py'))['synthetic']
+        for kind, count in (('q8', 82), ('iq2', 34)):
+            raw = fixture(kind)
+            self.assertEqual(count, P['check_native_log'](kind, raw)['cases'])
+            with self.assertRaises(AssertionError):
+                P['check_native_log'](kind, raw + raw)
+        command = P['singleton_native_command']()
+        self.assertNotIn('/capture/', command)
+        self.assertIn('> "/tmp/verify-singletons-$kind.log" 2>&1', command)
+        self.assertEqual(1, command.count(P['SINGLETON_MARKER']))
 
     def test_valid_mismatches_keep_25_and_diagnostic_rejection_behavior(self):
         for cell in ('VSA-W3', 'VSA-W7'):

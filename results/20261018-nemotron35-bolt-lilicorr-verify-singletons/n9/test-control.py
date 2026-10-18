@@ -4,6 +4,7 @@ import runpy
 import socket
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 assert __debug__ and socket.gethostname() == 'inference-host'
 ROOT = Path(__file__).resolve().parent
@@ -25,10 +26,14 @@ def fixture(passed=False):
 
 
 class ControlTests(unittest.TestCase):
-    def test_candidate_proof_fails_closed_pending_native_contract(self):
-        with self.assertRaisesRegex(RuntimeError,
-                                    'LEAD_NATIVE_INTEGRATION pending: singleton source/build proof'):
-            M['candidate_proof']()
+    def test_candidate_proof_requires_successful_exact_build(self):
+        proof = M['candidate_proof']()
+        self.assertEqual(proof['source'], M['N']['source_hashes'](M['CANDIDATE']))
+        self.assertEqual(proof['binaries'], M['N']['binaries'](M['CANDIDATE']))
+        with patch.object(Path, 'read_text', return_value='1'):
+            with self.assertRaises(AssertionError):
+                M['candidate_proof']()
+
     def test_failure_remains_failure(self):
         result = M['analyze_native'](fixture(), 1)
         self.assertFalse(result['numerical_pass'])

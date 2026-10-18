@@ -100,6 +100,7 @@ class TraceProbeFixtures(unittest.TestCase):
                 P['check_startup'](traced, baseline_cell, h)
             self.assertTrue(T['check_trace_startup'](traced, cell, h))
             for bad in (traced.replace(P['MARKER'], 'MISSING_NATIVE_GATE', 1),
+                        traced.replace(P['SINGLETON_MARKER'], 'MISSING_SINGLETON_GATE', 1),
                         traced + '\nBOLT_TENSOR_TRACE_ENABLED\n',
                         traced + '\nSYCL exception\n'):
                 with self.assertRaises(AssertionError):

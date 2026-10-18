@@ -70,12 +70,27 @@ def _manifest(path):
     return value
 
 def candidate_proof():
-    """Fail closed until the lead-owned singleton native contract is verified."""
-    # LEAD_NATIVE_INTEGRATION: replace this unconditional stop only with the
-    # native worker's exact source delta, binary manifest, build evidence, and
-    # check-source.check(parent, candidate, patch) contract.  In particular,
-    # do not run the old phase check_consumed_sources predicate against PARENT.
-    raise RuntimeError('LEAD_NATIVE_INTEGRATION pending: singleton source/build proof')
+    """Verify the protected callsite parent and the exact fresh singleton build."""
+    assert (BUILD_ATTEMPT / 'exit-code.txt').read_text().strip() == '0'
+    assert 'BOLT_VERIFY_SINGLETONS_BUILD_PASSED' in (CASE_ROOT / 'post-build-verification.log').read_text()
+    assert 'BOLT_VERIFY_SINGLETONS_DEPENDENCIES_PASSED' in (CASE_ROOT / 'runtime-precheck.log').read_text()
+    parent_root = BASE_ROOT / '20261018-nemotron35-bolt-lilicorr-router-callsite'
+    parent_gate = runpy.run_path(str(parent_root / 'n9/run-control.py'))
+    assert parent_gate['CANDIDATE'] == PARENT
+    parent = parent_gate['candidate_proof']()
+    checker = runpy.run_path(str(CASE_ROOT / 'check-source.py'))
+    checker['check'](PARENT, CANDIDATE, (CASE_ROOT / 'verify-singletons.patch').read_text())
+    source, binaries = N['source_hashes'](CANDIDATE), N['binaries'](CANDIDATE)
+    changed = sorted(k for k in parent['source'].keys() | source.keys()
+                     if parent['source'].get(k) != source.get(k))
+    assert changed == checker['SOURCE_SCOPE']
+    assert C['load'](CASE_ROOT / 'source-diff.json') == dict(changed_relative_to_parent=changed)
+    assert parent['binaries'] == _manifest(parent_root / 'candidate-binaries.json')
+    assert parent['binaries'] == _manifest(CASE_ROOT / 'parent-binaries.json')
+    assert binaries == _manifest(CASE_ROOT / 'candidate-binaries.json')
+    assert {key for key in binaries if binaries[key] != parent['binaries'][key]} == {
+        'libggml-sycl.so.0', 'libllama.so.0.7.0', 'test-backend-ops'}
+    return dict(source=source, binaries=binaries)
 
 
 def inputs(h):

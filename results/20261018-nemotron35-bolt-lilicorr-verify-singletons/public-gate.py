@@ -34,9 +34,8 @@ C = K['C']  # Inherited run_job's exception identity is essential.
 # These namespaces keep their original paths; use explicit new paths with generic helpers.
 N = runpy.run_path(str(PHASE / 'run-trace.py'))
 A = runpy.run_path(str(PHASE / 'analyze-trace.py'))
-# LEAD_NATIVE_INTEGRATION: the exact singleton source checker is lead-owned and
-# is intentionally not imported until its verified contract is supplied.
-S = None
+Q = runpy.run_path(str(ROOT / 'native.py'))
+SINGLETON_MARKER = 'BOLT_VERIFY_SINGLETONS_NATIVE_PASSED'
 OUT = ROOT / 'qualification-r1'
 MODE = 'verify-singletons-qualification-r1'
 ROLES = {'VSA-A': 'A', 'VSA-W3': 'W3', 'VSA-W7': 'W7'}
@@ -45,14 +44,16 @@ R3_MARKER = 'BOLT_VERIFY_ROUTER_VERIFY_PHASE_NATIVE_PASSED'
 MARKER = R3_MARKER
 NATIVE_LOGS = {'router_single2': 'originalrouter-single2-native.log',
                'router_columns8_r3': 'router-verify-phase-native.log',
-               'router_prefill': 'router-prefill-native.log'}
-# This list is deliberately limited to the preparation files that exist in this
-# bounded slice.  LEAD_NATIVE_INTEGRATION: append the exact native helper,
-# parser, test, patch, build, and source-check paths once the native worker
-# supplies their verified names; do not freeze an invented or incomplete set.
+               'router_prefill': 'router-prefill-native.log',
+               'q8': 'verify-singletons-q8.log', 'iq2': 'verify-singletons-iq2.log'}
 FILES = ('public-gate.py', 'test-public-gate.py', 'cpu-public-gate.sh', 'qualification.md',
-         'n9/run-control.py', 'n9/n9-equivalence.py', 'n9/test-control.py')
-BUILD_FILES = ()
+         'n9/run-control.py', 'n9/n9-equivalence.py', 'n9/test-control.py',
+         'native.py', 'test-native.py', 'test-guards.py', 'check-source.py',
+         'source-hashes.json', 'verify-singletons.patch', 'build-candidate.sh',
+         'trace-probe.py', 'test-trace-probe.py', 'analyze-first-frame.py',
+         'test-first-frame.py')
+BUILD_FILES = ('source-diff.json', 'parent-binaries.json', 'candidate-binaries.json',
+               'post-build-verification.log', 'runtime-precheck.log', 'build-attempt-r1/exit-code.txt')
 PHASE_FILES = ('run-trace.py', 'analyze-trace.py', 'test-trace.py', 'build-candidate.sh', 'router-verify-phase.patch',
                'protected-source-hashes.json', 'source-hashes.json', 'accepted-binaries.json',
                'parent-binaries.json', 'columns8-binaries.json', 'candidate-binaries.json')
@@ -70,6 +71,21 @@ NEW_NATIVE = (
     "python3 -B /router-verify-phase/analyze-trace.py --tag router_prefill /tmp/router-prefill-native.log; "
     "echo " + R3_MARKER + "; "
 )
+
+def singleton_native_command():
+    full = Q['native_command']()
+    assert full.startswith(N['NATIVE_COMMAND'])
+    tail = full[len(N['NATIVE_COMMAND']):]
+    tee = '2>&1 | tee "/capture/verify-singletons-$kind.log"'
+    assert tail.count(tee) == 1 and tail.count('/capture/') == 3
+    tail = tail.replace(tee, '> "/capture/verify-singletons-$kind.log" 2>&1')
+    return tail.replace('/capture/', '/tmp/') + '\n'
+
+
+def check_native_log(tag, log):
+    assert tag in NATIVE_LOGS
+    return Q['check'](log, tag) if tag in ('q8', 'iq2') else A['check_router_native_output'](log, tag)
+
 
 def name(cell):
     assert cell in ROLES
@@ -116,18 +132,15 @@ def make_create(cell, h):
     copy_original = 'cp ' + old_native_log + ' ' + copied_native_log + '; '
     assert base[-1].count(old_native + off['OFF_BOUNDARY']) == 1
     argv[-1] = base[-1].replace(old_native + off['OFF_BOUNDARY'],
-                                 updated + copy_original + NEW_NATIVE + off['OFF_BOUNDARY'])
-    # LEAD_NATIVE_INTEGRATION: insert the exact bounded singleton native
-    # command/check here once the native worker supplies it; retain NEW_NATIVE's
-    # inherited F32 controls unchanged.
+                                 updated + copy_original + NEW_NATIVE + singleton_native_command() + off['OFF_BOUNDARY'])
     assert argv[-1].startswith(off['NATIVE_ON'])
     assert argv[-3:-1] == ['bash', '-lc']
-    argv[-4:-4] = ['-v', str(PHASE) + ':/router-verify-phase:ro']
+    argv[-4:-4] = ['-v', str(PHASE) + ':/router-verify-phase:ro', '-v', str(ROOT) + ':/verify-singletons:ro']
     assert C['server_argv'](argv) == C['expected_pid_argv'](ROLES[cell], h)
     C['diagnostics_off_server'](argv[-1])
     # Reverse precisely the four allowed changes; no other argv/env/cap/model change is allowed.
     reverse = list(argv)
-    del reverse[-6:-4]
+    del reverse[-8:-4]
     reverse[reverse.index('--name') + 1] = base[base.index('--name') + 1]
     reverse[reverse.index(str(CANDIDATE) + ':/src:ro')] = mount
     reverse[-1] = base[-1]
@@ -162,11 +175,14 @@ def check_container(record, cell, h):
     assert binds.count(old_mount) == 1
     binds[binds.index(old_mount)] = new_mount
     binds.append(str(PHASE) + ':/router-verify-phase:ro')
+    binds.append(str(ROOT) + ':/verify-singletons:ro')
     assert sorted(actual_host.pop('Binds')) == sorted(binds)
     assert actual_host == expected_host
     expected_mounts = [dict(m, Source=str(CANDIDATE)) if m['Destination'] == '/src' else dict(m)
                        for m in base['Mounts']]
     expected_mounts.append(dict(Type='bind', Source=str(PHASE), Destination='/router-verify-phase',
+                                Mode='ro', RW=False, Propagation='rprivate'))
+    expected_mounts.append(dict(Type='bind', Source=str(ROOT), Destination='/verify-singletons',
                                 Mode='ro', RW=False, Propagation='rprivate'))
     assert C['canonical_mounts'](record['Mounts']) == C['canonical_mounts'](expected_mounts)
     return True
@@ -180,9 +196,9 @@ def check_startup(log, cell, h):
     native['parse_native_gate'](log, 'C0')
     for gate in ('iq2', 'q8', 'attention', 'attention_view'):
         p['check_' + gate + '_native_gate'](log)
-    # LEAD_NATIVE_INTEGRATION: add the exact singleton native marker/parser
-    # here once supplied by the native worker; the inherited F32 gates remain mandatory.
-    markers = (p['ATTENTION_VIEW_NATIVE_MARKER'], p['ROUTER_NATIVE_MARKER'], MARKER, p['MARKER'])
+    assert 'verify_singletons=1,' not in log, 'singleton output must stay in its raw native files'
+    markers = (p['ATTENTION_VIEW_NATIVE_MARKER'], p['ROUTER_NATIVE_MARKER'], MARKER,
+               SINGLETON_MARKER, p['MARKER'])
     assert all(log.count(marker) == 1 for marker in markers)
     assert [log.index(marker) for marker in markers] == sorted(log.index(marker) for marker in markers)
     segment = log.split(markers[0], 1)[1].split(markers[1], 1)[0]
@@ -215,11 +231,9 @@ def check_startup(log, cell, h):
 
 
 def candidate_proof():
-    """Fail closed until the lead-owned singleton native contract is verified."""
-    # LEAD_NATIVE_INTEGRATION: replace this unconditional stop only with the
-    # native worker's exact source delta, binary manifest, build evidence, and
-    # check-source.check(parent, candidate, patch) contract.
-    raise RuntimeError('LEAD_NATIVE_INTEGRATION pending: singleton source/build proof')
+    control = runpy.run_path(str(N9_ROOT / 'run-control.py'))
+    assert control['PARENT'] == PARENT and control['CANDIDATE'] == CANDIDATE
+    return control['candidate_proof']()
 
 def check_n9_equivalence(h):
     # Import lazily: the N9 controller may consume candidate_proof(), but the public
@@ -239,6 +253,10 @@ def freeze(h):
     hashes.update({str(N9_ROOT / file): C['sha'](N9_ROOT / file)
                    for file in ('run-control.py', 'test-control.py', 'n9-equivalence.py')})
     hashes.update({str(OLD_N9 / 'n9-equivalence.py'): C['sha'](OLD_N9 / 'n9-equivalence.py')})
+    callsite = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-callsite'
+    for file in ('n9/run-control.py', 'n9/n9-equivalence.py', 'check-source.py',
+                 'router-callsite.patch', 'source-hashes.json'):
+        hashes[str(callsite / file)] = C['sha'](callsite / file)
     parser = ROOT.parent / '20261017-nemotron35-bolt-lilicorr-route-trace/analyze-trace.py'
     hashes[str(parser)] = C['sha'](parser)
     refs = C['reference_hashes'](h)
@@ -266,7 +284,7 @@ def freeze(h):
 
 
 def check_tested(h):
-    candidate_proof()  # LEAD_NATIVE_INTEGRATION must gate every live public launch.
+    candidate_proof()  # Require the exact source/build proof before every live public launch.
     tested = C['load'](ROOT / 'preparation/public-tested-code.json')
     assert tested['tests_passed'] is True and tested['freeze'] == freeze(h), 'CPU-frozen code/reference/source/binary drift'
     return tested
@@ -309,8 +327,7 @@ class Runtime(K['Runtime']):
         return record
 
     def preserve_native(self, cell, phase, required=False):
-        # LEAD_NATIVE_INTEGRATION: add exact native artifact names to NATIVE_LOGS
-        # here once the native worker defines them; copy raw bytes without edits.
+        # Preserve raw native bytes even on partial startup or restoration failure.
         errors = []
         for tag, filename in NATIVE_LOGS.items():
             destination = self.out / cell / (phase + '-' + filename)
@@ -323,7 +340,7 @@ class Runtime(K['Runtime']):
         if required:
             assert not errors, errors
             for tag, filename in NATIVE_LOGS.items():
-                A['check_router_native_output']((self.out / cell / (phase + '-' + filename)).read_bytes().decode(), tag)
+                check_native_log(tag, (self.out / cell / (phase + '-' + filename)).read_bytes().decode())
 
     def begin(self, cell):
         assert cell in ROLES and self.active is None
@@ -543,7 +560,7 @@ def check_cell_evidence(h, directory, cell):
     for tag, filename in NATIVE_LOGS.items():
         native = (directory / ('ready-' + filename)).read_bytes()
         assert native == (directory / ('restored-' + filename)).read_bytes()
-        A['check_router_native_output'](native.decode(), tag)
+        check_native_log(tag, native.decode())
         if tag == 'router_single2':
             assert native.decode() in raw, 'raw old-30 log absent from startup stream'
     return C['log_duration_stats'](b''.join(logs['restored-final']).decode())

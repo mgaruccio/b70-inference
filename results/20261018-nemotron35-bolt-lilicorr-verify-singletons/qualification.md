@@ -1,8 +1,9 @@
 # Verify-singletons public qualification r1 — preparation, not a result
 
-**Development-only, quality-sensitive, and unpromoted.** This is a bounded mechanical
-port of the router-callsite public/N9 lifecycle. It is not a completed runtime adapter,
-a native result, a timing run, or a persistent launcher change.
+**Development-only, quality-sensitive, and unpromoted.** This integrates the
+router-callsite public/N9 lifecycle with the reviewed singleton source and native
+contracts. Runtime qualification is still pending; this is not a timing run or a
+persistent launcher change.
 
 ## Baseline and fixed interfaces
 
@@ -16,34 +17,24 @@ a native result, a timing run, or a persistent launcher change.
 - The seeded N9 runner/control-source tree remains read-only. Its paired-equivalence
   schema, 17,856-byte marker, F32 controls, and fixed `1e-7` tolerance are unchanged.
 
-The exact singleton source delta, allowed binary manifest, native command, and native
-parser are still lead-owned. No model-only whitelist or old phase source proof is a
-claim about this candidate.
+## Native contract and fail-closed boundary
 
-## Explicit native handoff and fail-closed boundary
+Public and N9 gates share the exact source/build proof. It requires successful
+build and dependency records, the protected callsite parent, only the four C++
+files in `check-source.py`, and the exact three changed artifacts among all six:
+`libggml-sycl.so.0`, `libllama.so.0.7.0`, and `test-backend-ops`.
 
-Both public and N9 `candidate_proof()` currently raise exactly:
+The wider path requires F32 plus private word-15 annotation `0x4e535631`.
+N1/N2 remain unchanged. Public startup retains all inherited F32 gates and adds
+82 Q8 and 34 IQ2 native cases, including 70 required byte-exact comparisons.
+The exact new command suffix comes from `native.py`; only its raw-log destination
+and stdout redirection change for public startup. Both raw logs are copied before
+requests and after restoration, parsed strictly, and checked byte-for-byte for drift.
+A read-only `/verify-singletons` helper mount is the only additional mount.
 
-```text
-RuntimeError('LEAD_NATIVE_INTEGRATION pending: singleton source/build proof')
-```
-
-No live launch can pass that missing proof. The lead must replace the stop only after
-the native worker supplies the exact `check-source.check(parent, candidate, patch)`
-contract, source delta, binary manifest, build evidence, command, and parser. In
-particular, do not run the old phase `check_consumed_sources(PARENT, 'candidate')`
-against the callsite parent and assume it proves the singleton change.
-
-The preparation files mark the bounded insertion seams:
-
-- public `make_create`: add the exact singleton native check after the inherited F32
-  checks, without changing the existing launch delta;
-- public `check_startup`: add the exact singleton marker/parser while retaining every
-  inherited F32 startup gate;
-- public native preservation: extend the raw artifact list only with exact native
-  names supplied by the lead, copying bytes without normalization;
-- public tested-file list: add the exact native helper/parser/test/build/source-check
-  files once their names are known. The current CPU freeze must not silently omit them.
+Missing build, source, binary, native, fresh N9, or CPU-frozen proof fails closed.
+The public freeze includes the actual native helpers, tests, patch, builder,
+source checker, and trace implementation; no unconditional preparation stub remains.
 
 ## Preserved lifecycle and validators
 
@@ -91,9 +82,9 @@ python3 -B "$ROOT/n9/run-control.py" --lead-run-control
 python3 -B "$ROOT/n9/run-control.py" --lead-after-restore
 ```
 
-Then run the CPU preparation. It may run isolated syntax/lifecycle fixtures, but it
-must report native build, fresh N9, and public qualification as dependent/not run
-until the lead-owned proof exists:
+Then run the CPU gate. It verifies the successful build and restored fresh N9
+pair, checks generated shell syntax, runs isolated lifecycle/parser/frame fixtures,
+and freezes the exact code, references, source, and binaries before public capture:
 
 ```bash
 bash "$ROOT/cpu-public-gate.sh"
@@ -120,7 +111,7 @@ python3 -B "$ROOT/public-gate.py" --lead-after-restore 2>&1 \
 ```
 
 After public restoration, the trace worker runs its existing `trace-short55-r1`
-journey with `VST-A` and `VST-W3`, including the full 55-request prefix, unchanged
+journey with `VST-A` and `VST-W3`, including the full 55-token prompt prefix, unchanged
 partial-prefill checks, intended routes, raw F32 controls, and same-role reproduction.
 A trace run cannot substitute for missing native or public proof.
 
@@ -151,7 +142,7 @@ exact original container identity/config/HostConfig/canonical mounts, source/bin
 hardware, sole DRM ownership, health, and READY smoke; do not normalize records, retry,
 delete evidence, time, or promote results.
 
-At this commit there is no new native build, N9 pair, public baseline, or trace result.
-Only syntax and isolated inherited CPU/helper tests are appropriate. This preparation
-claims no singleton runtime success; the lead owns native integration, all integration,
-and real execution.
+Host CPU checks passed: compiled guard stubs, patch-mutation rejections, native
+parser regressions, and all ten first-frame fixtures. Native build, fresh N9,
+public qualification, and trace outcomes must be reported from their real artifacts;
+source review and CPU fixtures alone do not establish runtime success.
