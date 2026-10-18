@@ -62,3 +62,21 @@ All attempts remain under remote `worker-scratch/`; logs are retained here, neve
 - `targeted-r1.log`, `targeted-r2.log`, `targeted-r3.log`, `prepare-r1.log`, `prepare-r2.log`, `prepare-r3.log`, and all three full CPU logs preserve the preparation history.
 
 **Lead real E2E is pending**, including GPU numerical/canary/native30 execution, actual five-representative dispatch evidence, API20 each arm, actual newly generated C0 history, fidelity comparison, and restoration. The CPU spy is not oneMKL/GPU evidence. Coverage is five representatives, not all40 routers; unsupported/mismatched widths and n1/n3 remain ineligible. No fidelity, timing, promotion, or standard-publication claim is made.
+
+## Lead-observed result — frozen S0/C0 fidelity passes
+
+After the recorded remote70+15 CPU pass, the lead ran `bash build-candidate.sh`, `python3 -B run-trace.py 2>&1 | tee controller-r1.log`, then `python3 -B analyze-trace.py 2>&1 | tee analysis-r1.log`, fail-fast from this remote result root through explicit local `bash -c`, the declared SSH flags, and remote `bash -s`. Real build/dependency/source/five-binary gates passed. Both arms completed without continuation or inference retry.
+
+Both arms passed inherited385 + OUT_PROD190/support9 + IQ2six + latent7 + attention13 + view6, **native router30 with35 operations/70 outer-inner records**, fresh API20/20, ordinary warmup, ordinary stream and separate diagnostic. All five representative routers passed actual all-frame route gates. Representative coverage is not an assertion that all40 router activations were logged.
+
+**All128 full131072-element F32 raw-logit vectors are byte-identical between S0 and C0. All128 emitted token IDs match; within-arm ordinary/diagnostic text gates pass.** `first_score_difference` and `first_output_difference_ordinal` are null, compared through128. This is the first full frozen-probe match after the prior output2 raw/output41 token discrepancy.
+
+S0 preserves all128 immediate-parent raw vectors and prompt/IDs/text/batch inputs/selected positions/rows. C0 changed as allowed: against its old parent it first differs in raw scores at2 and emitted tokens at41, so that comparison stops at41. Its newly generated history has57 accepted out of69 proposed tokens and12 rejections;70 post-prompt frames,69 width2. No old proposal history or batch count was forced. These acceptance counts are not a speed claim.
+
+The saved20 API quality cases also agree across arms: every request is identical, every output text/finish reason/completion-token count matches, and both functional gates pass (`cross-arm-quality-r1.json`). Those short API cases do not supply raw-vector or actual token-ID equality evidence; only the frozen128-token diagnostic does.
+
+Candidate SHA256 values: SYCL `64d6a58f17cb92ea9fe6354d9c553f74724565a58fc018d2f4bbd013d090a72e`, native test `bdd86349fac5ab43fa32d465aad27cec7f31dcad0651f7611403d8a783f10c7d`. Wrapper/implementation/common remain identical to the parent. Controller and independent analyzer restoration checks passed for the original container ID/config/HostConfig/all mounts, five protected hashes, protected sources, unchanged hardware, live health, READY and sole original process. Accepted runtime unchanged.
+
+Canonical remote artifacts: `run-r1/analysis.json`, per-arm `alignment.json`, raw `capture/`, API quality request/results, and `cross-arm-quality-r1.json`. Local logs and metadata JSON larger than1MB use lossless gzip with mtime0; raw vectors remain remote. Preparation failures remain retained. Two post-run inspection/archive mistakes (wrong comparison-field key; Fish expanding a remote shell variable) were corrected against saved artifacts; neither reran inference or changed original run summaries.
+
+This passes the declared **suppressed-draft versus active width1** fidelity probe, not the whole optimization task. S0 still loads/executes LiLiCorr and discards proposals, so it is not a fair no-draft timing baseline. The next gate is a true non-spec/no-draft baseline on this same five-width runtime, compared with these saved vectors and API results. Larger draft windows, broader workloads and timing remain unvalidated. Timing and promotion remain blocked.
