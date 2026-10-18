@@ -68,3 +68,20 @@ The suite includes Python AST/duplicate-method checks, `bash -n build-candidate.
 Retained failed attempts: `worker-scratch/preparation-attempt-r1.txt` records local shell quoting rejection before SSH (no local workload); `cpu-tests-r1.log` retains seven test-fixture/parent-adaptation failures and two extractor errors. Corrected tests passed in `cpu-tests-r2.log`; the final buffer-check ordering improvement and foreign-extra exclusions passed in r3. `patch-dry-run-r1.log` retains the initial clean source application check. No model reruns occurred.
 
 **Not run:** IntelLLVM/SYCL build, actual SYCL native numerical/route gates, GPU/model/API journey, restoration exercise, fidelity comparison, timing or promotion. These require the lead's build and full public-boundary journey above. Remaining risk: supported real-model descriptors must satisfy the intentionally narrow non-view preflight; otherwise actual-route gates fail rather than accepting text coincidence. Even successful singleton activation may not improve fidelity. Accepted runtime, protected trees, weights, services and hardware were not modified.
+
+## Parser correction and one-use continuation
+
+The saved S0 failure was a parser attribution failure, not missing route output: asynchronous `BOLT_VERIFY` batch markers can arrive after the direct `BOLT_ROUTE` records for the same target call. `route_frames()` now parses the two logger streams independently, anchors the target backend once from the unique block-0 SSM records, and matches the complete direct target-operation stream to the independent FIFO batch stream by exact order and retained-stride-derived width. It does not assume cross-logger positional containment, equate a backend pointer with a llama context, zip-truncate, or silently drop leftovers. Other-backend routes remain separate.
+
+Prefill widths 5/46/4 are explicitly accounted for. Each post-prompt frame requires the complete target operation sequence and strict route/type/shape/stride/reorder/precision checks; n1 requires one router pair and n2 requires two singleton pairs with original n2 strides. The n46 inner router operation remains DNNL F32. Original width is derived from retained strides rather than operation names.
+
+Regression coverage includes the real saved position-70 six-record logger shift, synthetic shifts across verification boundaries, dropped/extra/bad-width operations, reordered nonidentical-width groups, malformed/duplicate records, nested drafter backend separation, wrong n/stride/type/context, and partial target groups. The continuation regression verifies exact original failure/traceback, restored state, S0-only phase, absent C0, frozen payload/create argv, five-binary/source gates, S0 full-128 parent equality, corrected 127-frame router attribution, constant-only controller rewriting, and C0 report-only semantics without an operand-observer or both-arm parity gate.
+
+Observed on `mike@inference-host` in the separate parser scratch `/home/mike/b70-evals/parser-scratch-router-log-order` (no continuation execution):
+
+- `python3 -B -m py_compile analyze-trace.py test-trace.py continue-c0.py`: pass.
+- `python3 -B -m unittest -v test-trace.py`: **69 tests passed**; log retained at `test-trace-router-log-order.log`.
+- Corrected saved-S0 analysis: 130 verification frames, widths `5,46,4,1...`, 15 target routes at position 70, 127 post-prompt router batches, 128 samples, parent comparison through ordinal 128 with no difference, and S0 parent invariant true.
+- `continue-c0.py` was CPU-tested against saved S0 only. Its continuation `main()` was not run. No C0, native/model, fidelity, timing, or promotion result is claimed; timing and promotion remain false.
+
+The parser/continuation implementation used the official Python contracts for ordered JSON decoding, argument-list subprocess execution, and unittest assertions: https://docs.python.org/3/library/json.html, https://docs.python.org/3/library/subprocess.html, and https://docs.python.org/3/library/unittest.html.

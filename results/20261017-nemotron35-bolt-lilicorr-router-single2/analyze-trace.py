@@ -116,39 +116,230 @@ def route_records(log):
     return result
 
 
-def route_frames(log):
-    """Frame routes only inside BOLT_VERIFY batch..decoded target boundaries."""
+def _verify_frames(log):
+    """Parse the FIFO common logger without using direct-stderr positions."""
     frames = []
     active = None
-    route_count = 0
-    for line in log.splitlines():
-        assert not ('BOLT_VERIFY' in line and 'BOLT_ROUTE' in line), 'mixed trace records'
-        if 'BOLT_VERIFY' in line:
-            assert 'BOLT_VERIFY ' in line, 'malformed BOLT_VERIFY framing'
-            events = records(line)
-            assert len(events) == 1
-            event = events[0]
-            if event['event'] == 'batch':
-                assert active is None, 'nested BOLT_VERIFY batch'
-                active = dict(batch=event, routes=[])
-            elif event['event'] == 'decoded':
-                assert active is not None, 'decoded without batch'
-                assert event['ctx'] == active['batch']['ctx'], 'decoded context mismatch'
-                assert event['ret'] == 0, 'decoded failed'
-                active['decoded'] = event
-                frames.append(active)
-                active = None
+    for line_index, line in enumerate(log.splitlines()):
+        if 'BOLT_VERIFY' not in line:
             continue
-        if 'BOLT_ROUTE' in line:
-            route_count += 1
-            route = route_records(line)[0]
-            if active is not None:
-                active['routes'].append(route)
+        assert not ('BOLT_VERIFY' in line and 'BOLT_ROUTE' in line), 'mixed trace records'
+        assert 'BOLT_VERIFY ' in line, 'malformed BOLT_VERIFY framing'
+        events = records(line)
+        assert len(events) == 1
+        event = events[0]
+        if event['event'] == 'batch':
+            assert active is None, 'nested BOLT_VERIFY batch'
+            active = dict(batch=event, verify_line=line_index)
+        elif event['event'] == 'decoded':
+            assert active is not None, 'decoded without batch'
+            assert event['ctx'] == active['batch']['ctx'], 'decoded context mismatch'
+            assert event['ret'] == 0, 'decoded failed'
+            active['decoded'] = event
+            active['decoded_line'] = line_index
+            frames.append(active)
+            active = None
     assert active is None, 'unterminated BOLT_VERIFY batch'
-    assert route_count, 'empty route trace'
     assert frames, 'no BOLT_VERIFY batch frames'
     return frames
 
+
+def _route_stream(log):
+    """Return the direct route logger in its own FIFO order."""
+    result = []
+    for line_index, line in enumerate(log.splitlines()):
+        if 'BOLT_ROUTE' not in line:
+            continue
+        assert 'BOLT_VERIFY' not in line, 'mixed trace records'
+        assert line.count('BOLT_ROUTE ') == 1, 'bad route trace framing'
+        result.append(dict(route=route_records(line)[0], line_index=line_index))
+    assert result, 'empty route trace'
+    return result
+
+
+def _route_original_width(route):
+    """Recover the original column extent from retained strides, not labels."""
+    if route['weight'].endswith(('.ffn_up_exps.weight', '.ffn_down_exps.weight')):
+        numerator, denominator = route['src1_nb3'], route['src1_nb2']
+    else:
+        numerator, denominator = route['src1_nb2'], route['src1_nb1']
+    assert denominator > 0 and numerator > 0 and numerator % denominator == 0, route
+    width = numerator // denominator
+    assert 1 <= width <= 1024, route
+    return width
+
+
+def _target_group_width(routes):
+    widths = [_route_original_width(route) for route in routes
+              if route['weight'] != 'output.weight']
+    assert widths and len(set(widths)) == 1, ('inconsistent target route widths', widths)
+    return widths[0]
+
+
+def _expected_target_weights(n, label=None, output=False):
+    assert n in (1, 2, 3, 4, 5, 46)
+    pair = 2 if n == 46 else 1
+    router_pairs = 2 if label == 'C0' and n == 2 else 1
+    expert_pairs = 2 if n >= 2 else 1
+    weights = (['blk.0.ssm_in.weight'] * pair
+               + ['blk.0.ssm_out.weight'] * pair
+               + ['blk.1.ffn_gate_inp.weight'] * (2 * router_pairs)
+               + ['blk.1.ffn_latent_down.weight'] * pair
+               + ['blk.1.ffn_up_exps.weight'] * expert_pairs
+               + ['blk.1.ffn_down_exps.weight'] * expert_pairs
+               + ['blk.1.ffn_latent_up.weight'] * pair
+               + ['blk.1.ffn_up_shexp.weight'] * pair
+               + ['blk.1.ffn_down_shexp.weight'] * pair
+               + ['blk.7.attn_q.weight'] * pair
+               + ['blk.7.attn_v.weight'] * pair
+               + ['blk.7.attn_k.weight'] * pair
+               + ['blk.7.attn_output.weight'] * pair)
+    if output:
+        weights.append('output.weight')
+    return weights
+
+
+def _assert_route_pair(rows, inner_route, inner_operand_prec=None):
+    assert len(rows) == 2, rows
+    outer, inner = rows
+    assert outer['route'] == 'MUL_MAT_SYCL' and inner['route'] == inner_route, rows
+    assert outer['operand_prec'] == -1, rows
+    if inner_operand_prec is not None:
+        assert inner['operand_prec'] == inner_operand_prec, rows
+    assert {k: v for k, v in outer.items() if k not in ('route', 'operand_prec')} == {
+        k: v for k, v in inner.items() if k not in ('route', 'operand_prec')}, rows
+
+
+def _assert_prefill_frame(frame):
+    """Account for the three real prompt chunks before post-prompt gates."""
+    batch = frame['batch']
+    n = batch['n']
+    if batch['pos'][0] >= 55 or n not in (4, 5, 46):
+        return
+    routes = frame['routes']
+    expected = _expected_target_weights(n, output=any(batch['outputs']))
+    assert [route['weight'] for route in routes] == expected, (batch, routes)
+    router = [route for route in routes if route['weight'] == 'blk.1.ffn_gate_inp.weight']
+    assert_router_operations(router, n, split=False,
+                             inner_route='LIBRARY_DNNL_F32' if n == 46 else 'LIBRARY_MKL_F32')
+    if n == 46:
+        for weight in ('blk.0.ssm_in.weight', 'blk.0.ssm_out.weight'):
+            _assert_route_pair([route for route in routes if route['weight'] == weight],
+                               'LIBRARY_DNNL_F32', inner_operand_prec=10)
+        for weight in ('blk.1.ffn_latent_down.weight', 'blk.1.ffn_latent_up.weight'):
+            _assert_route_pair([route for route in routes if route['weight'] == weight],
+                               'LIBRARY_DNNL_F16', inner_operand_prec=20)
+        for weight in ('blk.1.ffn_up_shexp.weight', 'blk.1.ffn_down_shexp.weight'):
+            _assert_route_pair([route for route in routes if route['weight'] == weight],
+                               'LIBRARY_FUSED_DEQUANT_GEMM', inner_operand_prec=-1)
+        for weight in ('blk.7.attn_q.weight', 'blk.7.attn_v.weight',
+                       'blk.7.attn_k.weight', 'blk.7.attn_output.weight'):
+            _assert_route_pair([route for route in routes if route['weight'] == weight],
+                               'LIBRARY_DNNL_F16', inner_operand_prec=20)
+    else:
+        assert all(route['route'] == 'MMVQ_REORDERED'
+                   for route in routes
+                   if route['weight'] in ('blk.0.ssm_in.weight', 'blk.0.ssm_out.weight',
+                                          'blk.1.ffn_latent_down.weight',
+                                          'blk.1.ffn_latent_up.weight'))
+        assert all(route['route'] == 'MMVQ_PLAIN'
+                   for route in routes
+                   if route['weight'] in ('blk.1.ffn_up_shexp.weight',
+                                          'blk.1.ffn_down_shexp.weight'))
+        for weight in ('blk.1.ffn_up_exps.weight', 'blk.1.ffn_down_exps.weight'):
+            expert_routes = [route for route in routes if route['weight'] == weight]
+            assert len(expert_routes) == 2, routes
+            assert [route['route'] for route in expert_routes] == [
+                'MOE_GROUPED_GEMM_ATTEMPT', 'MOE_GROUPED_GEMM_RESULT'], routes
+
+
+def route_frames(log):
+    """Pair direct target-call order with FIFO BOLT_VERIFY batch order.
+
+    BOLT_ROUTE is direct stderr while BOLT_VERIFY is an asynchronous common
+    logger.  Their textual positions are deliberately not used to associate a
+    target operation with a batch.  The unique block-0 SSM backend anchors
+    target groups in the direct stream; groups and batches are then consumed in
+    exact serial order, with foreign backend routes retained separately.
+    """
+    verify_frames = _verify_frames(log)
+    stream = _route_stream(log)
+    routes = [row['route'] for row in stream]
+    anchors = [i for i, route in enumerate(routes)
+               if route['weight'] in ('blk.0.ssm_in.weight', 'blk.0.ssm_out.weight')]
+    contexts = {routes[i]['backend_ctx'] for i in anchors}
+    assert len(contexts) == 1, 'missing or ambiguous target SSM backend context'
+    target_context = next(iter(contexts))
+    group_starts = [i for i, route in enumerate(routes)
+                    if route['backend_ctx'] == target_context
+                    and route['weight'] == 'blk.0.ssm_in.weight'
+                    and route['route'] not in ('LIBRARY_DNNL_F32', 'LIBRARY_MKL_F32')]
+    assert group_starts, 'missing target SSM route anchors'
+    prefix_target = [route for route in routes[:group_starts[0]]
+                     if route['backend_ctx'] == target_context]
+    assert all(route['weight'] == 'output.weight' for route in prefix_target), (
+        'target operation precedes first SSM anchor')
+    groups = []
+    for index, start in enumerate(group_starts):
+        end = group_starts[index + 1] if index + 1 < len(group_starts) else len(routes)
+        target_routes = [route for route in routes[start:end]
+                         if route['backend_ctx'] == target_context]
+        assert target_routes and target_routes[0] == routes[start], 'malformed target route group'
+        groups.append(dict(routes=target_routes,
+                           other_backend_routes=[route for route in routes[start:end]
+                                                 if route['backend_ctx'] != target_context]))
+    group_widths = [_target_group_width(group['routes']) for group in groups]
+    known_widths = {1, 2, 3, 4, 5, 46}
+    frames = []
+    cursor = 0
+    leading_unmatched = []
+    for group_index, group in enumerate(groups):
+        width = group_widths[group_index]
+        while cursor < len(verify_frames) and verify_frames[cursor]['batch']['n'] != width:
+            frame = verify_frames[cursor]
+            assert frame['batch']['n'] not in known_widths, (
+                'target BOLT_VERIFY batch missing or reordered', frame['batch'])
+            assert not frames, 'non-target BOLT_VERIFY frame after target stream began'
+            leading_unmatched.append(frame)
+            cursor += 1
+        assert cursor < len(verify_frames), 'target BOLT_VERIFY batch missing'
+        verify = verify_frames[cursor]
+        assert verify['batch']['n'] == width
+        frame = dict(batch=verify['batch'], decoded=verify['decoded'],
+                     routes=group['routes'],
+                     other_backend_routes=group['other_backend_routes'],
+                     target_backend_ctx=target_context,
+                     verify_line=verify['verify_line'],
+                     decoded_line=verify['decoded_line'])
+        _assert_target_frame_width(frame)
+        _assert_prefill_frame(frame)
+        frames.append(frame)
+        cursor += 1
+    assert cursor == len(verify_frames), 'extra BOLT_VERIFY batch after target stream'
+    if frames:
+        prefix_other = [row['route'] for row in stream[:group_starts[0]]
+                        if row['route']['backend_ctx'] != target_context
+                        and row['line_index'] >= frames[0]['verify_line']]
+        frames[0]['other_backend_routes'] = prefix_other + frames[0]['other_backend_routes']
+        frames[0]['unframed_other_routes'] = [row['route'] for row in stream[:group_starts[0]]
+                                              if row['route']['backend_ctx'] != target_context
+                                              and row['line_index'] < frames[0]['verify_line']]
+        frames[0]['unframed_target_routes'] = [row['route'] for row in stream[:group_starts[0]]
+                                               if row['route']['backend_ctx'] == target_context]
+        frames[0]['leading_unmatched_verify_frames'] = leading_unmatched
+    return frames
+
+
+def _assert_target_frame_width(frame):
+    batch = frame['batch']
+    expected = batch['n']
+    output_width = sum(batch['outputs'])
+    for route in frame['routes']:
+        width = _route_original_width(route)
+        if route['weight'] == 'output.weight':
+            assert width == output_width, (batch, route)
+        else:
+            assert width == expected, (batch, route)
 
 def _route_batch_metadata(batch):
     return {key: batch[key] for key in ('off', 'n', 'tokens', 'pos', 'outputs', 'seq')}
@@ -171,13 +362,9 @@ def select_route_batches(log, label):
         assert frame['routes'], 'selected target batch has no filtered route records'
         # Draft feature work may run inside the target decode call. Anchor the
         # target backend to Bolt's first-block SSM projections, not pointer types.
-        anchors = [route for route in frame['routes'] if route['weight'] in
-                   ('blk.0.ssm_in.weight', 'blk.0.ssm_out.weight')]
-        contexts = {route['backend_ctx'] for route in anchors}
-        assert len(contexts) == 1, 'missing or ambiguous target SSM backend context'
-        target_context = next(iter(contexts))
-        target_routes = [route for route in frame['routes'] if route['backend_ctx'] == target_context]
-        other_routes = [route for route in frame['routes'] if route['backend_ctx'] != target_context]
+        target_context = frame['target_backend_ctx']
+        target_routes = frame['routes']
+        other_routes = frame['other_backend_routes']
         assert any(route['weight'] == 'output.weight' for route in target_routes), (
             'output projection route missing in target backend')
         selected.append(dict(batch=_route_batch_metadata(frame['batch']), routes=target_routes,
@@ -239,9 +426,10 @@ def assert_iq2_singleton_route(route, original_n, n_mats):
     assert_route_tensor(route, 'ids_', (9, 1, 1, 1), (4, n_mats * 4, n_mats * original_n * 4, n_mats * original_n * 4))
 
 
-def assert_actual_route_gates(route_analysis, label):
+def assert_actual_route_gates(route_analysis, label, expected_head_ne1=None):
     assert label in ('S0', 'C0')
-    expected_head_ne1 = 1 if label == 'S0' else 2
+    if expected_head_ne1 is None:
+        expected_head_ne1 = 1 if label == 'S0' else 2
     latent_route = 'DMMV_ESIMD'
     expert_weights = ('blk.1.ffn_up_exps.weight', 'blk.1.ffn_down_exps.weight')
     for batch in route_analysis['selected_batches']:
@@ -295,9 +483,9 @@ def assert_actual_route_gates(route_analysis, label):
                 assert route['operand_prec'] == -1, route
 
 
-def assert_router_operations(routes, n, split, layout=0):
+def assert_router_operations(routes, n, split, layout=0, inner_route='LIBRARY_MKL_F32'):
     """An outer dispatch plus its inner library record is ONE operation, not two."""
-    assert n in (1, 2, 3) and layout in (0, 1, 2)
+    assert n in (1, 2, 3, 4, 5, 46) and layout in (0, 1, 2)
     assert not split or (n == 2 and layout == 0)
     calls = 2 if split else 1
     assert len(routes) == 2 * calls, ('router operation count', n, split, routes)
@@ -305,7 +493,7 @@ def assert_router_operations(routes, n, split, layout=0):
     input_stride = (4096 + (16 if layout == 2 else 0)) * 4
     for i in range(calls):
         outer, inner = routes[2*i:2*i+2]
-        assert (outer['route'], inner['route']) == ('MUL_MAT_SYCL', 'LIBRARY_MKL_F32'), (outer, inner)
+        assert (outer['route'], inner['route']) == ('MUL_MAT_SYCL', inner_route), (outer, inner)
         assert outer['operand_prec'] == -1 and inner['operand_prec'] == 10
         assert {k: v for k, v in outer.items() if k not in ('route', 'operand_prec')} == {
             k: v for k, v in inner.items() if k not in ('route', 'operand_prec')}, (outer, inner)
@@ -324,7 +512,6 @@ def assert_router_operations(routes, n, split, layout=0):
     assert len({r['backend_ctx'] for r in routes}) == 1
     assert len({r['weight'] for r in routes}) == len({r['dst_name'] for r in routes}) == 1
 
-
 def assert_router_model_routes(log, label):
     """Require activation on EVERY post-prompt target frame; keep nested drafter routes separate."""
     assert label in ('S0', 'C0')
@@ -335,17 +522,20 @@ def assert_router_model_routes(log, label):
             continue
         n = batch['n']
         assert n in ((1,) if label == 'S0' else (1, 2)), batch
-        anchors = [r for r in frame['routes'] if r['weight'] in ('blk.0.ssm_in.weight', 'blk.0.ssm_out.weight')]
-        contexts = {r['backend_ctx'] for r in anchors}
-        assert len(contexts) == 1, 'missing or ambiguous router target backend'
-        target = next(iter(contexts))
-        routers = [r for r in frame['routes'] if r['backend_ctx'] == target and r['weight'].endswith('.ffn_gate_inp.weight')]
-        weights = {r['weight'] for r in routers}
-        assert 'blk.1.ffn_gate_inp.weight' in weights, 'missing actual target router route'
-        for weight in weights:
-            assert_router_operations([r for r in routers if r['weight'] == weight], n, split=(n == 2))
-        checked.append(dict(batch=_route_batch_metadata(batch), target_backend_ctx=target, routes=routers,
-                            other_backend_routes=[r for r in frame['routes'] if r['backend_ctx'] != target]))
+        target = frame['target_backend_ctx']
+        assert all(route['backend_ctx'] == target for route in frame['routes'])
+        expected = _expected_target_weights(n, label, output=any(batch['outputs']))
+        assert [route['weight'] for route in frame['routes']] == expected, (
+            batch, frame['routes'])
+        routers = [route for route in frame['routes']
+                   if route['weight'] == 'blk.1.ffn_gate_inp.weight']
+        assert routers, 'missing actual target router route'
+        assert_router_operations(routers, n, split=(label == 'C0' and n == 2))
+        assert_actual_route_gates(dict(selected_batches=[dict(batch=batch, routes=frame['routes'])]),
+                                  label, expected_head_ne1=n)
+        checked.append(dict(batch=_route_batch_metadata(batch), target_backend_ctx=target,
+                            routes=routers,
+                            other_backend_routes=frame['other_backend_routes']))
     assert checked, 'missing post-prompt router frames'
     if label == 'C0':
         assert any(x['batch']['n'] == 2 and x['batch']['pos'] == [55, 56] for x in checked), 'missing first two-column router control'

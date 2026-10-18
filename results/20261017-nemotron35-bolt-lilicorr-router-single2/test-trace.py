@@ -144,6 +144,12 @@ def route_line(route='MMVQ_PLAIN', weight='blk.0.attn_q.weight', backend='0xdef'
                   reorder=0, src1_prec=0, operand_prec=-1, accum_prec=0, dynamic_prec=3,
                   device=0, backend_ctx=backend, expert=expert, result=result)
     fields.update(extra)
+    if 'src1_ne1' in extra and 'src1_nb2' not in extra and 'src1_nb3' not in extra:
+        fields['src1_nb2'] = fields['src1_nb1'] * fields['src1_ne1']
+        fields['src1_nb3'] = fields['src1_nb2']
+    if 'dst_ne1' in extra and 'dst_nb2' not in extra and 'dst_nb3' not in extra:
+        fields['dst_nb2'] = fields['dst_nb1'] * fields['dst_ne1']
+        fields['dst_nb3'] = fields['dst_nb2']
     for key in omit:
         fields.pop(key)
     return '2026-10-17T00:00:00Z 0.0.1 I BOLT_ROUTE ' + ' '.join(f'{k}={v}' for k, v in fields.items())
@@ -233,14 +239,17 @@ def block1_route_lines(label='S0', backend='0xabc', head_ne1=1):
         rows.extend([iq2_route_line(weight, head_ne1, 240, backend=backend)] * head_ne1)
     rows.append(route_line(weight='blk.1.ffn_latent_up.weight', backend=backend, src0_type='q8_0',
                            route='DMMV_ESIMD', reorder=1, src1_ne1=head_ne1))
+    for weight in ('blk.1.ffn_up_shexp.weight', 'blk.1.ffn_down_shexp.weight'):
+        rows.append(route_line(weight=weight, backend=backend, src0_type='q8_0',
+                               route='MMVQ_PLAIN', reorder=1, src1_ne1=head_ne1))
     return rows
 
 def block7_route_lines(backend='0xabc', head_ne1=1):
     rows = []
     for weight, k, m in (
             ('blk.7.attn_q.weight', 4096, 4096),
-            ('blk.7.attn_k.weight', 4096, 256),
             ('blk.7.attn_v.weight', 4096, 256),
+            ('blk.7.attn_k.weight', 4096, 256),
             ('blk.7.attn_output.weight', 4096, 4096)):
         rows.append(route_line(weight=weight, backend=backend, src0_type='q8_0',
                                route='DMMV_ESIMD', reorder=1, src1_ne1=head_ne1,
@@ -304,8 +313,13 @@ def router_model_log(label='S0'):
     for frame in A['select_route_batches'](route_log(label), label)['selected_batches']:
         batch = frame['batch']
         lines.append(route_batch(batch['pos'], batch['tokens']))
-        lines.extend('BOLT_ROUTE ' + ' '.join(f'{k}={v}' for k, v in r.items()) for r in frame['routes'])
-        lines.extend(router_lines(batch['n']))
+        inserted = False
+        for route in frame['routes']:
+            if not inserted and route['weight'] == 'blk.1.ffn_latent_down.weight':
+                lines.extend(router_lines(batch['n']))
+                inserted = True
+            lines.append('BOLT_ROUTE ' + ' '.join(f'{k}={v}' for k, v in route.items()))
+        assert inserted
         lines.append(route_decoded())
     return '\n'.join(lines) + '\n'
 
@@ -1186,8 +1200,8 @@ class Trace(unittest.TestCase):
         log = route_log().replace(marker, marker + '\n' + foreign)
         first = A['select_route_batches'](log, 'S0')['selected_batches'][0]
         self.assertEqual(first['target_backend_ctx'], '0xabc')
-        self.assertEqual(len(first['other_backend_routes']), 1)
-        self.assertEqual(first['other_backend_routes'][0]['backend_ctx'], '0x999')
+        self.assertGreaterEqual(len(first['other_backend_routes']), 1)
+        self.assertIn('0x999', {row['backend_ctx'] for row in first['other_backend_routes']})
         self.assertTrue(all(row['backend_ctx'] == '0xabc' for row in first['routes']))
         ambiguous = route_log().replace(marker, marker + '\n' + route_line(weight='blk.0.ssm_in.weight', backend='0x999'))
         with self.assertRaisesRegex(AssertionError, 'ambiguous target'):
@@ -1860,13 +1874,119 @@ class Trace(unittest.TestCase):
         single_pair = original.splitlines()[:2]
         self.assertIn(original, log)
         self.assertRaises(AssertionError, A['assert_router_model_routes'], log.replace(original, '\n'.join(single_pair)), 'C0')
-        later = route_batch([100, 101], [1000, 1001]) + '\n' + '\n'.join(
-            [ssm_route('blk.0.ssm_in.weight', head_ne1=2)] + router_lines(2)) + '\n' + route_decoded()
+        later = router_model_log('C0').replace(
+            route_batch([55, 56], [1055, 1056]), route_batch([100, 101], [1000, 1001]), 1)
         A['assert_router_model_routes'](log + '\n' + later, 'C0')
         self.assertRaises(AssertionError, A['assert_router_model_routes'],
                           log + '\n' + later.replace('src1_ne1=1 ', 'src1_ne1=2 '), 'C0')
 
-    def test_router_real_capture_analyzer_rejects_parent_n2_and_checks_late_frames(self):
+    def test_saved_real_router_fifo_order_and_position70_shift(self):
+        log_path = M['ROOT'] / 'run-r1/S0/diagnostic-window.log'
+        log = log_path.read_text()
+        lines = log.splitlines()
+        batch70 = next(i for i, line in enumerate(lines)
+                       if 'BOLT_VERIFY batch ' in line and A['records'](line)[0]['pos'] == [70])
+        previous_decoded = max(i for i in range(batch70)
+                               if 'BOLT_VERIFY decoded ' in lines[i])
+        shifted = [line for line in lines[previous_decoded + 1:batch70]
+                   if 'BOLT_ROUTE ' in line and any(
+                       weight in line for weight in (
+                           'weight=blk.0.ssm_in.weight ', 'weight=blk.0.ssm_out.weight ',
+                           'weight=blk.1.ffn_gate_inp.weight ',
+                           'weight=blk.1.ffn_latent_down.weight ',
+                           'weight=blk.1.ffn_up_exps.weight '))]
+        self.assertEqual(len(shifted), 6)
+        self.assertEqual([A['route_records'](line)[0]['weight'] for line in shifted], [
+            'blk.0.ssm_in.weight', 'blk.0.ssm_out.weight',
+            'blk.1.ffn_gate_inp.weight', 'blk.1.ffn_gate_inp.weight',
+            'blk.1.ffn_latent_down.weight', 'blk.1.ffn_up_exps.weight'])
+        frames = A['route_frames'](log)
+        self.assertEqual(len(frames), 130)
+        self.assertEqual(len(next(frame for frame in frames if frame['batch']['pos'] == [70])['routes']), 15)
+        self.assertEqual(len(A['assert_router_model_routes'](log, 'S0')), 127)
+
+        model = router_model_log('S0')
+        model_lines = model.splitlines()
+        batches = [i for i, line in enumerate(model_lines) if 'BOLT_VERIFY batch ' in line]
+        second = batches[1]
+        decoded = next(i for i in range(second + 1, len(model_lines))
+                       if 'BOLT_VERIFY decoded ' in model_lines[i])
+        direct = model_lines[second + 1:decoded]
+        self.assertTrue(direct and all('BOLT_ROUTE ' in line for line in direct))
+        shifted_model = (model_lines[:second] + direct + [model_lines[second], model_lines[decoded]]
+                         + model_lines[decoded + 1:])
+        shifted_model = '\n'.join(shifted_model) + '\n'
+        self.assertEqual([A['records'](line)[0]['event'] for line in shifted_model.splitlines()
+                          if 'BOLT_VERIFY ' in line],
+                         [A['records'](line)[0]['event'] for line in model.splitlines()
+                          if 'BOLT_VERIFY ' in line])
+        self.assertEqual(len(A['assert_router_model_routes'](shifted_model, 'S0')), 2)
+
+    def test_router_fifo_rejects_dropped_extra_bad_width_and_reordered_groups(self):
+        log = (M['ROOT'] / 'run-r1/S0/diagnostic-window.log').read_text()
+        lines = log.splitlines()
+        batch70 = next(i for i, line in enumerate(lines)
+                       if 'BOLT_VERIFY batch ' in line and A['records'](line)[0]['pos'] == [70])
+        previous_decoded = max(i for i in range(batch70)
+                               if 'BOLT_VERIFY decoded ' in lines[i])
+        outer = next(line for line in lines[previous_decoded + 1:batch70]
+                     if 'BOLT_ROUTE ' in line and 'weight=blk.1.ffn_gate_inp.weight ' in line
+                     and 'route=MUL_MAT_SYCL' in line)
+        for bad in (
+                log.replace(outer, '', 1),
+                log.replace(outer, outer + '\n' + outer, 1),
+                log.replace('src1_nb2=16384', 'src1_nb2=32768', 1)):
+            with self.assertRaises(AssertionError):
+                A['assert_router_model_routes'](bad, 'S0')
+
+        route_rows = [(line, A['route_records'](line)[0])
+                      for line in lines if 'BOLT_ROUTE ' in line]
+        target = next(route['backend_ctx'] for _, route in route_rows
+                      if route['weight'] == 'blk.0.ssm_in.weight')
+        starts = [i for i, (_, route) in enumerate(route_rows)
+                  if route['backend_ctx'] == target
+                  and route['weight'] == 'blk.0.ssm_in.weight'
+                  and route['route'] not in ('LIBRARY_DNNL_F32', 'LIBRARY_MKL_F32')]
+        self.assertGreaterEqual(len(starts), 3)
+        first_end, second_end = starts[1], starts[2]
+        reordered = (route_rows[starts[1]:second_end] + route_rows[starts[0]:first_end]
+                     + route_rows[second_end:])
+        non_routes = [line for line in lines if 'BOLT_ROUTE ' not in line]
+        reordered_log = '\n'.join(non_routes + [line for line, _ in reordered]) + '\n'
+        with self.assertRaises(AssertionError):
+            A['route_frames'](reordered_log)
+
+    def test_missing_c0_continuation_preserves_saved_s0_and_controller_shape(self):
+        continuation = runpy.run_path('continue-c0.py')
+        source = continuation['controller_source']()
+        namespace = {'__name__': 'continuation_preview',
+                     '__file__': str(continuation['NEXT'] / 'run-trace.py')}
+        exec(compile(source, namespace['__file__'], 'exec'), namespace)
+        self.assertEqual(namespace['ROOT'], continuation['NEXT'])
+        self.assertEqual(namespace['ORDER'], ('C0',))
+        self.assertNotEqual(namespace['PREFIX'], M['PREFIX'])
+        for key in ('WIDTH1', 'PARENT_RESULTS', 'ACCEPTED', 'PARENT', 'CANDIDATE', 'SOURCE_SCOPE'):
+            self.assertEqual(namespace[key], M[key])
+        self.assertNotIn('operand_analysis', source)
+        self.assertNotIn('observer_parent_invariant', source)
+        old_functions = [ast.dump(node) for node in ast.parse(Path('run-trace.py').read_text()).body
+                         if isinstance(node, ast.FunctionDef)]
+        new_functions = [ast.dump(node) for node in ast.parse(source).body
+                         if isinstance(node, ast.FunctionDef)]
+        self.assertEqual(old_functions, new_functions)
+        runner = runpy.run_path(str(OLD['OLD'] / 'run-bolt-cell-ssm-prefill-r1.py'))
+        result = continuation['validate_saved_s0'](M, A, OLD, NATIVE, runner)
+        self.assertTrue(result['s0_parent_invariant_passed'])
+        self.assertEqual(result['parent_comparison']['compared_through_ordinal'], 128)
+        self.assertEqual(len(result['route_analysis']['router_batches']), 127)
+
+    def test_original_controller_remains_full_pair(self):
+        continuation = runpy.run_path('continue-c0.py')
+        self.assertEqual(M['ORDER'], ('S0', 'C0'))
+        self.assertEqual(continuation['ROOT'], M['ROOT'])
+        self.assertNotEqual(continuation['NEXT'], M['ROOT'])
+        self.assertIn('BOLT_VERIFY_PAIR_COMPLETED_NO_TIMING', Path('run-trace.py').read_text())
+
         for label in ('S0', 'C0'):
             parent = M['PARENT_RESULTS'] / 'run-r1' / label
             cell = self.root / ('router-' + label)
