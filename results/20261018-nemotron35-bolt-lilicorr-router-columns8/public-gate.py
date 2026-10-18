@@ -19,6 +19,8 @@ if not __debug__:
     raise RuntimeError('qualification requires assertions')
 ROOT = Path('/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-columns8')
 OLD = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-width-sweep'
+N9_ROOT = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-n9-control'
+N9_TEST_TREE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2')
 for filename, digest in (
     ('contracts.py', '80547ac6ca7689e259e9a9e70f3d0f7dc0fbb8248e763e99f7bbc0d6606a877f'),
     ('controller.py', 'e8f4a537b355b5315a08fdb410682f4ac5aef13878a723f51ca4c7812bd931d8'),
@@ -28,13 +30,15 @@ K = runpy.run_path(str(OLD / 'controller.py'))
 C = K['C']  # Inherited run_job's exception identity is essential.
 N = runpy.run_path(str(ROOT / 'run-trace.py'))
 A = runpy.run_path(str(ROOT / 'analyze-trace.py'))
-OUT = ROOT / 'qualification-r2'
-MODE = 'router-columns8-qualification'
-ROLES = {'R8R2-A': 'A', 'R8R2-W3': 'W3', 'R8R2-W7': 'W7'}
+N9 = runpy.run_path(str(N9_ROOT / 'n9-equivalence.py'))
+OUT = ROOT / 'qualification-r3'
+MODE = 'router-columns8-qualification-r3'
+ROLES = {'R8R3-A': 'A', 'R8R3-W3': 'W3', 'R8R3-W7': 'W7'}
 CELLS = tuple(ROLES)
-MARKER = 'BOLT_VERIFY_ROUTER_COLUMNS8_NATIVE_PASSED'
+R3_MARKER = 'BOLT_VERIFY_ROUTER_COLUMNS8_R3_NATIVE_PASSED'
+MARKER = R3_MARKER
 NATIVE_LOGS = {'router_single2': 'router-single2-native.log',
-               'router_columns8': 'router-columns8-native.log'}
+               'router_columns8_r3': 'router-columns8-r3-native.log'}
 FILES = ('public-gate.py', 'test-public-gate.py', 'cpu-public-gate.sh', 'qualification.md',
          'run-trace.py', 'analyze-trace.py', 'test-trace.py', 'build-candidate.sh',
          'router-columns8.patch', 'source-hashes.json', 'README.md')
@@ -44,13 +48,12 @@ BUILD_FILES = ('protected-source-hashes.json', 'accepted-binaries.json', 'parent
 HTTP_SUFFIXES = ('.request.json', '.request-body', '.http-request.json', '.http.json', '.http-body')
 NEW_NATIVE = (
     "GGML_SYCL_DEBUG=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT "
-    "-p '^router_columns8=1,' > /tmp/router-columns8-native.log 2>&1; "
-    "grep -Fqx '  62/62 tests passed' /tmp/router-columns8-native.log; "
-    "count=$(grep -Fc '  62/62 tests passed' /tmp/router-columns8-native.log || true); test \"$count\" -eq 1; "
-    "python3 -B /router-columns8/analyze-trace.py --tag router_columns8 /tmp/router-columns8-native.log; "
-    "echo " + MARKER + "; "
+    "-p '^router_columns8=1,(?!router_single2=1,weight=blk\\.48\\.ffn_gate_inp\\.weight,layout=0,type_a=f32,type_b=f32,m=496,n=9,)' > /tmp/router-columns8-r3-native.log 2>&1; "
+    "grep -Fqx '  61/61 tests passed' /tmp/router-columns8-r3-native.log; "
+    "count=$(grep -Fc '  61/61 tests passed' /tmp/router-columns8-r3-native.log || true); test \"$count\" -eq 1; "
+    "python3 -B /router-columns8/analyze-trace.py --tag router_columns8_r3 /tmp/router-columns8-r3-native.log; "
+    "echo " + R3_MARKER + "; "
 )
-
 
 def name(cell):
     assert cell in ROLES
@@ -135,7 +138,7 @@ def check_startup(log, cell, h):
     assert [log.index(marker) for marker in markers] == sorted(log.index(marker) for marker in markers)
     segment = log.split(markers[0], 1)[1].split(markers[1], 1)[0]
     router = A['check_router_native_output'](segment, 'router_single2')
-    assert 'router_columns8=1,' not in log, '62-case output must stay in its raw native file'
+    assert 'router_columns8=1,' not in log, '61-case output must stay in its raw native file'
     assert 'call ggml_sycl_ssm_scan_prefill:' not in log.split(p['MARKER'], 1)[0]
     model = log.split(p['MARKER'], 1)[1]
     width = C['width_for'](ROLES[cell])
@@ -175,17 +178,67 @@ def candidate_proof():
     return dict(source=source, binaries=binaries)
 
 
+def check_n9_equivalence(h):
+    proof_path = N9_ROOT / 'run-r2/equivalence.json'
+    proof = C['load'](proof_path)
+    assert (N9_ROOT / 'build-attempt-r2/exit-code.txt').read_text().strip() == '0'
+    assert 'BOLT_VERIFY_BUILD_PASSED' in (N9_ROOT / 'build-attempt-r2/post-build-verification.log').read_text()
+    assert 'BOLT_VERIFY_DEPENDENCIES_PASSED' in (N9_ROOT / 'build-attempt-r2/runtime-precheck.log').read_text()
+    backend_hashes = {'parent': N['binaries'](N['PARENT']),
+                      'candidate': N['binaries'](N['CANDIDATE'])}
+    test_sources = N['source_hashes'](N9_TEST_TREE)
+    test_binaries = N['binaries'](N9_TEST_TREE)
+    assert test_binaries == C['load'](N9_ROOT / 'r2/candidate-binaries.json')
+    original = (N['CANDIDATE'] / 'tests/test-backend-ops.cpp').read_bytes()
+    assert (N9_TEST_TREE / 'tests/test-backend-ops.cpp').read_bytes() == N9['expected_test_source'](original)
+    artifacts = {}
+    for cell in ('R8N9-PARENT', 'R8N9-CANDIDATE'):
+        directory = N9_ROOT / 'run-r2' / cell
+        artifacts[cell] = {stream: (directory / (stream + '.log')).read_bytes()
+                           for stream in ('stdout', 'stderr')}
+        for streams in artifacts.values():
+            combined = (streams['stdout'] + streams['stderr']).decode('utf-8')
+            routes = A['route_records'](combined)
+            assert len(routes) == 2
+            assert all(route['dst_name'] == N9['TARGET_ROUTE'] for route in routes)
+            A['assert_router_operations'](routes, ('blk.48.ffn_gate_inp.weight', 496, 0, 9))
+    raw_hashes = {cell: {stream: N9['sha256_bytes'](value) for stream, value in streams.items()}
+                  for cell, streams in artifacts.items()}
+    N9['check_proof'](
+        proof,
+        artifacts['R8N9-PARENT']['stdout'] + artifacts['R8N9-PARENT']['stderr'],
+        artifacts['R8N9-CANDIDATE']['stdout'] + artifacts['R8N9-CANDIDATE']['stderr'],
+        backend_hashes, test_binaries, test_sources,
+        N9['sha256_bytes']((N9_ROOT / 'run-control.py').read_bytes()), raw_hashes)
+    return proof
+
+
 def freeze(h):
+    check_n9_equivalence(h)
     hashes = C['code_hashes'](h)
     hashes.update({str(ROOT / file): C['sha'](ROOT / file) for file in FILES + BUILD_FILES})
+    hashes.update({str(N9_ROOT / file): C['sha'](N9_ROOT / file) for file in
+                   ('n9-equivalence.py', 'run-control.py', 'seeded-test.patch',
+                    'smallbuildhelper.py', 'build-test.sh', 'test-control.py')})
     refs = C['reference_hashes'](h)
     paths = [C['QUALIFY_DIR'] / file for file in ('summary.json', 'qualification.json')]
     for role in ROLES.values():
         directory = C['QUALIFY_DIR'] / role
         paths += [directory / file for file in ('pid-before.json', 'pid-after.json', 'create-argv.json',
-                  'container-before.json', 'native-and-startup.stdout.log', 'native-and-startup.stderr.log')]
+                                                 'container-before.json', 'native-and-startup.stdout.log',
+                                                 'native-and-startup.stderr.log')]
         for job in jobs(h):
             paths += [C['artifact'](directory / job['stem'], suffix) for suffix in HTTP_SUFFIXES]
+    n9_run = N9_ROOT / 'run-r2'
+    paths += [n9_run / 'equivalence.json', n9_run / 'analysis.json', n9_run / 'inputs-before.json',
+              n9_run / 'paired-argv-difference.json',
+              N9_ROOT / 'r2/candidate-binaries.json', N9_ROOT / 'r2/protected-source-hashes.json',
+              N9_ROOT / 'build-attempt-r2/exit-code.txt', N9_ROOT / 'build-attempt-r2/post-build-verification.log',
+              N9_ROOT / 'build-attempt-r2/runtime-precheck.log']
+    for cell in ('R8N9-PARENT', 'R8N9-CANDIDATE'):
+        paths += [n9_run / cell / 'create-argv.json']
+        paths += [n9_run / cell / (stream + '.log') for stream in ('stdout', 'stderr')]
+        paths += [n9_run / cell / 'native-result.json']
     refs.update({str(path): C['sha'](path) for path in paths})
     # Keep the legacy accepted/parent FULL source and binary checks, not just new-candidate checks.
     return dict(hashes=hashes, references=refs, source_binaries=C['source_binary_hashes'](h),
@@ -202,6 +255,7 @@ class Runtime(K['Runtime']):
     def preflight(self):
         self.capacity('initial')
         check_tested(self.h)
+        check_n9_equivalence(self.h)
         self.hashes = C['source_binary_hashes'](self.h)
         self.before_hw = self.h['runner']['hardware']()
         assert self.before_hw == C['load'](self.off['REFERENCE'] / 'run-r1/hardware-before.json')
@@ -306,6 +360,7 @@ class Runtime(K['Runtime']):
             errors.append(dict(check='legacy-restoration', error=repr(exc)))
         for key, fn in (
             ('cpu_frozen_candidate', lambda: check_tested(self.h)['freeze']['candidate']),
+            ('paired_n9_equivalence', lambda: check_n9_equivalence(self.h)),
             ('preserved_cells', self.stopped_cells),
         ):
             try:
@@ -372,7 +427,7 @@ def compare(kind, actual, expected):
 
 
 def new_report(cell):
-    return dict(cell=cell, role=ROLES[cell], width=C['width_for'](ROLES[cell]), baseline=(cell == 'R8R2-A'),
+    return dict(cell=cell, role=ROLES[cell], width=C['width_for'](ROLES[cell]), baseline=(cell == 'R8R3-A'),
                 passed=False, jobs=[], errors=[], fidelity_failures=[],
                 behavior=dict(natural_stop_cases=0, fixed_length_cases=0, diagnostics_exercised=0,
                               rejected_draft_observed=0, not_exercised=[]))
@@ -426,7 +481,7 @@ def collect(rt, cell):
                 read_public(rt.h, rt.out / cell, job)
                 result = read_result(rt.h, rt.out / cell, job)
             frozen = read_result(rt.h, rt.off['ROOT'] / 'run-r1/A0', job)
-            fresh = result if cell == 'R8R2-A' else read_result(rt.h, rt.out / 'R8R2-A', job)
+            fresh = result if cell == 'R8R3-A' else read_result(rt.h, rt.out / 'R8R3-A', job)
             row = add_result(report, job, result, frozen, fresh)
             C['save'](rt.out / cell / 'qualification.json', report)
             if report['baseline'] and not row['passed']:
@@ -498,12 +553,12 @@ def analyze(h):
                 read_public(h, directory, job)
                 actual = read_result(h, directory, job)
                 frozen = read_result(h, h['off']['ROOT'] / 'run-r1/A0', job)
-                fresh = actual if cell == 'R8R2-A' else read_result(h, OUT / 'R8R2-A', job)
+                fresh = actual if cell == 'R8R3-A' else read_result(h, OUT / 'R8R3-A', job)
                 add_result(report, job, actual, frozen, fresh)
             finish_report(report)
             assert report == captured, 'capture bookkeeping differs from independently reread raw evidence'
             report['cumulative_server_statistics'] = stats
-            if cell == 'R8R2-A':
+            if cell == 'R8R3-A':
                 assert report['passed'], 'fresh baseline failed'
         analysis['qualified_widths'] = [r['width'] for r in analysis['reports'].values() if r['width'] and r['passed']]
         analysis['status'] = 'analyzed'

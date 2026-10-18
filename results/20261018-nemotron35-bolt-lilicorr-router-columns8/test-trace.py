@@ -48,7 +48,7 @@ def fixture(tag='router_columns8', mutate=None):
             rows = mutate(key, rows)
         lines += ['BOLT_ROUTE ' + ' '.join(f'{k}={v}' for k, v in sorted(row.items())) for row in rows]
         w, m, layout, n = key
-        prefix = 'router_columns8=1,' if tag == 'router_columns8' else ''
+        prefix = '' if tag == 'router_single2' else 'router_columns8=1,'
         lines.append(f'  MUL_MAT({prefix}router_single2=1,weight={w},layout={layout},'
                      f'type_a=f32,type_b=f32,m={m},n={n},k=4096,bs=[1,1],nr=[1,1],per=[0,1,2,3],'
                      'k_v=0,o=1,src_overlap=0,m_v=0,pad=0): \x1b[1;32mOK\x1b[0m')
@@ -66,7 +66,9 @@ class NativeParser(unittest.TestCase):
             self.check(log, tag)
 
     def test_separate_cases_and_counts(self):
-        for tag, count, records, splits in [('router_columns8', 62, 404, 35), ('router_single2', 30, 90, 10)]:
+        for tag, count, records, splits in [('router_columns8', 62, 404, 35),
+                                              ('router_columns8_r3', 61, 402, 35),
+                                              ('router_single2', 30, 90, 10)]:
             with self.subTest(tag=tag):
                 result = self.check(fixture(tag), tag)
                 self.assertEqual((result['cases'], result['route_records'], result['split_cases']), (count, records, splits))

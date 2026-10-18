@@ -1,10 +1,22 @@
 diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 --- a/tests/test-backend-ops.cpp
 +++ b/tests/test-backend-ops.cpp
-@@ -65,5 +65,5 @@
-         auto init_thread = [&](size_t start, size_t end) {
+@@ -66 +66 @@
 -            thread_local std::default_random_engine gen(std::random_device{}());
 +            std::default_random_engine gen(static_cast<unsigned int>(0x5A17u + start));
-             std::uniform_real_distribution<float> distribution(min, max);
-             for (size_t i = start; i < end; i++) {
-                 data[i] = distribution(gen);
+@@ -1558,0 +1559,14 @@
++            }
++
++            if (strcmp(bn1, "SYCL0") == 0 && strcmp(bn2, "CPU") == 0 &&
++                    strcmp(t1->name, "router_columns8-m496-l0-n9") == 0 &&
++                    t1->type == GGML_TYPE_F32 && ggml_is_contiguous(t1) &&
++                    t1->ne[0] == 496 && t1->ne[1] == 9 && t1->ne[2] == 1 && t1->ne[3] == 1 &&
++                    ggml_nbytes(t1) == 17856) {
++                std::vector<uint8_t> device_output(ggml_nbytes(t1));
++                ggml_backend_tensor_get(t1, device_output.data(), 0, device_output.size());
++                printf("\nBOLT_N9_OUTPUT_HEX=");
++                for (uint8_t byte : device_output) {
++                    printf("%02x", byte);
++                }
++                printf("\n");
++            }

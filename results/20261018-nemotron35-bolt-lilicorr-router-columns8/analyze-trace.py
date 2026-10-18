@@ -15,7 +15,7 @@ ROUTER_WIDTHS = {
 }
 UNRELATED_WIDTHS = {('blk.1.unrelated.weight' if m == 240 else f'blk.1.width{m}.unrelated.weight'): m
                     for m in ROUTER_WIDTHS.values()}
-TAGS = ('router_single2', 'router_columns8')
+TAGS = ('router_single2', 'router_columns8', 'router_columns8_r3')
 ROUTE_STRINGS = {
     'route', 'weight', 'aux_weight', 'op', 'dst_name',
     'src0_type', 'aux_type', 'src1_type', 'dst_type', 'backend_ctx',
@@ -32,13 +32,16 @@ OK = r'(?:\x1b\[[0-9;]*m)*OK(?:\x1b\[[0-9;]*m)*'
 
 def native_cases(tag):
     assert tag in TAGS
-    ns, control_n = (range(1, 10), 8) if tag == 'router_columns8' else ((1, 2, 3), 2)
+    base_tag = 'router_columns8' if tag == 'router_columns8_r3' else tag
+    ns, control_n = (range(1, 10), 8) if base_tag == 'router_columns8' else ((1, 2, 3), 2)
     cases = {(w, m, 0, n) for w, m in ROUTER_WIDTHS.items() for n in ns}
     cases |= {(w, m, layout, control_n) for w, m in ROUTER_WIDTHS.items() for layout in (1, 2)}
     cases |= {(w, m, 0, control_n) for w, m in UNRELATED_WIDTHS.items()}
-    if tag == 'router_columns8':
+    if base_tag == 'router_columns8':
         cases |= {('blk.1.width256.ffn_gate_inp.weight', 256, 0, n) for n in (4, 8)}
-    assert len(cases) == (62 if tag == 'router_columns8' else 30)
+    if tag == 'router_columns8_r3':
+        cases.remove(('blk.48.ffn_gate_inp.weight', 496, 0, 9))
+    assert len(cases) == (61 if tag == 'router_columns8_r3' else 62 if base_tag == 'router_columns8' else 30)
     return cases
 
 

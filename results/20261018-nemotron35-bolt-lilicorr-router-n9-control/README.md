@@ -10,11 +10,13 @@ router_columns8=1,router_single2=1,weight=blk.48.ffn_gate_inp.weight,
 layout=0,type_a=f32,type_b=f32,m=496,n=9
 ```
 
-The only source change is in `init_tensor_uniform`: the per-chunk engine seed is
-predeclared as `0x5A17u + start`. No tolerance, shape, fixture, runtime, or
-backend source is changed. The fixed seed makes parent and candidate operands
-replayable; it does not reproduce the original `std::random_device` operands.
-Do not choose or retry another seed after observing results.
+The test-only source patch keeps the predeclared per-chunk engine seed
+`0x5A17u + start` and, only for the selected contiguous f32 device tensor,
+emits the full 17,856-byte SYCL output as one `BOLT_N9_OUTPUT_HEX=` line before
+numeric verdict handling. No tolerance, shape, fixture, runtime, or backend source
+is changed. The fixed seed makes parent and candidate operands replayable; it does
+not reproduce the original `std::random_device` operands. Do not choose or retry
+another seed after observing results.
 
 ## Lead CPU build
 
@@ -25,10 +27,11 @@ mount, with no host installs or GPU mounts:
 bash /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control/build-test.sh
 ```
 
-The script privately copies the router-columns8 parent with reflink, applies
-`seeded-test.patch` at fuzz 0, builds only `test-backend-ops -j6`, performs the
-five-binary/three-source protected checks, and runs an `ldd` dependency precheck.
-Failed attempts are retained and destination/container name collisions abort.
+The script privately copies the router-columns8 parent with reflink into the fresh
+`router-n9-control-r2` tree, applies `seeded-test.patch` at fuzz 0, builds only
+`test-backend-ops -j6`, stores r2 manifests under `r2/`, performs the five-binary/
+three-source protected checks, and runs an `ldd` dependency precheck. Failed
+attempts are retained and destination/container name collisions abort.
 
 ## Lead-owned native comparison
 
@@ -60,14 +63,17 @@ python3 -B "$R/run-control.py" --lead-after-restore
 
 Expected: exactly one M=496/N=9 fixture per backend, the same seeded executable,
 unsplit `MUL_MAT_SYCL` + `LIBRARY_DNNL_F32` dispatch, and the unchanged `1e-7`
-tolerance. The original random operands cannot be replayed; no raw output byte
-equality is claimed. Cleanup restores the exact accepted container's identity,
-configuration, mounts, health, READY/stop smoke and exclusive DRM ownership;
-it leaves the two completed diagnostic containers stopped. Evidence stays in
-`run-r1/`, including `analysis.json` and `independent-restoration.json`.
-No timing or promotion is permitted.
+tolerance. Each native arm must emit exactly one well-formed 17,856-byte marker;
+the parent and candidate device bytes are compared literally, not by rounded error.
+The proof is bound to current parent/candidate backend hashes, the test source and
+binary hashes, and the preserved raw logs. A missing, malformed, duplicate, or
+different marker fails closed. Cleanup restores the exact accepted container's
+identity, configuration, mounts, health, READY/stop smoke and exclusive DRM
+ownership; it leaves the two completed diagnostic containers stopped. Evidence
+stays in `run-r2/`, including `equivalence.json`, `analysis.json` and
+`independent-restoration.json`. No timing or promotion is permitted.
 
-## Observed result — blocked, not qualified
+## Preserved r1 result — blocked, not qualified
 
 The lead completed the CPU-only build, dependency precheck, eight remote CPU
 checks, and both native arms on `inference-host` / Intel Arc Pro B70. Only the
@@ -89,7 +95,13 @@ operands. No seed retry or tolerance change was made.
   `runtime-precheck.log`, and `cpu-tests-r2.log`.
 - Independent restoration: `run-r1/independent-restoration.json` passed with no
   errors. `final-container-state.txt` confirms the accepted service running and
+  errors. `final-container-state.txt` confirms the accepted service running and
   both native diagnostic containers stopped.
+
+The r1 numeric failures remain inherited diagnostic data, not passes. The r2
+sequence above must complete the literal-byte proof before the public r3 gate is
+staged; no oneDNN numerical remediation or tolerance relaxation is part of this
+case.
 
 The original router-columns8 R2 attempt remains **61/62**, with all 404 route
 records validated and 35 split cases observed. Its sole numerical failure was

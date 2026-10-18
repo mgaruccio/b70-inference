@@ -6,6 +6,13 @@ launcher/service change, timing run, promotion, new observer, or public controll
 is included. CPU tests, build, native tests and the public API journey are **not
 executed by this worker**. The lead owns all remote execution and restoration.
 
+## Acceptance correction
+The unchanged M=496,n=9 oneDNN control is not a public 1e-7 blocker: the paired
+seeded native control must first capture exactly one 17,856-byte SYCL output marker
+per arm and compare parent/candidate bytes literally, while retaining the numeric
+failure as inherited data. Public r3 then validates the other 61 native cases at
+1e-7 (402 route records and all 35 split cases) and runs the unchanged 75-request
+fidelity journey. No changed-path or public fidelity check is relaxed.
 ## Motivation and declared difference
 
 The supplied live evidence is narrower than a router diagnosis: prior active W3

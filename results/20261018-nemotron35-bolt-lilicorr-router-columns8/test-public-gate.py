@@ -78,7 +78,7 @@ class PublicGateFixtures(unittest.TestCase):
         for job in JOBS:
             for suffix in P['HTTP_SUFFIXES']:
                 source = C['artifact'](C['QUALIFY_DIR'] / 'A' / job['stem'], suffix)
-                target = C['artifact'](self.tmp / 'R8R2-A' / job['stem'], suffix)
+                target = C['artifact'](self.tmp / 'R8R3-A' / job['stem'], suffix)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, target)
 
@@ -97,7 +97,7 @@ class PublicGateFixtures(unittest.TestCase):
             self.assertIs(getattr(P['Runtime'], method), getattr(K['Runtime'], method))
         self.assertIs(C['FidelityFailure'], P['Runtime'].run_job.__globals__['C']['FidelityFailure'])
         self.assertFalse(set(P['CELLS']) & set(C['LABELS']))
-        self.assertEqual('router-columns8-qualification', P['MODE'])
+        self.assertEqual('router-columns8-qualification-r3', P['MODE'])
 
     def test_exact_launch_delta_old_validator_replaced_and_native_isolated(self):
         for cell, role in P['ROLES'].items():
@@ -116,7 +116,9 @@ class PublicGateFixtures(unittest.TestCase):
             self.assertEqual(1, command.count('--tag router_single2 /tmp/router-single2-native.log'))
             self.assertIn("-p '^router_single2=1,' 2>&1 | tee /tmp/router-single2-native.log", command)
             self.assertIn("grep -Fqx '  30/30 tests passed'", command)
-            self.assertIn("-p '^router_columns8=1,' > /tmp/router-columns8-native.log 2>&1", command)
+            self.assertIn("-p '^router_columns8=1,(?!router_single2=1,weight=blk\\.48\\.ffn_gate_inp\\.weight,layout=0,type_a=f32,type_b=f32,m=496,n=9,)' > /tmp/router-columns8-r3-native.log 2>&1", command)
+            self.assertIn("grep -Fqx '  61/61 tests passed'", command)
+            self.assertEqual(1, command.count('--tag router_columns8_r3 /tmp/router-columns8-r3-native.log'))
             self.assertEqual(1, command.count(P['NEW_NATIVE']))
             boundary = H['off']['OFF_BOUNDARY']
             self.assertIn(P['NEW_NATIVE'] + boundary, command)
@@ -165,14 +167,18 @@ class PublicGateFixtures(unittest.TestCase):
                 P['check_startup'](too_late, cell, H)
         a = P['A']
         self.assertEqual(62, a['check_router_native_output'](FIXTURE(), 'router_columns8')['cases'])
+        self.assertEqual(61, a['check_router_native_output'](FIXTURE('router_columns8_r3'), 'router_columns8_r3')['cases'])
         self.assertEqual(30, a['check_router_native_output'](FIXTURE('router_single2'), 'router_single2')['cases'])
         key = ('blk.1.ffn_gate_inp.weight', 240, 0, 3)
         old_n3 = FIXTURE('router_single2', lambda k, rows:
-            runpy.run_path(str(HERE / 'test-trace.py'))['rows_for'](k, 'router_single2', False) if k == key else rows)
+                         runpy.run_path(str(HERE / 'test-trace.py'))['rows_for'](k, 'router_single2', False) if k == key else rows)
         with self.assertRaises(AssertionError):
             a['check_router_native_output'](old_n3, 'router_single2')
         with self.assertRaises(AssertionError):
             a['check_router_native_output'](FIXTURE().replace('62/62', '61/62'), 'router_columns8')
+        with self.assertRaises(AssertionError):
+            a['check_router_native_output'](FIXTURE('router_columns8_r3').replace('61/61', '60/61'),
+                                            'router_columns8_r3')
 
     def test_names_only_new_cells_and_all_25_unchanged_requests(self):
         old = [C['ORIGINAL']] + [C['PREFIX'] + c.lower() for c in C['QUALIFY_ORDER'] + C['TIMING_ORDER']]
@@ -205,7 +211,7 @@ class PublicGateFixtures(unittest.TestCase):
             P['candidate_proof']()  # Failed build cannot qualify, before touching sources/binaries.
 
     def test_valid_mismatches_keep_25_and_diagnostic_rejection_behavior(self):
-        for cell in ('R8R2-W3', 'R8R2-W7'):
+        for cell in ('R8R3-W3', 'R8R3-W7'):
             rt = self.runtime(P['ROLES'][cell])
             self.assertEqual([], P['collect'](rt, cell))
             report = C['load'](self.tmp / cell / 'qualification.json')
@@ -231,20 +237,20 @@ class PublicGateFixtures(unittest.TestCase):
             return result
         rt.run_job.side_effect = mismatch
         with self.assertRaises(C['InfraFailure']):
-            P['collect'](rt, 'R8R2-A')
-        report = C['load'](self.tmp / 'R8R2-A/qualification.json')
+            P['collect'](rt, 'R8R3-A')
+        report = C['load'](self.tmp / 'R8R3-A/qualification.json')
         self.assertEqual(1, rt.run_job.call_count)
         self.assertEqual(1, len(report['jobs']))
         self.assertTrue(report['fidelity_failures'])
         rt = self.runtime()
         rt.run_job.side_effect = ConnectionError('CPU transport fixture')
         with self.assertRaises(C['InfraFailure']):
-            P['collect'](rt, 'R8R2-W3')
+            P['collect'](rt, 'R8R3-W3')
         self.assertEqual(1, rt.run_job.call_count)
-        self.assertTrue(C['load'](self.tmp / 'R8R2-W3/qualification.json')['errors'])
+        self.assertTrue(C['load'](self.tmp / 'R8R3-W3/qualification.json')['errors'])
 
     def test_fully_passing_report_requires_real_rejected_draft(self):
-        for cell, rejects, passed in (('R8R2-A', False, True), ('R8R2-W3', False, False), ('R8R2-W7', True, True)):
+        for cell, rejects, passed in (('R8R3-A', False, True), ('R8R3-W3', False, False), ('R8R3-W7', True, True)):
             report = P['new_report'](cell)
             for job in JOBS:
                 result = recorded('A', job)
@@ -276,7 +282,7 @@ class PublicGateFixtures(unittest.TestCase):
 
     def test_failed_start_preserves_native_via_stopped_container_without_blocking_restore(self):
         rt = P['Runtime'](H, self.tmp, P['MODE'])
-        cell = 'R8R2-W3'
+        cell = 'R8R3-W3'
         (self.tmp / cell).mkdir()
         rt.created = [cell]
         rt._stop_if_running = Mock()

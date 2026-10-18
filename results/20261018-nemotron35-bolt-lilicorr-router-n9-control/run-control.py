@@ -11,14 +11,16 @@ from pathlib import Path
 
 ROOT = Path('/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-n9-control')
 SOURCE = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-columns8'
-TEST_TREE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r1')
+TEST_TREE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2')
+BUILD_PROOF = ROOT / 'r2'
+BUILD_ATTEMPT = ROOT / 'build-attempt-r2'
 P = runpy.run_path(str(SOURCE / 'public-gate.py'))
 C, K, N, A = (P[key] for key in ('C', 'K', 'N', 'A'))
-OUT = ROOT / 'run-r1'
+N9 = runpy.run_path(str(ROOT / 'n9-equivalence.py'))
+OUT = ROOT / 'run-r2'
 BACKENDS = {'R8N9-PARENT': N['PARENT'], 'R8N9-CANDIDATE': N['CANDIDATE']}
 TEST_BINARY = TEST_TREE / 'build-sycl/bin/test-backend-ops'
-FILTER = (r'^router_columns8=1,router_single2=1,weight=blk\.48\.ffn_gate_inp\.weight,'
-          r'layout=0,type_a=f32,type_b=f32,m=496,n=9,')
+FILTER = N9['FILTER']
 COMMAND = r'''set -eo pipefail
 source /opt/intel/oneapi/setvars.sh --force
 export LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}
@@ -37,20 +39,34 @@ def name(cell):
 
 
 def inputs(h):
-    P['check_tested'](h)
-    assert (ROOT / 'build-attempt-r1/exit-code.txt').read_text().strip() == '0'
-    original = (N['CANDIDATE'] / 'tests/test-backend-ops.cpp').read_text()
-    old = 'thread_local std::default_random_engine gen(std::random_device{}());'
-    new = 'std::default_random_engine gen(static_cast<unsigned int>(0x5A17u + start));'
-    assert original.count(old) == 1
-    assert (TEST_TREE / 'tests/test-backend-ops.cpp').read_text() == original.replace(old, new)
-    before, after = N['source_hashes'](N['CANDIDATE']), N['source_hashes'](TEST_TREE)
-    assert sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k)) == ['tests/test-backend-ops.cpp']
-    binaries, test_binaries = N['binaries'](N['CANDIDATE']), N['binaries'](TEST_TREE)
-    assert [k for k in binaries if binaries[k] != test_binaries[k]] == ['test-backend-ops']
-    return dict(candidate=P['candidate_proof'](), test_sources=after, test_binaries=test_binaries,
-                controller_sha256=C['sha'](ROOT / 'run-control.py'), seed='0x5A17 + chunk start',
-                original_random_operands_replayed=False)
+    # The public candidate and its protected inputs are pinned independently of
+    # the new paired proof; the public CPU freeze is intentionally a later gate.
+    candidate = P['candidate_proof']()
+    N['check_consumed_sources'](N['CANDIDATE'], 'candidate')
+    original = (N['CANDIDATE'] / 'tests/test-backend-ops.cpp').read_bytes()
+    expected = N9['expected_test_source'](original)
+    assert (TEST_TREE / 'tests/test-backend-ops.cpp').read_bytes() == expected
+    test_sources = N['source_hashes'](TEST_TREE)
+    before, after = N['source_hashes'](N['CANDIDATE']), test_sources
+    assert sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k)) == [
+        'tests/test-backend-ops.cpp']
+    test_binaries = N['binaries'](TEST_TREE)
+    build_binaries = C['load'](BUILD_PROOF / 'candidate-binaries.json')
+    assert test_binaries == build_binaries
+    backend_hashes = {
+        'parent': N['binaries'](N['PARENT']),
+        'candidate': N['binaries'](N['CANDIDATE']),
+    }
+    assert {key for key in backend_hashes['parent'] if
+            backend_hashes['parent'][key] != backend_hashes['candidate'][key]} == {
+        'libggml-sycl.so.0'}
+    assert (BUILD_ATTEMPT / 'exit-code.txt').read_text().strip() == '0'
+    assert 'BOLT_VERIFY_BUILD_PASSED' in (BUILD_ATTEMPT / 'post-build-verification.log').read_text()
+    assert 'BOLT_VERIFY_DEPENDENCIES_PASSED' in (BUILD_ATTEMPT / 'runtime-precheck.log').read_text()
+    return dict(candidate=candidate, test_sources=test_sources, test_binaries=test_binaries,
+                backend_hashes=backend_hashes,
+                controller_sha256=N9['sha256_bytes']((ROOT / 'run-control.py').read_bytes()),
+                seed=N9['SEED'])
 
 
 def argv_for(cell, h):
@@ -77,8 +93,9 @@ def analyze_native(raw, exit_code):
     routes = A['route_records'](raw)
     key = ('blk.48.ffn_gate_inp.weight', 496, 0, 9)
     assert len(routes) == 2
-    assert all(r['dst_name'] == 'router_columns8-m496-l0-n9' for r in routes)
+    assert all(r['dst_name'] == N9['TARGET_ROUTE'] for r in routes)
     A['assert_router_operations'](routes, key)
+    output = N9['marker_bytes'](raw)
     totals = re.findall(r'(?m)^\s*(\d+)/(\d+) tests passed\s*$', raw)
     assert totals in ([('0', '1')], [('1', '1')]), totals
     passed = totals == [('1', '1')]
@@ -89,7 +106,8 @@ def analyze_native(raw, exit_code):
         assert float(errors[0][1]) == 1e-7
     assert re.findall(r'(?m)^(\d+)/(\d+) backends passed\s*$', raw) == [('2' if passed else '1', '2')]
     return dict(numerical_pass=passed, reported_error=errors[0][0] if errors else None,
-                tolerance=1e-7, routes=routes, original_random_operands_replayed=False,
+                tolerance=1e-7, n9_output_byte_length=len(output), routes=routes,
+                original_random_operands_replayed=False,
                 raw_output_byte_equality_claimed=False, qualification_waiver=False)
 
 
@@ -185,6 +203,11 @@ class Runtime(P['Runtime']):
         return record
 
 
+def raw_artifacts(cell):
+    directory = OUT / cell
+    return {stream: (directory / (stream + '.log')).read_bytes() for stream in ('stdout', 'stderr')}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group(required=True)
@@ -196,22 +219,35 @@ def main():
     if args.lead_run_control:
         inputs(h)
         OUT.mkdir(exist_ok=False)
-        K['capture'](Runtime(h, OUT, 'native-n9-control'), tuple(BACKENDS), lambda rt, cell: [])
+        K['capture'](Runtime(h, OUT, 'native-n9-control-r2'), tuple(BACKENDS), lambda rt, cell: [])
     else:
         summary = C['load'](OUT / 'summary.json')
         assert summary['status'] == 'captured' and summary['restored']
         assert summary['completed'] == list(BACKENDS) and not summary['timing_permitted']
-        Runtime(h, OUT, 'native-n9-control').verify_restored(OUT / 'independent-restoration.json')
+        Runtime(h, OUT, 'native-n9-control-r2').verify_restored(OUT / 'independent-restoration.json')
         reports = {}
+        raw = {}
         for cell in BACKENDS:
             directory = OUT / cell
-            raw = b''.join((directory / (stream + '.log')).read_bytes() for stream in ('stdout', 'stderr')).decode()
-            reports[cell] = analyze_native(raw, C['load'](directory / 'exit-code.json'))
+            raw[cell] = raw_artifacts(cell)
+            combined = raw[cell]['stdout'] + raw[cell]['stderr']
+            reports[cell] = analyze_native(combined.decode(), C['load'](directory / 'exit-code.json'))
             assert reports[cell] == C['load'](directory / 'native-result.json')
         images = {C['load'](OUT / cell / 'container-before.json')['Image'] for cell in BACKENDS}
-        assert images == {C['load'](ROOT / 'build-attempt-r1/image.json')[0]['Id']}
+        assert images == {C['load'](BUILD_ATTEMPT / 'image.json')[0]['Id']}
+        snapshot = C['load'](OUT / 'inputs-before.json')
+        raw_hashes = {cell: {stream: N9['sha256_bytes'](value) for stream, value in artifacts.items()}
+                      for cell, artifacts in raw.items()}
+        equivalence = N9['make_proof'](
+            raw['R8N9-PARENT']['stdout'] + raw['R8N9-PARENT']['stderr'],
+            raw['R8N9-CANDIDATE']['stdout'] + raw['R8N9-CANDIDATE']['stderr'],
+            snapshot['backend_hashes'], snapshot['test_binaries'], snapshot['test_sources'],
+            snapshot['controller_sha256'], raw_hashes)
+        C['save'](OUT / 'equivalence.json', equivalence)
         C['save'](OUT / 'analysis.json', dict(reports=reports, independently_restored=True,
-                  original_random_operands_replayed=False, qualification_waiver=False, timing_permitted=False))
+                  baseline_equivalent=equivalence['baseline_equivalent'], equivalence='equivalence.json',
+                  original_random_operands_replayed=False, qualification_waiver=False,
+                  timing_permitted=False))
         print(json.dumps({cell: {key: value for key, value in result.items() if key != 'routes'}
                           for cell, result in reports.items()}, indent=2))
 

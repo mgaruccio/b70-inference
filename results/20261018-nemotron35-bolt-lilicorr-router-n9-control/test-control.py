@@ -9,12 +9,13 @@ assert __debug__ and socket.gethostname() == 'inference-host'
 ROOT = Path(__file__).resolve().parent
 M = runpy.run_path(str(ROOT / 'run-control.py'))
 F = runpy.run_path(str(M['SOURCE'] / 'test-trace.py'))
-
+N9 = M['N9']
 
 def fixture(passed=False):
     rows = F['rows_for'](('blk.48.ffn_gate_inp.weight', 496, 0, 9), 'router_columns8')
     lines = ['Backend 1/2: SYCL0']
     lines += ['BOLT_ROUTE ' + ' '.join(f'{k}={v}' for k, v in sorted(row.items())) for row in rows]
+    lines += [N9['MARKER'] + '00' * N9['EXPECTED_BYTES']]
     if not passed:
         lines += ['[MUL_MAT] ERR = 0.000000139 > 0.000000100']
     lines += [f'  {int(passed)}/1 tests passed', 'Backend 2/2: CPU', '  Skipping',
@@ -54,6 +55,17 @@ class ControlTests(unittest.TestCase):
             with self.subTest(raw=raw, code=code), self.assertRaises(AssertionError):
                 M['analyze_native'](raw, code)
 
+    def test_output_marker_fails_closed_and_pair_is_literal(self):
+        raw = fixture()
+        marker = next(line for line in raw.splitlines() if line.startswith(N9['MARKER']))
+        wrong_length = N9['MARKER'] + '00' * (N9['EXPECTED_BYTES'] - 1)
+        for changed in (raw.replace(marker + '\n', '', 1), raw + marker + '\n',
+                        raw.replace(marker, wrong_length, 1)):
+            with self.subTest(changed=changed[:len(N9['MARKER'])]), self.assertRaises(AssertionError):
+                M['analyze_native'](changed, 1)
+        one_byte_mismatch = N9['MARKER'] + '01' + '00' * (2 * N9['EXPECTED_BYTES'] - 2)
+        with self.assertRaises(AssertionError):
+            N9['check_pair'](raw, raw.replace(marker, one_byte_mismatch, 1))
     def test_wrong_route_or_duplicate_rejected(self):
         raw = fixture()
         extra = next(line for line in raw.splitlines() if line.startswith('BOLT_ROUTE')) + '\n'
