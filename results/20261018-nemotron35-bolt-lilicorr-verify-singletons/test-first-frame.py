@@ -38,19 +38,16 @@ def _set_tensor(row, prefix, shape, strides):
         row[f'{prefix}nb{i}'] = value
 
 
-def synthetic_special_row(weight, n, marked, context='0xabc'):
+def synthetic_special_row(weight, n, marked, context='0xabc', route=None, q8_columns=None):
     """Construct a clearly synthetic full route record, never runtime evidence."""
     spec = F['SPECIAL_SPECS'][weight]
     if marked:
         route = spec['route']
         accum = 10
-    elif spec['family'] == 'q8':
-        route = 'DMMV_ESIMD' if n == 1 else 'MMVQ_REORDERED'
-        accum = 0
     else:
-        route = ('MOE_SINGLE_MMVQ_PLAIN_Q8_1' if n == 1
-                 else 'MOE_GROUPED_GEMM_ATTEMPT')
+        assert route is not None
         accum = 0
+    result = 1 if route == 'MOE_GROUPED_GEMM_RESULT' else -1
     row = dict(
         route=route, weight=weight, aux_weight='-', op=spec['op'], op_id=spec['op_id'],
         dst_name='synthetic-' + weight.replace('.', '-'),
@@ -58,19 +55,21 @@ def synthetic_special_row(weight, n, marked, context='0xabc'):
         aux_type='-', src1_type='f32', dst_type='f32',
         reorder=1 if spec['family'] == 'q8' else 0, src1_prec=0,
         operand_prec=-1, accum_prec=accum, dynamic_prec=0, device=0,
-        backend_ctx=context, expert=-1, result=-1,
+        backend_ctx=context, expert=-1, result=result,
     )
     _set_tensor(row, '', spec['weight_shape'], spec['weight_strides'])
     if spec['family'] == 'q8':
+        columns = n if q8_columns is None else q8_columns
         src1_ne0, dst_ne0 = spec['src1_ne0'], spec['dst_ne0']
         _set_tensor(row, 'src1_',
-                    (src1_ne0, n, 1, 1),
+                    (src1_ne0, columns, 1, 1),
                     (4, spec['src1_nb1'], spec['src1_nb1'] * n,
                      spec['src1_nb1'] * n))
         _set_tensor(row, 'dst_',
-                    (dst_ne0, n, 1, 1),
+                    (dst_ne0, columns, 1, 1),
                     (4, spec['dst_nb1'], spec['dst_nb1'] * n,
                      spec['dst_nb1'] * n))
+        _set_tensor(row, 'ids_', (0, 0, 0, 0), (0, 0, 0, 0))
     else:
         _set_tensor(row, 'src1_',
                     (spec['src1_ne0'], spec['src1_ne1'], n, 1),
@@ -81,9 +80,16 @@ def synthetic_special_row(weight, n, marked, context='0xabc'):
                     (4, spec['dst_nb1'], spec['dst_nb1'] * spec['dst_ne1'],
                      spec['dst_nb1'] * spec['dst_ne1'] * n))
         _set_tensor(row, 'ids_', (9, n, 1, 1), (4, 960, 960 * n, 960 * n))
-    if spec['family'] == 'q8':
-        _set_tensor(row, 'ids_', (0, 0, 0, 0), (0, 0, 0, 0))
     return row
+
+
+def synthetic_special_rows(weight, n, marked, context='0xabc'):
+    if marked:
+        return [synthetic_special_row(weight, n, True, context)]
+    expected = F['UNMARKED_SPECIAL_ROUTES'].get(n)
+    assert expected is not None
+    return [synthetic_special_row(weight, n, False, context, route=route)
+            for expected_weight, route in expected if expected_weight == weight]
 
 
 def frame_log(n, start, outputs, marked, tokens=None, special_marked=None):
@@ -99,8 +105,8 @@ def frame_log(n, start, outputs, marked, tokens=None, special_marked=None):
         new = FIX['rows_for']((weight, N['ROUTER_WIDTHS'][weight], 0, n),
                               'router_columns8_r3' if marked else 'router_prefill')
         rows.extend(dict(row, dst_name='ffn_moe_logits-' + weight.split('.')[1]) for row in new)
-    rows.extend(synthetic_special_row(weight, n, special_marked)
-                for weight in F['SPECIAL_ORDER'])
+    for weight in F['SPECIAL_ORDER']:
+        rows.extend(synthetic_special_rows(weight, n, special_marked))
     if any(outputs):
         rows.append(dict(seed, weight='output.weight'))
     lines += ['BOLT_ROUTE ' + ' '.join(f'{key}={value}' for key, value in sorted(row.items()))
@@ -201,15 +207,53 @@ class FirstFrameFixtures(unittest.TestCase):
 
     def test_singleton_views_retain_outer_strides(self):
         parsed = frame()
-        for row in parsed['routes']:
-            if row['weight'] in ('blk.1.ffn_latent_down.weight',
-                                 'blk.1.ffn_latent_up.weight'):
-                row['src1_ne1'] = row['dst_ne1'] = 1
-            elif row['weight'] in ('blk.1.ffn_up_exps.weight',
-                                   'blk.1.ffn_down_exps.weight'):
-                row['src1_ne2'] = row['dst_ne2'] = row['ids_ne1'] = 1
-        self.assertTrue(F['check_router_frame'](N, parsed, True))
+        for weight in ('blk.1.ffn_latent_down.weight',
+                       'blk.1.ffn_latent_up.weight'):
+            index = next(i for i, row in enumerate(parsed['routes'])
+                         if row['weight'] == weight)
+            outer = parsed['routes'][index]
+            singletons = []
+            for _ in range(parsed['batch']['n']):
+                singleton = copy.deepcopy(outer)
+                singleton['src1_ne1'] = singleton['dst_ne1'] = 1
+                singletons.append(singleton)
+            parsed['routes'][index:index + 1] = singletons
+        report = F['check_router_frame'](N, parsed, True)
+        self.assertTrue(report['special_routes_marked'])
+        self.assertEqual(4, report['special_route_counts']['blk.1.ffn_latent_down.weight'])
+        self.assertEqual(4, report['special_route_counts']['blk.1.ffn_latent_up.weight'])
 
+    def test_marked_special_shape_cardinality_rejects_partial_views(self):
+        bad = frame()
+        singleton = next(row for row in bad['routes']
+                         if row['weight'] == 'blk.1.ffn_latent_down.weight')
+        singleton['src1_ne1'] = singleton['dst_ne1'] = 1
+        with self.assertRaises(AssertionError):
+            F['check_router_frame'](N, bad, True)
+
+        bad = frame()
+        index = next(i for i, row in enumerate(bad['routes'])
+                     if row['weight'] == 'blk.1.ffn_latent_down.weight')
+        outer = bad['routes'][index]
+        singleton = copy.deepcopy(outer)
+        singleton['src1_ne1'] = singleton['dst_ne1'] = 1
+        bad['routes'][index:index + 1] = [singleton] + [copy.deepcopy(outer) for _ in range(3)]
+        with self.assertRaises(AssertionError):
+            F['check_router_frame'](N, bad, True)
+
+        bad = frame()
+        index = next(i for i, row in enumerate(bad['routes'])
+                     if row['weight'] == 'blk.1.ffn_up_exps.weight')
+        bad['routes'].insert(index + 1, copy.deepcopy(bad['routes'][index]))
+        with self.assertRaises(AssertionError):
+            F['check_router_frame'](N, bad, True)
+
+        bad = frame()
+        iq2 = next(row for row in bad['routes']
+                   if row['weight'] == 'blk.1.ffn_up_exps.weight')
+        iq2['src1_ne2'] = iq2['dst_ne2'] = iq2['ids_ne1'] = 1
+        with self.assertRaises(AssertionError):
+            F['check_router_frame'](N, bad, True)
     def test_split_is_ordered_singleton_pairs_not_outer_batch_width(self):
         parsed = frame()
         original = copy.deepcopy(parsed)
@@ -260,6 +304,29 @@ class FirstFrameFixtures(unittest.TestCase):
         result = F['check_prompt_frames'](N, frames, list(range(55)), '0xabc')
         self.assertTrue(all(f['router_accum_prec'] == 0 for f in result))
         self.assertTrue(all(f['special_accum_prec'] == 0 for f in result))
+
+        def change_special_route(fs):
+            row = next(row for row in fs[0]['routes']
+                       if row['weight'] == 'blk.1.ffn_latent_down.weight')
+            row['route'] = 'DMMV_ESIMD'
+
+        def duplicate_special_route(fs):
+            index = next(i for i, row in enumerate(fs[0]['routes'])
+                         if row['weight'] == 'blk.1.ffn_latent_down.weight')
+            fs[0]['routes'].insert(index + 1, copy.deepcopy(fs[0]['routes'][index]))
+
+        def remove_special_route(fs):
+            index = next(i for i, row in enumerate(fs[0]['routes'])
+                         if row['weight'] == 'blk.1.ffn_latent_down.weight')
+            del fs[0]['routes'][index]
+
+        def reorder_special_routes(fs):
+            indices = [i for i, row in enumerate(fs[0]['routes'])
+                       if row['weight'] in F['SPECIAL_WEIGHTS']]
+            first, second = indices[:2]
+            fs[0]['routes'][first], fs[0]['routes'][second] = (
+                fs[0]['routes'][second], fs[0]['routes'][first])
+
         for mutate in (
             lambda fs: fs.pop(0),
             lambda fs: fs[0]['batch']['tokens'].__setitem__(0, 999),
@@ -268,6 +335,10 @@ class FirstFrameFixtures(unittest.TestCase):
             lambda fs: fs[2]['routes'][2].__setitem__('accum_prec', 10),
             lambda fs: fs[0]['routes'].__setitem__(
                 2, dict(fs[0]['routes'][2], route='DMMV_ESIMD')),
+            change_special_route,
+            duplicate_special_route,
+            remove_special_route,
+            reorder_special_routes,
         ):
             bad = copy.deepcopy(frames)
             mutate(bad)

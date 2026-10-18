@@ -88,25 +88,34 @@ python3 -B "$ROOT/analyze-first-frame.py" 2>&1 | tee "$ROOT/trace-first-frame.lo
 - The complete 55-token prompt prefix is required, split exactly into n=5 at positions
   0..4, n=46 at 5..50, and n=4 at 51..54. Their output masks are respectively all
   zero, all zero, and `[0,0,0,1]`. Every target router in those partial-output frames
-  remains unmarked (`accum_prec=0`) and retains its old route family.
-- A first post-prefix A frame is n=1 at position 55, all outputs, with the old routes
-  and no intervention mark. W3 is n=4 at positions 55..58, all outputs.
+  remains unmarked (`accum_prec=0`) and matches its exact parent-A route sequence and count.
+- A first post-prefix A frame is n=1 at position 55, all outputs, with the exact parent-A
+  unmarked sequence `DMMV_ESIMD`, `MOE_SINGLE_MMVQ_PLAIN_Q8_1`,
+  `MOE_SINGLE_MMVQ_PLAIN_Q8_1`, `DMMV_ESIMD`, and no intervention mark. W3 is n=4 at
+  positions 55..58, all outputs.
 - The target backend is anchored by exactly the first-block SSM projections. The five
   target F32 routers are still blocks 1, 8, 21, 37, and 48, with the existing ordered
   route-pair, context, destination, shape, stride, precision, and singleton-view checks.
-- W3's intended singleton intervention must cover **all four exact eligible weights**
-  observed in parent A: `blk.1.ffn_latent_down.weight` (Q8_0, `[4096,1024]`),
+- For the four exact eligible first-block weights observed in parent A, the unmarked
+  prefix route sequences are pinned by both order and count: n=5 has six rows
+  (`MMVQ_REORDERED`, grouped attempt/result for each IQ2 weight, then `MMVQ_REORDERED`),
+  n=46 has eight rows (the Q8 `MUL_MAT_SYCL`/`LIBRARY_DNNL_F16` pair at each end plus
+  the two grouped IQ2 attempt/result pairs), and n=4 has the same six-row sequence as
+  n=5. Changed routes, duplicates, removals, or reorderings fail closed.
+- W3's intended singleton intervention is limited to **these four exact eligible
+  first-block weights**: `blk.1.ffn_latent_down.weight` (Q8_0, `[4096,1024]`),
   `blk.1.ffn_latent_up.weight` (Q8_0, `[1024,4096]`),
   `blk.1.ffn_up_exps.weight` (IQ2_XXS, `[1024,2048,240]`), and
-  `blk.1.ffn_down_exps.weight` (IQ2_XXS, `[2048,1024,240]`). Exact backing strides,
+  `blk.1.ffn_down_exps.weight` (IQ2_XXS, `[2048,1024,240]`). The instrumentation and
+  validation do not claim to trace all model Q8/IQ2 weights. Exact backing strides,
   types, op IDs, device, reorder, IDs, and original outer strides are checked.
 - The intended Q8 route is `DMMV_ESIMD`, and the intended IQ2 route is
   `MOE_SINGLE_MMVQ_PLAIN_Q8_1`; both carry the existing precision mark
-  `accum_prec=10` only for the marked n=3..8 family. A Q8 callback may emit one outer
-  n=4 record or four singleton view records, so the adapter accepts only those bounded
-  cardinalities and never fabricates singleton entries. The IQ2 `MUL_MAT_ID` outer
-  entry is expected once; it is not multiplied by inner views. Singleton views may have
-  a one-column shape, but their original outer strides and target context must remain.
+  `accum_prec=10` only for the marked n=3..8 family. A marked Q8 callback may emit
+  exactly one coherent outer n-column record or exactly n coherent singleton records
+  (four for W3), never a mixture. The IQ2 `MUL_MAT_ID` callback must emit exactly one
+  outer record with `src1.ne2 == dst.ne2 == ids.ne1 == n`; singleton or mixed IQ2 views
+  are rejected. No inner view entries are fabricated.
 - Missing weights, wrong context, wrong type, wrong precision/mark, wrong route, wrong
   shape/stride, duplicate or misordered eligible records, native fixture names, and
   drafter-context records fail closed. The unchanged parent W3 route set is an explicit

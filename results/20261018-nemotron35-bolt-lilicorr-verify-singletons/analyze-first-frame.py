@@ -47,18 +47,43 @@ SPECIAL_SPECS = {
         dst_ne0=1024, dst_ne1=9, dst_nb1=4096),
 }
 SPECIAL_WEIGHTS = frozenset(SPECIAL_SPECS)
-OLD_Q8_ROUTES = frozenset({
-    'DMMV_ESIMD', 'DMMV_REORDERED', 'DMMV_PLAIN', 'MMVQ_REORDERED',
-    'MMVQ_PLAIN', 'MUL_MAT_SYCL', 'LIBRARY_MKL_F32', 'LIBRARY_DNNL_F32',
-    'LIBRARY_MKL_F16', 'LIBRARY_DNNL_F16',
-})
-OLD_IQ2_ROUTES = frozenset({
-    'MOE_SINGLE_MMVQ_PLAIN_Q8_1', 'MOE_SINGLE_MMVQ_REORDERED_Q8_1',
-    'MOE_GROUPED_GEMM_ATTEMPT', 'MOE_GROUPED_GEMM_RESULT',
-    'MOE_PER_EXPERT_FALLBACK', 'MMVQ_PLAIN', 'MMVQ_REORDERED',
-    'MUL_MAT_SYCL', 'LIBRARY_MKL_F32', 'LIBRARY_DNNL_F32',
-    'LIBRARY_MKL_F16', 'LIBRARY_DNNL_F16',
-})
+# Exact (weight, route) sequences and cardinalities observed in immutable parent A.
+# These are keyed by the actual n values used by the prefix and first post-prefix
+# frames; unmarked validation must not widen them to route-family allowlists.
+UNMARKED_SPECIAL_ROUTES = {
+    1: (
+        ('blk.1.ffn_latent_down.weight', 'DMMV_ESIMD'),
+        ('blk.1.ffn_up_exps.weight', 'MOE_SINGLE_MMVQ_PLAIN_Q8_1'),
+        ('blk.1.ffn_down_exps.weight', 'MOE_SINGLE_MMVQ_PLAIN_Q8_1'),
+        ('blk.1.ffn_latent_up.weight', 'DMMV_ESIMD'),
+    ),
+    5: (
+        ('blk.1.ffn_latent_down.weight', 'MMVQ_REORDERED'),
+        ('blk.1.ffn_up_exps.weight', 'MOE_GROUPED_GEMM_ATTEMPT'),
+        ('blk.1.ffn_up_exps.weight', 'MOE_GROUPED_GEMM_RESULT'),
+        ('blk.1.ffn_down_exps.weight', 'MOE_GROUPED_GEMM_ATTEMPT'),
+        ('blk.1.ffn_down_exps.weight', 'MOE_GROUPED_GEMM_RESULT'),
+        ('blk.1.ffn_latent_up.weight', 'MMVQ_REORDERED'),
+    ),
+    46: (
+        ('blk.1.ffn_latent_down.weight', 'MUL_MAT_SYCL'),
+        ('blk.1.ffn_latent_down.weight', 'LIBRARY_DNNL_F16'),
+        ('blk.1.ffn_up_exps.weight', 'MOE_GROUPED_GEMM_ATTEMPT'),
+        ('blk.1.ffn_up_exps.weight', 'MOE_GROUPED_GEMM_RESULT'),
+        ('blk.1.ffn_down_exps.weight', 'MOE_GROUPED_GEMM_ATTEMPT'),
+        ('blk.1.ffn_down_exps.weight', 'MOE_GROUPED_GEMM_RESULT'),
+        ('blk.1.ffn_latent_up.weight', 'MUL_MAT_SYCL'),
+        ('blk.1.ffn_latent_up.weight', 'LIBRARY_DNNL_F16'),
+    ),
+    4: (
+        ('blk.1.ffn_latent_down.weight', 'MMVQ_REORDERED'),
+        ('blk.1.ffn_up_exps.weight', 'MOE_GROUPED_GEMM_ATTEMPT'),
+        ('blk.1.ffn_up_exps.weight', 'MOE_GROUPED_GEMM_RESULT'),
+        ('blk.1.ffn_down_exps.weight', 'MOE_GROUPED_GEMM_ATTEMPT'),
+        ('blk.1.ffn_down_exps.weight', 'MOE_GROUPED_GEMM_RESULT'),
+        ('blk.1.ffn_latent_up.weight', 'MMVQ_REORDERED'),
+    ),
+}
 
 
 def load(path):
@@ -77,11 +102,11 @@ def _assert_tensor(row, prefix, shape, strides):
     assert tuple(row[f'{prefix}nb{i}'] for i in range(4)) == strides, row
 
 
-def _assert_common_special(row, weight, context, n, marked):
+def _assert_common_special(row, weight, context, n, marked, expected_route=None):
     spec = SPECIAL_SPECS[weight]
     assert row['weight'] == weight and row['backend_ctx'] == context
-    assert row['route'] == spec['route'] if marked else row['route'] in (
-        OLD_Q8_ROUTES if spec['family'] == 'q8' else OLD_IQ2_ROUTES)
+    route = spec['route'] if marked else expected_route
+    assert route is not None and row['route'] == route, row
     assert row['op'] == spec['op'] and row['op_id'] == spec['op_id'], row
     assert row['aux_weight'] == row['aux_type'] == '-', row
     assert row['src0_type'] == ('q8_0' if spec['family'] == 'q8' else 'iq2_xxs')
@@ -112,13 +137,12 @@ def _assert_common_special(row, weight, context, n, marked):
                        (4, spec['dst_nb1'], spec['dst_nb1'] * n,
                         spec['dst_nb1'] * n))
     else:
-        # MUL_MAT_ID keeps the expert dimension in ne1 and the token batch in ne2.
-        # A singleton helper view may set ne2/ne1(ids) to one; its outer strides
-        # must still describe the original n-column backing tensor.
+        # MUL_MAT_ID has one outer row. Its token batch and IDs must all retain
+        # the complete n-column view; singleton IQ2 helper views are invalid.
         src1_ne2 = row['src1_ne2']
         dst_ne2 = row['dst_ne2']
         ids_ne1 = row['ids_ne1']
-        assert src1_ne2 in (1, n) and dst_ne2 in (1, n) and ids_ne1 in (1, n), row
+        assert src1_ne2 == dst_ne2 == ids_ne1 == n, row
         _assert_tensor(row, 'src1_',
                        (spec['src1_ne0'], spec['src1_ne1'], src1_ne2, 1),
                        (4, spec['src1_nb1'], spec['src1_nb1'] * spec['src1_ne1'],
@@ -130,14 +154,13 @@ def _assert_common_special(row, weight, context, n, marked):
         _assert_tensor(row, 'ids_', (9, ids_ne1, 1, 1),
                        (4, 960, 960 * n, 960 * n))
 
-
 def check_special_routes(routes, n, context, marked):
-    """Require all intended Q8/IQ2 weights, never a candidate-selected subset.
+    """Require the exact eligible first-block route contract.
 
-    The new mark is only valid on the full-output n=3..8 intervention family.  For
-    all other frames, preserve the old route family and require an unmarked record.
-    This deliberately accepts either one outer Q8 record or n singleton records,
-    while MUL_MAT_ID remains one outer record rather than fabricated inner entries.
+    Marked Q8 accepts one coherent outer n-column row or exactly n coherent
+    singleton rows. Marked IQ2 remains one outer MUL_MAT_ID row with a complete
+    n-column token/ID view. Unmarked frames use the exact parent-A sequence for
+    their observed n value, rather than a broad route-family allowlist.
     """
     assert n >= 1
     eligible_names = ('.ffn_latent_down.weight', '.ffn_latent_up.weight',
@@ -157,17 +180,31 @@ def check_special_routes(routes, n, context, marked):
         if not first_seen or first_seen[-1] != row['weight']:
             first_seen.append(row['weight'])
     assert first_seen == list(SPECIAL_ORDER), ('eligible route order', first_seen)
+
     if marked:
         assert 3 <= n <= 8
         for weight in SPECIAL_ORDER:
-            expected = 1 if SPECIAL_SPECS[weight]['family'] == 'iq2' else n
-            assert len(by_weight[weight]) in (1, expected), (weight, len(by_weight[weight]))
-            for row in by_weight[weight]:
+            weight_rows = by_weight[weight]
+            spec = SPECIAL_SPECS[weight]
+            if spec['family'] == 'q8':
+                assert len(weight_rows) in (1, n), (weight, len(weight_rows))
+                if len(weight_rows) == 1:
+                    assert (weight_rows[0]['src1_ne1'] ==
+                            weight_rows[0]['dst_ne1'] == n), weight_rows[0]
+                else:
+                    assert all(row['src1_ne1'] == row['dst_ne1'] == 1
+                               for row in weight_rows), (weight, weight_rows)
+            else:
+                assert len(weight_rows) == 1, (weight, len(weight_rows))
+            for row in weight_rows:
                 _assert_common_special(row, weight, context, n, True)
     else:
-        for weight in SPECIAL_ORDER:
-            for row in by_weight[weight]:
-                _assert_common_special(row, weight, context, n, False)
+        expected = UNMARKED_SPECIAL_ROUTES.get(n)
+        assert expected is not None, ('unrecognized unmarked frame width', n)
+        actual = tuple((row['weight'], row['route']) for row in rows)
+        assert actual == expected, ('unmarked eligible route sequence', actual, expected)
+        for row, (weight, route) in zip(rows, expected):
+            _assert_common_special(row, weight, context, n, False, route)
     return dict(
         special_route_weights=list(SPECIAL_ORDER),
         special_route_counts={weight: len(by_weight[weight]) for weight in SPECIAL_ORDER},
