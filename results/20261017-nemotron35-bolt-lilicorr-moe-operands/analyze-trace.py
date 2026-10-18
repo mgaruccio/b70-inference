@@ -683,9 +683,10 @@ def operand_record(line):
         expected_type = 'f32' if weight == 'blk.1.ffn_gate_inp.weight' else 'q8_0'
         block = 4 if expected_type == 'f32' else 34
         stride = rows * 4 if expected_type == 'f32' else rows // 32 * 34
-        expected_reorder = 0 if expected_type == 'f32' else 1
     else:
-        expected_type, block, stride, expected_reorder = 'f32', 4, rows * 4, 0
+        expected_type, block, stride = 'f32', 4, rows * 4
+    # Every role records the projection WEIGHT's reorder state, not its own dtype.
+    expected_reorder = int(weight == 'blk.1.ffn_latent_down.weight')
     size = stride * cols
     assert row['type'] == expected_type and row['reorder'] == expected_reorder
     assert row['phase'] == ('after' if role == 'dst' else 'before')

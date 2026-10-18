@@ -357,9 +357,10 @@ def operand_fixture_row(weight, role, n, backend='0xabc'):
     rows, cols = (k, m) if role == 'weight' else ((k, n) if role == 'src1' else (m, n))
     if role == 'weight':
         type_name = 'f32' if weight == 'blk.1.ffn_gate_inp.weight' else 'q8_0'
-        block, stride, reorder = ((4, rows * 4, 0) if type_name == 'f32' else (34, rows // 32 * 34, 1))
+        block, stride = ((4, rows * 4) if type_name == 'f32' else (34, rows // 32 * 34))
     else:
-        type_name, block, stride, reorder = 'f32', 4, rows * 4, 0
+        type_name, block, stride = 'f32', 4, rows * 4
+    reorder = int(weight == 'blk.1.ffn_latent_down.weight')
     size = stride * cols
     stem = 'router' if weight == 'blk.1.ffn_gate_inp.weight' else 'latent_down'
     return dict(phase='after' if role == 'dst' else 'before', weight=weight, role=role,
@@ -1812,6 +1813,41 @@ class Trace(unittest.TestCase):
         self.assertLess(body.index("for stem in ('warmup', 'ordinary')"), body.index('body = operand_diagnostic('))
         self.assertIn('operands.mkdir(mode=0o700)', body)
 
+    def test_actual_saved_projection_reorder_for_every_role(self):
+        cell = M['ROOT']/'run-r1/S0'
+        lines = [line for line in (cell/'diagnostic-window.log').read_text().splitlines() if 'BOLT_MOE_OPERAND' in line]
+        self.assertEqual(len(lines), 6)
+        for line in lines:
+            row = A['operand_record'](line)
+            expected = int(row['weight'] == 'blk.1.ffn_latent_down.weight')
+            self.assertEqual(row['reorder'], expected)
+            bad = dict(row, reorder=1-expected)
+            with self.subTest(weight=row['weight'], role=row['role']), self.assertRaises(AssertionError):
+                A['operand_record'](operand_line(bad))
+        result = A['analyze_arm'](cell, 'S0', OLD)
+        self.assertTrue(result['observer_parent_invariant_passed'])
+        self.assertTrue(result['operand_analysis']['complete'])
+        self.assertEqual(result['parent_comparison']['compared_through_ordinal'], 128)
+
+    def test_missing_c0_continuation_preserves_logic_and_saved_s0(self):
+        continuation = runpy.run_path('continue-c0.py')
+        source = continuation['controller_source']()
+        namespace = {'__name__': 'continuation_preview', '__file__': str(continuation['NEXT']/'run-trace.py')}
+        exec(compile(source, namespace['__file__'], 'exec'), namespace)
+        self.assertEqual(namespace['ROOT'], continuation['NEXT'])
+        self.assertEqual(namespace['ORDER'], ('C0',))
+        self.assertNotEqual(namespace['PREFIX'], M['PREFIX'])
+        for key in ('WIDTH1', 'PARENT_RESULTS', 'ACCEPTED', 'PARENT', 'CANDIDATE', 'SOURCE_SCOPE',
+                    'IQ2_NATIVE_COMMAND', 'Q8_NATIVE_COMMAND', 'ATTENTION_NATIVE_COMMAND', 'ATTENTION_VIEW_NATIVE_COMMAND'):
+            self.assertEqual(namespace[key], M[key])
+        old_functions = [ast.dump(n) for n in ast.parse(Path('run-trace.py').read_text()).body if isinstance(n, ast.FunctionDef)]
+        new_functions = [ast.dump(n) for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)]
+        self.assertEqual(old_functions, new_functions)
+        runner = runpy.run_path(str(OLD['OLD']/'run-bolt-cell-ssm-prefill-r1.py'))
+        result = continuation['validate_saved_s0'](M, A, OLD, NATIVE, runner)
+        self.assertTrue(result['observer_parent_invariant_passed'])
+        self.assertTrue(result['operand_analysis']['complete'])
+
     def test_operand_strict_records_bounds_and_malformed(self):
         row = operand_fixture_row('blk.1.ffn_gate_inp.weight', 'src1', 2)
         line = operand_line(row)
@@ -1852,8 +1888,10 @@ class Trace(unittest.TestCase):
         with self.assertRaises(AssertionError):
             A['first_operand_column'](b'abcd', strided)
 
-    def test_no_historical_continuation_controller_is_carried(self):
-        self.assertFalse(Path('continue-c0.py').exists())
+    def test_original_controller_remains_full_pair(self):
+        continuation = runpy.run_path('continue-c0.py')
+        self.assertEqual(continuation['ROOT'], M['ROOT'])
+        self.assertNotEqual(continuation['NEXT'], M['ROOT'])
         self.assertEqual(M['ORDER'], ('S0', 'C0'))
         self.assertIn('BOLT_VERIFY_PAIR_COMPLETED_NO_TIMING', Path('run-trace.py').read_text())
 

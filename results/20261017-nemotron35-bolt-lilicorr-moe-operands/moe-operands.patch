@@ -9,7 +9,7 @@
 +#include <mutex>
 +#include <sys/stat.h>
 +#include <unistd.h>
- 
+
  #include <sycl/sycl.hpp>
  #include <sycl/backend.hpp>
 @@ -6470,6 +6475,162 @@
@@ -172,7 +172,7 @@
 +    }
 +    bolt_moe_copy(capture, ctx, 2); // Completion on the SAME queue before host storage release.
 +}
- 
+
  static bool ggml_sycl_compute_forward(ggml_backend_sycl_context & ctx, struct ggml_tensor * dst) try {
      GGML_SYCL_DEBUG("[SYCL] ggml_sycl_compute_forward: dst=%s, op=%s\n", dst->name, ggml_op_name(dst->op));
 @@ -6685,13 +6846,16 @@
