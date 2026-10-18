@@ -104,3 +104,22 @@ Executed CPU/parser/source/patch checks only in `newRoot/worker-scratch`, throug
 Retained preparation failures: `cpu-r1.log` reached its 90-second cap after 33 passes; no semantic failure was reported before timeout. `cpu-r2-iq2-native.log` exposed an inherited whole-source-tail comparison incompatible with observer additions; replaced by the established observer's unchanged-IQ2-function assertions. `cpu-r3-observer.log` exposed the inherited C++ extraction helper's bool/void-only return-type pattern and an old expected container prefix; reused the prior observer's helper and updated the prefix. Corrected targeted reruns and the complete final partitioned suite are green. Earlier logs/exit files remain remote; nothing was retried to obtain model agreement.
 
 **Pending with lead:** review/integration, real candidate build, fresh native/API gates, real S0/C0 captures, empirical both-arm observer parity, direct operand result and live restoration verification. No live instrumentation-invariance, router-equality, fidelity, quality or performance conclusion is made here.
+
+## Lead-observed result
+
+Executed on `mike@inference-host` with the declared SSH/local+remote Bash boundary: `bash build-candidate.sh`, then `python3 -B test-trace.py`, then `python3 -B run-trace.py` and `python3 -B analyze-trace.py`. The real SYCL build/dependency/protected-source/five-binary gates passed. All **82 lead CPU tests passed** in one complete invocation (`lead-cpu-r1.log.gz`). Both real arms completed on the first paired attempt; no continuation or inference rerun was needed.
+
+Both arms passed native385 + OUT_PROD190/9 + IQ2six + latent7 + attention13 + view6 + router6, followed by API20/20, warmup, ordinary and diagnostic requests. **BOTH arms preserve all128 immediate-parent raw vectors byte-for-byte, plus prompt/IDs/text/batch inputs/selected positions/rows.** Observer attribution and full-pair restoration checks pass.
+
+At first post-prompt position55/output2, token0:
+
+- Router: full F32 weight3,932,160 bytes, input column16,384 bytes, and output column960 bytes are ALL byte-identical between S0 and C0. The previous213/240 unequal router outputs are now eliminated at this observed boundary.
+- Latent-down: full reordered Q8 weight4,456,448 bytes, input column16,384 bytes and output column4,096 bytes are also ALL byte-identical.
+
+This directly confirms that the router singleton control removed the observed router discrepancy. It does NOT establish whole-model fidelity: final raw logits still first differ at output2 before rollback, and emitted tokens first differ at41. Only these observed projections at position55/token0 are excluded as the remaining differing boundary; other operations/state are not thereby proved equal.
+
+Candidate SYCL SHA256: `0a3d7ce7131e808bfaf8e8739416516d8a473fe447fa4bb0a7123af7e53e919e`. Other four binaries, including native test `5f43858b1cbd1083ced719a8700f93c30a0e68e94f307541f0bee9e43f5e8389`, are identical to the router-single2 parent. The accepted source/archive, original container identity/config/HostConfig/mounts/five hashes, hardware, health, READY and sole-running-original checks passed and were rechecked by the analyzer.
+
+Canonical remote evidence: `run-r1/analysis.json`, both `alignment.json` files, and each cell's raw `capture/` and six `moe-operands/` files. Local evidence retains metadata and lossless gzip (mtime0) logs; JSON reports larger than1MB are also losslessly compressed (`run-r1/analysis.json.gz`, per-arm `alignment.json.gz`). Full raw tensors/weights/logits remain remote. Worker failures and final CPU checks are retained under `worker-checks/`. No timing, performance, quality or promotion claim.
+
+Next investigation: identify safe complete-block-output capture points in the early model, including residuals and fusion paths, to localize the remaining divergence without changing arithmetic or using tensor callbacks. Computational parent remains router-single2, not this observer.
