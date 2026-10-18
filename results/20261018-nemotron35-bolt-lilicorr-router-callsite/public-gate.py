@@ -36,9 +36,9 @@ C = K['C']  # Inherited run_job's exception identity is essential.
 N = runpy.run_path(str(PHASE / 'run-trace.py'))
 A = runpy.run_path(str(PHASE / 'analyze-trace.py'))
 S = runpy.run_path(str(ROOT / 'check-source.py'))
-OUT = ROOT / 'qualification-r1'
-MODE = 'router-callsite-qualification-r1'
-ROLES = {'RCA-A': 'A', 'RCA-W3': 'W3', 'RCA-W7': 'W7'}
+OUT = ROOT / 'qualification-r2'
+MODE = 'router-callsite-qualification-r2'
+ROLES = {'RCA2-A': 'A', 'RCA2-W3': 'W3', 'RCA2-W7': 'W7'}
 CELLS = tuple(ROLES)
 R3_MARKER = 'BOLT_VERIFY_ROUTER_VERIFY_PHASE_NATIVE_PASSED'
 MARKER = R3_MARKER
@@ -130,24 +130,34 @@ def make_create(cell, h):
     return argv
 
 
+def environment_values(values):
+    result = {}
+    for entry in values:
+        key, separator, value = entry.partition('=')
+        assert separator and key and key not in result, 'invalid or duplicate environment key'
+        result[key] = value
+    return result
+
+
 def check_container(record, cell, h):
     base = C['load'](C['QUALIFY_DIR'] / ROLES[cell] / 'container-before.json')
     assert record['Name'] == '/' + name(cell)
     assert record['Config']['Cmd'] == make_create(cell, h)[-3:]
     assert re.fullmatch(r'[0-9a-f]{64}', record['Id'])
     assert record['Config']['Hostname'] == record['Id'][:12]
-    assert {k: v for k, v in record['Config'].items() if k not in ('Cmd', 'Hostname')} == {
-        k: v for k, v in base['Config'].items() if k not in ('Cmd', 'Hostname')}
+    assert {k: v for k, v in record['Config'].items() if k not in ('Cmd', 'Env', 'Hostname')} == {
+        k: v for k, v in base['Config'].items() if k not in ('Cmd', 'Env', 'Hostname')}
+    assert environment_values(record['Config']['Env']) == environment_values(base['Config']['Env'])
     expected_host, actual_host = dict(base['HostConfig']), dict(record['HostConfig'])
     for host in (expected_host, actual_host):
         oom_disable = host.pop('OomKillDisable')
         assert oom_disable is None or oom_disable is False, 'OOM killer must remain enabled'
     old_mount, new_mount = str(N['PARENT']) + ':/src:ro', str(CANDIDATE) + ':/src:ro'
-    binds = list(expected_host['Binds'])
+    binds = list(expected_host.pop('Binds'))
     assert binds.count(old_mount) == 1
     binds[binds.index(old_mount)] = new_mount
     binds.append(str(PHASE) + ':/router-verify-phase:ro')
-    expected_host['Binds'] = binds
+    assert sorted(actual_host.pop('Binds')) == sorted(binds)
     assert actual_host == expected_host
     expected_mounts = [dict(m, Source=str(CANDIDATE)) if m['Destination'] == '/src' else dict(m)
                        for m in base['Mounts']]
@@ -447,7 +457,7 @@ def compare(kind, actual, expected):
 
 
 def new_report(cell):
-    return dict(cell=cell, role=ROLES[cell], width=C['width_for'](ROLES[cell]), baseline=(cell == 'RCA-A'),
+    return dict(cell=cell, role=ROLES[cell], width=C['width_for'](ROLES[cell]), baseline=(cell == 'RCA2-A'),
                 passed=False, jobs=[], errors=[], fidelity_failures=[],
                 behavior=dict(natural_stop_cases=0, fixed_length_cases=0, diagnostics_exercised=0,
                               rejected_draft_observed=0, not_exercised=[]))
@@ -501,7 +511,7 @@ def collect(rt, cell):
                 read_public(rt.h, rt.out / cell, job)
                 result = read_result(rt.h, rt.out / cell, job)
             frozen = read_result(rt.h, rt.off['ROOT'] / 'run-r1/A0', job)
-            fresh = result if cell == 'RCA-A' else read_result(rt.h, rt.out / 'RCA-A', job)
+            fresh = result if cell == 'RCA2-A' else read_result(rt.h, rt.out / 'RCA2-A', job)
             row = add_result(report, job, result, frozen, fresh)
             C['save'](rt.out / cell / 'qualification.json', report)
             if report['baseline'] and not row['passed']:
@@ -573,12 +583,12 @@ def analyze(h):
                 read_public(h, directory, job)
                 actual = read_result(h, directory, job)
                 frozen = read_result(h, h['off']['ROOT'] / 'run-r1/A0', job)
-                fresh = actual if cell == 'RCA-A' else read_result(h, OUT / 'RCA-A', job)
+                fresh = actual if cell == 'RCA2-A' else read_result(h, OUT / 'RCA2-A', job)
                 add_result(report, job, actual, frozen, fresh)
             finish_report(report)
             assert report == captured, 'capture bookkeeping differs from independently reread raw evidence'
             report['cumulative_server_statistics'] = stats
-            if cell == 'RCA-A':
+            if cell == 'RCA2-A':
                 assert report['passed'], 'fresh baseline failed'
         analysis['qualified_widths'] = [r['width'] for r in analysis['reports'].values() if r['width'] and r['passed']]
         analysis['status'] = 'analyzed'

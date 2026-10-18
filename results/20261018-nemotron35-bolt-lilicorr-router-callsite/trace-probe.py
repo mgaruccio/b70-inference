@@ -27,7 +27,7 @@ OUT = ROOT / 'trace-short55-r1'
 MODE = 'router-callsite-trace-short55-r1'
 CELLS = ('RCT-A', 'RCT-W3')
 ROLES = {'RCT-A': 'A', 'RCT-W3': 'W3'}
-BASE_CELLS = {'A': 'RCA-A', 'W3': 'RCA-W3'}
+BASE_CELLS = {'A': 'RCA2-A', 'W3': 'RCA2-W3'}
 TRACE_ENV = {
     'BOLT_VERIFY_CAPTURE_DIR': '/capture',
     'LLAMA_TRACE': '1',
@@ -60,7 +60,7 @@ def trace_name(cell):
 
 def base_create_argv(role):
     assert role in BASE_CELLS, role
-    path = ROOT / 'qualification-r1' / BASE_CELLS[role] / 'create-argv.json'
+    path = ROOT / 'qualification-r2' / BASE_CELLS[role] / 'create-argv.json'
     argv = load(path)
     assert isinstance(argv, list) and argv and argv[0:2] == ['docker', 'create']
     return list(argv)
@@ -225,7 +225,7 @@ def _trace_row(job, result, comparison, expected_role):
 
 
 def _base_container(role):
-    return load(ROOT / 'qualification-r1' / BASE_CELLS[role] / 'container-before.json')
+    return load(ROOT / 'qualification-r2' / BASE_CELLS[role] / 'container-before.json')
 
 
 def _env_map(values):
@@ -394,17 +394,17 @@ class Runtime(K['Runtime']):
         assert public_summary['status'] == 'captured' and public_summary['restored']
         assert public_summary['order'] == public_summary['completed'] == list(P['CELLS'])
         assert public_analysis['status'] == 'analyzed' and public_analysis['independently_restored']
-        assert public_analysis['reports']['RCA-A']['passed']
+        assert public_analysis['reports']['RCA2-A']['passed']
         assert restored['passed'] and not restored['errors']
         for role, cell in BASE_CELLS.items():
             assert base_create_argv(role) == P['make_create'](cell, self.h)
             P['check_container'](_base_container(role), cell, self.h)
         self.hashes = C['source_binary_hashes'](self.h)
         self.before_hw = self.h['runner']['hardware']()
-        frozen_hw = load(ROOT / 'qualification-r1' / 'hardware-before.json')
+        frozen_hw = load(ROOT / 'qualification-r2' / 'hardware-before.json')
         assert self.before_hw == frozen_hw, 'hardware/capability snapshot differs from callsite qualification'
 
-        frozen_original = load(ROOT / 'qualification-r1' / 'original-container.json')
+        frozen_original = load(ROOT / 'qualification-r2' / 'original-container.json')
         live = self.inspect(self.original_name)
         assert C['same_container'](frozen_original, live)
         assert live['State']['Running']
@@ -441,7 +441,7 @@ class Runtime(K['Runtime']):
         record = json.loads(self.command(
             'docker', 'exec', name, 'python3', '-B', '-c', C['PID_PROBE']))
         save(self.out / cell / ('pid-' + phase + '.json'), record)
-        baseline = load(ROOT / 'qualification-r1' / BASE_CELLS[role_for(cell)] / 'pid-before.json')
+        baseline = load(ROOT / 'qualification-r2' / BASE_CELLS[role_for(cell)] / 'pid-before.json')
         C['check_pid'](baseline, role_for(cell), self.h)
         # Do not call C.check_pid on the trace record: it intentionally rejects
         # the two env entries whose presence is the point of this adapter.
@@ -622,7 +622,7 @@ def collect(rt, cell):
                     P['read_public'](rt.h, directory, job)
                     result = P['read_result'](rt.h, directory, job)
                 _, comparison = compare_same_role(
-                    rt.h, directory, ROOT / 'qualification-r1' / BASE_CELLS[role_for(cell)],
+                    rt.h, directory, ROOT / 'qualification-r2' / BASE_CELLS[role_for(cell)],
                     job, result)
                 row = _trace_row(job, result, comparison, role_for(cell))
                 report['jobs'].append(row)
@@ -665,7 +665,7 @@ def check_cell_evidence(h, cell):
     assert load(directory / 'create-argv.json') == argv
     assert load(directory / 'argv-diff.json') == P['positional_diff'](
         base_create_argv(role), argv)
-    baseline = load(ROOT / 'qualification-r1' / BASE_CELLS[role] / 'pid-before.json')
+    baseline = load(ROOT / 'qualification-r2' / BASE_CELLS[role] / 'pid-before.json')
     for phase in ('before', 'after'):
         check_trace_pid(load(directory / ('pid-' + phase + '.json')), baseline)
     for phase in ('before', 'after'):
@@ -729,7 +729,7 @@ def analyze(h):
             recomputed = _report(cell)
             for job in jobs:
                 P['read_public'](h, OUT / cell, job)
-                role_directory = ROOT / 'qualification-r1' / BASE_CELLS[role_for(cell)]
+                role_directory = ROOT / 'qualification-r2' / BASE_CELLS[role_for(cell)]
                 P['read_public'](h, role_directory, job)
                 result = P['read_result'](h, OUT / cell, job)
                 expected = P['read_result'](h, role_directory, job)

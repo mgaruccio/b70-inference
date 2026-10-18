@@ -90,7 +90,7 @@ class TraceProbeFixtures(unittest.TestCase):
         h = C['helpers']()
         for cell in T['CELLS']:
             baseline_cell = T['BASE_CELLS'][T['role_for'](cell)]
-            directory = T['ROOT'] / 'qualification-r1' / baseline_cell
+            directory = T['ROOT'] / 'qualification-r2' / baseline_cell
             raw = ''.join((directory / ('native-and-startup.raw.' + stream + '.log')).read_text()
                           for stream in ('stdout', 'stderr'))
             route = next(line for line in raw.splitlines() if 'BOLT_ROUTE route=' in line)
@@ -148,7 +148,7 @@ class TraceProbeFixtures(unittest.TestCase):
 
         h = C['helpers']()
         diagnostic = T['trace_jobs'](h)[-1]
-        expected_dir = T['ROOT'] / 'qualification-r1' / 'RCA-A'
+        expected_dir = T['ROOT'] / 'qualification-r2' / 'RCA2-A'
         expected = P['read_result'](h, expected_dir, diagnostic)
         result = dict(kind='diagnostic', actual=copy.deepcopy(expected['actual']),
                       speculation=copy.deepcopy(expected['speculation']))

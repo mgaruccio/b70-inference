@@ -8,8 +8,8 @@ new public capture/independent restoration must be complete.
 
 ## Runtime and request contract
 
-`trace-probe.py` derives its launch from `qualification-r1/RCA-A/create-argv.json`
-and `RCA-W3/create-argv.json`. Fresh roles are **RCT-A / RCT-W3**, physical names
+`trace-probe.py` derives its launch from `qualification-r2/RCA2-A/create-argv.json`
+and `RCA2-W3/create-argv.json`. Fresh roles are **RCT-A / RCT-W3**, physical names
 `C.PREFIX + cell.lower()`, output **`trace-short55-r1/`**. Only name, the fresh
 read/write `/capture` bind, `BOLT_VERIFY_CAPTURE_DIR=/capture`, `LLAMA_TRACE=1`, and
 the corresponding final server environment boundary differ. `GGML_SYCL_DEBUG=0`,
@@ -29,7 +29,7 @@ Exactly **46 real generation requests**, **23 per arm**, in frozen order:
 20 QA, anchor, short ordinary, short diagnostic (128 tokens, EOS ignored). This is
 not a two-request shortcut: preceding history is part of reproduction. The public
 boundary remains `/apply-template`, `/tokenize`, `/v1/chat/completions` with unchanged
-payloads. Trace A must exactly reproduce **new RCA-A** and trace W3 **new RCA-W3**,
+payloads. Trace A must exactly reproduce **new RCA2-A** and trace W3 **new RCA2-W3**,
 including actual API IDs/pieces, text, finish and usage. W3 may differ from A; that is
 separate from trace reproduction. Independent analysis rereads both roles' raw
 public/template/tokenize evidence only after successful restoration.

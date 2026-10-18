@@ -14,8 +14,8 @@ same `FidelityFailure` / `InfraFailure` class identities.
   `libllama.so.0.7.0`** of the six pinned artifacts. Backend and native executable
   are unchanged. `check-source.py` verifies the full inherited predicate and exact
   insertion against the pinned parent; no new protected/source-hashes manifests exist.
-- Arms: **RCA-A**, **RCA-W3**, **RCA-W7**; physical names are `C.PREFIX + cell.lower()`.
-  Output is `qualification-r1/`. No old cell/output name is reused.
+- Arms: **RCA2-A**, **RCA2-W3**, **RCA2-W7**; physical names are `C.PREFIX + cell.lower()`.
+  Output is `qualification-r2/`. No old cell/output name is reused.
 
 Public launch argv is derived from frozen A/W3/W7. Only the name, `/src:ro` candidate
 mount, inherited native validation shell, and read-only **old phase analyzer** bind
@@ -92,7 +92,7 @@ analysis as **separate invocations**:
 ```bash
 set -euo pipefail
 ROOT=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite
-test ! -e "$ROOT/qualification-r1"
+test ! -e "$ROOT/qualification-r2"
 test ! -e "$ROOT/public-capture-r1.log"
 python3 -B "$ROOT/public-gate.py" --lead-run-qualification 2>&1 | tee "$ROOT/public-capture-r1.log"
 ```
@@ -124,7 +124,7 @@ work or claim the bug fixed. Continue the bounded trace journey even if widths f
 
 ## Evidence and cleanup
 
-Retain all build/CPU logs, N9 proof/raw/inputs/restoration, all `qualification-r1/`
+Retain all build/CPU logs, N9 proof/raw/inputs/restoration, all `qualification-r2/`
 requests/responses and template/tokenize evidence, actual PID/library/startup records,
 argv deltas, three ready/restored native files, proposal/rejection statistics, and
 `analysis.json` / `independent-restoration.json`. No actual records are normalized.

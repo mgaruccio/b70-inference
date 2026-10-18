@@ -82,7 +82,7 @@ class PublicGateFixtures(unittest.TestCase):
         for job in JOBS:
             for suffix in P['HTTP_SUFFIXES']:
                 source = C['artifact'](C['QUALIFY_DIR'] / 'A' / job['stem'], suffix)
-                target = C['artifact'](self.tmp / 'RCA-A' / job['stem'], suffix)
+                target = C['artifact'](self.tmp / 'RCA2-A' / job['stem'], suffix)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, target)
 
@@ -102,7 +102,7 @@ class PublicGateFixtures(unittest.TestCase):
         self.assertIs(C['FidelityFailure'], P['Runtime'].run_job.__globals__['C']['FidelityFailure'])
         self.assertIs(C['InfraFailure'], P['Runtime'].restore.__globals__['C']['InfraFailure'])
         self.assertFalse(set(P['CELLS']) & set(C['LABELS']))
-        self.assertEqual('router-callsite-qualification-r1', P['MODE'])
+        self.assertEqual('router-callsite-qualification-r2', P['MODE'])
         self.assertEqual(P['PARENT'], N['CANDIDATE'])  # Old helper namespace was NOT retargeted.
         self.assertEqual(P['PHASE'], N['ROOT'])
 
@@ -156,6 +156,27 @@ class PublicGateFixtures(unittest.TestCase):
                 untouched = copy.deepcopy(container)
                 P['check_container'](container, cell, H)
                 self.assertEqual(container, untouched)
+            reordered = copy.deepcopy(container)
+            reordered['Config']['Env'].reverse()
+            reordered['HostConfig']['Binds'].reverse()
+            untouched = copy.deepcopy(reordered)
+            P['check_container'](reordered, cell, H)
+            self.assertEqual(reordered, untouched)
+            original_env = container['Config']['Env']
+            for values in (original_env + [original_env[0]], original_env[1:],
+                           original_env + ['UNEXPECTED_ENV=1'],
+                           [original_env[0].split('=', 1)[0] + '=wrong'] + original_env[1:]):
+                bad = copy.deepcopy(container)
+                bad['Config']['Env'] = values
+                with self.assertRaises(AssertionError):
+                    P['check_container'](bad, cell, H)
+            original_binds = container['HostConfig']['Binds']
+            for values in (original_binds + [original_binds[0]], original_binds[1:],
+                           original_binds + ['/unexpected:/unexpected:ro']):
+                bad = copy.deepcopy(container)
+                bad['HostConfig']['Binds'] = values
+                with self.assertRaises(AssertionError):
+                    P['check_container'](bad, cell, H)
             for field, value in (('Source', str(P['PARENT'])), ('RW', True), ('Mode', 'rw')):
                 bad = copy.deepcopy(container)
                 next(m for m in bad['Mounts'] if m['Destination'] == '/src')[field] = value
@@ -254,7 +275,7 @@ class PublicGateFixtures(unittest.TestCase):
             P['candidate_proof']()
 
     def test_valid_mismatches_keep_25_and_diagnostic_rejection_behavior(self):
-        for cell in ('RCA-W3', 'RCA-W7'):
+        for cell in ('RCA2-W3', 'RCA2-W7'):
             rt = self.runtime(P['ROLES'][cell])
             self.assertEqual([], P['collect'](rt, cell))
             report = C['load'](self.tmp / cell / 'qualification.json')
@@ -280,20 +301,20 @@ class PublicGateFixtures(unittest.TestCase):
             return result
         rt.run_job.side_effect = mismatch
         with self.assertRaises(C['InfraFailure']):
-            P['collect'](rt, 'RCA-A')
-        report = C['load'](self.tmp / 'RCA-A/qualification.json')
+            P['collect'](rt, 'RCA2-A')
+        report = C['load'](self.tmp / 'RCA2-A/qualification.json')
         self.assertEqual(1, rt.run_job.call_count)
         self.assertEqual(1, len(report['jobs']))
         self.assertTrue(report['fidelity_failures'])
         rt = self.runtime()
         rt.run_job.side_effect = ConnectionError('CPU transport fixture')
         with self.assertRaises(C['InfraFailure']):
-            P['collect'](rt, 'RCA-W3')
+            P['collect'](rt, 'RCA2-W3')
         self.assertEqual(1, rt.run_job.call_count)
-        self.assertTrue(C['load'](self.tmp / 'RCA-W3/qualification.json')['errors'])
+        self.assertTrue(C['load'](self.tmp / 'RCA2-W3/qualification.json')['errors'])
 
     def test_fully_passing_report_requires_real_rejected_draft(self):
-        for cell, rejects, passed in (('RCA-A', False, True), ('RCA-W3', False, False), ('RCA-W7', True, True)):
+        for cell, rejects, passed in (('RCA2-A', False, True), ('RCA2-W3', False, False), ('RCA2-W7', True, True)):
             report = P['new_report'](cell)
             for job in JOBS:
                 result = recorded('A', job)
@@ -325,7 +346,7 @@ class PublicGateFixtures(unittest.TestCase):
 
     def test_docker_atomic_port_failure_uses_real_begin_and_inherited_cleanup(self):
         rt = P['Runtime'](H, self.tmp, P['MODE'])
-        cell = 'RCA-W3'
+        cell = 'RCA2-W3'
         rt.preflight = Mock()
         rt.capacity = Mock()
         rt.ownership = Mock()
@@ -351,7 +372,7 @@ class PublicGateFixtures(unittest.TestCase):
 
     def test_failed_start_preserves_native_via_stopped_container_without_blocking_restore(self):
         rt = P['Runtime'](H, self.tmp, P['MODE'])
-        cell = 'RCA-W3'
+        cell = 'RCA2-W3'
         (self.tmp / cell).mkdir()
         rt.created = [cell]
         rt._stop_if_running = Mock()
