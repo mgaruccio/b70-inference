@@ -1,0 +1,158 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -5579,7 +5579,87 @@
+            src1->ne[1] <= MMVQ_MAX_BATCH_SIZE;
+ }
+ 
++// Bounded router control: no queue/pool/reorder/launch during either-column preflight.
++// Call only after exact model dimensions/strides have bounded ggml_nbytes.
++static bool ggml_sycl_router_single2_range(
++    const ggml_backend_sycl_context & ctx, const ggml_tensor * t)
++{
++    if (!t->data || !t->buffer || ggml_backend_buffer_is_sycl_split(t->buffer) ||
++        !ggml_backend_buffer_is_sycl(t->buffer) || !t->buffer->context ||
++        (uintptr_t) t->data % sizeof(float) != 0 ||
++        static_cast<const ggml_backend_sycl_buffer_context *>(t->buffer->context)->device != ctx.device) {
++        return false;
++    }
++    const uintptr_t base = (uintptr_t) ggml_backend_buffer_get_base(t->buffer);
++    const uintptr_t data = (uintptr_t) t->data;
++    const size_t size = ggml_backend_buffer_get_size(t->buffer);
++    return base != 0 && size <= UINTPTR_MAX - base && data >= base && data - base <= size &&
++           ggml_nbytes(t) <= size - (data - base);
++}
++
++static bool ggml_sycl_router_single2_views(
++    const ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
++    const ggml_tensor * src1, const ggml_tensor * dst,
++    ggml_tensor (&src1_col)[2], ggml_tensor (&dst_col)[2])
++{
++    if (dst->op != GGML_OP_MUL_MAT || dst->src[0] != src0 || dst->src[1] != src1 ||
++        ggml_get_op_params_i32(dst, 1) != 0 || src0->op != GGML_OP_NONE ||
++        (src0->flags & (GGML_TENSOR_FLAG_INPUT | GGML_TENSOR_FLAG_OUTPUT | GGML_TENSOR_FLAG_COMPUTE)) ||
++        src0->type != GGML_TYPE_F32 || src1->type != GGML_TYPE_F32 || dst->type != GGML_TYPE_F32 ||
++        src0->ne[0] != 4096 || src0->ne[1] != 240 ||
++        src1->ne[0] != 4096 || src1->ne[1] != 2 || dst->ne[0] != 240 || dst->ne[1] != 2) {
++        return false;
++    }
++    constexpr char suffix[] = ".ffn_gate_inp.weight";
++    const size_t len = std::strlen(src0->name);
++    if (len < sizeof(suffix) - 1 || std::strcmp(src0->name + len - (sizeof(suffix) - 1), suffix) != 0) {
++        return false;
++    }
++    for (const ggml_tensor * t : {src0, src1, dst}) {
++        if (t->ne[2] != 1 || t->ne[3] != 1 || t->view_src || t->view_offs ||
++            t->nb[0] != sizeof(float) || t->nb[1] != sizeof(float) * t->ne[0] ||
++            t->nb[2] != t->nb[1] * t->ne[1] || t->nb[3] != t->nb[2] ||
++            !ggml_sycl_router_single2_range(ctx, t)) {
++            return false;
++        }
++        // Only interpret backend-owned extra after verifying the SYCL buffer.
++        const auto * extra = static_cast<const ggml_tensor_extra_gpu *>(t->extra);
++        if (extra && extra->optimized_feature.reorder) return false;
++    }
++    // MUL_MAT must not overwrite either input, even across the two launches.
++    const uintptr_t out = (uintptr_t) dst->data;
++    for (const ggml_tensor * t : {src0, src1}) {
++        const uintptr_t in = (uintptr_t) t->data;
++        if (out < in + ggml_nbytes(t) && in < out + ggml_nbytes(dst)) return false;
++    }
++    for (int col = 0; col < 2; ++col) {
++        src1_col[col] = *src1;
++        dst_col[col] = *dst;
++        src1_col[col].data = (char *) src1->data + col * src1->nb[1];
++        dst_col[col].data = (char *) dst->data + col * dst->nb[1];
++        src1_col[col].ne[1] = 1;
++        dst_col[col].ne[1] = 1;
++        dst_col[col].src[1] = &src1_col[col];
++        // Keep op/precision and original strides; singleton dimensions ignore nb[2/3].
++        if (!ggml_is_contiguous(&src1_col[col]) || !ggml_is_contiguous(&dst_col[col]) ||
++            !ggml_sycl_router_single2_range(ctx, &src1_col[col]) ||
++            !ggml_sycl_router_single2_range(ctx, &dst_col[col])) return false;
++    }
++    return true;
++}
++
+ static void ggml_sycl_mul_mat(ggml_backend_sycl_context & ctx, const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
++    ggml_tensor src1_col[2], dst_col[2];
++    if (ggml_sycl_router_single2_views(ctx, src0, src1, dst, src1_col, dst_col)) {
++        for (int col = 0; col < 2; ++col) {
++            // Both descriptors are already validated. No fallback after column 0.
++            // The existing F32 singleton path uses ctx.stream(device, 0), submitting
++            // pointers/scalars to MKL synchronously; it retains no stack metadata.
++            ggml_sycl_mul_mat(ctx, src0, &src1_col[col], &dst_col[col]);
++        }
++        return;
++    }
++
+     scope_op_debug_print scope_dbg_print(__func__, dst, /*num_src=*/2);
+ 
+     // Handle HADAMARAD hint given from further up the pipeline and pass it to the correct
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5661,6 +5661,50 @@
+     }
+ };
+ 
++// Six isolated F32 CPU-reference cases for the exact-two-column router control.
++struct test_mul_mat_router_single2 : public test_mul_mat {
++    const char * weight;
++    const int layout; // 0: ordinary; 1: offset view; 2: padded-column view
++
++    test_mul_mat_router_single2(const char * weight, int64_t n, int layout = 0) :
++        test_mul_mat(GGML_TYPE_F32, GGML_TYPE_F32, 240, n, 4096, {1, 1}, {1, 1}),
++        weight(weight), layout(layout) {}
++
++    std::string vars() override {
++        return std::string("router_single2=1,weight=") + weight + ",layout=" + std::to_string(layout) + "," + test_mul_mat::vars();
++    }
++
++    double max_nmse_err() override { return 1e-7; }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * a = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, m);
++        ggml_set_name(a, weight);
++        ggml_tensor * b = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k + (layout == 2 ? 16 : 0), n + (layout == 1));
++        ggml_set_name(b, "router.input");
++        if (layout != 0) {
++            b = ggml_view_2d(ctx, b, k, n, b->nb[1], layout == 1 ? b->nb[1] : 0);
++            ggml_set_name(b, "router.view");
++        }
++        ggml_tensor * out = ggml_mul_mat(ctx, a, b);
++        ggml_format_name(out, "router_single2-l%d-n%d", layout, (int) n);
++        return out;
++    }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        test_case::initialize_tensors(ctx);
++        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t; t = ggml_get_next_tensor(ctx, t)) {
++            if (strcmp(t->name, "router.input") != 0) continue;
++            std::vector<float> data(ggml_nelements(t));
++            for (int64_t col = 0; col < t->ne[1]; ++col) {
++                for (int64_t i = 0; i < t->ne[0]; ++i) {
++                    data[col * t->ne[0] + i] = (col + 1) * ((i % 17) - 8) / 16.0f + (col % 2 ? 0.25f : -0.125f);
++                }
++            }
++            ggml_backend_tensor_set(t, data.data(), 0, data.size() * sizeof(float));
++        }
++    }
++};
++
+ // GGML_HINT_SRC0_IS_HADAMARD
+ struct test_mul_mat_hadamard : public test_mul_mat {
+     test_mul_mat_hadamard(ggml_type type_a = GGML_TYPE_F32, ggml_type type_b = GGML_TYPE_F32,
+@@ -11627,6 +11671,14 @@
+     test_cases.emplace_back(new test_mul_mat_attention_view_dmmv2("blk.7.offset.attn_output.weight", 2));
+     test_cases.emplace_back(new test_mul_mat_attention_view_dmmv2("blk.7.unrelated.weight", 2));
+ 
++    // Exactly six router cases, selected by -p '^router_single2=1,'.
++    for (int64_t n : {1, 2, 3}) {
++        test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.ffn_gate_inp.weight", n));
++    }
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.unrelated.weight", 2));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.ffn_gate_inp.weight", 2, 1));
++    test_cases.emplace_back(new test_mul_mat_router_single2("blk.1.ffn_gate_inp.weight", 2, 2));
++
+     // Experimental NVFP4 reorder lifetime/scale regressions. Filter with -p nvfp4_reorder=1.
+     for (bool f32 : {false, true}) {
+         for (int64_t k : {64, 192}) {
