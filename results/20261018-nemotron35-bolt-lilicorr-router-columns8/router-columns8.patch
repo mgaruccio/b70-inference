@@ -1,0 +1,118 @@
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -5583,7 +5583,7 @@
+            src1->ne[1] <= MMVQ_MAX_BATCH_SIZE;
+ }
+ 
+-// Bounded router control: no queue/pool/reorder/launch during either-column preflight.
++// Bounded router control: no queue/pool/reorder/launch during all-column preflight.
+ // Call only after exact model dimensions/strides have bounded ggml_nbytes.
+ static bool ggml_sycl_router_single2_range(
+     const ggml_backend_sycl_context & ctx, const ggml_tensor * t)
+@@ -5604,7 +5604,7 @@
+ static bool ggml_sycl_router_single2_views(
+     const ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
+     const ggml_tensor * src1, const ggml_tensor * dst,
+-    ggml_tensor (&src1_col)[2], ggml_tensor (&dst_col)[2])
++    ggml_tensor (&src1_col)[8], ggml_tensor (&dst_col)[8])
+ {
+     if (dst->op != GGML_OP_MUL_MAT || dst->src[0] != src0 || dst->src[1] != src1 ||
+         ggml_get_op_params_i32(dst, 1) != 0 || src0->op != GGML_OP_NONE ||
+@@ -5613,7 +5613,8 @@
+         src0->ne[0] != 4096 ||
+         (src0->ne[1] != 240 && src0->ne[1] != 304 && src0->ne[1] != 368 &&
+          src0->ne[1] != 432 && src0->ne[1] != 496) ||
+-        src1->ne[0] != 4096 || src1->ne[1] != 2 || dst->ne[0] != src0->ne[1] || dst->ne[1] != 2) {
++        src1->ne[0] != 4096 || src1->ne[1] < 2 || src1->ne[1] > 8 ||
++        dst->ne[0] != src0->ne[1] || dst->ne[1] != src1->ne[1]) {
+         return false;
+     }
+     constexpr char suffix[] = ".ffn_gate_inp.weight";
+@@ -5632,13 +5633,13 @@
+         const auto * extra = static_cast<const ggml_tensor_extra_gpu *>(t->extra);
+         if (extra && extra->optimized_feature.reorder) return false;
+     }
+-    // MUL_MAT must not overwrite either input, even across the two launches.
++    // MUL_MAT must not overwrite either input, even across all column launches.
+     const uintptr_t out = (uintptr_t) dst->data;
+     for (const ggml_tensor * t : {src0, src1}) {
+         const uintptr_t in = (uintptr_t) t->data;
+         if (out < in + ggml_nbytes(t) && in < out + ggml_nbytes(dst)) return false;
+     }
+-    for (int col = 0; col < 2; ++col) {
++    for (int col = 0; col < src1->ne[1]; ++col) {
+         src1_col[col] = *src1;
+         dst_col[col] = *dst;
+         src1_col[col].data = (char *) src1->data + col * src1->nb[1];
+@@ -5655,10 +5656,10 @@
+ }
+ 
+ static void ggml_sycl_mul_mat(ggml_backend_sycl_context & ctx, const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
+-    ggml_tensor src1_col[2], dst_col[2];
++    ggml_tensor src1_col[8], dst_col[8];
+     if (ggml_sycl_router_single2_views(ctx, src0, src1, dst, src1_col, dst_col)) {
+-        for (int col = 0; col < 2; ++col) {
+-            // Both descriptors are already validated. No fallback after column 0.
++        for (int col = 0; col < src1->ne[1]; ++col) {
++            // All column descriptors are already validated. No fallback after column 0.
+             // The existing F32 singleton path uses ctx.stream(device, 0), submitting
+             // pointers/scalars to MKL synchronously; it retains no stack metadata.
+             ggml_sycl_mul_mat(ctx, src0, &src1_col[col], &dst_col[col]);
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -5705,6 +5705,21 @@
+     }
+ };
+ 
++// Separate selector; inherit the 1e-7 CPU tolerance and per-column input pattern.
++struct test_mul_mat_router_columns8 : public test_mul_mat_router_single2 {
++    using test_mul_mat_router_single2::test_mul_mat_router_single2;
++
++    std::string vars() override {
++        return std::string("router_columns8=1,") + test_mul_mat_router_single2::vars();
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        ggml_tensor * out = test_mul_mat_router_single2::build_graph(ctx);
++        ggml_format_name(out, "router_columns8-m%d-l%d-n%d", (int) m, layout, (int) n);
++        return out;
++    }
++};
++
+ // GGML_HINT_SRC0_IS_HADAMARD
+ struct test_mul_mat_hadamard : public test_mul_mat {
+     test_mul_mat_hadamard(ggml_type type_a = GGML_TYPE_F32, ggml_type type_b = GGML_TYPE_F32,
+@@ -11705,6 +11720,31 @@
+     test_cases.emplace_back(new test_mul_mat_router_single2("blk.48.ffn_gate_inp.weight", 2, 1, 496));
+     test_cases.emplace_back(new test_mul_mat_router_single2("blk.48.ffn_gate_inp.weight", 2, 2, 496));
+ 
++    // Exactly 62 additional cases, selected by -p '^router_columns8=1,'.
++    // 35 positives (n=2..8), 10 n=1/9 controls, 15 name/view controls, 2 unsupported-M controls.
++    const struct {
++        const char * weight;
++        const char * unrelated;
++        int64_t m;
++    } router_columns8_profiles[] = {
++        {"blk.1.ffn_gate_inp.weight",  "blk.1.unrelated.weight",          240},
++        {"blk.8.ffn_gate_inp.weight",  "blk.1.width304.unrelated.weight", 304},
++        {"blk.37.ffn_gate_inp.weight", "blk.1.width368.unrelated.weight", 368},
++        {"blk.21.ffn_gate_inp.weight", "blk.1.width432.unrelated.weight", 432},
++        {"blk.48.ffn_gate_inp.weight", "blk.1.width496.unrelated.weight", 496},
++    };
++    for (const auto & profile : router_columns8_profiles) {
++        for (int64_t n = 1; n <= 9; ++n) {
++            test_cases.emplace_back(new test_mul_mat_router_columns8(profile.weight, n, 0, profile.m));
++        }
++        test_cases.emplace_back(new test_mul_mat_router_columns8(profile.unrelated, 8, 0, profile.m));
++        test_cases.emplace_back(new test_mul_mat_router_columns8(profile.weight, 8, 1, profile.m));
++        test_cases.emplace_back(new test_mul_mat_router_columns8(profile.weight, 8, 2, profile.m));
++    }
++    for (int64_t n : {4, 8}) {
++        test_cases.emplace_back(new test_mul_mat_router_columns8("blk.1.width256.ffn_gate_inp.weight", n, 0, 256));
++    }
++
+     // Experimental NVFP4 reorder lifetime/scale regressions. Filter with -p nvfp4_reorder=1.
+     for (bool f32 : {false, true}) {
+         for (int64_t k : {64, 192}) {
