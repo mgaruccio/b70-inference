@@ -111,11 +111,11 @@ python3 -B "$ROOT/analyze-first-frame.py" 2>&1 | tee "$ROOT/trace-first-frame.lo
   types, op IDs, device, reorder, IDs, and original outer strides are checked.
 - The intended Q8 route is `DMMV_ESIMD`, and the intended IQ2 route is
   `MOE_SINGLE_MMVQ_PLAIN_Q8_1`; both carry the existing precision mark
-  `accum_prec=10` only for the marked n=3..8 family. A marked Q8 callback may emit
-  exactly one coherent outer n-column record or exactly n coherent singleton records
-  (four for W3), never a mixture. The IQ2 `MUL_MAT_ID` callback must emit exactly one
-  outer record with `src1.ne2 == dst.ne2 == ids.ne1 == n`; singleton or mixed IQ2 views
-  are rejected. No inner view entries are fabricated.
+  `accum_prec=10` only for the marked n=3..8 family. A marked Q8 callback emits exactly
+  one coherent outer n-column record. The IQ2 `MUL_MAT_ID` callback emits exactly n
+  coherent singleton rows, each with `src1.ne2 == dst.ne2 == ids.ne1 == 1` and the
+  original n-column backing strides. One outer IQ2 row, one singleton row, mixed shapes,
+  and duplicate outer representations are rejected; no inner view entries are fabricated.
 - Missing weights, wrong context, wrong type, wrong precision/mark, wrong route, wrong
   shape/stride, duplicate or misordered eligible records, native fixture names, and
   drafter-context records fail closed. The unchanged parent W3 route set is an explicit

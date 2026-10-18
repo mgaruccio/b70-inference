@@ -20,8 +20,8 @@ SPECIAL_ORDER = ('blk.1.ffn_latent_down.weight', 'blk.1.ffn_up_exps.weight',
                  'blk.1.ffn_down_exps.weight', 'blk.1.ffn_latent_up.weight')
 
 # These are the exact eligible first-block weights and backing layouts observed in
-# the immutable parent-A frame.  Candidate rows may expose an outer n-column view or
-# a singleton view of that tensor, but the backing dimensions/strides remain fixed.
+# the immutable parent-A frame. Marked Q8 emits one outer n-column row; marked IQ2
+# emits n singleton rows. Their backing dimensions/strides remain fixed.
 SPECIAL_SPECS = {
     'blk.1.ffn_latent_down.weight': dict(
         family='q8', route='DMMV_ESIMD', op='MUL_MAT', op_id=29,
@@ -137,12 +137,14 @@ def _assert_common_special(row, weight, context, n, marked, expected_route=None)
                        (4, spec['dst_nb1'], spec['dst_nb1'] * n,
                         spec['dst_nb1'] * n))
     else:
-        # MUL_MAT_ID has one outer row. Its token batch and IDs must all retain
-        # the complete n-column view; singleton IQ2 helper views are invalid.
+        # MUL_MAT_ID retains the exact marked interface: Q8 has an outer row, while
+        # IQ2 uses a singleton helper row per token. Every singleton keeps the
+        # original n-column backing strides.
+        iq2_columns = 1 if marked else n
         src1_ne2 = row['src1_ne2']
         dst_ne2 = row['dst_ne2']
         ids_ne1 = row['ids_ne1']
-        assert src1_ne2 == dst_ne2 == ids_ne1 == n, row
+        assert src1_ne2 == dst_ne2 == ids_ne1 == iq2_columns, row
         _assert_tensor(row, 'src1_',
                        (spec['src1_ne0'], spec['src1_ne1'], src1_ne2, 1),
                        (4, spec['src1_nb1'], spec['src1_nb1'] * spec['src1_ne1'],
@@ -157,9 +159,9 @@ def _assert_common_special(row, weight, context, n, marked, expected_route=None)
 def check_special_routes(routes, n, context, marked):
     """Require the exact eligible first-block route contract.
 
-    Marked Q8 accepts one coherent outer n-column row or exactly n coherent
-    singleton rows. Marked IQ2 remains one outer MUL_MAT_ID row with a complete
-    n-column token/ID view. Unmarked frames use the exact parent-A sequence for
+    Marked Q8 accepts exactly one coherent outer n-column row. Marked IQ2 emits
+    exactly n coherent singleton MUL_MAT_ID rows with one-column token/ID views.
+    Unmarked frames use the exact parent-A sequence for
     their observed n value, rather than a broad route-family allowlist.
     """
     assert n >= 1
@@ -187,15 +189,13 @@ def check_special_routes(routes, n, context, marked):
             weight_rows = by_weight[weight]
             spec = SPECIAL_SPECS[weight]
             if spec['family'] == 'q8':
-                assert len(weight_rows) in (1, n), (weight, len(weight_rows))
-                if len(weight_rows) == 1:
-                    assert (weight_rows[0]['src1_ne1'] ==
-                            weight_rows[0]['dst_ne1'] == n), weight_rows[0]
-                else:
-                    assert all(row['src1_ne1'] == row['dst_ne1'] == 1
-                               for row in weight_rows), (weight, weight_rows)
-            else:
                 assert len(weight_rows) == 1, (weight, len(weight_rows))
+                assert (weight_rows[0]['src1_ne1'] ==
+                        weight_rows[0]['dst_ne1'] == n), weight_rows[0]
+            else:
+                assert len(weight_rows) == n, (weight, len(weight_rows))
+                assert all(row['src1_ne2'] == row['dst_ne2'] == row['ids_ne1'] == 1
+                           for row in weight_rows), (weight, weight_rows)
             for row in weight_rows:
                 _assert_common_special(row, weight, context, n, True)
     else:
