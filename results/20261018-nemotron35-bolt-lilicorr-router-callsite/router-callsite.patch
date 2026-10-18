@@ -1,0 +1,21 @@
+diff --git a/src/models/nemotron-h.cpp b/src/models/nemotron-h.cpp
+--- a/src/models/nemotron-h.cpp
++++ b/src/models/nemotron-h.cpp
+@@ -309,6 +309,17 @@
+         }
+ 
+         ggml_tensor * router_logits = build_lora_mm(model.layers[il].ffn_gate_inp, cur);
++        // Bound the F32 router request to small full-output batches. This excludes
++        // ordinary checkpoint prefill (zero/one output), not every possible prompt.
++        if (arch == LLM_ARCH_NEMOTRON_H_MOE &&
++            model.layers[il].ffn_gate_inp->type == GGML_TYPE_F32 &&
++            cur->type == GGML_TYPE_F32 && router_logits->type == GGML_TYPE_F32 &&
++            router_logits->op == GGML_OP_MUL_MAT && router_logits->src[0] == model.layers[il].ffn_gate_inp &&
++            router_logits->src[1] == cur &&
++            cur->ne[1] >= 3 && cur->ne[1] <= 8 &&
++            cur->ne[1] == this->n_tokens && this->n_outputs == this->n_tokens) {
++            GGML_ASSERT(ggml_prec_set_acc(router_logits, GGML_PREC_F32));
++        }
+         cb(router_logits, "ffn_moe_logits", il);
+ 
+         ggml_tensor * moe_out =
