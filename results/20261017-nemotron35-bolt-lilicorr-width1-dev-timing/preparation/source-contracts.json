@@ -1,0 +1,196 @@
+{
+  "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1": {
+    "tools/server/server-common.cpp": {
+      "sha256": "fcb05757dd6a25d349024fd57df9b05c7ff77902cd17d1b70b9f41ac54f6c45c",
+      "evidence": [
+        {
+          "line": 94,
+          "text": "        {\"predicted_ms\",           t_gen_ms()},"
+        },
+        {
+          "line": 96,
+          "text": "        {\"predicted_per_second\",   n_gen_tps()},"
+        }
+      ]
+    },
+    "tools/server/server-common.h": {
+      "sha256": "1aebeeb72c7f232fe6588370a3bb5f27b92e265bbb151eb26207fdc87414753d",
+      "evidence": [
+        {
+          "line": 409,
+          "text": "    int64_t t_prompt_last = 0;"
+        },
+        {
+          "line": 410,
+          "text": "    int64_t t_gen_last    = 0;"
+        },
+        {
+          "line": 417,
+          "text": "    void set_prompt_last(int64_t t_us) {"
+        },
+        {
+          "line": 419,
+          "text": "        t_prompt_last = t_us;"
+        },
+        {
+          "line": 422,
+          "text": "        set_prompt_last(ggml_time_us());"
+        },
+        {
+          "line": 424,
+          "text": "    void update_gen_last() {"
+        },
+        {
+          "line": 425,
+          "text": "        GGML_ASSERT(t_prompt_last > 0);"
+        },
+        {
+          "line": 426,
+          "text": "        t_gen_last = ggml_time_us();"
+        },
+        {
+          "line": 434,
+          "text": "        if (t_prompt_last == 0) {"
+        },
+        {
+          "line": 437,
+          "text": "        return (t_prompt_last - t_start) / 1000.0;"
+        },
+        {
+          "line": 440,
+          "text": "        if (t_gen_last == 0) {"
+        },
+        {
+          "line": 443,
+          "text": "        // clamp to 1 us, the first token can land in the same us as t_prompt_last"
+        },
+        {
+          "line": 444,
+          "text": "        return std::max<int64_t>(1, t_gen_last - t_prompt_last);"
+        }
+      ]
+    },
+    "tools/server/server-context.cpp": {
+      "sha256": "4ed2e401a9e566b2caf2dd208582fbd42a6b230d516b1b9d56be130cbad3caa6",
+      "evidence": [
+        {
+          "line": 3515,
+          "text": "                common_speculative_draft(spec.get());"
+        },
+        {
+          "line": 4486,
+          "text": "            slot.stats.update_gen_last();"
+        },
+        {
+          "line": 4589,
+          "text": "                common_speculative_accept(spec.get(), slot.id, accepted.size() - 1);"
+        },
+        {
+          "line": 4602,
+          "text": "            slot.stats.update_gen_last();"
+        },
+        {
+          "line": 4739,
+          "text": "                slot.stats.set_prompt_last(t_now);"
+        }
+      ]
+    }
+  },
+  "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-widths-single2-r1": {
+    "tools/server/server-common.cpp": {
+      "sha256": "fcb05757dd6a25d349024fd57df9b05c7ff77902cd17d1b70b9f41ac54f6c45c",
+      "evidence": [
+        {
+          "line": 94,
+          "text": "        {\"predicted_ms\",           t_gen_ms()},"
+        },
+        {
+          "line": 96,
+          "text": "        {\"predicted_per_second\",   n_gen_tps()},"
+        }
+      ]
+    },
+    "tools/server/server-common.h": {
+      "sha256": "1aebeeb72c7f232fe6588370a3bb5f27b92e265bbb151eb26207fdc87414753d",
+      "evidence": [
+        {
+          "line": 409,
+          "text": "    int64_t t_prompt_last = 0;"
+        },
+        {
+          "line": 410,
+          "text": "    int64_t t_gen_last    = 0;"
+        },
+        {
+          "line": 417,
+          "text": "    void set_prompt_last(int64_t t_us) {"
+        },
+        {
+          "line": 419,
+          "text": "        t_prompt_last = t_us;"
+        },
+        {
+          "line": 422,
+          "text": "        set_prompt_last(ggml_time_us());"
+        },
+        {
+          "line": 424,
+          "text": "    void update_gen_last() {"
+        },
+        {
+          "line": 425,
+          "text": "        GGML_ASSERT(t_prompt_last > 0);"
+        },
+        {
+          "line": 426,
+          "text": "        t_gen_last = ggml_time_us();"
+        },
+        {
+          "line": 434,
+          "text": "        if (t_prompt_last == 0) {"
+        },
+        {
+          "line": 437,
+          "text": "        return (t_prompt_last - t_start) / 1000.0;"
+        },
+        {
+          "line": 440,
+          "text": "        if (t_gen_last == 0) {"
+        },
+        {
+          "line": 443,
+          "text": "        // clamp to 1 us, the first token can land in the same us as t_prompt_last"
+        },
+        {
+          "line": 444,
+          "text": "        return std::max<int64_t>(1, t_gen_last - t_prompt_last);"
+        }
+      ]
+    },
+    "tools/server/server-context.cpp": {
+      "sha256": "04b02f4fa079e29c27919b575568928fdd09842eb0e21aef80b465eab5f43997",
+      "evidence": [
+        {
+          "line": 3645,
+          "text": "                common_speculative_draft(spec.get());"
+        },
+        {
+          "line": 4637,
+          "text": "            slot.stats.update_gen_last();"
+        },
+        {
+          "line": 4758,
+          "text": "                common_speculative_accept(spec.get(), slot.id, accepted.size() - 1);"
+        },
+        {
+          "line": 4771,
+          "text": "            slot.stats.update_gen_last();"
+        },
+        {
+          "line": 4916,
+          "text": "                slot.stats.set_prompt_last(t_now);"
+        }
+      ]
+    }
+  }
+}
