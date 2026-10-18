@@ -16,7 +16,7 @@ The private container capture mount and environment are both `/block-window`; th
 
 ## Fidelity gates and lead-owned E2E process
 
-The inherited direct-BOLT_ROUTE independent FIFO parser, exact target route groups and cardinality/width/stride checks, frozen prefill widths 5/46/4, native385 + OUT_PROD190/support9 + IQ2six + latent7 + attention13 + attention-view6 + router6 gates, asymmetric S0/C0 mapping, BOTH128 immediate-parent raw-byte/input parity, and restoration controls remain unchanged. Common BOLT_VERIFY and BLOCK_OUTPUT records use their own FIFO streams; cross-stream order is never compared. The first diagnostic target is position 55, token 0, ordinal 2, with S0 width 1 and C0 width 2.
+The inherited direct-BOLT_ROUTE independent FIFO parser, exact target route groups and cardinality/width/stride checks, frozen prefill widths 5/46/4, native385 + OUT_PROD190/support9 + IQ2six + latent7 + attention13 + attention-view6 + router6 gates, asymmetric S0/C0 mapping, BOTH128 immediate-parent raw-byte/input parity, and restoration controls remain unchanged. BOLT_VERIFY and BOLT_BLOCK_OUTPUT share the same common-logger FIFO. Direct BOLT_ROUTE uses a separate stream; its order is not compared against common-logger emission order. The first diagnostic target is position 55, token 0, ordinal 2, with S0 width 1 and C0 width 2.
 
 The lead's frozen journey is a six-job Intel LLVM 2026 / oneDNN 3.14 read-only disposable build and run on `mike@inference-host`, using the declared native/API20 gates, ordinary warmup/stream, and separate frozen diagnostic request: 128 outputs, temperature 0, seed 42, cache false, ignore EOS, S0 `max=1/min=2`, C0 `max=1/min=0`, `n_rs_seq=1`, K=2, unchanged capacity/reservation, q8 KV with F32 recurrent state, context 65536, batch/ubatch 1024, parallel 1, graphs 0, callbacks verbose off. No agreement retries are permitted; failures remain recorded. The worker does not build the candidate or run GPU/API inference.
 
@@ -39,3 +39,19 @@ Official queue reference: <https://github.khronos.org/SYCL_Reference/iface/queue
 ## Non-goals
 
 No accepted-runtime change, timing comparison, promotion, arithmetic/fusion/router modification, full-fidelity claim, or conclusion about blocks after this observed window is made by this preparation slice.
+
+## Lead-observed result — first unequal complete boundary is block8
+
+On `mike@inference-host`, explicit local Bash piped a fail-fast command sequence through the declared SSH flags to remote `bash -s`: `bash build-candidate.sh`, `python3 -B test-trace.py 2>&1 | tee lead-cpu-r1.log`, `python3 -B run-trace.py 2>&1 | tee controller-r1.log`, then `python3 -B analyze-trace.py 2>&1 | tee analysis-r1.log`, from this remote result root. Build/source/dependency/five-binary gates passed. **All79 lead CPU tests passed in136.043s.** Both arms completed without continuation or inference rerun.
+
+Both arms passed native385 + OUT_PROD190/support9 + IQ2six + latent7 + attention13 + view6 + router6, fresh API20/20, warmup, ordinary stream and separate diagnostic. All nine complete-boundary captures were attributed to position55/token0. **BOTH arms preserve all128 immediate-parent raw vectors byte-for-byte, plus prompt/IDs/text/batch inputs/selected positions/rows.**
+
+The predeclared endpoint check also passed: for each arm, token0 at physical7 and15 exactly matches its saved sparse-checkpoint counterpart (four comparisons,16,384 bytes each). The check first revalidated both runs' both-arm128 gates, attribution and restoration, rejected symlinks/wrong file lengths, then compared token0 bytes and recorded their SHA256 values in `endpoint-comparison-r1.json`. No model request was repeated for this post-run analysis.
+
+Checkpoint7 remains equal across S0/C0. **Checkpoint8 is the first unequal complete boundary**, starting at byte4/F32 index1. Blocks9,10,11 first differ at byte4;12,13 at byte16;14,15 at byte8. There is no unobserved boundary between equal7 and unequal8. This localizes the current difference to the block8 computation or its inputs/state beyond the equal incoming residual; it does not identify an internal operation or establish equality of persistent state. Final raw scores still first differ at output2 before rollback; emitted tokens first differ at41.
+
+Candidate SYCL SHA256 `e6b27838a1ae715684913995cb94080cefd16840cfc0b750699ba2c53a58ed7e`; the other four artifacts remain identical to router-single2. Controller and independent analyzer restoration checks passed: original container identity/config/HostConfig/all mounts, five hashes, protected sources, unchanged hardware, health, READY and sole original process. Accepted runtime unchanged; timing and promotion remain blocked.
+
+Canonical remote artifacts are `run-r1/analysis.json`, per-arm `alignment.json`, raw `capture/`, nine `block-window/block-*.f32.bin` per arm, and the endpoint-comparison JSON. Local logs and metadata JSON larger than1MB are losslessly gzipped with mtime0. Initial preparation syntax, negative-name fixture and malformed-hunk failures are preserved separately in `worker-checks/preparation-failures.log.gz`, with their final79-test distinction; no inference was run during those failures. Raw activations/logits/weights stay remote.
+
+Next bounded step: inspect block8 SSM input/output projection operands and outputs using the prior proven operand observer, retaining the computational parent and both-arm128 parity. No arithmetic change is justified by the complete-boundary observation alone.
