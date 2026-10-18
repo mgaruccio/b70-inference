@@ -280,9 +280,6 @@ def inject_block7_routes(metadata):
 def route_log(label='S0', missing_output=False, missing_block1=False, missing_block7=False):
     assert label in ('S0', 'C0')
     lines = [route_line(weight='blk.0.outside.weight')]
-    lines += [route_batch(list(range(55)), list(range(1000, 1055))),
-              head_route(),
-              route_line(weight='blk.0.prompt.weight'), route_decoded()]
 
     def target_routes(head_ne1=1):
         rows = [ssm_route('blk.0.ssm_in.weight', head_ne1=head_ne1),
@@ -1955,6 +1952,47 @@ class Trace(unittest.TestCase):
         reordered_log = '\n'.join(non_routes + [line for line, _ in reordered]) + '\n'
         with self.assertRaises(AssertionError):
             A['route_frames'](reordered_log)
+        first_ssm = next(line for line, route in route_rows
+                         if route['backend_ctx'] == target
+                         and route['weight'] == 'blk.0.ssm_in.weight')
+        bad_prefix = log.replace(first_ssm, head_route(backend=target) + '\n' + first_ssm, 1)
+        with self.assertRaises(AssertionError):
+            A['route_frames'](bad_prefix)
+
+        first_batch = next(i for i, line in enumerate(lines) if 'BOLT_VERIFY batch ' in line)
+        unknown = (route_batch(list(range(0, 55)), list(range(0, 55))) + '\n' + route_decoded()).splitlines()
+        bad_leading = '\n'.join(lines[:first_batch] + unknown + lines[first_batch:]) + '\n'
+        with self.assertRaises(AssertionError):
+            A['route_frames'](bad_leading)
+
+    def test_analyze_arm_rejects_changed_reordered_or_missing_prefill(self):
+        source = M['ROOT'] / 'run-r1/S0'
+        base_log = (source / 'diagnostic-window.log').read_text()
+        base_lines = base_log.splitlines()
+        verify = A['_verify_frames'](base_log)
+        self.assertEqual([(frame['batch']['n'], frame['batch']['pos']) for frame in verify[:3]], [
+            (5, list(range(0, 5))), (46, list(range(5, 51))), (4, list(range(51, 55)))])
+        names = ('ordinary.result.json', 'warmup.result.json', 'diagnostic.response.json',
+                 'diagnostic.request.json', 'ordinary.request.json', 'warmup.request.json')
+        for kind in ('changed', 'reordered', 'missing'):
+            with self.subTest(kind=kind):
+                cell = self.root / ('prefill-' + kind)
+                cell.mkdir()
+                for name in names:
+                    shutil.copy2(source / name, cell / name)
+                lines = list(base_lines)
+                if kind == 'changed':
+                    index = verify[0]['verify_line']
+                    lines[index] = lines[index].replace('n=5 ', 'n=6 ', 1)
+                elif kind == 'reordered':
+                    first, second = verify[0]['verify_line'], verify[1]['verify_line']
+                    lines[first], lines[second] = lines[second], lines[first]
+                else:
+                    removed = {verify[0]['verify_line'], verify[0]['decoded_line']}
+                    lines = [line for index, line in enumerate(lines) if index not in removed]
+                (cell / 'diagnostic-window.log').write_text('\n'.join(lines) + '\n')
+                with self.assertRaisesRegex(AssertionError, 'frozen prefill batches changed'):
+                    A['analyze_arm'](cell, 'S0', OLD)
 
     def test_missing_c0_continuation_preserves_saved_s0_and_controller_shape(self):
         continuation = runpy.run_path('continue-c0.py')

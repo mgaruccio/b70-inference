@@ -253,6 +253,20 @@ def _assert_prefill_frame(frame):
                 'MOE_GROUPED_GEMM_ATTEMPT', 'MOE_GROUPED_GEMM_RESULT'], routes
 
 
+def assert_frozen_prefill_batches(log):
+    """Require the immutable three-batch prompt reservation before decode."""
+    frames = _verify_frames(log)
+    expected = [
+        (5, list(range(0, 5))),
+        (46, list(range(5, 51))),
+        (4, list(range(51, 55))),
+    ]
+    actual = [(frame['batch']['n'], frame['batch']['pos']) for frame in frames[:3]]
+    assert actual == expected, ('frozen prefill batches changed', actual)
+    assert len(frames) >= 4 and all(frame['batch']['pos'][0] >= 55 for frame in frames[3:]), (
+        'unexpected batch before post-prompt decode', frames[3:])
+
+
 def route_frames(log):
     """Pair direct target-call order with FIFO BOLT_VERIFY batch order.
 
@@ -275,9 +289,8 @@ def route_frames(log):
                     and route['weight'] == 'blk.0.ssm_in.weight'
                     and route['route'] not in ('LIBRARY_DNNL_F32', 'LIBRARY_MKL_F32')]
     assert group_starts, 'missing target SSM route anchors'
-    prefix_target = [route for route in routes[:group_starts[0]]
-                     if route['backend_ctx'] == target_context]
-    assert all(route['weight'] == 'output.weight' for route in prefix_target), (
+    assert not any(route['backend_ctx'] == target_context
+                   for route in routes[:group_starts[0]]), (
         'target operation precedes first SSM anchor')
     groups = []
     for index, start in enumerate(group_starts):
@@ -289,22 +302,14 @@ def route_frames(log):
                            other_backend_routes=[route for route in routes[start:end]
                                                  if route['backend_ctx'] != target_context]))
     group_widths = [_target_group_width(group['routes']) for group in groups]
-    known_widths = {1, 2, 3, 4, 5, 46}
+    assert len(groups) == len(verify_frames), (
+        'target route/verify frame count mismatch', len(groups), len(verify_frames))
     frames = []
-    cursor = 0
-    leading_unmatched = []
     for group_index, group in enumerate(groups):
         width = group_widths[group_index]
-        while cursor < len(verify_frames) and verify_frames[cursor]['batch']['n'] != width:
-            frame = verify_frames[cursor]
-            assert frame['batch']['n'] not in known_widths, (
-                'target BOLT_VERIFY batch missing or reordered', frame['batch'])
-            assert not frames, 'non-target BOLT_VERIFY frame after target stream began'
-            leading_unmatched.append(frame)
-            cursor += 1
-        assert cursor < len(verify_frames), 'target BOLT_VERIFY batch missing'
-        verify = verify_frames[cursor]
-        assert verify['batch']['n'] == width
+        verify = verify_frames[group_index]
+        assert verify['batch']['n'] == width, (
+            'target route/verify width mismatch', group_index, width, verify['batch'])
         frame = dict(batch=verify['batch'], decoded=verify['decoded'],
                      routes=group['routes'],
                      other_backend_routes=group['other_backend_routes'],
@@ -314,8 +319,7 @@ def route_frames(log):
         _assert_target_frame_width(frame)
         _assert_prefill_frame(frame)
         frames.append(frame)
-        cursor += 1
-    assert cursor == len(verify_frames), 'extra BOLT_VERIFY batch after target stream'
+    assert len(frames) == len(verify_frames), 'target route/verify frame mismatch'
     if frames:
         prefix_other = [row['route'] for row in stream[:group_starts[0]]
                         if row['route']['backend_ctx'] != target_context
@@ -326,7 +330,6 @@ def route_frames(log):
                                               and row['line_index'] < frames[0]['verify_line']]
         frames[0]['unframed_target_routes'] = [row['route'] for row in stream[:group_starts[0]]
                                                if row['route']['backend_ctx'] == target_context]
-        frames[0]['leading_unmatched_verify_frames'] = leading_unmatched
     return frames
 
 
@@ -815,11 +818,13 @@ def analyze_arm(cell, label, old):
         ordinary, diagnostic,
         load(reference / 'repeat-00.result.json'),
         load(reference / 'diagnostic.response.json'))
-    result = align(records((cell / 'diagnostic-window.log').read_text()), tokens, cell / 'capture')
+    diagnostic_log = (cell / 'diagnostic-window.log').read_text()
+    assert_frozen_prefill_batches(diagnostic_log)
+    result = align(records(diagnostic_log), tokens, cell / 'capture')
     result['capture_path'] = str(cell / 'capture')
-    route_analysis = select_route_batches((cell / 'diagnostic-window.log').read_text(), label)
+    route_analysis = select_route_batches(diagnostic_log, label)
     assert_actual_route_gates(route_analysis, label)
-    route_analysis['router_batches'] = assert_router_model_routes((cell / 'diagnostic-window.log').read_text(), label)
+    route_analysis['router_batches'] = assert_router_model_routes(diagnostic_log, label)
     parent_comparison = report_parent_comparison(result, label, ordinary, diagnostic)
     if label == 'S0':
         assert_parent_observer_invariant(parent_comparison)
