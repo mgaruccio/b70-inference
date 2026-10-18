@@ -16,7 +16,7 @@ OLD = runpy.run_path(str(PHASE / 'analyze-trace.py'))
 OK = OLD['OK']
 Q8_WEIGHTS = ['blk.1.ffn_latent_down.weight', 'blk.1.ffn_latent_up.weight',
               'blk.7.attn_q.weight', 'blk.7.attn_k.weight', 'blk.7.attn_v.weight', 'blk.7.attn_output.weight']
-ID = r'(q8|iq2)-p([0-5])-n([1-9])-m([01])-l([0-3])'
+ID = r'(q8|iq2)-p([0-5])-n([1-9])-m([01])-l([0-3])(?:-a([02]))?'
 SINGLE = 'MOE_SINGLE_MMVQ_PLAIN_Q8_1'
 LIBRARIES = {'LIBRARY_MKL_F16', 'LIBRARY_DNNL_F16', 'LIBRARY_MKL_F32', 'LIBRARY_DNNL_F32'}
 
@@ -30,31 +30,35 @@ def cases(kind):
         result |= {(kind, p, 4, 1, layout) for layout in (1, 2)}
     if kind == 'q8':
         result |= {(kind, 5, n, 1, 3) for n in range(3, 9)}
-    assert len(result) == (78 if kind == 'q8' else 26)
+    result = {(*key, 1) for key in result}
+    result |= {(kind, p, n, 1, 0, annotation)
+               for p in ((5,) if kind == 'q8' else (0, 1))
+               for n in (4, 8) for annotation in (0, 2)}
+    assert len(result) == (82 if kind == 'q8' else 34)
     return result
 
 
 def identity(key):
-    kind, p, n, mark, layout = key
-    return f'{kind}-p{p}-n{n}-m{mark}-l{layout}'
+    kind, p, n, mark, layout, annotation = key
+    return f'{kind}-p{p}-n{n}-m{mark}-l{layout}' + ('' if annotation == 1 else f'-a{annotation}')
 
 
 def parse_id(text):
     m = re.fullmatch(ID, text)
     assert m, text
-    return (m[1], *map(int, m.groups()[1:]))
+    return (m[1], *map(int, m.groups()[1:5]), int(m[6]) if m[6] is not None else 1)
 
 
 def dimensions(key):
-    kind, p, _, _, _ = key
+    kind, p, _, _, _, _ = key
     if kind == 'q8':
         return (1024 if p == 1 else 4096, 1024 if p == 0 else 256 if p in (3, 4) else 4096, 1)
     return (1024, 2048, 1) if p == 0 else (2048, 1024, 9)
 
 
 def exact(key):
-    kind, _, n, mark, layout = key
-    return layout in ((0, 3) if kind == 'q8' else (0,)) and (n <= 2 or (mark == 1 and n <= 8))
+    kind, _, n, mark, layout, annotation = key
+    return layout in ((0, 3) if kind == 'q8' else (0,)) and (n <= 2 or (mark == annotation == 1 and n <= 8))
 
 
 def route_records(log):
@@ -81,7 +85,7 @@ def route_records(log):
 
 
 def check_routes(rows, key, col):
-    kind, p, n, mark, layout = key
+    kind, p, n, mark, layout, _ = key
     k, m, used = dimensions(key)
     wide = col == 'wide'
     expected_mark = 10 if wide and mark else 0
@@ -178,7 +182,7 @@ def check(log, kind):
     for r in routes:
         match = re.fullmatch('(' + ID + r')-(wide|s[0-8])', r['dst_name'])
         assert match, r
-        key, col = parse_id(match[1]), match[7]
+        key, col = parse_id(match[1]), match.groups()[-1]
         assert key in expected and (col == 'wide' or int(col[1:]) < key[2])
         grouped.setdefault((key, col), []).append(r)
     assert set(grouped) == {(key, col) for key in expected for col in ['wide'] + [f's{i}' for i in range(key[2])]}

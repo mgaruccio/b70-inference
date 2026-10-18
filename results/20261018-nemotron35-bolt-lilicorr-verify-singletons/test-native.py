@@ -9,7 +9,7 @@ M = runpy.run_path(str(Path(__file__).with_name('native.py')))
 
 
 def row(key, col, route, **changes):
-    kind, p, n, mark, layout = key
+    kind, p, n, mark, layout, _ = key
     k, m, used = M['dimensions'](key)
     r = {k: 0 for k in M['OLD']['ROUTE_INTS']}
     r.update({k: '-' for k in M['OLD']['ROUTE_STRINGS']})
@@ -49,9 +49,13 @@ def synthetic(kind, grouped=True):
             keys += [(kind, p, 8, 0, 0)]
     if kind == 'q8':
         keys += [(kind, 5, n, 1, 3) for n in range(3, 9)]
+    keys = [(*key, 1) for key in keys]
+    for p in ([5] if kind == 'q8' else [0, 1]):
+        for n in [4, 8]:
+            keys += [(kind, p, n, 1, 0, annotation) for annotation in [0, 2]]
     lines = ['Backend 1/2: SYCL0']
     for key in keys:
-        _, p, n, mark, layout = key
+        _, p, n, mark, layout, _ = key
         ident = M['identity'](key)
         _, m, used = M['dimensions'](key)
         records = []
@@ -92,7 +96,7 @@ class NativeTests(unittest.TestCase):
             for grouped in (False, True):
                 log = synthetic(kind, grouped)
                 result = M['check'](log, kind)
-                self.assertEqual(result['cases'], 78 if kind == 'q8' else 26)
+                self.assertEqual(result['cases'], 82 if kind == 'q8' else 34)
                 self.assertEqual(result['byte_exact_cases'], 54 if kind == 'q8' else 16)
                 M['check'](log.replace(': OK', ': \x1b[32mOK\x1b[0m'), kind)
 
@@ -125,6 +129,26 @@ class NativeTests(unittest.TestCase):
             for i, bad in enumerate(mutations):
                 with self.subTest(kind=kind, mutation=i), self.assertRaises(AssertionError):
                     M['check'](bad, kind)
+
+    def test_private_scope_negatives(self):
+        for kind in ('q8', 'iq2'):
+            log = synthetic(kind)
+            for p in ([5] if kind == 'q8' else [0, 1]):
+                for n in (4, 8):
+                    for annotation in (0, 2):
+                        key = (kind, p, n, 1, 0, annotation)
+                        self.assertIn(key, M['cases'](kind))
+                        self.assertFalse(M['exact'](key))
+                        ident = M['identity'](key)
+                        self.assertEqual(M['parse_id'](ident), key)
+                        line = next(line for line in log.splitlines() if 'dst_name=' + ident + '-wide ' in line)
+                        old = 'MMVQ_REORDERED' if kind == 'q8' else 'MOE_GROUPED_GEMM_ATTEMPT'
+                        new = 'DMMV_ESIMD' if kind == 'q8' else M['SINGLE']
+                        wrong_route = log.replace(line, line.replace('route=' + old, 'route=' + new), 1)
+                        missing_scope_control = log.replace(ident, ident[:-3])
+                        for bad in (wrong_route, missing_scope_control):
+                            with self.subTest(key=key), self.assertRaises(AssertionError):
+                                M['check'](bad, kind)
 
     def test_command_is_inherited_plus_new_selectors(self):
         command = M['native_command']()

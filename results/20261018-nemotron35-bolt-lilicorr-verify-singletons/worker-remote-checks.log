@@ -15,3 +15,19 @@ columns8 {"libggml-sycl.so.0": "ecc27415ea65c4a18b4767512943cc061c70a6a6a82d1193
 verify-phase {"libggml-sycl.so.0": "bec49499b177561d93d764c69e4388574875a9db0a83f4a7d8c8a012aa8c573d", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "c8389538f105d830720ce29042a6f01c17b7285f2ea3ebd5ab21582834802d62", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "3fd9d0b04df4cc26557b2903bbf6650e5fd7f28d7d60c1f7cc502f90625263db"}
 callsite {"libggml-sycl.so.0": "bec49499b177561d93d764c69e4388574875a9db0a83f4a7d8c8a012aa8c573d", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "b7a32a66f2ef99ac4e2a4c7cb6f8cab60916f9bc091aed7e9a55224ea7765f17", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "3fd9d0b04df4cc26557b2903bbf6650e5fd7f28d7d60c1f7cc502f90625263db"}
 BOLT_VERIFY_SINGLETONS_PROTECTED_PASSED
+
+=== FOLLOW-UP: private scope-marker patch; read-only current-parent checks ===
++ sha256sum /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch
+4362d830523cfc12498655c4a818fb33b570ead82bf774db0f488b5ab456b6ea  /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/verify-singletons.patch
++ ssh -o BatchMode=yes -o ConnectTimeout=20 -o ControlMaster=no -o ControlPath=none -o ForwardAgent=no mike@inference-host 'bash -lc '\''cd /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1 && git apply --check --verbose -'\'''
+Checking patch ggml/src/ggml-sycl/ggml-sycl.cpp...
+Checking patch src/llama-graph.cpp...
+Checking patch src/models/nemotron-h.cpp...
+Checking patch tests/test-backend-ops.cpp...
++ ssh -o BatchMode=yes -o ConnectTimeout=20 -o ControlMaster=no -o ControlPath=none -o ForwardAgent=no mike@inference-host 'bash -lc '\''cd /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1 && patch --dry-run --fuzz=0 --batch -p1'\'''
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
+checking file src/llama-graph.cpp
+checking file src/models/nemotron-h.cpp
+checking file tests/test-backend-ops.cpp
++ printf 'SCOPE_MARKER_REMOTE_DRY_RUNS_PASSED: no remote writes/build/GPU/HTTP\n'
+SCOPE_MARKER_REMOTE_DRY_RUNS_PASSED: no remote writes/build/GPU/HTTP

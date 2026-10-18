@@ -39,10 +39,15 @@ Only these source files may differ from the parent (exact hashes in `source-hash
 4. `tests/test-backend-ops.cpp`: add isolated fixtures only. All inherited tests,
    F32 router/N9 controls and their tolerances remain byte-for-byte source-identical.
 
-The mark is the **existing** `ggml_prec_set_acc(..., GGML_PREC_F32)` request for
-MUL_MAT/MUL_MAT_ID: `op_params[0]` / route `accum_prec=10`; activation precision is
-unchanged (`src1_prec=0` under the frozen settings). No API/header, CLI/env flag or
-precision policy is added. N1/N2, unmarked wider operations, N9 and rejected layouts
+The existing `ggml_prec_set_acc(..., GGML_PREC_F32)` request remains in word 0
+(route `accum_prec=10`). **Independently**, target producers annotate existing
+`op_params[15]` with `0x4e535631`; both conditions are required for n=3..8.
+F32 alone is not target identity: the parent already requests it for GLM4/GLM4_MOE/
+JAIS2 attention output (`llama-graph.cpp:3218–3222,3305–3309`). Those operations
+remain unannotated and cannot enter the widened Q8/IQ2 singleton paths.
+Activation precision remains unchanged (`src1_prec=0` under the frozen settings).
+No API/header, CLI/env flag, precision-bit, tensor-name or tensor-flag encoding is
+added. N1/N2 ignore the annotation entirely; unannotated wider operations, N9 and rejected layouts
 keep their original dispatch. Partial-output checkpoint prefill stays unmarked;
 a small **full-output prompt can satisfy this predicate** (not a universal phase classifier).
 
@@ -58,6 +63,33 @@ For the lead's native/public trace adapter:
 - `check-source.check(parent, candidate, patch)` remains callable and read-only;
   `candidate=None` checks parent/patch identity. The builder separately checks the
   complete non-build source maps, not just these four files.
+
+## Private operation-word audit
+
+This is a pinned-source internal experiment, not a new serving contract. Word 15
+(byte offset 60) is unused **for MUL_MAT/MUL_MAT_ID**, not globally unused:
+
+- `ggml/include/ggml.h:226,700` allocates 64 bytes / 16 int32 words. New tensor
+  allocation zeroes all words (`ggml/src/ggml.c:1835`). `ggml_mul_mat:3362` and
+  `ggml_mul_mat_id:3413` create fresh results and set only the operation/operands.
+- The matmul parameter writers use word 0 for accumulation (`ggml_prec_set_acc:3303`,
+  `ggml_mul_mat_set_prec:3379`), word 1 for the Hadamard hint (`ggml_mul_mat_set_hint:3389`),
+  and word 3 for source-1 precision (`ggml_prec_set_src:3327`, only idx=1 accepted).
+  These writers do not copy/clear or reinterpret word 15. `src/` has only three
+  pre-existing direct parameter reads, all Hadamard word 1 in `llama-context.cpp`.
+- SYCL matmul consumers read accumulation word 0, hint word 1 and activation word 3
+  (`ggml-sycl.cpp:3296,5679`, `common.hpp:114`); CPU matmul reads hint word 1
+  (`ggml-cpu/ggml-cpu.c:1262`), not word 15. The source-wide word-15 scan, including
+  pointer casts/aliases, finds only RoPE `n_offs` producers/consumers; RoPE is unchanged.
+- Backend graph duplication copies the operation **and all 64 parameter bytes**
+  (`ggml-backend.cpp:2278–2280`). IQ2 lowering copies complete output descriptors
+  before changing only pointers/extents; Q8 dispatch retains the original descriptor.
+  The compiled checks verify accumulation/scope preservation in IQ2 singleton copies.
+
+The annotated producer/consumer/test constants are checked together: **3 producer
+sites, 2 guards, 2 fixture classes**, word 15 / `0x4e535631`. The source audit and
+unchanged-core hashes are retained in `worker-checks.log`; re-audit on any source
+refresh rather than treating this slot as a portable ABI reservation.
 
 ## Native fixtures and CPU-only command printing
 
@@ -80,10 +112,16 @@ oneDNN `/opt/onednn:ro`, this package `/verify-singletons:ro`, inherited phase p
 `/router-verify-phase:ro`, and a **fresh** writable native attempt directory `/capture`.
 Lead owns container/device exclusivity and restoration. Do not run inside interactive Pi.
 
-- **78 Q8 cases**: latent down/up and attention q/k/v/output at n=1..9; unmarked n4;
-  marked n4 offset/padded activation controls; full attention reshape at marked3..8.
-- **26 IQ2 cases**: both expert shapes at n=1..9; unmarked n4/n8; marked n4 strided
-  weight and padded-token-layout controls. Cyclic IDs exercise all 16 experts by n2.
+- **82 Q8 cases**: original 78 retained (latent down/up and attention q/k/v/output
+  n=1..9, unmarked n4, marked n4 offset/padded activations, full attention reshape
+  marked3..8); add F32 attention-output n4/n8 with absent/malformed scope markers.
+- **34 IQ2 cases**: original 26 retained (both expert shapes n=1..9, unmarked n4/n8,
+  marked n4 strided weights/padded token layouts); add both F32 expert shapes at
+  n4/n8 with absent/malformed markers. Cyclic IDs exercise all 16 experts by n2.
+- Existing fixture IDs are unchanged. New negative IDs append `-a0` (absent) or
+  `-a2` (malformed) to `*-pP-nN-m1-l0`; these still request F32. The parser requires
+  Q8 `MMVQ_REORDERED` and IQ2 original grouped/per-expert fallback, never the widened
+  singleton path. The marker itself is not a new route-log field.
 - Each graph computes an actual wide op and separate default-precision n=1 ops on
   identical weights, activation columns and IDs, then concatenates the singleton
   outputs. `BOLT_SINGLETON case=... bytes=... required=... mismatches=...` reports a
@@ -157,11 +195,15 @@ failure. No timing/promotion unless fidelity is established; CPU checks are not 
 
 ## Worker close gate observed
 
+The follow-up log sections qualify the private-marker patch; earlier F32-only
+entries are retained as historical evidence, not qualification of this revision.
+
 `worker-checks.log` retains exact local commands/environment (Python3.14.7, GCC16.2.1):
-source/hash scope plus 11 rejecting patch mutations; **313 compiled actual-guard cases**
-with CPU stubs and UBSan (including late preflight failure/no enqueue, pointer offsets,
-parent strides, alias/overflow/layout/phase/architecture/MTP controls); three parser
-unit tests including 42 rejecting mutations; Python/build/embedded-shell syntax;
+source/hash scope plus 13 rejecting patch mutations; **655 compiled actual-guard cases**
+with CPU stubs and UBSan (including F32-only/malformed/marker-only controls, unchanged
+n1/n2 behavior, GLM4/GLM4_MOE/JAIS2 exclusions, late preflight failure/no enqueue,
+pointer offsets, parent strides, alias/overflow/layout/phase/architecture/MTP controls);
+four parser unit tests including **66 rejecting mutations**; Python/build/embedded-shell syntax;
 GCC C++17 syntax-only checks of both graph files and test-backend-ops; fuzz=0 forward
 and reverse patch dry-runs. All passed. No full SYCL compilation was substituted.
 

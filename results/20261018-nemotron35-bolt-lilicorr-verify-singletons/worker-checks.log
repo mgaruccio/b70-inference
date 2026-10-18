@@ -126,3 +126,299 @@ test_rejects_bad_evidence (__main__.NativeTests.test_rejects_bad_evidence) ... o
 Ran 3 tests in 0.877s
 
 OK
+
+=== FOLLOW-UP: private scope marker; supersedes F32-only qualification above ===
++ pwd -P
+/home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons
++ python3 --version
+Python 3.14.7
++ g++ --version
++ head -1
+g++ (GCC) 16.2.1 20260810
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/check-source.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate
+{
+  "source_scope": [
+    "ggml/src/ggml-sycl/ggml-sycl.cpp",
+    "src/llama-graph.cpp",
+    "src/models/nemotron-h.cpp",
+    "tests/test-backend-ops.cpp"
+  ],
+  "patch_sha256": "4362d830523cfc12498655c4a818fb33b570ead82bf774db0f488b5ab456b6ea",
+  "source_hashes": {
+    "ggml/src/ggml-sycl/ggml-sycl.cpp": {
+      "parent": "8d6c1f9314a0ba8be51f5ed7ac3e3c79321e8dd3a950ab6a6ba1a0b5d8b4211d",
+      "candidate": "6b7e7a1801bf267e907b9b40564593b4c0986a3c444c1c476085eff6874ffcdd"
+    },
+    "src/llama-graph.cpp": {
+      "parent": "c28d647b7c9b552089259431eb7f671e9d1409cdeaf64f66d47f33de981a4abc",
+      "candidate": "42ec7a2411a03ec2a53178fa49a244fc8f08c28dd932e9b88e98aee6fe0321e5"
+    },
+    "src/models/nemotron-h.cpp": {
+      "parent": "a3858c2c00cac43665f1fb22824a39ec7f94190bb10f77fe51cf8e3630d6bd38",
+      "candidate": "80691017681665c8d8672f9b7354d37551001eacd59b2cf4b154fcfccc7e2a45"
+    },
+    "tests/test-backend-ops.cpp": {
+      "parent": "6a5835efbcae4d313272303fb7be3d3751a599778db1831fd7029bba1e77b728",
+      "candidate": "3a2167a0b4d9e26feea23ef299e11fe6468baf19be6e0304ebde57ea240e1c6d"
+    }
+  },
+  "candidate_checked": true,
+  "native_and_public_fidelity": "NOT_TESTED",
+  "rejected_patch_mutations": [
+    "width9",
+    "width1",
+    "mark",
+    "scope-marker",
+    "producer-marker",
+    "graph-count",
+    "output-count",
+    "architecture",
+    "identity",
+    "mtp",
+    "all-column-preflight",
+    "stride-overflow",
+    "alias"
+  ]
+}
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/test-guards.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate
+SCOPE_MARKER_CONSISTENCY_PASSED word=15 value=0x4e535631 producers=3 guards=2 fixtures=2
+CPU_GUARDS_PASSED cases=655 (stubs; no GPU execution)
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/test-native.py -v
+test_command_is_inherited_plus_new_selectors (__main__.NativeTests.test_command_is_inherited_plus_new_selectors) ... ok
+test_complete_and_colored (__main__.NativeTests.test_complete_and_colored) ... ok
+test_private_scope_negatives (__main__.NativeTests.test_private_scope_negatives) ... ok
+test_rejects_bad_evidence (__main__.NativeTests.test_rejects_bad_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.427s
+
+OK
++ for source in src/llama-graph.cpp src/models/nemotron-h.cpp tests/test-backend-ops.cpp
++ g++ -std=c++17 -fsyntax-only -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/ggml/include -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/include -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/src -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/src/models /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate/src/llama-graph.cpp
++ for source in src/llama-graph.cpp src/models/nemotron-h.cpp tests/test-backend-ops.cpp
++ g++ -std=c++17 -fsyntax-only -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/ggml/include -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/include -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/src -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/src/models /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate/src/models/nemotron-h.cpp
++ for source in src/llama-graph.cpp src/models/nemotron-h.cpp tests/test-backend-ops.cpp
++ g++ -std=c++17 -fsyntax-only -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/ggml/include -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/include -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/src -I /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent/src/models /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate/tests/test-backend-ops.cpp
++ bash -n /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/build-candidate.sh
++ patch --dry-run --fuzz=0 --batch -p1 -d /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
+checking file src/llama-graph.cpp
+checking file src/models/nemotron-h.cpp
+checking file tests/test-backend-ops.cpp
++ patch --dry-run --reverse --fuzz=0 --batch -p1 -d /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/candidate
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
+checking file src/llama-graph.cpp
+checking file src/models/nemotron-h.cpp
+checking file tests/test-backend-ops.cpp
++ git diff --check
++ printf 'SCOPE_MARKER_LOCAL_CHECKS_PASSED (CPU only; no SYCL build/GPU/HTTP)\n'
+SCOPE_MARKER_LOCAL_CHECKS_PASSED (CPU only; no SYCL build/GPU/HTTP)
+
+=== Pinned parent operation-word audit (read-only) ===
++ cd /home/mike/code/.pi-worktrees/b70-inference/bolt-verify-singletons/results/20261018-nemotron35-bolt-lilicorr-verify-singletons/.work/parent
++ sha256sum ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
+475beaa7e959be8c383279d9ce9d5191f37426e6b338270cfb12b26a798129d3  ggml/include/ggml.h
+42b238412cda218552812a37329fab95a2f94be6d8bff5139083450d432f796d  ggml/src/ggml.c
+43564db0238aebb7ed68501e346c194866b5dac218d1d37b26baff9f458c00d3  ggml/src/ggml-impl.h
+43dea13b13c2a15afd83f53515f3488c17072fc107a6ba4a5e0370f90b4fe7ff  ggml/src/ggml-backend.cpp
+c6ab617afac0eca67c9c9079e75582c791c51f376bb6932502098f8c18a1937d  ggml/src/ggml-cpu/ggml-cpu.c
+57996971b0e058104a268b497a2814c775d0a6dcbc99b1f905c44e93e59d59ef  ggml/src/ggml-sycl/common.hpp
+2a25e556cb0d16725e01ce853fb1b76da91dcb41b803ce1a6bacec89bfb94aa5  src/llama-context.cpp
++ for file in ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
++ cmp ggml/include/ggml.h ../candidate/ggml/include/ggml.h
++ for file in ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
++ cmp ggml/src/ggml.c ../candidate/ggml/src/ggml.c
++ for file in ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
++ cmp ggml/src/ggml-impl.h ../candidate/ggml/src/ggml-impl.h
++ for file in ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
++ cmp ggml/src/ggml-backend.cpp ../candidate/ggml/src/ggml-backend.cpp
++ for file in ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
++ cmp ggml/src/ggml-cpu/ggml-cpu.c ../candidate/ggml/src/ggml-cpu/ggml-cpu.c
++ for file in ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
++ cmp ggml/src/ggml-sycl/common.hpp ../candidate/ggml/src/ggml-sycl/common.hpp
++ for file in ggml/include/ggml.h ggml/src/ggml.c ggml/src/ggml-impl.h ggml/src/ggml-backend.cpp ggml/src/ggml-cpu/ggml-cpu.c ggml/src/ggml-sycl/common.hpp src/llama-context.cpp
++ cmp src/llama-context.cpp ../candidate/src/llama-context.cpp
++ rg -n 'GGML_MAX_OP_PARAMS|op_params\[' ggml/include/ggml.h
+226:#define GGML_MAX_OP_PARAMS      64
+700:        int32_t op_params[GGML_MAX_OP_PARAMS / sizeof(int32_t)];
++ sed -n '1831,1837p;3303,3349p;3362,3438p' ggml/src/ggml.c
+        /*.buffer       =*/ NULL,
+        /*.ne           =*/ { 1, 1, 1, 1 },
+        /*.nb           =*/ { 0, 0, 0, 0 },
+        /*.op           =*/ GGML_OP_NONE,
+        /*.op_params    =*/ { 0 },
+        /*.flags        =*/ 0,
+        /*.src          =*/ { NULL },
+bool ggml_prec_set_acc(
+        struct ggml_tensor * a,
+        enum ggml_prec       prec) {
+    switch (a->op) {
+        case GGML_OP_MUL_MAT:
+        case GGML_OP_MUL_MAT_ID:
+            {
+                const int32_t prec_i32 = (int32_t) prec;
+                ggml_set_op_params_i32(a, 0, prec_i32);
+            }
+            break;
+        case GGML_OP_FLASH_ATTN_EXT:
+            {
+                const int32_t prec_i32 = (int32_t) prec;
+                ggml_set_op_params_i32(a, 3, prec_i32);
+            }
+            break;
+        default:
+            return false;
+    };
+
+    return true;
+}
+
+bool ggml_prec_set_src(
+        struct ggml_tensor * a,
+        enum ggml_prec       prec,
+        int                  idx) {
+    GGML_ASSERT(idx >= 0 && idx < GGML_MAX_SRC);
+
+    switch (a->op) {
+        case GGML_OP_MUL_MAT:
+        case GGML_OP_MUL_MAT_ID:
+            {
+                if (idx != 1) {
+                    return false;
+                }
+
+                const int32_t prec_i32 = (int32_t) prec;
+                ggml_set_op_params_i32(a, 2 + idx, prec_i32);
+            }
+            break;
+        default:
+            return false;
+    };
+
+    return true;
+struct ggml_tensor * ggml_mul_mat(
+        struct ggml_context * ctx,
+        struct ggml_tensor  * a,
+        struct ggml_tensor  * b) {
+    GGML_ASSERT(ggml_can_mul_mat(a, b));
+    GGML_ASSERT(!ggml_is_transposed(a));
+
+    const int64_t ne[4] = { a->ne[1], b->ne[1], b->ne[2], b->ne[3] };
+    struct ggml_tensor * result = ggml_new_tensor(ctx, GGML_TYPE_F32, 4, ne);
+
+    result->op     = GGML_OP_MUL_MAT;
+    result->src[0] = a;
+    result->src[1] = b;
+
+    return result;
+}
+
+void ggml_mul_mat_set_prec(
+        struct ggml_tensor * a,
+        enum ggml_prec       prec) {
+    GGML_ASSERT(a->op == GGML_OP_MUL_MAT);
+
+    const int32_t prec_i32 = (int32_t) prec;
+
+    ggml_set_op_params_i32(a, 0, prec_i32);
+}
+
+void ggml_mul_mat_set_hint(
+        struct ggml_tensor * a,
+        enum ggml_op_hint    hint) {
+    GGML_ASSERT(a->op == GGML_OP_MUL_MAT);
+
+    const int32_t hint_i32 = (int32_t) hint;
+
+    ggml_set_op_params_i32(a, 1, hint_i32);
+}
+
+// ggml_mul_mat_id
+
+/*
+    c = ggml_mul_mat_id(ctx, as, b, ids);
+
+    as  -> [cols, rows, n_expert]
+    b   -> [cols, n_expert_used, n_tokens]
+    ids -> [n_expert_used, n_tokens] (i32)
+    c   -> [rows, n_expert_used, n_tokens]
+
+    in b, n_expert_used can be broadcasted to match the n_expert_used of ids
+
+    c ~= as[:,:,i] @ b[:,i%r,t], i = ids[e,t] for all e,t in ids
+*/
+struct ggml_tensor * ggml_mul_mat_id(
+        struct ggml_context * ctx,
+        struct ggml_tensor  * as,
+        struct ggml_tensor  * b,
+        struct ggml_tensor  * ids) {
+    GGML_ASSERT(!ggml_is_transposed(as));
+    GGML_ASSERT(ids->type == GGML_TYPE_I32);
+
+    GGML_ASSERT(as->ne[3] == 1); // as is 3d (one matrix per expert)
+    GGML_ASSERT(b->ne[3] == 1); // b is 3d
+    GGML_ASSERT(ids->ne[2] == 1 && ids->ne[3] == 1); // ids is 2d
+    GGML_ASSERT(ids->ne[1] == b->ne[2]); // must have an expert list per b row
+    GGML_ASSERT(as->ne[0] == b->ne[0]); // can_mul_mat
+    GGML_ASSERT(ids->ne[0] % b->ne[1] == 0); // can broadcast
+
+    const int64_t ne[4] = { as->ne[1], ids->ne[0], b->ne[2], 1 };
+    struct ggml_tensor * result = ggml_new_tensor(ctx, GGML_TYPE_F32, 4, ne);
+
+    result->op     = GGML_OP_MUL_MAT_ID;
+    result->src[0] = as;
+    result->src[1] = b;
+    result->src[2] = ids;
+
+    return result;
+}
+
++ rg -n op_params src ggml/src/ggml-sycl/common.hpp ggml/src/ggml-cpu/ggml-cpu.c
+ggml/src/ggml-cpu/ggml-cpu.c:1262:    const int32_t hint = ggml_get_op_params_i32(dst, 1);
+ggml/src/ggml-cpu/ggml-cpu.c:2035:                int32_t t = ggml_get_op_params_i32(tensor, 0);
+ggml/src/ggml-cpu/ggml-cpu.c:2451:                struct ggml_map_custom1_op_params p;
+ggml/src/ggml-cpu/ggml-cpu.c:2452:                memcpy(&p, node->op_params, sizeof(p));
+ggml/src/ggml-cpu/ggml-cpu.c:2461:                struct ggml_map_custom2_op_params p;
+ggml/src/ggml-cpu/ggml-cpu.c:2462:                memcpy(&p, node->op_params, sizeof(p));
+ggml/src/ggml-cpu/ggml-cpu.c:2471:                struct ggml_map_custom3_op_params p;
+ggml/src/ggml-cpu/ggml-cpu.c:2472:                memcpy(&p, node->op_params, sizeof(p));
+ggml/src/ggml-cpu/ggml-cpu.c:2481:                struct ggml_custom_op_params p;
+ggml/src/ggml-cpu/ggml-cpu.c:2482:                memcpy(&p, node->op_params, sizeof(p));
+ggml/src/ggml-cpu/ggml-cpu.c:3028:                        const int64_t K   = ggml_get_op_params_i32(node, 0);
+ggml/src/ggml-sycl/common.hpp:114:                                                                                       dst->op_params[3];
+src/llama-context.cpp:65:        if (node->op == GGML_OP_MUL_MAT && ((const int32_t *) node->op_params)[1] == GGML_HINT_SRC0_IS_HADAMARD) {
+src/llama-context.cpp:83:            ((const int32_t *) src->op_params)[1] == GGML_HINT_SRC0_IS_HADAMARD &&
+src/llama-context.cpp:101:                                ((const int32_t *) n2->op_params)[1]);
++ sed -n 2273,2283p ggml/src/ggml-backend.cpp
+    struct ggml_tensor * dst = ggml_dup_tensor_layout(src->data && !src->view_src ? ctx_allocated : ctx_unallocated, src);
+    if (src->view_src != NULL) {
+        dst->view_src = graph_copy_dup_tensor(hash_set, node_copies, ctx_allocated, ctx_unallocated, src->view_src);
+        dst->view_offs = src->view_offs;
+    }
+    dst->op = src->op;
+    dst->flags = src->flags;
+    memcpy(dst->op_params, src->op_params, sizeof(dst->op_params));
+    ggml_set_name(dst, src->name);
+
+    // copy src
++ rg -n 'params[^;]*\[15\]|params[^;]*\+\s*(15|60)|op_params_[a-z0-9]+\([^\n]*,\s*15[,)]' src ggml/src
+ggml/src/ggml.c:4334:    params[15] = 0; // n_offs, set via ggml_rope_set_offset()
+ggml/src/ggml.c:4556:    ggml_set_op_params_i32(a, 15, n_offs);
+ggml/src/ggml-webgpu/ggml-webgpu.cpp:2762:    const int n_offs     = ((int32_t *) dst->op_params)[15];
+ggml/src/ggml-vulkan/ggml-vulkan.cpp:10774:    const int n_offs        = ((const int32_t *) dst->op_params)[15];
+ggml/src/ggml-vulkan/ggml-vulkan-debug.cpp:1079:            const int n_offs = ((int32_t *) tensor->op_params)[15];
+ggml/src/ggml-metal/ggml-metal-ops.cpp:4583:    const int n_offs = ((const int32_t *) op->op_params)[15];
+ggml/src/ggml-et/ggml-et.cpp:1066:                const bool zero_rot_offset  = ggml_get_op_params_i32(op, 15) == 0;
+ggml/src/ggml-hexagon/htp/rope-ops.c:771:    rctx.n_offs     = ((const int32_t *) op_params)[15];
+ggml/src/ggml-sycl/rope.cpp:508:    const int n_offs = ((int32_t *)dst->op_params)[15];
+ggml/src/ggml-hexagon/ggml-hexagon.cpp:7705:    const int n_offs = op_params[15];
+ggml/src/ggml-cuda/rope.cu:584:    const int n_offs     = ((int32_t *) dst->op_params)[15];
+ggml/src/ggml-openvino/openvino/op/rope.cpp:42:    const int64_t n_offs = static_cast<int64_t>(op_params[15]);
+ggml/src/ggml-cuda/ggml-cuda.cu:2887:    const int n_offs = ((const int32_t *) rope->op_params)[15];
+ggml/src/ggml-cann/ggml-cann.cpp:2545:                if (((const int32_t *) op->op_params)[15] != 0) {
+ggml/src/ggml-cpu/ops.cpp:6410:    const int n_offs = ((int32_t *) dst->op_params)[15];
+ggml/src/ggml-opencl/ggml-opencl.cpp:29113:    const int n_offs     = ((int32_t *) dst->op_params)[15];
++ printf 'SLOT_AUDIT_RETAINED: matmul writers words 0/1/3; word15 existing uses are RoPE n_offs; core unchanged\n'
+SLOT_AUDIT_RETAINED: matmul writers words 0/1/3; word15 existing uses are RoPE n_offs; core unchanged
+
+FINAL_FETCHED_SOURCE_SCOPE_PASSED files=1761 changed=['ggml/src/ggml-sycl/ggml-sycl.cpp', 'src/llama-graph.cpp', 'src/models/nemotron-h.cpp', 'tests/test-backend-ops.cpp']

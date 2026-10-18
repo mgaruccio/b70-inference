@@ -46,7 +46,8 @@ STUBS = r'''
 enum { GGML_TYPE_Q8_0, GGML_TYPE_F32, GGML_TYPE_I32, GGML_TYPE_IQ2_XXS, GGML_TYPE_F16 };
 enum { GGML_OP_NONE, GGML_OP_MUL_MAT, GGML_OP_MUL_MAT_ID, GGML_OP_RESHAPE, GGML_OP_ADD };
 enum { GGML_TENSOR_FLAG_INPUT=1, GGML_TENSOR_FLAG_OUTPUT=2, GGML_TENSOR_FLAG_COMPUTE=4 };
-enum { GGML_PREC_F32=10, LLM_ARCH_NEMOTRON_H_MOE, LLM_ARCH_DFLASH, LLM_ARCH_NEMOTRON_H };
+enum { GGML_PREC_F32=10, LLM_ARCH_NEMOTRON_H_MOE, LLM_ARCH_DFLASH, LLM_ARCH_NEMOTRON_H,
+       LLM_ARCH_GLM4, LLM_ARCH_GLM4_MOE, LLM_ARCH_JAIS2 };
 struct block_iq2_xxs { char data[66]; };
 struct feature { bool reorder = false; };
 struct ggml_tensor_extra_gpu { feature optimized_feature; };
@@ -57,7 +58,7 @@ struct ggml_tensor {
     int64_t ne[4]={1,1,1,1}; size_t nb[4]={4,4,4,4};
     ggml_tensor * src[3]={}; ggml_tensor * view_src=nullptr; size_t view_offs=0;
     struct buffer * buffer=nullptr; void * data=nullptr; void * extra=nullptr;
-    char name[128]={}; int32_t op_params[4]={};
+    char name[128]={}; int32_t op_params[16]={};
 };
 struct ggml_backend_sycl_context { int device=0; feature opt_feature{true}; };
 bool g_ggml_sycl_enable_esimd=true, g_ggml_sycl_enable_optimize=true, f16_ok=true, reorder_ok=true;
@@ -113,6 +114,7 @@ struct fixture {
         shape(d,GGML_TYPE_F32,32,iq?9:n,iq?n:1);
         d.op=iq?GGML_OP_MUL_MAT_ID:GGML_OP_MUL_MAT; d.src[0]=&a; d.src[1]=&b; d.src[2]=&ids;
         d.op_params[0]=mark?GGML_PREC_F32:0;
+        d.op_params[15]=mark?0x4e535631:0;
         std::strcpy(a.name,iq?"blk.1.ffn_up_exps.weight":"blk.1.ffn_latent_down.weight");
     }
     static void shape(ggml_tensor & t,int type,int64_t x,int64_t y,int64_t z) {
@@ -141,6 +143,8 @@ int main() {
                 assert(!memcmp(calls[col].input.nb,f.b.nb,sizeof(f.b.nb)));
                 assert(!memcmp(calls[col].ids.nb,f.ids.nb,sizeof(f.ids.nb)));
                 assert(!memcmp(calls[col].output.nb,f.d.nb,sizeof(f.d.nb)));
+                assert(calls[col].output.op_params[0]==f.d.op_params[0]);
+                assert(calls[col].output.op_params[15]==f.d.op_params[15]);
             }
             calls.clear(); preflight=0; fail_preflight=n; // last column, before any enqueue
             assert(!ggml_sycl_mul_mat_id_iq2_single2(f.ctx,&f.a,&f.b,&f.ids,&f.d) && calls.empty());
@@ -148,6 +152,22 @@ int main() {
         }
         ++cases;
     }
+    // Precision is independent of target identity: include GLM-like attention output.
+    for(bool iq:{false,true}) for(int n=1;n<=9;++n) for(bool f32:{false,true})
+        for(int32_t annotation:{0,0x4e535631,0x4e535630,-1}) {
+            fixture f(iq,n,f32);
+            if(!iq) std::strcpy(f.a.name,"blk.7.attn_output.weight");
+            f.d.op_params[15]=annotation;
+            const bool expected=n==2 || (n>=3 && n<=8 && f32 && annotation==0x4e535631);
+            assert(f.eligible()==expected);
+            if(n<=2 || !f32 || annotation!=0x4e535631) assert(f.eligible()==f.eligible(true));
+            if(iq) {
+                calls.clear(); preflight=0;
+                assert(ggml_sycl_mul_mat_id_iq2_single2(f.ctx,&f.a,&f.b,&f.ids,&f.d)==expected);
+                assert(calls.size()==(expected?size_t(n):0));
+            }
+            ++cases;
+        }
     std::vector<std::function<void(fixture&)>> invalid={
         [](fixture&f){f.d.src[0]=&f.b;}, [](fixture&f){f.b.type=GGML_TYPE_F16;},
         [](fixture&f){f.d.ne[0]++;}, [](fixture&f){f.b.nb[2]+=4; f.b.ne[2]=4;},
@@ -180,12 +200,24 @@ int main() {
     assert(aborted && calls.size()==1); fail_dispatch=false; ++cases;
     // Exercise the actual graph producer predicates, including MTP and DFlash exclusions.
     graph g;
-    for(bool iq:{false,true}) for(int n=1;n<=9;++n) for(int outputs:{0,1,n}) for(int arch:{LLM_ARCH_NEMOTRON_H_MOE,LLM_ARCH_DFLASH,LLM_ARCH_NEMOTRON_H}) {
-        fixture f(iq,n,false); g.n_tokens=n; g.n_outputs=outputs; g.arch=arch;
-        if(!iq) std::strcpy(f.a.name,"blk.7.attn_output.weight");
-        g.mark(iq,&f.a,&f.b,&f.b,&f.d,&f.ids,nullptr);
-        assert((f.d.op_params[0]==GGML_PREC_F32)==(arch==LLM_ARCH_NEMOTRON_H_MOE && n>=3 && n<=8 && outputs==n)); ++cases;
-    }
+    for(bool iq:{false,true}) for(int n=1;n<=9;++n) for(int outputs:{0,1,n})
+        for(int arch:{LLM_ARCH_NEMOTRON_H_MOE,LLM_ARCH_DFLASH,LLM_ARCH_NEMOTRON_H,LLM_ARCH_GLM4,LLM_ARCH_GLM4_MOE,LLM_ARCH_JAIS2}) {
+            fixture f(iq,n,false); g.n_tokens=n; g.n_outputs=outputs; g.arch=arch;
+            if(!iq) std::strcpy(f.a.name,"blk.7.attn_output.weight");
+            g.mark(iq,&f.a,&f.b,&f.b,&f.d,&f.ids,nullptr);
+            const bool expected=arch==LLM_ARCH_NEMOTRON_H_MOE && n>=3 && n<=8 && outputs==n;
+            assert((f.d.op_params[0]==GGML_PREC_F32)==expected);
+            assert(f.d.op_params[15]==(expected?0x4e535631:0)); ++cases;
+        }
+    // Existing unrelated F32 requests are retained but never acquire target scope.
+    for(bool iq:{false,true}) for(int n=3;n<=8;++n)
+        for(int arch:{LLM_ARCH_GLM4,LLM_ARCH_GLM4_MOE,LLM_ARCH_JAIS2}) {
+            fixture f(iq,n,true); f.d.op_params[15]=0;
+            if(!iq) std::strcpy(f.a.name,"blk.7.attn_output.weight");
+            g.arch=arch; g.n_tokens=g.n_outputs=n;
+            g.mark(iq,&f.a,&f.b,&f.b,&f.d,&f.ids,nullptr);
+            assert(f.d.op_params[0]==GGML_PREC_F32 && f.d.op_params[15]==0 && !f.eligible()); ++cases;
+        }
     g.arch=LLM_ARCH_NEMOTRON_H_MOE; g.n_tokens=g.n_outputs=4;
     for(bool iq:{false,true}) for(int control=0;control<8;++control) {
         fixture f(iq,4,false); if(!iq) std::strcpy(f.a.name,"blk.7.attn_q.weight");
@@ -198,10 +230,13 @@ int main() {
         if(control==5) g.n_outputs=1;
         if(control==6) g.n_tokens=5;
         if(control==7) f.d.type=GGML_TYPE_F16;
-        g.mark(iq,&f.a,input,&f.b,&f.d,&f.ids,slots); assert(f.d.op_params[0]==0);
+        g.mark(iq,&f.a,input,&f.b,&f.d,&f.ids,slots); assert(f.d.op_params[0]==0 && f.d.op_params[15]==0);
         g.n_tokens=g.n_outputs=4; ++cases;
     }
-    for(int layer:{0,51,52}) { fixture f(false,4,false); g.il=layer; g.latent(&f.d,&f.a,&f.b); assert((f.d.op_params[0]==10)==(layer<52)); ++cases; }
+    for(int layer:{0,51,52}) {
+        fixture f(false,4,false); g.il=layer; g.latent(&f.d,&f.a,&f.b);
+        assert((f.d.op_params[0]==10)==(layer<52)); assert(f.d.op_params[15]==(layer<52?0x4e535631:0)); ++cases;
+    }
     for(const char *name:{"blk.999999999999999999999999999999.attn_q.weight","blk.-1.attn_q.weight","blk.attn_q.weight"}) {
         fixture f(false,4,false); std::strcpy(f.a.name,name); assert(!nemotron_verify_weight(&f.a,52,".attn_q.weight")); ++cases;
     }
@@ -234,6 +269,12 @@ def main():
     code += function(candidate, 'ggml_sycl_mul_mat_id_iq2_single2')
     graph = (args.candidate / 'src/llama-graph.cpp').read_text()
     model = (args.candidate / 'src/models/nemotron-h.cpp').read_text()
+    fixtures = (args.candidate / 'tests/test-backend-ops.cpp').read_text()
+    assert candidate.count('ggml_get_op_params_i32(dst, 15) != 0x4e535631') == 2
+    assert graph.count('res->op_params[15] = 0x4e535631;') == 2
+    assert model.count('out->op_params[15] = 0x4e535631;') == 1
+    assert fixtures.count('wide->op_params[15] = annotation == 0 ? 0 : (0x4e535631 ^ (annotation == 2));') == 2
+    print('SCOPE_MARKER_CONSISTENCY_PASSED word=15 value=0x4e535631 producers=3 guards=2 fixtures=2', flush=True)
     code += function(graph, 'nemotron_verify_weight')
     q8 = graph.split('    // Mark the actual direct Q8 producer,', 1)[1].split('    return res;', 1)[0]
     q8 = '    // Mark the actual direct Q8 producer,' + q8

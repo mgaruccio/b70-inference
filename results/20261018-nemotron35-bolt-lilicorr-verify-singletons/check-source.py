@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent
 PARENT = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1')
 SOURCE_SCOPE = ['ggml/src/ggml-sycl/ggml-sycl.cpp', 'src/llama-graph.cpp',
                 'src/models/nemotron-h.cpp', 'tests/test-backend-ops.cpp']
-PATCH_SHA256 = 'df09643806327b583527b428669371e400b24a63344ab8ccb3f9e59036901f91'
+PATCH_SHA256 = '4362d830523cfc12498655c4a818fb33b570ead82bf774db0f488b5ab456b6ea'
 
 
 def sha256(data):
@@ -42,6 +42,8 @@ def regression(parent, candidate=None, patch=None):
         'width9': ('n > 8', 'n > 9'),
         'width1': ('n < 3', 'n < 1'),
         'mark': ('!= GGML_PREC_F32', '== GGML_PREC_F32'),
+        'scope-marker': ('ggml_get_op_params_i32(dst, 15) != 0x4e535631', 'ggml_get_op_params_i32(dst, 15) == 0x4e535631'),
+        'producer-marker': ('res->op_params[15] = 0x4e535631;', 'res->op_params[15] = 0;'),
         'graph-count': ('== this->n_tokens', '<= this->n_tokens'),
         'output-count': ('this->n_outputs == this->n_tokens', 'this->n_outputs <= this->n_tokens'),
         'architecture': ('LLM_ARCH_NEMOTRON_H_MOE', 'LLM_ARCH_DFLASH'),

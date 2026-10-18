@@ -1,7 +1,7 @@
 diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
 --- a/ggml/src/ggml-sycl/ggml-sycl.cpp
 +++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
-@@ -3818,16 +3818,46 @@
+@@ -3818,16 +3818,49 @@
      peer_access_enabled = enable_peer_access;
  }
  
@@ -34,7 +34,10 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
                                            const ggml_tensor * src1, const ggml_tensor * dst) {
  #ifdef GGML_SYCL_DMMV_HAS_ESIMD
 +    const int64_t n = src1->ne[1];
-+    if (n != 2 && (n < 3 || n > 8 || ggml_get_op_params_i32(dst, 0) != GGML_PREC_F32)) return false;
++    // Word 15 is private scope metadata for MUL_MAT/MUL_MAT_ID, not precision.
++    // F32 alone also occurs on GLM/JAIS attention and must not widen their route.
++    if (n != 2 && (n < 3 || n > 8 || ggml_get_op_params_i32(dst, 0) != GGML_PREC_F32 ||
++                   ggml_get_op_params_i32(dst, 15) != 0x4e535631)) return false;
 +    if (n > 2) {
 +        for (const ggml_tensor * t : {src0, src1, dst}) {
 +            int64_t elements = 1;
@@ -51,7 +54,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
          src0->ne[0] % GGML_SYCL_DMMV_X != 0 || src0->ne[0] % QK8_0 != 0 ||
          ggml_nelements(src0) > INT_MAX || src1->ne[0] != src0->ne[0] || dst->ne[0] != src0->ne[1] ||
          src0->ne[2] != 1 || src0->ne[3] != 1 || src1->ne[2] != 1 || src1->ne[3] != 1 ||
-@@ -3842,6 +3872,8 @@
+@@ -3842,6 +3875,8 @@
          !should_reorder_tensor(ctx, dst)) {
          return false;
      }
@@ -60,7 +63,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
  #ifdef GGML_SYCL_F16
      // Preserve the dispatcher's precision guard even though this path reads F32.
      if (!ggml_sycl_src1_f16_ok(dst)) {
-@@ -3860,6 +3892,13 @@
+@@ -3860,6 +3895,13 @@
          std::strcmp(src0->name + len - (sizeof(attn_out) - 1), attn_out) == 0;
      if (src1->view_src) {
          const ggml_tensor * src1_base = src1->view_src;
@@ -74,7 +77,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
          if (!is_attn_output || src1->op != GGML_OP_RESHAPE || src1->view_offs != 0 ||
              src1->data != src1_base->data || src1->buffer != src1_base->buffer ||
              !src1->buffer || ggml_backend_buffer_is_sycl_split(src1->buffer) ||
-@@ -4132,7 +4171,7 @@
+@@ -4132,7 +4174,7 @@
                      src1_padded_col_size = (i0 * ne11 + src1_col_0) * ne10;
                  }
                  // do the computation
@@ -83,12 +86,14 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
                      ggml_sycl_latent_dmmv2_eligible(ctx, src0, src1, dst)) {
                      // The DMMV callback ignores ncols. Keep its F32 ESIMD arithmetic,
                      // row-low offset and queue ordering, but launch once per column.
-@@ -6139,10 +6178,12 @@
+@@ -6139,10 +6181,14 @@
      const ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
      const ggml_tensor * src1, const ggml_tensor * ids, const ggml_tensor * dst)
  {
 +    const int64_t n = src1->ne[2];
-+    if (n != 2 && (n < 3 || n > 8 || ggml_get_op_params_i32(dst, 0) != GGML_PREC_F32)) return false;
++    // Same private scope word as the targeted graph producers; n=2 ignores it.
++    if (n != 2 && (n < 3 || n > 8 || ggml_get_op_params_i32(dst, 0) != GGML_PREC_F32 ||
++                   ggml_get_op_params_i32(dst, 15) != 0x4e535631)) return false;
      if (dst->op != GGML_OP_MUL_MAT_ID || dst->src[0] != src0 || dst->src[1] != src1 || dst->src[2] != ids ||
          src0->type != GGML_TYPE_IQ2_XXS || src1->type != GGML_TYPE_F32 ||
          ids->type != GGML_TYPE_I32 || dst->type != GGML_TYPE_F32 ||
@@ -97,7 +102,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
          src0->ne[3] != 1 || src1->ne[3] != 1 || ids->ne[2] != 1 || ids->ne[3] != 1 || dst->ne[3] != 1) {
          return false;
      }
-@@ -6174,10 +6215,15 @@
+@@ -6174,10 +6220,15 @@
      }
      // IDs are a view of the full expert-count rows, not tightly packed selected IDs.
      if (ids->nb[0] != sizeof(int32_t) || ids->nb[1] < sizeof(int32_t) * ids->ne[0] ||
@@ -115,7 +120,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
      }
      return true;
  }
-@@ -6187,24 +6233,27 @@
+@@ -6187,24 +6238,27 @@
      const ggml_tensor * src1, const ggml_tensor * ids, ggml_tensor * dst)
  {
      if (!ggml_sycl_iq2_single2_eligible(ctx, src0, src1, ids, dst)) return false;
@@ -149,7 +154,7 @@ diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
          // A false here violates the preflight contract: never fall back after a partial enqueue.
          if (!ggml_sycl_mul_mat_id_mmvq_fused(ctx, src0, &src1_token[t], &ids_token[t], &dst_token[t])) {
              GGML_ABORT("preflighted IQ2 singleton dispatch failed");
-@@ -6269,7 +6318,7 @@
+@@ -6269,7 +6323,7 @@
      const int64_t n_as = ne02;
      const int64_t n_ids = ids->ne[0];
  
@@ -189,7 +194,7 @@ diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
      cur = build_hadamard_input(w, cur);
      ggml_tensor * res = ggml_mul_mat(ctx0, w, cur);
  
-@@ -1649,6 +1666,18 @@
+@@ -1649,6 +1666,19 @@
          res = ggml_add(ctx0, res, ab_cur);
      }
  
@@ -204,11 +209,12 @@ diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
 +         nemotron_verify_weight(w, n_layer, ".attn_v.weight") ||
 +         nemotron_verify_weight(w, n_layer, ".attn_output.weight"))) {
 +        GGML_ASSERT(ggml_prec_set_acc(res, GGML_PREC_F32));
++        res->op_params[15] = 0x4e535631; // private Nemotron verification scope, not a precision bit
 +    }
      return res;
  }
  
-@@ -1658,6 +1687,7 @@
+@@ -1658,6 +1688,7 @@
            ggml_tensor * ids,
            ggml_tensor * w_s,
            ggml_tensor * slots) const {
@@ -216,7 +222,7 @@ diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
      cur = build_hadamard_input(w, cur);
      // the experts in the MoE cache are selected by their slots
      ggml_tensor * res = slots == nullptr ?
-@@ -1700,6 +1730,17 @@
+@@ -1700,6 +1731,18 @@
          res = ggml_add(ctx0, res, ab_cur);
      }
  
@@ -230,6 +236,7 @@ diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
 +        (nemotron_verify_weight(w, n_layer, ".ffn_up_exps.weight") ||
 +         nemotron_verify_weight(w, n_layer, ".ffn_down_exps.weight"))) {
 +        GGML_ASSERT(ggml_prec_set_acc(res, GGML_PREC_F32));
++        res->op_params[15] = 0x4e535631; // private Nemotron verification scope, not a precision bit
 +    }
      return res;
  }
@@ -237,7 +244,7 @@ diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
 diff --git a/src/models/nemotron-h.cpp b/src/models/nemotron-h.cpp
 --- a/src/models/nemotron-h.cpp
 +++ b/src/models/nemotron-h.cpp
-@@ -303,9 +303,19 @@
+@@ -303,9 +303,20 @@
      } else {
          ggml_tensor * inp_emb    = cur;
          ggml_tensor * inp_latent = cur;
@@ -248,6 +255,7 @@ diff --git a/src/models/nemotron-h.cpp b/src/models/nemotron-h.cpp
 +                input->ne[1] >= 3 && input->ne[1] <= 8 && input->ne[1] == this->n_tokens &&
 +                this->n_outputs == this->n_tokens) {
 +                GGML_ASSERT(ggml_prec_set_acc(out, GGML_PREC_F32));
++                out->op_params[15] = 0x4e535631; // private Nemotron verification scope, not a precision bit
 +            }
 +        };
  
@@ -257,7 +265,7 @@ diff --git a/src/models/nemotron-h.cpp b/src/models/nemotron-h.cpp
          }
  
          ggml_tensor * router_logits = build_lora_mm(model.layers[il].ffn_gate_inp, cur);
-@@ -341,7 +351,9 @@
+@@ -341,7 +352,9 @@
          cb(moe_out, "ffn_moe_out", il);
  
          if (model.layers[il].ffn_latent_up) {
@@ -271,7 +279,7 @@ diff --git a/src/models/nemotron-h.cpp b/src/models/nemotron-h.cpp
 diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 --- a/tests/test-backend-ops.cpp
 +++ b/tests/test-backend-ops.cpp
-@@ -5956,6 +5956,140 @@
+@@ -5956,6 +5956,150 @@
      }
  };
  
@@ -293,6 +301,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +    const int profile;
 +    const bool marked;
 +    const int layout; // 0 plain; 1 offset; 2 padded columns; 3 full attention reshape
++    const int annotation; // 0 absent (GLM-like F32); 1 private target marker; 2 malformed
 +    ggml_tensor * wide = nullptr;
 +    ggml_tensor * single = nullptr;
 +    static const char * weight(int p) {
@@ -300,12 +309,13 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +            "blk.7.attn_q.weight", "blk.7.attn_k.weight", "blk.7.attn_v.weight", "blk.7.attn_output.weight"};
 +        return names[p];
 +    }
-+    test_mul_mat_verify_singletons(int p, int64_t n, bool marked, int layout = 0) :
++    test_mul_mat_verify_singletons(int p, int64_t n, bool marked, int layout = 0, int annotation = 1) :
 +        test_mul_mat(GGML_TYPE_Q8_0, GGML_TYPE_F32, p == 0 ? 1024 : (p == 3 || p == 4 ? 256 : 4096),
-+                     n, p == 1 ? 1024 : 4096, {1, 1}, {1, 1}), profile(p), marked(marked), layout(layout) {}
++                     n, p == 1 ? 1024 : 4096, {1, 1}, {1, 1}), profile(p), marked(marked), layout(layout), annotation(annotation) {}
 +    std::string id() const {
 +        return "q8-p" + std::to_string(profile) + "-n" + std::to_string(n) +
-+               "-m" + std::to_string(marked) + "-l" + std::to_string(layout);
++               "-m" + std::to_string(marked) + "-l" + std::to_string(layout) +
++               (annotation == 1 ? "" : "-a" + std::to_string(annotation));
 +    }
 +    std::string vars() override { return "verify_singletons=1,case=" + id(); }
 +    std::string op_desc(ggml_tensor *) override { return "MUL_MAT"; }
@@ -323,7 +333,10 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +            if (layout) b = ggml_view_2d(ctx, b, k, n, b->nb[1], layout == 1 ? b->nb[1] : 0);
 +        }
 +        wide = ggml_mul_mat(ctx, a, b);
-+        if (marked) GGML_ASSERT(ggml_prec_set_acc(wide, GGML_PREC_F32));
++        if (marked) {
++            GGML_ASSERT(ggml_prec_set_acc(wide, GGML_PREC_F32));
++            wide->op_params[15] = annotation == 0 ? 0 : (0x4e535631 ^ (annotation == 2));
++        }
 +        ggml_format_name(wide, "%s-wide", id().c_str());
 +        single = nullptr;
 +        for (int64_t col = 0; col < n; ++col) {
@@ -338,7 +351,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +    }
 +    double err(const float * a, const float * b, size_t count) override {
 +        if (count == 2 * (size_t) ggml_nelements(wide)) {
-+            const bool required = (layout == 0 || layout == 3) && (n <= 2 || (marked && n <= 8));
++            const bool required = (layout == 0 || layout == 3) && (n <= 2 || (marked && annotation == 1 && n <= 8));
 +            if (!verify_singletons_bytes(id(), wide, single, required)) return INFINITY;
 +        }
 +        return test_mul_mat::err(a, b, count);
@@ -348,15 +361,17 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +struct test_mul_mat_id_verify_singletons : public test_mul_mat_id {
 +    const bool marked;
 +    const int layout; // 0 plain; 1 strided weights; 2 padded token stride
++    const int annotation; // 0 absent; 1 private target marker; 2 malformed
 +    ggml_tensor * wide = nullptr;
 +    ggml_tensor * single = nullptr;
-+    test_mul_mat_id_verify_singletons(bool up, int64_t n, bool marked, int layout = 0) :
++    test_mul_mat_id_verify_singletons(bool up, int64_t n, bool marked, int layout = 0, int annotation = 1) :
 +        test_mul_mat_id(GGML_TYPE_IQ2_XXS, GGML_TYPE_F32, 16, 9, up,
 +                        up ? 2048 : 1024, n, up ? 1024 : 2048, 1.0f, layout == 1 ? (up ? 2049 : 1025) : 0),
-+        marked(marked), layout(layout) {}
++        marked(marked), layout(layout), annotation(annotation) {}
 +    std::string id() const {
 +        return "iq2-p" + std::to_string(b ? 0 : 1) + "-n" + std::to_string(n) +
-+               "-m" + std::to_string(marked) + "-l" + std::to_string(layout);
++               "-m" + std::to_string(marked) + "-l" + std::to_string(layout) +
++               (annotation == 1 ? "" : "-a" + std::to_string(annotation));
 +    }
 +    std::string vars() override { return "verify_singletons=1,case=" + id(); }
 +    std::string op_desc(ggml_tensor *) override { return "MUL_MAT_ID"; }
@@ -373,7 +388,10 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +            input = ggml_view_3d(ctx, base, k, input->ne[1], n, base->nb[1], base->nb[2], 0);
 +            wide = ggml_mul_mat_id(ctx, w, input, ids);
 +        }
-+        if (marked) GGML_ASSERT(ggml_prec_set_acc(wide, GGML_PREC_F32));
++        if (marked) {
++            GGML_ASSERT(ggml_prec_set_acc(wide, GGML_PREC_F32));
++            wide->op_params[15] = annotation == 0 ? 0 : (0x4e535631 ^ (annotation == 2));
++        }
 +        ggml_format_name(wide, "%s-wide", id().c_str());
 +        single = nullptr;
 +        for (int64_t col = 0; col < n; ++col) {
@@ -402,7 +420,7 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +    }
 +    double err(const float * a, const float * b, size_t count) override {
 +        if (count == 2 * (size_t) ggml_nelements(wide)) {
-+            const bool required = layout == 0 && (n <= 2 || (marked && n <= 8));
++            const bool required = layout == 0 && (n <= 2 || (marked && annotation == 1 && n <= 8));
 +            if (!verify_singletons_bytes(id(), wide, single, required)) return INFINITY;
 +        }
 +        return test_mul_mat_id::err(a, b, count);
@@ -412,11 +430,11 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
  // MUL_MAT_ID with expert ids repeated within a token's row
  struct test_mul_mat_id_dup : public test_mul_mat_id {
      using test_mul_mat_id::test_mul_mat_id;
-@@ -11784,6 +11918,24 @@
+@@ -11784,6 +11928,31 @@
          test_cases.emplace_back(new test_mul_mat_nvfp4_reorder(37, 9, 192, f32, false));
      }
  
-+    // Bounded phase-marked singleton experiment: 78 Q8 + 26 IQ2 cases.
++    // Bounded phase-marked singleton experiment: 82 Q8 + 34 IQ2 cases.
 +    // All original router, N9, latent/attention and IQ2-single2 cases stay intact.
 +    for (int p = 0; p < 6; ++p) {
 +        for (int64_t n = 1; n <= 9; ++n) {
@@ -426,12 +444,19 @@ diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
 +        for (int layout : {1, 2}) test_cases.emplace_back(new test_mul_mat_verify_singletons(p, 4, true, layout));
 +    }
 +    for (int64_t n = 3; n <= 8; ++n) test_cases.emplace_back(new test_mul_mat_verify_singletons(5, n, true, 3));
++    // F32 is not target identity: GLM/JAIS attention output also requests it.
++    for (int64_t n : {4, 8}) for (int annotation : {0, 2}) {
++        test_cases.emplace_back(new test_mul_mat_verify_singletons(5, n, true, 0, annotation));
++    }
 +    for (bool up : {true, false}) {
 +        for (int64_t n = 1; n <= 9; ++n) {
 +            test_cases.emplace_back(new test_mul_mat_id_verify_singletons(up, n, n >= 3));
 +        }
 +        for (int64_t n : {4, 8}) test_cases.emplace_back(new test_mul_mat_id_verify_singletons(up, n, false));
 +        for (int layout : {1, 2}) test_cases.emplace_back(new test_mul_mat_id_verify_singletons(up, 4, true, layout));
++        for (int64_t n : {4, 8}) for (int annotation : {0, 2}) {
++            test_cases.emplace_back(new test_mul_mat_id_verify_singletons(up, n, true, 0, annotation));
++        }
 +    }
 +
      // Multi-column MMVQ coverage for the Q4_K weight-reuse path and a Q5_K control.
