@@ -84,7 +84,7 @@ def candidate_proof():
     N['check_consumed_sources'](PARENT, 'candidate')
     parent_sources = N['source_hashes'](PARENT)
     assert parent_sources == N['source_hashes'](N['CANDIDATE'])
-    CALLSITE['check'](PARENT, CANDIDATE, CASE_ROOT / 'router-callsite.patch')
+    CALLSITE['check'](PARENT, CANDIDATE, (CASE_ROOT / 'router-callsite.patch').read_text())
     candidate_sources = N['source_hashes'](CANDIDATE)
     assert sorted(k for k in parent_sources.keys() | candidate_sources.keys()
                   if parent_sources.get(k) != candidate_sources.get(k)) == [

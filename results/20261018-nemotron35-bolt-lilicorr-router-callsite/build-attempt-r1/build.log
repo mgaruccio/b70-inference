@@ -1,0 +1,244 @@
++ uname -a
+Linux inference-host 7.2.0-1-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 20 Aug 2026 16:18:38 +0000 x86_64 GNU/Linux
++ docker version
+Client:
+ Version:           29.7.2
+ API version:       1.55
+ Go version:        go1.26.5-X:nodwarf5
+ Git commit:        a7dcaa6fdb
+ Built:             Thu Aug  6 16:36:45 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server:
+ Engine:
+  Version:          29.7.2
+  API version:      1.55 (minimum version 1.40)
+  Go version:       go1.26.5-X:nodwarf5
+  Git commit:       6a43e3d5af
+  Built:            Thu Aug  6 16:36:45 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.3.4
+  GitCommit:        db8809540e1a7a9da5d518876894933ff55692ab.m
+ runc:
+  Version:          1.5.1
+  GitCommit:        1.5.1-1-0-gce23c4c-dirty
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
++ docker image inspect intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-router-callsite-r1-build
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-router-callsite-r1-precheck
+++ cat /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1/UPSTREAM_COMMIT
++ test b6334e37e6ef286fc5091a41b6561b2113d915fb = b6334e37e6ef286fc5091a41b6561b2113d915fb
++ test -f /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1/build-sycl/CMakeCache.txt
++ grep -Fx CMAKE_HOME_DIRECTORY:INTERNAL=/src /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1/build-sycl/CMakeCache.txt
+CMAKE_HOME_DIRECTORY:INTERNAL=/src
++ check_protected
++ python3 -B - /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1
+accepted {"libggml-sycl.so.0": "076b16475de805572cf7a623eecca827fd04e58903bf03a003121f60af56fd2f", "libllama-common.so": "731100ef8c379050fd5fd99f95fb1e6dc1b1fa3498b057ca200f02c8d9758cca", "libllama-server-impl.so": "67ae7c8673110b52d11924677ad662141dc93f57d7c21d67a3f0d3e4489e09ad", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "a6a3f666754fce8edfbb59d9840290a188ba2681e7065f812de3359f4e12c98d"}
+parent {"libggml-sycl.so.0": "64d6a58f17cb92ea9fe6354d9c553f74724565a58fc018d2f4bbd013d090a72e", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "bdd86349fac5ab43fa32d465aad27cec7f31dcad0651f7611403d8a783f10c7d"}
+columns8 {"libggml-sycl.so.0": "ecc27415ea65c4a18b4767512943cc061c70a6a6a82d11930a04a109f3718578", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "947a799046ab125e839afb296d2e0cd7a53448ed575a763bf2837c78de20675f"}
+verify-phase {"libggml-sycl.so.0": "bec49499b177561d93d764c69e4388574875a9db0a83f4a7d8c8a012aa8c573d", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "c8389538f105d830720ce29042a6f01c17b7285f2ea3ebd5ab21582834802d62", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "3fd9d0b04df4cc26557b2903bbf6650e5fd7f28d7d60c1f7cc502f90625263db"}
+BOLT_VERIFY_CALLSITE_PROTECTED_PASSED
++ python3 -B /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/check-source.py
++ tee /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/source-check-parent.log
+{
+  "target": "src/models/nemotron-h.cpp",
+  "parent_sha256": "6eec4bbf1b636a91a2a618545ff22877f1a94645923794ed29ccfe8c87b27ed0",
+  "patched_sha256": "a3858c2c00cac43665f1fb22824a39ec7f94190bb10f77fe51cf8e3630d6bd38",
+  "patch_sha256": "a47f2233bf1c91e6b9c8ca76875b215e999bf357db00dea7d577bbd353d9dd2e",
+  "checks": [
+    "exact target insertion before cb",
+    "entire inherited phase predicate",
+    "precomputed router passed to build_moe_ffn",
+    "candidate bytes pending build"
+  ],
+  "rejected_controls": [
+    "width9",
+    "width1",
+    "graph-count",
+    "output-count",
+    "architecture",
+    "type",
+    "input-identity",
+    "weight-identity",
+    "mtp-path"
+  ]
+}
++ git -C /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1 apply --check --verbose /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/router-callsite.patch
+Checking patch src/models/nemotron-h.cpp...
++ patch --directory=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1 --fuzz=0 --dry-run --batch --forward -p1
+checking file src/models/nemotron-h.cpp
+++ du -sk /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1
+++ cut -f1
++ need=464576
+++ awk 'NR==2 {print $4}'
++++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
+++ df -Pk /home/mike/inference/src
++ available=9510388
++ test 9510388 -gt 5707456
+++ df -Pk /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite
+++ awk 'NR==2 {print $4}'
++ test 9510388 -gt 5242880
+++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
++ df -Pk /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite /home/mike/inference/src
+Filesystem     1024-blocks      Used Available Capacity Mounted on
+/dev/nvme0n1p2   484190196 471485676   9510388      99% /home
+/dev/nvme0n1p2   484190196 471485676   9510388      99% /home
++ cp -a --reflink=auto /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1 /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
++ patch --directory=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1 --fuzz=0 --batch --forward -p1
+patching file src/models/nemotron-h.cpp
++ git -C /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1 apply --reverse --check --verbose /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/router-callsite.patch
+Checking patch src/models/nemotron-h.cpp...
++ check_candidate_sources
++ python3 -B /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/check-source.py --candidate /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
++ tee /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/source-check-candidate.log
+{
+  "target": "src/models/nemotron-h.cpp",
+  "parent_sha256": "6eec4bbf1b636a91a2a618545ff22877f1a94645923794ed29ccfe8c87b27ed0",
+  "patched_sha256": "a3858c2c00cac43665f1fb22824a39ec7f94190bb10f77fe51cf8e3630d6bd38",
+  "patch_sha256": "a47f2233bf1c91e6b9c8ca76875b215e999bf357db00dea7d577bbd353d9dd2e",
+  "checks": [
+    "exact target insertion before cb",
+    "entire inherited phase predicate",
+    "precomputed router passed to build_moe_ffn",
+    "candidate bytes"
+  ],
+  "rejected_controls": [
+    "width9",
+    "width1",
+    "graph-count",
+    "output-count",
+    "architecture",
+    "type",
+    "input-identity",
+    "weight-identity",
+    "mtp-path"
+  ]
+}
++ python3 -B - /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1 /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
+BOLT_VERIFY_CALLSITE_SOURCE_SCOPE_PASSED
++ check_protected
++ python3 -B - /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1
+accepted {"libggml-sycl.so.0": "076b16475de805572cf7a623eecca827fd04e58903bf03a003121f60af56fd2f", "libllama-common.so": "731100ef8c379050fd5fd99f95fb1e6dc1b1fa3498b057ca200f02c8d9758cca", "libllama-server-impl.so": "67ae7c8673110b52d11924677ad662141dc93f57d7c21d67a3f0d3e4489e09ad", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "a6a3f666754fce8edfbb59d9840290a188ba2681e7065f812de3359f4e12c98d"}
+parent {"libggml-sycl.so.0": "64d6a58f17cb92ea9fe6354d9c553f74724565a58fc018d2f4bbd013d090a72e", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "bdd86349fac5ab43fa32d465aad27cec7f31dcad0651f7611403d8a783f10c7d"}
+columns8 {"libggml-sycl.so.0": "ecc27415ea65c4a18b4767512943cc061c70a6a6a82d11930a04a109f3718578", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "947a799046ab125e839afb296d2e0cd7a53448ed575a763bf2837c78de20675f"}
+verify-phase {"libggml-sycl.so.0": "bec49499b177561d93d764c69e4388574875a9db0a83f4a7d8c8a012aa8c573d", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "c8389538f105d830720ce29042a6f01c17b7285f2ea3ebd5ab21582834802d62", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "3fd9d0b04df4cc26557b2903bbf6650e5fd7f28d7d60c1f7cc502f90625263db"}
+BOLT_VERIFY_CALLSITE_PROTECTED_PASSED
+++ df -Pk /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
+++ awk 'NR==2 {print $4}'
++ test 9510380 -gt 5242880
++ docker run --rm --pull=never --name bolt-lilicorr-router-callsite-r1-build --cpus=6 -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1:/src -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro -w /src intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0 bash -lc $'\nset -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\napt-get update -qq\nDEBIAN_FRONTEND=noninteractive apt-get install --no-upgrade -y -qq ninja-build libcurl4-openssl-dev pkg-config\ncmake --build /src/build-sycl --config Release -j6 --target llama-server test-backend-ops\n'
+ 
+:: initializing oneAPI environment ...
+   bash: BASH_VERSION = 5.2.21(1)-release
+   args: Using "$@" for setvars.sh arguments: --force
+:: ccl -- latest
+:: compiler -- latest
+:: debugger -- latest
+:: dev-utilities -- latest
+:: dpl -- latest
+:: mkl -- latest
+:: mpi -- latest
+:: pti -- latest
+:: tbb -- latest
+:: tcm -- latest
+:: umf -- latest
+:: oneAPI environment initialized ::
+ 
+debconf: delaying package configuration, since apt-utils is not installed
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 28099 files and directories currently installed.)
+Preparing to unpack .../curl_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking curl (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Preparing to unpack .../libcurl4t64_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl4t64:amd64 (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Preparing to unpack .../libcurl3t64-gnutls_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl3t64-gnutls:amd64 (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Selecting previously unselected package libcurl4-openssl-dev:amd64.
+Preparing to unpack .../libcurl4-openssl-dev_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl4-openssl-dev:amd64 (8.5.0-2ubuntu10.16) ...
+Selecting previously unselected package ninja-build.
+Preparing to unpack .../ninja-build_1.11.1-2_amd64.deb ...
+Unpacking ninja-build (1.11.1-2) ...
+Setting up libcurl4t64:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up libcurl3t64-gnutls:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up ninja-build (1.11.1-2) ...
+Setting up libcurl4-openssl-dev:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up curl (8.5.0-2ubuntu10.16) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+[1/13] Provisioning UI assets
+-- UI: HF stamp matches 'ggml-org/llama-ui|b0', skipping HF fetch
+-- UI: assets unchanged, skipping embedding
+[2/10] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_6_cxx.cxx.o
+[3/10] Linking CXX shared library bin/libllama.so.0.7.0
+[4/10] Creating library symlink bin/libllama.so.0 bin/libllama.so
+[5/10] Linking CXX shared library bin/libmtmd.so.0.7.0
+[6/10] Creating library symlink bin/libmtmd.so.0 bin/libmtmd.so
+[7/10] Linking CXX shared library bin/libllama-common.so.0.7.0
+[8/10] Creating library symlink bin/libllama-common.so.0 bin/libllama-common.so
+[9/10] Linking CXX shared library bin/libllama-server-impl.so
+[10/10] Linking CXX executable bin/llama-server
++ docker run --rm --pull=never --network none --name bolt-lilicorr-router-callsite-r1-precheck -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1:/src:ro -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0 bash -lc $'\nset -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\nexport LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\nfor f in llama-server libllama-server-impl.so libggml-sycl.so.0 test-backend-ops libllama-common.so libllama.so.0.7.0; do ldd "/src/build-sycl/bin/$f"; done | tee /tmp/dependencies.log\nif grep -F "not found" /tmp/dependencies.log; then exit 1; fi\necho BOLT_VERIFY_CALLSITE_DEPENDENCIES_PASSED\n'
++ check_protected
++ python3 -B - /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1
+accepted {"libggml-sycl.so.0": "076b16475de805572cf7a623eecca827fd04e58903bf03a003121f60af56fd2f", "libllama-common.so": "731100ef8c379050fd5fd99f95fb1e6dc1b1fa3498b057ca200f02c8d9758cca", "libllama-server-impl.so": "67ae7c8673110b52d11924677ad662141dc93f57d7c21d67a3f0d3e4489e09ad", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "a6a3f666754fce8edfbb59d9840290a188ba2681e7065f812de3359f4e12c98d"}
+parent {"libggml-sycl.so.0": "64d6a58f17cb92ea9fe6354d9c553f74724565a58fc018d2f4bbd013d090a72e", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "bdd86349fac5ab43fa32d465aad27cec7f31dcad0651f7611403d8a783f10c7d"}
+columns8 {"libggml-sycl.so.0": "ecc27415ea65c4a18b4767512943cc061c70a6a6a82d11930a04a109f3718578", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "947a799046ab125e839afb296d2e0cd7a53448ed575a763bf2837c78de20675f"}
+verify-phase {"libggml-sycl.so.0": "bec49499b177561d93d764c69e4388574875a9db0a83f4a7d8c8a012aa8c573d", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "c8389538f105d830720ce29042a6f01c17b7285f2ea3ebd5ab21582834802d62", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "3fd9d0b04df4cc26557b2903bbf6650e5fd7f28d7d60c1f7cc502f90625263db"}
+BOLT_VERIFY_CALLSITE_PROTECTED_PASSED
+++ df -Pk /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
+++ awk 'NR==2 {print $4}'
++ test 9498492 -gt 5242880
+++ df -Pk /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite
+++ awk 'NR==2 {print $4}'
++ test 9498492 -gt 5242880
++ check_candidate_sources
++ python3 -B /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/check-source.py --candidate /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
+{
+  "target": "src/models/nemotron-h.cpp",
+  "parent_sha256": "6eec4bbf1b636a91a2a618545ff22877f1a94645923794ed29ccfe8c87b27ed0",
+  "patched_sha256": "a3858c2c00cac43665f1fb22824a39ec7f94190bb10f77fe51cf8e3630d6bd38",
+  "patch_sha256": "a47f2233bf1c91e6b9c8ca76875b215e999bf357db00dea7d577bbd353d9dd2e",
+  "checks": [
+    "exact target insertion before cb",
+    "entire inherited phase predicate",
+    "precomputed router passed to build_moe_ffn",
+    "candidate bytes"
+  ],
+  "rejected_controls": [
+    "width9",
+    "width1",
+    "graph-count",
+    "output-count",
+    "architecture",
+    "type",
+    "input-identity",
+    "weight-identity",
+    "mtp-path"
+  ]
+}
++ python3 -B - /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1 /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
+BOLT_VERIFY_CALLSITE_SOURCE_SCOPE_PASSED
++ python3 -B - /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1 /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1
++ tee /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-callsite/post-build-verification.log
+Changed artifacts: libllama.so.0.7.0
+BOLT_VERIFY_CALLSITE_BUILD_PASSED
++ finish
++ rc=0
++ trap - EXIT
++ set +e
++ check_protected
++ python3 -B - /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-verify-phase-r1
+accepted {"libggml-sycl.so.0": "076b16475de805572cf7a623eecca827fd04e58903bf03a003121f60af56fd2f", "libllama-common.so": "731100ef8c379050fd5fd99f95fb1e6dc1b1fa3498b057ca200f02c8d9758cca", "libllama-server-impl.so": "67ae7c8673110b52d11924677ad662141dc93f57d7c21d67a3f0d3e4489e09ad", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "a6a3f666754fce8edfbb59d9840290a188ba2681e7065f812de3359f4e12c98d"}
+parent {"libggml-sycl.so.0": "64d6a58f17cb92ea9fe6354d9c553f74724565a58fc018d2f4bbd013d090a72e", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "bdd86349fac5ab43fa32d465aad27cec7f31dcad0651f7611403d8a783f10c7d"}
+columns8 {"libggml-sycl.so.0": "ecc27415ea65c4a18b4767512943cc061c70a6a6a82d11930a04a109f3718578", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "8fbc9edb3c724a636fd58dcc5af1d4e95d4f45d4ae228dcfd7200f173e6818bd", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "947a799046ab125e839afb296d2e0cd7a53448ed575a763bf2837c78de20675f"}
+verify-phase {"libggml-sycl.so.0": "bec49499b177561d93d764c69e4388574875a9db0a83f4a7d8c8a012aa8c573d", "libllama-common.so": "934b90be6129c55ba040218f2a895670761a6d9c371da8a1afae568791bbd812", "libllama-server-impl.so": "43dc709205a1f2557b3872ff3789aeefb3d4c8a88b92b69bfa72caceb2468ede", "libllama.so.0.7.0": "c8389538f105d830720ce29042a6f01c17b7285f2ea3ebd5ab21582834802d62", "llama-server": "22073e7fb3ae3a68f694cef109873a94860834996bdf30c597a8ea99da97184d", "test-backend-ops": "3fd9d0b04df4cc26557b2903bbf6650e5fd7f28d7d60c1f7cc502f90625263db"}
+BOLT_VERIFY_CALLSITE_PROTECTED_PASSED
++ test 0 -ne 0
++ printf '%s\n' 0
++ exit 0

@@ -25,6 +25,11 @@ def fixture(passed=False):
 
 
 class ControlTests(unittest.TestCase):
+    def test_actual_candidate_source_and_binary_contract(self):
+        proof = M['candidate_proof']()
+        self.assertEqual(set(proof), {'source', 'binaries'})
+        self.assertEqual(set(proof['binaries']), set(M['N']['ARTIFACTS']))
+
     def test_failure_remains_failure(self):
         result = M['analyze_native'](fixture(), 1)
         self.assertFalse(result['numerical_pass'])
