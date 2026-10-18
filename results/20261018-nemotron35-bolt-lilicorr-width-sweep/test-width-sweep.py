@@ -11,7 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 HERE = Path(__file__).resolve().parent
 SCRATCH = Path(os.environ['BOLT_WIDTH_SWEEP_CPU_SCRATCH']).resolve()
@@ -112,6 +112,18 @@ class WidthSweepFixtures(unittest.TestCase):
                 C['check_output'](result, job, result, OFF['reference_prompt']('A0', job))
         self.assertEqual(before, C['reference_hashes'](H))
 
+
+    def test_reference_hashes_pin_a0_artifacts_and_detect_changes(self):
+        artifacts = C['reference_artifacts'](H)
+        self.assertTrue(artifacts)
+        before = C['reference_hashes'](H)
+        target = artifacts[0]
+        original_sha = C['sha']
+        with patch.dict(C, {'sha': lambda path: 'changed' if Path(path) == target
+                            else original_sha(path)}):
+            after = C['reference_hashes'](H)
+        self.assertNotEqual(before[str(target)], after[str(target)])
+
     def test_quality_anchor_length_and_functional_gates(self):
         selected = C['frozen_jobs'](H)
         for job in C['qualification_jobs'](H):
@@ -163,6 +175,98 @@ class WidthSweepFixtures(unittest.TestCase):
         self.assertEqual(12, len(C['expected_measurements'](set())))
         self.assertEqual(1, sum(row['phase'] == 'warmup' for row in schedule[:4]))
         self.assertEqual(12, sum(row['phase'] == 'warmup' for row in schedule))
+
+
+    def test_phase_exact_name_collisions_preserve_qualification_containers(self):
+        qualification = [C['PREFIX'] + cell.lower() for cell in C['QUALIFY_ORDER']]
+        plan = C['check_name_collisions'](qualification, 'timing', {3, 7})
+        self.assertEqual(('A1', 'W3a', 'W7a', 'W7b', 'W3b', 'A2'),
+                         tuple(plan['planned_cells']))
+        self.assertNotIn(C['PREFIX'] + 'a', plan['planned_names'])
+        with self.assertRaises(AssertionError):
+            C['check_name_collisions']([plan['planned_names'][0]], 'timing', {3, 7})
+
+
+    def test_cumulative_server_stats_retain_counters_and_durations(self):
+        line = ('I spec common_specu: statistics draft-dflash: '
+                '#calls(b,g,a) =   3  11  11, #gen drafts = 11, #acc drafts = 9, '
+                '#gen tokens = 11, #acc tokens = 9, #mean acc len = 1.83, '
+                'dur(b,g,a) = 0.002, 736.226, 0.005 ms')
+        result = C['log_duration_stats'](line)
+        self.assertTrue(result['available'])
+        self.assertTrue(result['cumulative'])
+        record = result['records'][0]
+        self.assertEqual({'b': 3, 'g': 11, 'a': 11}, record['calls'])
+        self.assertEqual({'drafts': 11, 'tokens': 11}, record['generated'])
+        self.assertEqual({'drafts': 9, 'tokens': 9}, record['accepted'])
+        self.assertEqual({'b': 0.002, 'g': 736.226, 'a': 0.005}, record['duration_ms'])
+        with self.assertRaises(AssertionError):
+            C['log_duration_stats']('#calls(b,g,a) = 1 1 1, incomplete')
+
+
+    def test_width_startup_contract_is_case_local_for_3_and_7(self):
+        class Match:
+            def __init__(self, *values):
+                self.values = values
+
+            def group(self, index=0):
+                return self.values[index - 1] if index else self.values[0]
+
+            def groups(self):
+                return self.values
+
+        class Finditer:
+            def __init__(self, *values):
+                self.values = values
+
+            def finditer(self, text):
+                return [Match(value) for value in self.values]
+
+        class Search:
+            def __init__(self, *values):
+                self.values = values
+
+            def search(self, text):
+                return Match(*self.values)
+
+        model_template = ('n_rs_seq = {width}\n'
+                          'n_rs_seq = 0\n'
+                          'common_speculative_impl_draft_dflash\n'
+                          'R (f32) S (f32)\n'
+                          'llama_context: n_outputs_max = {outputs}\n'
+                          'llama_context: n_outputs_max_per_seq = {outputs}\n'
+                          'draft-dflash speculative decoding context\n'
+                          'GGML_SYCL_ENABLE_DNN: 1\nGGML_SYCL_ENABLE_FUSION: 1\n'
+                          'GGML_SYCL_ENABLE_ESIMD: 1\nGGML_SYCL_ENABLE_OPT: 1\n'
+                          'GGML_SYCL_ENABLE_VMM: 1\nGGML_SYCL_ENABLE_GRAPH: 0\n')
+        native = {'parse_native_gate': lambda log, label: self.assertEqual('C0', label)}
+        gate_calls = []
+        p = {'MARKER': 'MARK', 'WIDTH1': self.tmp}
+        for name in ('iq2', 'q8', 'attention', 'attention_view', 'router'):
+            p['check_' + name + '_native_gate'] = (
+                lambda log, name=name: gate_calls.append(name))
+
+        def make_h(width):
+            old = {
+                'check_model_log': lambda model, label: self.assertEqual('C', label),
+                'N_RS_SEQ_RE': Finditer(str(width), '0'),
+                'DFLASH_PARAMS_RE': Search(str(width), '0'),
+                'DFLASH_BLOCK_RE': Search('8'),
+            }
+            return {'off': {'P': p, 'OLD': old,
+                            'check_off_log': lambda log: self.assertIn('MARK', log)}}
+
+        for cell, width in (('W3', 3), ('W7', 7)):
+            model = model_template.format(width=width, outputs=width + 1)
+            with patch.object(C['runpy'], 'run_path', return_value=native):
+                result = C['check_width_startup']('native\nMARK\n' + model, cell, make_h(width))
+            self.assertEqual(width, result['target_n_rs_seq'])
+            self.assertEqual(width + 1, result['n_outputs_max'])
+        self.assertEqual(10, len(gate_calls))
+        bad = model_template.format(width=7, outputs=8)
+        with patch.object(C['runpy'], 'run_path', return_value=native):
+            with self.assertRaises(AssertionError):
+                C['check_width_startup']('native\nMARK\n' + bad, 'W3', make_h(3))
 
     def test_complete_mount_objects_canonicalize_order_only(self):
         mounts = [

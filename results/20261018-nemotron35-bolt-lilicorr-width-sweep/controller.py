@@ -204,7 +204,8 @@ class Runtime:
         self.original_was_running = True
         assert self.h['api']['request'](self.off['OLD']['URL'], '/health')['status'] == 'ok'
         existing = self.command('docker', 'ps', '-a', '--format', '{{.Names}}').splitlines()
-        assert not any(name.startswith(C['PREFIX']) for name in existing)
+        planned = C['check_name_collisions'](existing, self.mode, self.qualified_widths)
+        C['save'](self.out / 'planned-containers.json', planned)
         C['save'](self.out / 'original-container.json', self.original)
         C['save'](self.out / 'hash-checks-before.json', self.hashes)
         C['save'](self.out / 'hardware-before.json', self.before_hw)
@@ -267,10 +268,12 @@ class Runtime:
         C['save'](cell_dir / 'models.json', self.ready(self.h['api'], name))
         startup = self.save_logs(cell, 'native-and-startup', name)
         label = C['cell_label'](cell)
-        self.off['check_startup'](startup, label)
-        assert 'BOLT_VERIFY_SERVER_START' not in startup
-        startup_contract = dict(label=label, width=C['width_for'](cell),
-                                evidence='PID1 argv below; startup text is retained, not forged')
+        if C['width_for'](cell) is None:
+            self.off['check_startup'](startup, label)
+            startup_contract = dict(label=label, width=None)
+        else:
+            startup_contract = C['check_width_startup'](startup, cell, self.h)
+        startup_contract['evidence'] = 'PID1 argv below; startup text is retained, not forged'
         pid_record = self.pid(cell, 'before')
         startup_contract['pid_argv'] = pid_record['argv']
         startup_contract['pid_width_evidence'] = 'actual /proc/1/cmdline'

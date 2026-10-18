@@ -253,6 +253,25 @@ def eligible_order(widths):
                  if cell.startswith('A') or width_for(cell) in widths)
 
 
+def planned_cells(mode, widths=()):
+    assert mode in ('qualification', 'timing'), mode
+    if mode == 'qualification':
+        assert not widths
+        return QUALIFY_ORDER
+    return eligible_order(widths)
+
+
+def check_name_collisions(existing, mode, widths=()):
+    plan = planned_cells(mode, widths)
+    planned = tuple(PREFIX + cell.lower() for cell in plan)
+    assert len(planned) == len(set(planned))
+    collisions = sorted(set(planned) & set(existing))
+    assert not collisions, ('planned container names already exist', collisions)
+    return dict(mode=mode, qualified_widths=sorted(int(width) for width in widths),
+                planned_cells=list(plan), planned_names=list(planned),
+                collisions=collisions)
+
+
 def expected_measurements(widths):
     return [job for job in schedule() if job['phase'] == 'measured'
             and job['cell'] in eligible_order(widths)]
@@ -454,6 +473,42 @@ def check_pid(record, cell, h):
     return True
 
 
+def check_width_startup(log, cell, h):
+    width = width_for(cell)
+    assert width in (3, 7), cell
+    off, p, old = h['off'], h['off']['P'], h['off']['OLD']
+    assert p['MARKER'] in log and log.count(p['MARKER']) == 1
+    off['check_off_log'](log)
+    native = runpy.run_path(str(p['WIDTH1'] / 'analyze-controls.py'))
+    native['parse_native_gate'](log, 'C0')
+    for name in ('iq2', 'q8', 'attention', 'attention_view', 'router'):
+        p['check_' + name + '_native_gate'](log)
+    assert 'call ggml_sycl_ssm_scan_prefill:' not in log.split(p['MARKER'], 1)[0]
+    model = log.split(p['MARKER'], 1)[1]
+    old['check_model_log'](model, 'C')
+    values = [int(match.group(1)) for match in old['N_RS_SEQ_RE'].finditer(model)]
+    assert values[:2] == [width, 0], values
+    params = old['DFLASH_PARAMS_RE'].search(model)
+    assert params and params.groups() == (str(width), '0'), params
+    block = old['DFLASH_BLOCK_RE'].search(model)
+    assert block and block.group(1) == '8', block
+    spec = model.split('common_speculative_impl_draft_dflash', 1)[1]
+    spec = spec.split('speculative decoding context', 1)[0]
+    assert 'clamp' not in spec.lower(), 'unexpected speculative parameter clamp'
+    assert "R (f32)" in model and "S (f32)" in model, 'F32 recurrent state not reported'
+    for key in ('n_outputs_max', 'n_outputs_max_per_seq'):
+        match = re.search(r'llama_context: ' + key + r'\s*=\s*(\d+)', model)
+        assert match and match.group(1) == str(width + 1), (key, match)
+    for key, value in (('DNN', 1), ('FUSION', 1), ('ESIMD', 1), ('OPT', 1),
+                       ('VMM', 1), ('GRAPH', 0)):
+        assert f'GGML_SYCL_ENABLE_{key}: {value}' in model
+    assert 'BOLT_VERIFY error' not in log
+    return dict(label='C0', width=width, target_n_rs_seq=width,
+                draft_n_rs_seq=0, n_max=width, n_min=0, block_size=8,
+                n_outputs_max=width + 1, n_outputs_max_per_seq=width + 1,
+                evidence='shared native/model/off-log gates')
+
+
 def source_evidence(h):
     # The imported helper owns the accepted five-binary/source pin set.  This
     # call only reads it; callers save both this result and the exact hash map.
@@ -471,10 +526,42 @@ def code_hashes(h):
     return paths
 
 
+def reference_artifacts(h):
+    """Return every A0 request/response file consumed by ``_reference``."""
+    off = h['off']
+    paths = set()
+    suffixes = ('.request.json', '.request-body', '.http-request.json',
+                '.http.json', '.http-body')
+    for job in off['frozen_jobs']():
+        stem = off['ROOT'] / 'run-r1/A0' / job['stem']
+        request = artifact(stem, '.request.json')
+        assert load(request) == job['payload'], ('reference request drift', job['stem'])
+        assert artifact(stem, '.request-body').read_bytes() == json.dumps(
+            job['payload']).encode()
+        request_record = load(artifact(stem, '.http-request.json'))
+        assert request_record['url'] == off['OLD']['URL'] + '/v1/chat/completions'
+        assert request_record['method'] == 'POST'
+        assert request_record['headers']['Content-type'] == 'application/json'
+        response = load(artifact(stem, '.http.json'))
+        raw = artifact(stem, '.http-body').read_bytes()
+        assert response['status'] == 200 and response['complete'] and 'error' not in response
+        assert response['bytes'] == len(raw)
+        paths.update(artifact(stem, suffix) for suffix in suffixes)
+    paths.update((off['ROOT'] / 'run-r1' / name) for name in (
+        'original-container.json', 'hardware-before.json'))
+    paths.update((off['ROOT'] / 'run-r1' / 'A0' / name) for name in (
+        'container.json', 'create-argv.json', 'models.json', 'startup.json'))
+    paths.add(off['NODRAFT'] / 'run-r1/A0' / 'create-argv.json')
+    paths.add(off['NODRAFT'] / 'run-r1' / 'frozen-payload.json')
+    for path in paths:
+        assert path.is_file(), path
+    return tuple(sorted(paths))
+
+
 def reference_hashes(h):
-    # The diagnostics-off helper already hashes all frozen payload/response,
-    # prompt, source-proof, and accepted/candidate reference artifacts.
-    return h['off']['reference_hashes'](h['off']['frozen_jobs']())
+    paths = h['off']['reference_hashes'](h['off']['frozen_jobs']())
+    paths.update({str(path): sha(path) for path in reference_artifacts(h)})
+    return paths
 
 
 def check_tested(h):
@@ -506,14 +593,30 @@ def check_speculation_counts(view):
 
 
 def log_duration_stats(log_text):
-    """Extract only duration fields actually emitted in existing server logs."""
-    found = []
-    known = ('draft_ms', 'draft_duration_ms', 'speculative_ms',
-             'speculative_duration_ms', 'acceptance_ms')
+    """Parse cumulative speculative statistics emitted by the server."""
+    number = r'(?:\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)'
+    pattern = re.compile(
+        r'#calls\(b,g,a\)\s*=\s*(\d+)\s+(\d+)\s+(\d+)\s*,\s*'
+        r'#gen drafts\s*=\s*(\d+)\s*,\s*'
+        r'#acc drafts\s*=\s*(\d+)\s*,\s*'
+        r'#gen tokens\s*=\s*(\d+)\s*,\s*'
+        r'#acc tokens\s*=\s*(\d+)\b.*?'
+        r'dur\(b,g,a\)\s*=\s*(' + number + r')\s*,\s*(' + number +
+        r')\s*,\s*(' + number + r')\s*ms')
+    records = []
     for line_number, line in enumerate(log_text.splitlines(), 1):
-        if not any(name in line for name in known):
+        if '#calls(b,g,a)' not in line:
             continue
-        found.append(dict(line=line_number, text=line,
-                          fields={name: line.count(name) for name in known if name in line}))
-    return dict(available=bool(found), records=found,
-                source='server logs only; no diagnostic/profile hook added')
+        match = pattern.search(line)
+        assert match, ('unparseable cumulative server statistics', line)
+        calls = tuple(int(value) for value in match.group(1, 2, 3))
+        generated = dict(drafts=int(match.group(4)), tokens=int(match.group(6)))
+        accepted = dict(drafts=int(match.group(5)), tokens=int(match.group(7)))
+        duration = tuple(float(value) for value in match.group(8, 9, 10))
+        records.append(dict(line=line_number, text=line, cumulative=True,
+                           calls=dict(zip(('b', 'g', 'a'), calls)),
+                           generated=generated, accepted=accepted,
+                           duration_ms=dict(zip(('b', 'g', 'a'), duration))))
+    return dict(available=bool(records), records=records,
+                cumulative=True, per_request_durations_derived=False,
+                source='cumulative server log records only')
