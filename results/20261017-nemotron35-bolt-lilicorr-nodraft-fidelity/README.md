@@ -1,6 +1,6 @@
 # True no-draft A0 fidelity preparation — development only
 
-**Real A0 is pending; no timing interpretation or promotion.** This is one bounded validation harness, not another optimization. The accepted runtime, five-width runtime, saved S0/C0, native gates, weights, and persistent launcher are immutable. No rebuild/source patch or additional depth test is authorized.
+**Real A0 passes the frozen fidelity gate; no timing interpretation or promotion.** See the lead-observed result below. This is one bounded validation harness, not another optimization. The accepted runtime, five-width runtime, saved S0/C0, native gates, weights, and persistent launcher are immutable. No rebuild/source patch or additional depth test is authorized.
 
 ## Declaration and research basis
 
@@ -57,4 +57,20 @@ bash -lc 'ssh -o BatchMode=yes -o ConnectTimeout=8 -o ControlMaster=no -o Contro
 
 Tests cover actual S0 argv removal, prior K1 startup, unchanged native30 parser on saved actual native evidence, source/five-binary guards, restoration config, absence of imported main, frozen requests, independent logger FIFO, source-derived width boundaries and corruptions, arbitrary valid contiguous chunks, single-only128 alignment, raw-file guards, inclusive fidelity cutoffs/arm labels, shape differences without false parent invariance, and API20 common mechanics. **All transformed route/frame fixtures are SYNTHETIC and cannot prove live A0 behavior.** Saved S0 raw captures exercise common capture mechanics only.
 
-Remote CPU gate: **16 tests passed in 7.020s, exit0**; all protected source and binary hashes matched. Exact commands, environment, tested script hashes, and retained logs are in [preparation-results.md](preparation-results.md) and `preparation/`. Real A0/native/API/restoration/fidelity remain lead-owned pending work. No standard publication checklist is complete; no performance result is claimed.
+Remote CPU gate: **16 tests passed in 7.020s, exit0**; all protected source and binary hashes matched. Exact commands, environment, tested script hashes, and retained logs are in [preparation-results.md](preparation-results.md) and `preparation/`. At preparation commit `8893b676`, real A0/native/API/restoration/fidelity remained pending; the subsequent result follows. No standard publication checklist is complete; no performance result is claimed.
+
+## Lead-observed true-baseline result
+
+The lead installed the tested scripts, byte-compared them with the remote preparation snapshot, and ran exactly one fresh A0 capture: `python3 -B run-a0.py 2>&1 | tee -a controller-r1.log`. After successful capture/restoration, the separate CPU command was `python3 -B analyze-a0.py 2>&1 | tee -a analysis-r1.log`. Both ran from the declared remote root via local `bash -c`, remote `bash -s`, the SSH options above, and `set -euo pipefail`; logs were created exclusively. Both exited0. There was no rebuild, inference retry, parser fix, or repeated arm.
+
+- Real startup confirmed no draft model/implementation, `n_rs_seq=0`, output capacity/per-sequence capacity1. The five candidate binaries and complete accepted/candidate source maps remained unchanged.
+- Existing native385 + OUTPROD190/support9 + IQ2six + latent7 + attention13/view6 + router30 gates passed. Fresh API20 passed; warmup/ordinary/diagnostic completed and within-arm output consistency passed.
+- Actual prompt chunks were5/46/4, covering the exact55 frozen IDs;127 singleton decode frames yielded128 samples/emissions. All representative route, shape, stride, precision, ordering and single-only gates passed. Natural K1/no-feature-extraction settings were retained, not forced into the reference configuration.
+- **A0 versus S0: all128 complete131072-F32 vectors are byte-identical, and all128 emitted token IDs match.** Actual batch inputs and selected-row metadata also match, despite different startup reservation/features.
+- **A0 versus C0: all128 complete131072-F32 vectors are byte-identical, and all128 emitted token IDs match.** Actual batch inputs and selected-row metadata differ as expected for active drafting; those differences were recorded, not rejected or hidden.
+- Both comparisons have no first score or output difference and cover all128 positions. Across all20 saved API cases, requests, text, finish reasons and completion-token counts match A0/S0 and A0/C0. These API cases do not establish raw-token-ID equality independently of the frozen diagnostic.
+- The controller restored the exact original container/configuration/mounts, verified READY, unchanged hardware/source/binaries, and sole-original running. After analysis the lead independently re-inspected the live original container, checked exact configuration and sole-running status, and obtained `/health` status `ok` (`lead-inspection-r1.json`). The experimental A0 container remains stopped; the accepted runtime and persistent launcher are unchanged.
+
+Remote canonical evidence is `run-r1/{summary.json,analysis.json,A0/alignment.json,A0/capture/}` plus API results and logs. Local logs and JSON larger than1MB are losslessly gzip-compressed with mtime0; raw logits remain remote. The original pre-run declaration is preserved in `run-r1/declaration.md`.
+
+This closes the **true no-draft versus active width1 frozen-probe** gap. It does not establish broader-context fidelity, higher draft depths, clean/non-debug performance, or production quality. Next is bounded longer-prompt/retrieval fidelity on the same unchanged width1 runtime. Timing and promotion remain blocked.
