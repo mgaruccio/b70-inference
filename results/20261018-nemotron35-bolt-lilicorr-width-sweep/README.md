@@ -10,7 +10,7 @@ Only `results/20261018-nemotron35-bolt-lilicorr-width-sweep/` is changed. The pr
 
 The candidate source is `/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-widths-single2-r1`. Current source facts are pinned before any launch: `common/speculative.cpp:1296-1350` sets `n_draft=params.n_max` while `n_block_tokens=is_lilicorr ? block_size : ...`; the actual C1 startup has `dflash.block_size=8`, `lilicorr.candidate_topk=8`, `n_max=1/min=0/p_min=0`. Therefore a full eight-position drafter block is already performed at width 1 and the usable draft limit is 7. Widths **3** and **7** are bounded screening sizes (nominal verification 4/8); they are not claims that the native wider output dimensions are draft depth.
 
-The native router’s five widths are output dimensions 240/304/368/432/496, not draft depths. The single2 workaround intentionally applies to n2/n3 and is not treated as eligibility evidence. Historical max4/max1 token-116 failures are not conflated with this current fixed-width-1 source.
+The native router’s five widths are output dimensions 240/304/368/432/496, not draft depths. The single2 workaround applies only to n2; n3 remains ineligible. Native coverage is not treated as wider-depth public-fidelity evidence. Historical max4/max1 token-116 failures are not conflated with this current fixed-width-1 source.
 
 The exact frozen requests and outputs are read from the accepted diagnostics-off A0 references:
 

@@ -517,4 +517,3 @@ def log_duration_stats(log_text):
                           fields={name: line.count(name) for name in known if name in line}))
     return dict(available=bool(found), records=found,
                 source='server logs only; no diagnostic/profile hook added')
-EOF

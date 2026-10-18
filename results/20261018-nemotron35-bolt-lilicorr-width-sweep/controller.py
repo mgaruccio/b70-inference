@@ -573,6 +573,7 @@ def capture(runtime, cells, callback):
                    raw_f32_equality_claimed=False)
     def interrupted(signum, frame):
         raise InterruptedError(f'interrupted by signal {signum}')
+    failure = None
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(sig, interrupted)
     try:
@@ -607,4 +608,3 @@ def capture(runtime, cells, callback):
         raise failure
     assert summary['status'] == 'captured' and summary['restored'], summary
     return summary
-EOF
