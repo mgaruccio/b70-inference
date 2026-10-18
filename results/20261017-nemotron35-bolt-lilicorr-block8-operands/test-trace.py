@@ -2399,7 +2399,7 @@ int main() {
                                        ('blk.8.ffn_gate_inp.weight','dst','block8_router_projection'),
                                        ('blk.8.ffn_latent_down.weight','src1','between_router_and_latent_down'),
                                        ('blk.8.ffn_latent_down.weight','weight','latent_down_weight_bytes_differ'),
-                                       ('blk.8.ffn_latent_down.weight','dst','latent_down_projection')]: 
+                                       ('blk.8.ffn_latent_down.weight','dst','latent_down_projection')]:
             meta = arms['C0']['operand_analysis']; row = meta['projections'][weight][role]
             path = Path(meta['directory'])/row['file']
             with path.open('r+b') as stream: stream.write(b'\x01')

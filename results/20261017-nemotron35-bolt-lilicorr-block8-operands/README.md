@@ -137,3 +137,23 @@ execution:
 `build-candidate.sh` and real S0/C0 capture remain lead-only and pending. Real
 E2E, empirical both-arm parity, operand equality, restoration, timing, and
 promotion conclusions are not claimed here.
+
+## Lead-observed result — block8 router differs with identical operands
+
+Lead verification ran entirely on `mike@inference-host`, via explicit local Bash and remote `bash -s` with the declared SSH flags, from this remote result root. Commands were `python3 -B test-trace.py 2>&1 | tee lead-cpu-r1.log` (**85 passed in169.708s**), then `bash build-candidate.sh`; after read-only review found no blockers, `python3 -B run-trace.py 2>&1 | tee controller-r1.log` and `python3 -B analyze-trace.py 2>&1 | tee analysis-r1.log`. The latter two were fail-fast chained. Preparation route checks above use synthetic records, not runtime evidence; the following results come from the actual compiled candidate and API captures.
+
+Real build/dependency/source/five-binary gates passed. Both S0/C0 passed native385 + OUT_PROD190/support9 + IQ2six + latent7 + attention13 + view6 + router6, fresh API20/20, warmup, ordinary stream and separate diagnostic. Both arms preserve **all128 immediate-parent raw vectors byte-for-byte**, plus prompt/IDs/text/batch inputs/selected positions/rows. No continuation or inference rerun was needed.
+
+At output2/position55/token0, the block8 router's full4,980,736-byte F32 weight and16,384-byte input match exactly across S0/C0. Its1,216-byte output differs: **274/304 float bit patterns differ; maximum absolute difference4.291534423828125e-6**, starting at byte0. The latent-down full4,456,448-byte reordered Q8 weight,16,384-byte input and4,096-byte output all match exactly. These are two projections and six files per arm, not six model weights; expert/shared operands were not captured.
+
+Live route gates passed for all target frames: block8's router uses one full-width outer/inner MKL F32 pair at n1/n2 (DNNL F32 at prefill46); the existing block1 C0 router still uses two singleton pairs. The measured localization is `block8_router_projection`, not a sole-root-cause or complete-fidelity claim. Final raw scores still first differ at output2 before rollback, and emitted tokens at41.
+
+Candidate SYCL SHA256 `fdc36e2a590dd3ebf0825d656ef19a866e0c8ad8d2c8fd5b19d37869dda2ffef`; the other four artifacts remain identical to router-single2. Controller restoration and independent analyzer recheck passed for the original container identity/config/HostConfig/all mounts, five hashes, protected sources, hardware, live health, READY and sole original process. The older router-control `test-trace.py` also matches committed bytes on the remote host: SHA256 `20f69c5b2357bc44e0b6f6246db8273260bf1a3643e3e9dc2642f677180d1a70`. No older baseline fixture change remains.
+
+Canonical remote evidence: `run-r1/analysis.json`, per-arm alignments, raw `capture/` and `moe-operands/`, `router-difference.json`, and `router-width-inventory.json`. Local logs, worker failure logs/excerpts and JSON larger than1MB are lossless gzip with mtime0; remote originals remain intact. Valid unified-diff blank context markers are retained in patch/diff assets rather than treated as source whitespace. Lead removed one test-only trailing space before its85-test run. An initial archive command had a shell-quoting SyntaxError before producing any archive; corrected retrieval used the same saved artifacts, with no inference retry.
+
+## Next bounded computational control — not yet implemented or verified
+
+Fresh GGUF header inventory finds40 F32 routers with K4096 and exactly five output widths:240(12 routers),304(6),368(9),432(10),496(3). The current240-only guard covers only12 shapes-instances. Identical operands/different router outputs have now been measured at240 and304; other widths are not independently proven divergent.
+
+The next development-only control will reuse the existing two-singleton path for the closed width set `{240,304,368,432,496}`, require matching source/destination dimensions, and preserve all other eligibility/range/alias/queue guards. Native coverage will exercise each width and unsupported/mismatched-width exclusions. Live route checks will cover representatives blk1(240),blk8(304),blk21(432),blk37(368),blk48(496); this is representative coverage, not a claim that all40 activations were logged. No operand observer is carried into that computational runtime. S0 must preserve all128 parent vectors; C0 may change and must follow its own newly generated proposal history, with comparisons limited to common prior history. Accepted runtime remains immutable. Timing and promotion stay blocked pending actual fidelity results.
