@@ -96,3 +96,30 @@ Retained remote iteration logs under this root's `worker-cpu/`:
 Historical-only `test_pair_r2_preserves_controller_and_analyzer_logic` is retired: no one-use retry controller is part of this experiment. The old IQ2 route-replacement wiring test is superseded by `test_both_arm_parent_parity_and_controller_return_fields`, using current real parent routes rather than synthesizing the already-integrated control. Native numerical/failure/count/route gates, API20 checks, raw128 checks and restoration behavior are retained. No source archive, raw tensors, raw logits or prior build logs are copied into Git.
 
 Lead execution remains `bash build-candidate.sh`, `python3 -B run-trace.py`, then `python3 -B analyze-trace.py` **on inference-host** using the same SSH envelope. Preserve their logs and `run-r1/` evidence remotely. If any parity/attribution/native/API/restoration gate fails, retain the attempt, restore the original service and stop; no retry-until-match. No timing or promotion is authorized.
+
+## Saved-S0 parser correction and missing-C0 continuation
+
+Lead66 CPU tests, build, dependency checks and protected source/five-binary gates passed. S0 completed the native gates, API20, warmup, ordinary and diagnostic requests; all128 parent raw vectors and text/ID/batch identities passed. Analysis then rejected `copy/compute ordering`. The original failed run remains failed, with original service restored and no C0 run.
+
+The failed assumption was ordering between different logging mechanisms, not a failed copy or observed arithmetic change. `BOLT_VERIFY` uses LOG_INF and the new operand records use GGML_LOG_INFO -> common_log_default_callback -> common_log_add(common_log_main()), an ordered asynchronous logger (common/log.cpp:187–190,240+,560+). Existing BOLT_ROUTE writes directly to stderr (ggml-sycl.cpp:231+). In the real S0 diagnostic, the first projection's route printed at line190 before its queued before-src1 message at191 (one-based), even though the unchanged C++ hook copies/waits before invoking the original matmul.
+
+Correct analysis requires ordered before-weight/before-src1/after-dst records from the common logger, exactly one matching successful route inside the same actual target frame, all context/type/shape/stride/bounds metadata, and unchanged128-parent vectors. It no longer treats the direct-stderr record's printed position relative to queued operand text as GPU operation ordering. This preserves copy-phase and target-frame checks; runtime source/binary/capture behavior is unchanged. Regression tests use the real saved S0 log/captures, valid direct-route positions, and retain invalid same-logger phase-order/duplicate/missing/drafter/outside-frame negatives.
+
+Run remote `python3 -B test-trace.py`, then `python3 -B continue-c0.py`. The one-use continuation validates the original specific failure, absent C0, frozen payload/create argv, native/API/128-row/operand gates using SAVED S0, protected sources/hashes and restored identity/hardware/health/READY. It does not rerun S0 or rebuild. Only the missing C0 executes in fresh continuation-c0 paths and a distinct container, with unchanged controller function bodies and pinned parent paths (AST regression). Both arms must independently preserve all128 parent vectors before comparing operands. The original failed summary is never rewritten; new reanalysis-S0.json and continuation-comparison.json identify their separate source cells. Any new failure remains failed; no retry-until-match or timing.
+
+## Observed localization result
+
+Updated remote CPU suite: **68/68 passed** (`lead-cpu-parser-r2.log.gz`). `python3 -B continue-c0.py` validated the existing S0 without rerunning it, ran only the missing C0, and independently verified restoration. Evidence: `reanalysis-S0.json`, `continuation-c0/run-r1/C0/alignment.json`, `continuation-comparison.json`, and `continuation-c0.log.gz`. Original `run-r1/summary.json` remains failed for the original parser error; the continuation summary is completed.
+
+Both arms passed the unchanged native385, OUT_PROD190 numerical/9 support, six IQ2, seven latent, thirteen attention and six attention-view cases, plus API20/20. Both preserve **all128 parent raw-logit vectors byte-for-byte**, as well as prompt, IDs, ordinary/diagnostic text, target batch inputs, selected rows and positions. The observer therefore did not change either recorded parent trajectory. Cross-arm output divergence remains40 and raw-score divergence2 before rollback; this is not a fidelity pass.
+
+At the actual first post-prompt target frame (position55/output2), the S0/C0 token0 boundary comparisons are ALL byte-identical:
+
+- ssm_in: entire reordered weight42,762,240 bytes; F32 input16,384 bytes; F32 output74,240 bytes.
+- ssm_out: entire reordered weight18,874,368 bytes; F32 input32,768 bytes; F32 output16,384 bytes.
+
+The first-block projections and their observed input/output boundaries do not explain the score divergence at this step. This does **not** prove every intermediate recurrent-state byte or later step equal. Continue localization at block1's F32 router and Q8 latent-down projections rather than claiming an SSM scan cause from route labels.
+
+Only candidate SYCL changed: `b9919ae26c9d9793504e30ad5e2a3dcb3b07fbf1d9b20691868bb79445bccf2f`. Other four protected candidate binaries equal IQ2 parent; accepted/parent binaries and source inventories stayed unchanged. Original container identity/config/HostConfig/all mounts, hardware, health, READY and sole-running-service checks passed after both original and continuation paths. Raw logits and all full operand/weight files remain remote; Git contains metadata, patches and losslessly compressed logs only.
+
+Selective source/capture review found no unfixed safety/correctness blocker and explicitly confirmed the mixed-logger parser correction. Its observations were based on source and saved S0, not a new GPU run; the lead's completed missing-C0 journey above supplies the additional E2E evidence. No timing or promotion.

@@ -745,7 +745,10 @@ def analyze_operands(cell, label, alignment):
         route_line, route = routes[0]
         assert route['route'] == 'MMVQ_REORDERED' and route['reorder'] == 1 and route['result'] == -1
         assert route['op'] == 'MUL_MAT' and route['expert'] == -1 and route['device'] == 0
-        assert rows[0][0] < rows[1][0] < route_line < rows[2][0], 'copy/compute ordering'
+        # Operand/BOLT_VERIFY messages share the ordered common logger; BOLT_ROUTE
+        # writes stderr directly. Its printed position does not order GPU operations.
+        # Require the same frame/dispatch/metadata above and ordered copy phases here.
+        assert rows[0][0] < rows[1][0] < rows[2][0], 'copy phase ordering'
         result[weight] = {}
         for _, row in rows:
             assert row['n'] == n

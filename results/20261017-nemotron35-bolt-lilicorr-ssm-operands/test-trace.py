@@ -1792,6 +1792,37 @@ class Trace(unittest.TestCase):
         with self.assertRaises(AssertionError):
             A['first_operand_column'](b'abcd', strided)
 
+    def test_missing_c0_continuation_preserves_logic_and_saved_s0(self):
+        continuation = runpy.run_path('continue-c0.py')
+        source = continuation['controller_source']()
+        namespace = {'__name__': 'continuation_preview', '__file__': str(continuation['NEXT']/'run-trace.py')}
+        exec(compile(source, namespace['__file__'], 'exec'), namespace)
+        self.assertEqual(namespace['ROOT'], continuation['NEXT'])
+        self.assertEqual(namespace['ORDER'], ('C0',))
+        self.assertNotEqual(namespace['PREFIX'], M['PREFIX'])
+        for key in ('WIDTH1', 'PARENT_RESULTS', 'ACCEPTED', 'PARENT', 'CANDIDATE', 'SOURCE_SCOPE',
+                    'IQ2_NATIVE_COMMAND', 'Q8_NATIVE_COMMAND', 'ATTENTION_NATIVE_COMMAND', 'ATTENTION_VIEW_NATIVE_COMMAND'):
+            self.assertEqual(namespace[key], M[key])
+        old_functions = [ast.dump(n) for n in ast.parse(Path('run-trace.py').read_text()).body if isinstance(n, ast.FunctionDef)]
+        new_functions = [ast.dump(n) for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)]
+        self.assertEqual(old_functions, new_functions)
+        runner = runpy.run_path(str(OLD['OLD']/'run-bolt-cell-ssm-prefill-r1.py'))
+        result = continuation['validate_saved_s0'](M, A, OLD, NATIVE, runner)
+        self.assertTrue(result['observer_parent_invariant_passed'])
+        self.assertTrue(result['operand_analysis']['complete'])
+
+    def test_saved_ssm_capture_async_route_print_order(self):
+        cell = Path('/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-ssm-operands/run-r1/S0')
+        lines = (cell/'diagnostic-window.log').read_text().splitlines()
+        first = next(i for i, line in enumerate(lines) if 'BOLT_SSM_OPERAND' in line)
+        src = next(i for i in range(first, len(lines)) if 'BOLT_SSM_OPERAND' in lines[i] and 'role=src1 ' in lines[i])
+        route = next(i for i in range(first, len(lines)) if 'BOLT_ROUTE' in lines[i] and 'weight=blk.0.ssm_in.weight ' in lines[i])
+        self.assertLess(route, src)  # Real stderr route precedes queued before-src1 text.
+        result = A['analyze_arm'](cell, 'S0', OLD)
+        self.assertTrue(result['observer_parent_invariant_passed'])
+        self.assertTrue(result['operand_analysis']['complete'])
+        self.assertEqual(result['parent_comparison']['compared_through_ordinal'], 128)
+
     def test_operand_attribution_order_duplicates_and_outside(self):
         for label in ('S0', 'C0'):
             cell, alignment = operand_cell(self.root/label/'operand-fixture', label)
@@ -1809,6 +1840,13 @@ class Trace(unittest.TestCase):
             other_backend['backend_ctx'] = '0xbeef'
             mutations.append(good.replace(record, operand_line(other_backend), 1))
             route_index = next(i for i in range(index, len(lines)) if 'BOLT_ROUTE' in lines[i])
+            for position in (index, index + 1):
+                shifted = lines[:]
+                dispatch = shifted.pop(route_index)
+                shifted.insert(position, dispatch)
+                (cell/'diagnostic-window.log').write_text('\n'.join(shifted))
+                self.assertTrue(A['analyze_operands'](cell, label, alignment)['complete'])
+            (cell/'diagnostic-window.log').write_text(good)
             mutations += [good.replace(lines[route_index], lines[route_index]+'\n'+lines[route_index], 1),
                           good.replace(lines[route_index], lines[route_index].replace('route=MMVQ_REORDERED', 'route=MMVQ_PLAIN'), 1)]
             outer = lines[route_index].replace('route=MMVQ_REORDERED', 'route=MUL_MAT_SYCL')
