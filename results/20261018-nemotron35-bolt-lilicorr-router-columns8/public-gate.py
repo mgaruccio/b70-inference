@@ -28,9 +28,9 @@ K = runpy.run_path(str(OLD / 'controller.py'))
 C = K['C']  # Inherited run_job's exception identity is essential.
 N = runpy.run_path(str(ROOT / 'run-trace.py'))
 A = runpy.run_path(str(ROOT / 'analyze-trace.py'))
-OUT = ROOT / 'qualification-r1'
+OUT = ROOT / 'qualification-r2'
 MODE = 'router-columns8-qualification'
-ROLES = {'R8-A': 'A', 'R8-W3': 'W3', 'R8-W7': 'W7'}
+ROLES = {'R8R2-A': 'A', 'R8R2-W3': 'W3', 'R8R2-W7': 'W7'}
 CELLS = tuple(ROLES)
 MARKER = 'BOLT_VERIFY_ROUTER_COLUMNS8_NATIVE_PASSED'
 NATIVE_LOGS = {'router_single2': 'router-single2-native.log',
@@ -372,7 +372,7 @@ def compare(kind, actual, expected):
 
 
 def new_report(cell):
-    return dict(cell=cell, role=ROLES[cell], width=C['width_for'](ROLES[cell]), baseline=(cell == 'R8-A'),
+    return dict(cell=cell, role=ROLES[cell], width=C['width_for'](ROLES[cell]), baseline=(cell == 'R8R2-A'),
                 passed=False, jobs=[], errors=[], fidelity_failures=[],
                 behavior=dict(natural_stop_cases=0, fixed_length_cases=0, diagnostics_exercised=0,
                               rejected_draft_observed=0, not_exercised=[]))
@@ -426,7 +426,7 @@ def collect(rt, cell):
                 read_public(rt.h, rt.out / cell, job)
                 result = read_result(rt.h, rt.out / cell, job)
             frozen = read_result(rt.h, rt.off['ROOT'] / 'run-r1/A0', job)
-            fresh = result if cell == 'R8-A' else read_result(rt.h, rt.out / 'R8-A', job)
+            fresh = result if cell == 'R8R2-A' else read_result(rt.h, rt.out / 'R8R2-A', job)
             row = add_result(report, job, result, frozen, fresh)
             C['save'](rt.out / cell / 'qualification.json', report)
             if report['baseline'] and not row['passed']:
@@ -498,12 +498,12 @@ def analyze(h):
                 read_public(h, directory, job)
                 actual = read_result(h, directory, job)
                 frozen = read_result(h, h['off']['ROOT'] / 'run-r1/A0', job)
-                fresh = actual if cell == 'R8-A' else read_result(h, OUT / 'R8-A', job)
+                fresh = actual if cell == 'R8R2-A' else read_result(h, OUT / 'R8R2-A', job)
                 add_result(report, job, actual, frozen, fresh)
             finish_report(report)
             assert report == captured, 'capture bookkeeping differs from independently reread raw evidence'
             report['cumulative_server_statistics'] = stats
-            if cell == 'R8-A':
+            if cell == 'R8R2-A':
                 assert report['passed'], 'fresh baseline failed'
         analysis['qualified_widths'] = [r['width'] for r in analysis['reports'].values() if r['width'] and r['passed']]
         analysis['status'] = 'analyzed'

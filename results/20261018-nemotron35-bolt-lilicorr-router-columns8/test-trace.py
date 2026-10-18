@@ -52,7 +52,7 @@ def fixture(tag='router_columns8', mutate=None):
         lines.append(f'  MUL_MAT({prefix}router_single2=1,weight={w},layout={layout},'
                      f'type_a=f32,type_b=f32,m={m},n={n},k=4096,bs=[1,1],nr=[1,1],per=[0,1,2,3],'
                      'k_v=0,o=1,src_overlap=0,m_v=0,pad=0): \x1b[1;32mOK\x1b[0m')
-    lines += [f'  {len(cases)}/{len(cases)} tests passed', '  Backend SYCL0: OK',
+    lines += [f'  {len(cases)}/{len(cases)} tests passed', '  Backend SYCL0: \x1b[1;32mOK\x1b[0m',
               'Backend 2/2: CPU', '  Skipping', '2/2 backends passed', 'OK']
     return '\n'.join(lines) + '\n'
 
@@ -72,6 +72,19 @@ class NativeParser(unittest.TestCase):
                 self.assertEqual((result['cases'], result['route_records'], result['split_cases']), (count, records, splits))
                 self.assertEqual(result['public_api_fidelity'], 'NOT_TESTED')
                 self.assertEqual(result['device_batched_vs_singleton_byte_equality'], 'NOT_TESTED')
+
+    def test_colored_backend_status_is_exact_and_unique(self):
+        colored = '\x1b[1;32mOK\x1b[0m'
+        for tag in A['TAGS']:
+            raw = fixture(tag)
+            line = '  Backend SYCL0: ' + colored
+            plain = raw.replace(line, '  Backend SYCL0: OK')
+            self.assertEqual(self.check(raw, tag), self.check(plain, tag))
+            for status in ('', 'FAIL', '\x1b[1;31mFAIL\x1b[0m', 'OK trailing',
+                           '\x1b[2JOK', 'OK\n  Backend SYCL0: OK'):
+                with self.subTest(tag=tag, status=status):
+                    self.reject(raw.replace(line, '  Backend SYCL0: ' + status), tag)
+            self.reject(raw.replace(line + '\n', ''), tag)
 
     def test_every_positive_requires_all_actual_singleton_routes(self):
         for key in sorted(A['native_cases']('router_columns8')):

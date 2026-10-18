@@ -16,12 +16,14 @@ proven router cause. Native success alone cannot demonstrate the public fix.
 
 The native patch changes F32 per-column router dispatch from n=2 to n=2..8 only;
 all shape/type/layout/name/width guards remain. This qualification uses that new
-candidate for fresh **R8-A (no draft), R8-W3 (max3/min0), R8-W7 (max7/min0)**.
+candidate for fresh **R8R2-A (no draft), R8R2-W3 (max3/min0), R8R2-W7 (max7/min0)**.
 Roles map to the old A/W3/W7 argv. Target/drafter, weights, thread count, context,
 cache types, sampler, image, environment and hardware caps otherwise stay fixed.
-Physical names are `bolt-lilicorr-width-sweep-r1-r8-{a,w3,w7}`. Old case names are
+Physical names are `bolt-lilicorr-width-sweep-r1-r8r2-{a,w3,w7}`. Old case names are
 not reused, removed or treated as collisions. Only new names and a new
-`qualification-r1/` are permitted.
+`qualification-r2/` are permitted.
+
+Attempt r1 is preserved: it stopped at ANSI-colored backend-status parsing before model startup or public requests, and restoration was independently verified. Attempt r2 changes that parser check and the attempt namespace only; the runtime binaries, payloads, numerical tolerances and route requirements are unchanged. Replay the preserved raw 30-case log and rerun both CPU suites before this attempt.
 
 The launch delta is exactly name, parent `/src:ro` -> candidate `/src:ro`, the
 additional case `/router-columns8:ro` bind, and native validation shell code.
@@ -50,6 +52,12 @@ Exact commands, submitted by the lead as separate managed remote jobs:
 ```bash
 ROOT=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-columns8
 # First: build must already have completed successfully. Do NOT rebuild/reuse a failed attempt.
+set -euo pipefail
+(set -o noclobber; : > "$ROOT/cpu-r2.log")
+python3 -B "$ROOT/test-trace.py" 2>&1 | tee -a "$ROOT/cpu-r2.log"
+(set -o noclobber; : > "$ROOT/native-replay-r1.log")
+python3 -B "$ROOT/analyze-trace.py" --tag router_single2 \
+  "$ROOT/qualification-r1/R8-A/restored-router-single2-native.log" 2>&1 | tee -a "$ROOT/native-replay-r1.log"
 bash "$ROOT/cpu-public-gate.sh"
 ```
 
@@ -58,8 +66,8 @@ Only after CPU success and authorization of the exclusive live window:
 ```bash
 set -euo pipefail
 ROOT=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-columns8
-test ! -e "$ROOT/public-capture-r1.log"
-python3 -B "$ROOT/public-gate.py" --lead-run-qualification 2>&1 | tee "$ROOT/public-capture-r1.log"
+test ! -e "$ROOT/public-capture-r2.log"
+python3 -B "$ROOT/public-gate.py" --lead-run-qualification 2>&1 | tee "$ROOT/public-capture-r2.log"
 ```
 
 Only after that command exits **captured and restored**, a separate invocation:
@@ -67,8 +75,8 @@ Only after that command exits **captured and restored**, a separate invocation:
 ```bash
 set -euo pipefail
 ROOT=/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-columns8
-test ! -e "$ROOT/public-analysis-r1.log"
-python3 -B "$ROOT/public-gate.py" --lead-after-restore 2>&1 | tee "$ROOT/public-analysis-r1.log"
+test ! -e "$ROOT/public-analysis-r2.log"
+python3 -B "$ROOT/public-gate.py" --lead-after-restore 2>&1 | tee "$ROOT/public-analysis-r2.log"
 ```
 
 The CPU runner records exact commands/environment and isolated attempt logs under
@@ -124,7 +132,7 @@ as qualified for a separately declared future experiment: timing remains false.
 ## Evidence and cleanup
 
 Retain build manifests/logs, CPU attempt files, both top-level CLI logs, and the
-whole `qualification-r1/`: declaration/tested freeze; environment/hardware/source
+whole `qualification-r2/`: declaration/tested freeze; environment/hardware/source
 proofs; full argv/diffs/container/PID/library/startup records; raw HTTP request and
 response files; public template/tokenize evidence; per-cell qualification reports;
 ready/restored raw 30/62 native files; cumulative proposal/acceptance statistics;

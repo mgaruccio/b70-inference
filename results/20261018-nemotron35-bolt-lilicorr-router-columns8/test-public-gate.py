@@ -78,7 +78,7 @@ class PublicGateFixtures(unittest.TestCase):
         for job in JOBS:
             for suffix in P['HTTP_SUFFIXES']:
                 source = C['artifact'](C['QUALIFY_DIR'] / 'A' / job['stem'], suffix)
-                target = C['artifact'](self.tmp / 'R8-A' / job['stem'], suffix)
+                target = C['artifact'](self.tmp / 'R8R2-A' / job['stem'], suffix)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, target)
 
@@ -205,7 +205,7 @@ class PublicGateFixtures(unittest.TestCase):
             P['candidate_proof']()  # Failed build cannot qualify, before touching sources/binaries.
 
     def test_valid_mismatches_keep_25_and_diagnostic_rejection_behavior(self):
-        for cell in ('R8-W3', 'R8-W7'):
+        for cell in ('R8R2-W3', 'R8R2-W7'):
             rt = self.runtime(P['ROLES'][cell])
             self.assertEqual([], P['collect'](rt, cell))
             report = C['load'](self.tmp / cell / 'qualification.json')
@@ -231,20 +231,20 @@ class PublicGateFixtures(unittest.TestCase):
             return result
         rt.run_job.side_effect = mismatch
         with self.assertRaises(C['InfraFailure']):
-            P['collect'](rt, 'R8-A')
-        report = C['load'](self.tmp / 'R8-A/qualification.json')
+            P['collect'](rt, 'R8R2-A')
+        report = C['load'](self.tmp / 'R8R2-A/qualification.json')
         self.assertEqual(1, rt.run_job.call_count)
         self.assertEqual(1, len(report['jobs']))
         self.assertTrue(report['fidelity_failures'])
         rt = self.runtime()
         rt.run_job.side_effect = ConnectionError('CPU transport fixture')
         with self.assertRaises(C['InfraFailure']):
-            P['collect'](rt, 'R8-W3')
+            P['collect'](rt, 'R8R2-W3')
         self.assertEqual(1, rt.run_job.call_count)
-        self.assertTrue(C['load'](self.tmp / 'R8-W3/qualification.json')['errors'])
+        self.assertTrue(C['load'](self.tmp / 'R8R2-W3/qualification.json')['errors'])
 
     def test_fully_passing_report_requires_real_rejected_draft(self):
-        for cell, rejects, passed in (('R8-A', False, True), ('R8-W3', False, False), ('R8-W7', True, True)):
+        for cell, rejects, passed in (('R8R2-A', False, True), ('R8R2-W3', False, False), ('R8R2-W7', True, True)):
             report = P['new_report'](cell)
             for job in JOBS:
                 result = recorded('A', job)
@@ -276,7 +276,7 @@ class PublicGateFixtures(unittest.TestCase):
 
     def test_failed_start_preserves_native_via_stopped_container_without_blocking_restore(self):
         rt = P['Runtime'](H, self.tmp, P['MODE'])
-        cell = 'R8-W3'
+        cell = 'R8R2-W3'
         (self.tmp / cell).mkdir()
         rt.created = [cell]
         rt._stop_if_running = Mock()

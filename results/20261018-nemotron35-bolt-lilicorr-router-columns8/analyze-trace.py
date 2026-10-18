@@ -112,7 +112,8 @@ def check_router_native_output(log, tag='router_columns8'):
     count = str(len(expected))
     assert re.findall(r'(?m)^\s*(\d+)/(\d+) tests passed\s*$', log) == [(count, count)]
     assert re.findall(r'(?m)^Backend \d+/\d+: (\S+)\s*$', log) == ['SYCL0', 'CPU']
-    assert re.findall(r'(?m)^\s*Backend SYCL0: (\S+)\s*$', log) == ['OK']
+    backend_status = re.findall(r'(?m)^[ \t]*Backend SYCL0: ([^\r\n]*)$', log)
+    assert len(backend_status) == 1 and re.fullmatch(OK + r'[ \t]*', backend_status[0])
     assert re.findall(r'(?m)^(\d+)/(\d+) backends passed\s*$', log) == [('2', '2')]
     # Only the backend not selected by -b is allowed to skip. Do not normalize logs.
     assert len(re.findall(r'(?m)^Backend 2/2: CPU\n[ \t]+Skipping\n', log)) == 1
