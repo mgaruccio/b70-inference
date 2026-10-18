@@ -1022,6 +1022,7 @@ def compare_blocks(arms):
         compared.append(dict(block=physical_id, source=BLOCK_NAMES[slot], bytes_equal=left == right,
                              compared_bytes=16384, first_differing_byte=first,
                              first_differing_float=None if first is None else first // 4))
+    assert compared[0]['block'] == 7 and compared[0]['bytes_equal'], 'known-equal checkpoint7 anchor changed'
     first_difference = next((r['block'] for r in compared if not r['bytes_equal']), None)
     if first_difference is None:
         previous_equal = BLOCK_IDS[-1]

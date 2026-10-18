@@ -2394,11 +2394,16 @@ int main() {
         for block in BLOCK_IDS:
             metadata=arms['C0']['block_analysis']; slot=BLOCK_IDS.index(block); path=Path(metadata['directory'])/metadata['blocks'][slot]['file']
             original=path.read_bytes(); data=bytearray(original); data[9]^=1; path.write_bytes(data)
-            result=A['compare_blocks'](arms)
-            self.assertEqual(result['first_differing_checkpoint'],block)
-            self.assertEqual(result['comparisons'][slot]['first_differing_byte'],9)
-            self.assertEqual(result['comparisons'][slot]['first_differing_float'],2)
-            self.assertEqual([r['block'] for r in result['comparisons'] if not r['bytes_equal']],[block])
+            if block == 7:
+                with self.assertRaisesRegex(AssertionError, 'known-equal checkpoint7 anchor changed'):
+                    A['compare_blocks'](arms)
+            else:
+                result=A['compare_blocks'](arms)
+                self.assertEqual(result['first_differing_checkpoint'],block)
+                self.assertEqual(result['previous_equal_checkpoint'],BLOCK_IDS[slot-1])
+                self.assertEqual(result['comparisons'][slot]['first_differing_byte'],9)
+                self.assertEqual(result['comparisons'][slot]['first_differing_float'],2)
+                self.assertEqual([r['block'] for r in result['comparisons'] if not r['bytes_equal']],[block])
             path.write_bytes(original)
 
 

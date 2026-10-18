@@ -37,3 +37,23 @@ Fresh official reference: <https://github.khronos.org/SYCL_Reference/iface/queue
 ## Non-goals
 
 This result is not a timing comparison, promotion, arithmetic/fusion/router change, full-fidelity claim, or proof about unobserved intermediate blocks. Historical early-checkpoint assets are reused only as a harness precedent; no historical raw activations are copied here.
+
+## Lead preflight corrections
+
+The worker's intermediate capture-directory mismatch was fixed before integration: patch, environment and mount now agree on `/block-checkpoints`. Lead review additionally made checkpoint7 equality a mandatory rejection gate, not merely a reported discrepancy, and added its negative regression plus previous-equal-checkpoint assertions. These are parser/test-only changes; the seven-checkpoint runtime patch is unchanged. Full remote CPU and real E2E validation remain pending at this declaration.
+
+The lead invokes all commands through explicit local Bash and remote `bash -s` over the recorded SSH flags, using fail-fast chaining: build, complete CPU suite, paired controller, analyzer. Any nonzero exit stops the remaining steps. No inference retry or continuation is pre-authorized by a successful targeted worker test.
+
+## Lead-observed result — discrepancy bracketed between7 and15
+
+On `mike@inference-host`, explicit local/remote Bash with the recorded SSH flags executed `bash build-candidate.sh`, `python3 -B test-trace.py`, `python3 -B run-trace.py`, and `python3 -B analyze-trace.py`. Real SYCL build/dependency/source/five-binary gates passed. **All79 lead CPU tests passed in143.151s**, including rejection of a changed checkpoint7 anchor (`lead-cpu-r1.log.gz`). Both paired arms completed without continuation or inference rerun.
+
+Both arms passed native385 + OUT_PROD190/9 + IQ2six + latent7 + attention13 + view6 + router6, then fresh API20/20, warmup, ordinary stream and diagnostic. All seven physical checkpoint captures were present at position55/token0. **BOTH arms preserve all128 immediate-parent raw vectors byte-for-byte plus prompt/IDs/text/batches/selected positions/rows.**
+
+Checkpoint7 is byte-identical across S0/C0. Checkpoint15 differs first at byte8 (F32 index2). Checkpoints31,47,63,79,86 also differ, starting at byte0. Every comparison covers exactly16,384 bytes of token0. Thus the first observed differing checkpoint is15, with previous equal checkpoint7; blocks8–14 are unobserved in this sparse probe. This brackets the remaining discrepancy in8–15, not an internal root cause. Final raw scores still first differ at output2 before rollback, and emitted tokens at41.
+
+Candidate SYCL SHA256 `6d1c23155692b92ea2495274f38d0afa97ab217629263153f320c2f388302963`; the other four binaries are unchanged from router-single2. Controller restoration and analyzer recheck passed for the original container identity/config/HostConfig/all mounts, five hashes, protected sources, unchanged hardware, live health, READY and sole running original. Accepted runtime remains unchanged.
+
+Remote canonical evidence: `run-r1/analysis.json`, per-arm alignments, `capture/`, and `block-checkpoints/block-*.f32.bin`. Local logs and metadata JSON larger than1MB are losslessly gzipped with mtime0; raw tensors/logits remain remote. No timing or promotion.
+
+Next bounded observer uses complete physical outputs7–15 inclusive, retains the same computational parent and both-arm128 gate, and rechecks the known-equal7 anchor. The lead will compare saved token0 endpoints7 and15 across the sparse and contiguous probes for each arm before interpreting the narrower result. No arithmetic changes.
