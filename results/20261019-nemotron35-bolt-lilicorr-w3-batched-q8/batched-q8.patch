@@ -1,0 +1,126 @@
+diff --git a/ggml/src/ggml-sycl/dmmv.cpp b/ggml/src/ggml-sycl/dmmv.cpp
+--- a/ggml/src/ggml-sycl/dmmv.cpp
++++ b/ggml/src/ggml-sycl/dmmv.cpp
+@@ -2045,12 +2045,12 @@
+     }
+ }
+ 
+-template <int WG>
++template <int WG, typename Item>
+ ESIMD_INLINE void dequantize_mul_mat_vec_q8_0_reorder_esimd(
+         const void * vx, const float * y, float * dst,
+         const int ncols, const int nrows,
+         sycl::local_accessor<float, 1> lmem,
+-        const sycl::nd_item<1> & it) {
++        const Item & it) {
+     using namespace sycl::ext::intel::esimd;
+ 
+     constexpr int STRIPE = 8;
+@@ -2135,6 +2135,47 @@
+         q8_0_esimd_launch<2>(vx, y, dst, ncols, nrows, stream);
+     } else {
+         q8_0_esimd_launch<1>(vx, y, dst, ncols, nrows, stream);
++    }
++}
++
++// One independent work-group per (row pair, activation column). The shared
++// body retains the singleton stripe order and both stages of its reduction.
++template <int WG>
++static void q8_0_esimd_launch_batched(const void * vx, const float * y, float * dst,
++                                     const int ncols, const int nrows, const int nvectors,
++                                     const int64_t y_stride, const int64_t dst_stride,
++                                     dpct::queue_ptr stream) {
++    const int workgroups = (nrows + 1) / 2;
++    stream->submit([&](sycl::handler & h) {
++        sycl::local_accessor<float, 1> lmem(sycl::range<1>(WG * 2), h);
++        h.parallel_for(
++            sycl::nd_range<2>(sycl::range<2>((size_t) workgroups * WG, (size_t) nvectors),
++                              sycl::range<2>(WG, 1)),
++            [=](sycl::nd_item<2> it) [[intel::sycl_explicit_simd]] {
++                const int64_t col = it.get_group(1);
++                dequantize_mul_mat_vec_q8_0_reorder_esimd<WG>(
++                    vx, y + col * y_stride, dst + col * dst_stride, ncols, nrows, lmem, it);
++            });
++    });
++}
++
++void ggml_sycl_dequantize_mul_mat_vec_q8_0_batched(
++        const void * vx, const float * y, float * dst, const int ncols, const int nrows,
++        const int nvectors, const int64_t y_stride, const int64_t dst_stride,
++        dpct::queue_ptr stream) {
++    GGML_ASSERT(ncols % QK8_0 == 0);
++    GGML_ASSERT(nvectors >= 3 && nvectors <= 8);
++
++    // Exactly the singleton WG selection, not an MMVQ/Q4_K crossover.
++    const int nblk_row = ncols / QK8_0;
++    if (nblk_row >= 64) {
++        q8_0_esimd_launch_batched<8>(vx, y, dst, ncols, nrows, nvectors, y_stride, dst_stride, stream);
++    } else if (nblk_row >= 32) {
++        q8_0_esimd_launch_batched<4>(vx, y, dst, ncols, nrows, nvectors, y_stride, dst_stride, stream);
++    } else if (nblk_row >= 16) {
++        q8_0_esimd_launch_batched<2>(vx, y, dst, ncols, nrows, nvectors, y_stride, dst_stride, stream);
++    } else {
++        q8_0_esimd_launch_batched<1>(vx, y, dst, ncols, nrows, nvectors, y_stride, dst_stride, stream);
+     }
+ }
+ 
+diff --git a/ggml/src/ggml-sycl/dmmv.hpp b/ggml/src/ggml-sycl/dmmv.hpp
+--- a/ggml/src/ggml-sycl/dmmv.hpp
++++ b/ggml/src/ggml-sycl/dmmv.hpp
+@@ -24,4 +24,13 @@
+     const int64_t src1_ncols, const int64_t src1_padded_row_size,
+     const dpct::queue_ptr &stream);
+ 
++// Internal entry point: caller must pass the existing phase-marked 3..8-column
++// Q8 eligibility/preflight. Strides are in F32 elements, not bytes.
++#if defined(__INTEL_LLVM_COMPILER)
++void ggml_sycl_dequantize_mul_mat_vec_q8_0_batched(
++    const void * vx, const float * y, float * dst, const int ncols, const int nrows,
++    const int nvectors, const int64_t y_stride, const int64_t dst_stride,
++    dpct::queue_ptr stream);
++#endif
++
+ #endif // GGML_SYCL_DMMV_HPP
+diff --git a/ggml/src/ggml-sycl/ggml-sycl.cpp b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -3838,7 +3838,7 @@
+ }
+ 
+ // Existing two-column control, plus phase-marked 3..8 columns. All old safety
+-// checks and the existing per-column DMMV callback are retained.
++// checks are retained; only the marked wide path batches its ESIMD submission.
+ static bool should_reorder_tensor(ggml_backend_sycl_context & ctx, const ggml_tensor * dst);
+ 
+ static bool ggml_sycl_latent_dmmv2_eligible(ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
+@@ -4176,14 +4176,23 @@
+                 // do the computation
+                 if (op == ggml_sycl_op_dequantize_mul_mat_vec && src1_ncols == src1->ne[1] &&
+                     ggml_sycl_latent_dmmv2_eligible(ctx, src0, src1, dst)) {
+-                    // The DMMV callback ignores ncols. Keep its F32 ESIMD arithmetic,
+-                    // row-low offset and queue ordering, but launch once per column.
+                     GGML_ASSERT(src0_extra && src0_extra->optimized_feature.reorder);
+-                    for (int64_t col = 0; col < src1_ncols; ++col) {
+-                        SYCL_CHECK(CHECK_TRY_ERROR(op(ctx, src0, src1, dst, src0_dd_i,
+-                            src1_ddf_i + col * ne10, src1_ddq_i,
+-                            dst_dd_i + col * (dst_on_device ? ne0 : row_diff),
+-                            dev[i].row_low, dev[i].row_high, 1, src1_padded_col_size, stream)));
++#ifdef GGML_SYCL_DMMV_HAS_ESIMD
++                    if (src1_ncols > 2) {
++                        // The unchanged eligibility guard admits only phase-marked 3..8.
++                        SYCL_CHECK(CHECK_TRY_ERROR(ggml_sycl_dequantize_mul_mat_vec_q8_0_batched(
++                            src0_dd_i, src1_ddf_i, dst_dd_i, ne00, row_diff, src1_ncols,
++                            ne10, dst_on_device ? ne0 : row_diff, stream)));
++                    } else
++#endif
++                    {
++                        // Preserve the existing two-column callback path exactly.
++                        for (int64_t col = 0; col < src1_ncols; ++col) {
++                            SYCL_CHECK(CHECK_TRY_ERROR(op(ctx, src0, src1, dst, src0_dd_i,
++                                src1_ddf_i + col * ne10, src1_ddq_i,
++                                dst_dd_i + col * (dst_on_device ? ne0 : row_diff),
++                                dev[i].row_low, dev[i].row_high, 1, src1_padded_col_size, stream)));
++                        }
+                     }
+                 } else {
+                     SYCL_CHECK(CHECK_TRY_ERROR(op(ctx, src0, src1, dst, src0_dd_i, src1_ddf_i, src1_ddq_i, dst_dd_i,

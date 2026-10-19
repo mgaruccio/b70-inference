@@ -1,0 +1,133 @@
++ uname -a
+Linux desktop 7.2.9-2-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 08 Oct 2026 15:06:16 +0000 x86_64 GNU/Linux
++ python3 --version
+Python 3.14.7
++ g++ --version
+g++ (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
++ git --version
+git version 2.56.0
++ patch --version
+GNU patch 2.8
+Copyright 1989-2025 Free Software Foundation, Inc.
+Copyright 1984-1988 Larry Wall
+
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Larry Wall and Paul Eggert
++ sha256sum /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/batched-q8.patch
+a1b926f9d3a15613b49dcceea96a5dc647a78d87270ec8485899f187e696face  /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/batched-q8.patch
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/check-source.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/candidate
+{
+  "source_scope": [
+    "ggml/src/ggml-sycl/dmmv.cpp",
+    "ggml/src/ggml-sycl/dmmv.hpp",
+    "ggml/src/ggml-sycl/ggml-sycl.cpp"
+  ],
+  "patch_sha256": "a1b926f9d3a15613b49dcceea96a5dc647a78d87270ec8485899f187e696face",
+  "source_hashes": {
+    "ggml/src/ggml-sycl/dmmv.cpp": {
+      "parent": "fea7d2dd6d379499ca00ddd3b4c8f96561d618caa1056f34dd4e0f8db5a35f07",
+      "candidate": "abd671d07f21026ec9ed5e3f925d1365f2a124e54a432e971fce7292533a764d"
+    },
+    "ggml/src/ggml-sycl/dmmv.hpp": {
+      "parent": "4ecfa6dc1aa0b76c491c76ef5a9fe4bd6c9124bb1947d92774885bc73ea89463",
+      "candidate": "61c0514128992a48a44b40bdee81da7e169151ae0631f64c02a4a4d77607a03f"
+    },
+    "ggml/src/ggml-sycl/ggml-sycl.cpp": {
+      "parent": "140d3955e32d219a0d87753c793004cd188a9e267bd96db119cac40c4d880325",
+      "candidate": "537b3de705178dd537833c6012890d8d15693c10642baad6203916aa7959bc4b"
+    }
+  },
+  "candidate_checked": true,
+  "native_and_public_fidelity": "NOT_TESTED"
+}
++ git -C /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent apply --check --verbose /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/batched-q8.patch
+Skipped patch 'ggml/src/ggml-sycl/dmmv.cpp'.
+Skipped patch 'ggml/src/ggml-sycl/dmmv.hpp'.
+Skipped patch 'ggml/src/ggml-sycl/ggml-sycl.cpp'.
++ patch --directory=/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent --fuzz=0 --dry-run --batch --forward -p1
+checking file ggml/src/ggml-sycl/dmmv.cpp
+checking file ggml/src/ggml-sycl/dmmv.hpp
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
++ mkdir /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied
++ cp -a /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent/. /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied/
++ patch --directory=/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied --fuzz=0 --batch --forward -p1
+patching file ggml/src/ggml-sycl/dmmv.cpp
+patching file ggml/src/ggml-sycl/dmmv.hpp
+patching file ggml/src/ggml-sycl/ggml-sycl.cpp
++ git -C /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied apply --reverse --check --verbose /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/batched-q8.patch
+Skipped patch 'ggml/src/ggml-sycl/dmmv.cpp'.
+Skipped patch 'ggml/src/ggml-sycl/dmmv.hpp'.
+Skipped patch 'ggml/src/ggml-sycl/ggml-sycl.cpp'.
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/check-source.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied
+{
+  "source_scope": [
+    "ggml/src/ggml-sycl/dmmv.cpp",
+    "ggml/src/ggml-sycl/dmmv.hpp",
+    "ggml/src/ggml-sycl/ggml-sycl.cpp"
+  ],
+  "patch_sha256": "a1b926f9d3a15613b49dcceea96a5dc647a78d87270ec8485899f187e696face",
+  "source_hashes": {
+    "ggml/src/ggml-sycl/dmmv.cpp": {
+      "parent": "fea7d2dd6d379499ca00ddd3b4c8f96561d618caa1056f34dd4e0f8db5a35f07",
+      "candidate": "abd671d07f21026ec9ed5e3f925d1365f2a124e54a432e971fce7292533a764d"
+    },
+    "ggml/src/ggml-sycl/dmmv.hpp": {
+      "parent": "4ecfa6dc1aa0b76c491c76ef5a9fe4bd6c9124bb1947d92774885bc73ea89463",
+      "candidate": "61c0514128992a48a44b40bdee81da7e169151ae0631f64c02a4a4d77607a03f"
+    },
+    "ggml/src/ggml-sycl/ggml-sycl.cpp": {
+      "parent": "140d3955e32d219a0d87753c793004cd188a9e267bd96db119cac40c4d880325",
+      "candidate": "537b3de705178dd537833c6012890d8d15693c10642baad6203916aa7959bc4b"
+    }
+  },
+  "candidate_checked": true,
+  "native_and_public_fidelity": "NOT_TESTED"
+}
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/test-contract.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied
+SOURCE_IDENTITY_PASSED singleton body/stripe/reductions/1D launch, all guards, IQ2, tracing unchanged
+recording ESIMD path: True
+CPU_CONTRACT_PASSED dispatch=85 launch_mapping=840 (no GPU arithmetic)
+recording ESIMD path: False
+CPU_CONTRACT_PASSED dispatch=85 launch_mapping=0 (no GPU arithmetic)
++ bash -n /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/build-candidate.sh
++ set +x
++ GIT_CEILING_DIRECTORIES=/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch
++ git -C /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent apply --check --verbose /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/batched-q8.patch
+Checking patch ggml/src/ggml-sycl/dmmv.cpp...
+Checking patch ggml/src/ggml-sycl/dmmv.hpp...
+Checking patch ggml/src/ggml-sycl/ggml-sycl.cpp...
++ GIT_CEILING_DIRECTORIES=/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch
++ git -C /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied apply --reverse --check --verbose /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/batched-q8.patch
+Checking patch ggml/src/ggml-sycl/ggml-sycl.cpp...
+Checking patch ggml/src/ggml-sycl/dmmv.hpp...
+Checking patch ggml/src/ggml-sycl/dmmv.cpp...
++ patch --directory=/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied --fuzz=0 --dry-run --batch --reverse -p1
+checking file ggml/src/ggml-sycl/dmmv.cpp
+checking file ggml/src/ggml-sycl/dmmv.hpp
+checking file ggml/src/ggml-sycl/ggml-sycl.cpp
++ python3 -B - /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8
+SOURCE_GATE_REJECTED: mutated patch
+SOURCE_GATE_REJECTED: wrong parent
+SOURCE_GATE_REJECTED: unpatched candidate
+PYTHON_AND_BUILD_HEREDOC_PARSE_PASSED blocks=3
++ set +x
++ GIT_CEILING_DIRECTORIES=/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch
++ git -C /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent apply --check --whitespace=error --verbose /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/batched-q8.patch
+Checking patch ggml/src/ggml-sycl/dmmv.cpp...
+Checking patch ggml/src/ggml-sycl/dmmv.hpp...
+Checking patch ggml/src/ggml-sycl/ggml-sycl.cpp...
++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/test-contract.py --parent /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/parent --candidate /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/applied
+SOURCE_IDENTITY_PASSED singleton body/stripe/reductions/1D launch, all guards, IQ2, tracing unchanged
+recording ESIMD path: True
+CPU_CONTRACT_PASSED dispatch=85 launch_mapping=840 (no GPU arithmetic)
+recording ESIMD path: False
+CPU_CONTRACT_PASSED dispatch=85 launch_mapping=0 (no GPU arithmetic)
++ bash -n /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/build-candidate.sh
++ set +x

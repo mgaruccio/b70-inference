@@ -1,0 +1,43 @@
+CPU harness development attempt 1 (fixed fixture reorder state):
+SOURCE_IDENTITY_PASSED singleton body/stripe/reductions/1D launch, all guards, IQ2, tracing unchanged
+recording ESIMD path: True
+contract: /home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-hnykomkw/contract.cpp:584: void dispatch(fixture&, sycl::queue&, int64_t): Assertion `src0_extra && src0_extra->optimized_feature.reorder' failed.
+Traceback (most recent call last):
+  File "/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/test-contract.py", line 225, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/test-contract.py", line 221, in main
+    subprocess.run([str(exe)], check=True, timeout=15)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-hnykomkw/contract']' died with <Signals.SIGABRT: 6>.
+
+CPU harness development attempt 2 (fixed missing GGML_UNUSED stub):
+SOURCE_IDENTITY_PASSED singleton body/stripe/reductions/1D launch, all guards, IQ2, tracing unchanged
+recording ESIMD path: True
+CPU_CONTRACT_PASSED dispatch=85 launch_mapping=840 (no GPU arithmetic)
+/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-f7sllijq/contract.cpp: In function ‘bool ggml_sycl_latent_dmmv2_eligible(ggml_backend_sycl_context&, const ggml_tensor*, const ggml_tensor*, const ggml_tensor*)’:
+/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-f7sllijq/contract.cpp:224:5: error: ‘GGML_UNUSED’ was not declared in this scope
+  224 |     GGML_UNUSED(ctx);
+      |     ^~~~~~~~~~~
+/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-f7sllijq/contract.cpp: In function ‘bool ggml_sycl_latent_dmmv2_eligible_parent(ggml_backend_sycl_context&, const ggml_tensor*, const ggml_tensor*, const ggml_tensor*)’:
+/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-f7sllijq/contract.cpp:378:5: error: ‘GGML_UNUSED’ was not declared in this scope
+  378 |     GGML_UNUSED(ctx);
+      |     ^~~~~~~~~~~
+Traceback (most recent call last):
+  File "/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/test-contract.py", line 226, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/test-contract.py", line 218, in main
+    subprocess.run(['g++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-Wno-attributes',
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    '-Wno-unused-parameter', '-Wno-unused-function', '-fsanitize=undefined',
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    '-fno-sanitize-recover=all', str(src), '-o', str(exe)], check=True, timeout=30)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['g++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-Wno-attributes', '-Wno-unused-parameter', '-Wno-unused-function', '-fsanitize=undefined', '-fno-sanitize-recover=all', '/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-f7sllijq/contract.cpp', '-o', '/home/mike/code/.pi-worktrees/b70-inference/bolt-w3-batched-q8/results/20261019-nemotron35-bolt-lilicorr-w3-batched-q8/worker-scratch/cpu-contract-f7sllijq/contract']' returned non-zero exit status 1.
