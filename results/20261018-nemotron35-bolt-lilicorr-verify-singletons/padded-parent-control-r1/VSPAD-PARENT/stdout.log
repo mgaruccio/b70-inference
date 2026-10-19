@@ -1,0 +1,71 @@
+ 
+:: initializing oneAPI environment ...
+   bash: BASH_VERSION = 5.2.21(1)-release
+   args: Using "$@" for setvars.sh arguments: --force
+:: ccl -- latest
+:: compiler -- latest
+:: debugger -- latest
+:: dev-utilities -- latest
+:: dpl -- latest
+:: mkl -- latest
+:: mpi -- latest
+:: pti -- latest
+:: tbb -- latest
+:: tcm -- latest
+:: umf -- latest
+:: oneAPI environment initialized ::
+ 
+	linux-vdso.so.1 (0x00007f97b7c33000)
+	libggml.so.0 => /src/build-sycl/bin/libggml.so.0 (0x00007f97b7c1f000)
+	libggml-cpu.so.0 => /src/build-sycl/bin/libggml-cpu.so.0 (0x00007f97b7800000)
+	libggml-sycl.so.0 => /src/build-sycl/bin/libggml-sycl.so.0 (0x00007f97b3800000)
+	libggml-base.so.0 => /src/build-sycl/bin/libggml-base.so.0 (0x00007f97b7b2e000)
+	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f97b3582000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f97b3499000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f97b7afa000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f97b3287000)
+	libsvml.so => /opt/intel/oneapi/compiler/2026.0/lib/libsvml.so (0x00007f97b1a8b000)
+	libirng.so => /opt/intel/oneapi/compiler/2026.0/lib/libirng.so (0x00007f97b1992000)
+	libimf.so => /opt/intel/oneapi/compiler/2026.0/lib/libimf.so (0x00007f97b1543000)
+	libintlc.so.5 => /opt/intel/oneapi/compiler/2026.0/lib/libintlc.so.5 (0x00007f97b14e0000)
+	libiomp5.so => /opt/intel/oneapi/compiler/2026.0/lib/libiomp5.so (0x00007f97b1000000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f97b7c35000)
+	libze_loader.so.1 => /lib/x86_64-linux-gnu/libze_loader.so.1 (0x00007f97b0e7c000)
+	libdnnl.so.3 => /opt/onednn/lib/libdnnl.so.3 (0x00007f97aba00000)
+	libsycl.so.9 => /opt/intel/oneapi/compiler/2026.0/lib/libsycl.so.9 (0x00007f97ab62c000)
+	libmkl_sycl_blas.so.6 => /opt/intel/oneapi/mkl/2026.0/lib/libmkl_sycl_blas.so.6 (0x00007f97a7955000)
+	libmkl_intel_ilp64.so.3 => /opt/intel/oneapi/mkl/2026.0/lib/libmkl_intel_ilp64.so.3 (0x00007f97a6ae2000)
+	libmkl_tbb_thread.so.3 => /opt/intel/oneapi/mkl/2026.0/lib/libmkl_tbb_thread.so.3 (0x00007f97a4b96000)
+	libmkl_core.so.3 => /opt/intel/oneapi/mkl/2026.0/lib/libmkl_core.so.3 (0x00007f97a0556000)
+	libtbb.so.12 => /opt/intel/oneapi/tbb/2023.0/env/../lib/intel64/gcc4.8/libtbb.so.12 (0x00007f97a0200000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f97b7aef000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f97b7aea000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f97b7ae5000)
+	libur_loader.so.0 => /opt/intel/oneapi/compiler/2026.0/lib/libur_loader.so.0 (0x00007f979f43e000)
+	libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f97b7ac7000)
+Testing 2 devices
+
+Backend 1/2: SYCL0
+  Device description: Intel(R) Graphics [0xe223]
+  Device memory: 32656 MB (32377 MB free)
+
+[CONCAT] NaN at index 0 (SYCL0=nan CPU=-20.036547)   MUL_MAT(verify_singletons=1,case=q8-p0-n4-m1-l2): [1;31mFAIL[0m
+[CONCAT] NaN at index 12288 (SYCL0=nan CPU=-1.603186)   MUL_MAT(verify_singletons=1,case=q8-p1-n4-m1-l2): [1;31mFAIL[0m
+[CONCAT] NaN at index 0 (SYCL0=-nan CPU=-1.449029)   MUL_MAT(verify_singletons=1,case=q8-p2-n4-m1-l2): [1;31mFAIL[0m
+[CONCAT] NaN at index 0 (SYCL0=nan CPU=-22.341351)   MUL_MAT(verify_singletons=1,case=q8-p3-n4-m1-l2): [1;31mFAIL[0m
+[CONCAT] NaN at index 0 (SYCL0=-nan CPU=49.776306)   MUL_MAT(verify_singletons=1,case=q8-p4-n4-m1-l2): [1;31mFAIL[0m
+[CONCAT] NaN at index 0 (SYCL0=nan CPU=-9.613932)   MUL_MAT(verify_singletons=1,case=q8-p5-n4-m1-l2): [1;31mFAIL[0m
+  0/6 tests passed
+
+Failing tests:
+  MUL_MAT(verify_singletons=1,case=q8-p0-n4-m1-l2)
+  MUL_MAT(verify_singletons=1,case=q8-p1-n4-m1-l2)
+  MUL_MAT(verify_singletons=1,case=q8-p2-n4-m1-l2)
+  MUL_MAT(verify_singletons=1,case=q8-p3-n4-m1-l2)
+  MUL_MAT(verify_singletons=1,case=q8-p4-n4-m1-l2)
+  MUL_MAT(verify_singletons=1,case=q8-p5-n4-m1-l2)
+  Backend SYCL0: [1;31mFAIL[0m
+Backend 2/2: CPU
+  Skipping
+1/2 backends passed
+[1;31mFAIL[0m

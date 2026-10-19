@@ -17,9 +17,8 @@ Development-only and unpromoted. No public qualification or performance result.
   `MMVQ_REORDERED` and produced NaNs against finite CPU results. Their final
   byte markers were absent because the reference comparison failed first.
 - IQ2 did not run. No public arm completed and no qualification requests ran.
-  The trace journey was not started. Source inspection points to unchanged
-  MMVQ staging rather than a malformed backing allocation. Direct parent GPU
-  reproduction and the precise correction are still pending.
+  The trace journey was not started. The later parent reproduction and source
+  diagnosis below identify an inherited RHS-format mismatch; r1 remains rejected.
 - Original service restoration and a separate independent live check **passed**.
   No tolerances, controls, persistent service settings, or promotion rules changed.
 
@@ -45,3 +44,19 @@ The two cumulative original-service stdout prefixes exceed GitHub's per-file
 limit. Those prefixes and their stderr companions remain unchanged remotely and
 locally, excluded from Git. Synthetic CPU scratch is also excluded; its original
 logs remain under remote `worker-scratch/`.
+
+## Parent reproduction and identified correction
+
+A separate parent-library run of the six padded controls, using the unchanged r1
+`test-backend-ops` executable, also returned **0/6 with six NaNs**. Its diagnostic
+adapter then rejected Q8 routes through an F32-only parser; it did not execute its
+second arm. Correct offline parsing of the saved parent output and the earlier
+r1 startup output confirms the same six `MMVQ_REORDERED` failures. This is not a
+paired-operand or cross-run byte-equality claim. Independent restoration passed.
+See `padded-parent-control-r1/offline-analysis.json` and preserved raw output.
+
+Source diagnosis identifies the non-contiguous RHS branch's hardcoded
+`quantize_row_q8_1_sycl<quantize_q8_1>`: it emits ordinary AoS data even when the
+selected reordered kernel expects SoA. The contiguous branch uses `quantize_f`.
+A fresh r2 is being prepared to use that selected quantizer in the strided branch
+as well, without changing routes, fixtures, counts, tolerances, or byte gates.

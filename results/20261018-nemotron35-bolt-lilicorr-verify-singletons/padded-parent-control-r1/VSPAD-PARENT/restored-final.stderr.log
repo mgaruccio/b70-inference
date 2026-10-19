@@ -1,0 +1,1007 @@
+2026-10-19T00:28:31.658039323Z [SYCL] call ggml_check_sycl
+2026-10-19T00:28:31.658054943Z Build with Macros:
+2026-10-19T00:28:31.658060453Z   GGML_SYCL_DNNL: yes
+2026-10-19T00:28:31.658064684Z   GGML_SYCL_F16: yes
+2026-10-19T00:28:31.658068644Z   GGML_SYCL_FORCE_MMQ: no
+2026-10-19T00:28:31.658072704Z   GGML_SYCL_GRAPH: yes
+2026-10-19T00:28:31.658076694Z   GGML_SYCL_SUPPORT_LEVEL_ZERO_API: yes
+2026-10-19T00:28:31.658080704Z   GGML_SYCL_SUPPORT_VMM: yes
+2026-10-19T00:28:31.658084664Z Running with Environment Variables:
+2026-10-19T00:28:31.658088634Z   GGML_SYCL_DEBUG: 1
+2026-10-19T00:28:31.658092594Z   GGML_SYCL_DEV_DEBUG: 0
+2026-10-19T00:28:31.658096614Z   GGML_SYCL_DEV2DEV_MEMCPY: 0 (SYCL API)
+2026-10-19T00:28:31.658100854Z   GGML_SYCL_GET_MEM_API: 0 (Level Zero API)
+2026-10-19T00:28:31.658104894Z   GGML_SYCL_ENABLE_DNN: 1
+2026-10-19T00:28:31.658108854Z   GGML_SYCL_FA_ONEDNN: 1
+2026-10-19T00:28:31.658112804Z   GGML_SYCL_FA_ONEDNN_MAX_KV: 0
+2026-10-19T00:28:31.658116764Z   GGML_SYCL_ENABLE_MKL_FA: 1
+2026-10-19T00:28:31.658120704Z   GGML_SYCL_MEMTRACE: 0
+2026-10-19T00:28:31.658124655Z   GGML_SYCL_MEMTRACE_STEP: 64
+2026-10-19T00:28:31.658128605Z   GGML_SYCL_ENABLE_FLASH_ATTN: 1
+2026-10-19T00:28:31.658132545Z   GGML_SYCL_ENABLE_GRAPH: 0
+2026-10-19T00:28:31.658136495Z   GGML_SYCL_ENABLE_OPT: 1
+2026-10-19T00:28:31.658145695Z   GGML_SYCL_XMX_GATHER_TYPES: -1
+2026-10-19T00:28:31.658153265Z   GGML_SYCL_XMX_GATHER_SHAPES: 255
+2026-10-19T00:28:31.658157345Z   GGML_SYCL_DYNAMIC_PRECISION: F16
+2026-10-19T00:28:31.658161285Z   GGML_SYCL_DYNAMIC_REQUIRED_PRECISION: F32
+2026-10-19T00:28:31.658165265Z   GGML_SYCL_ENABLE_VMM: 1
+2026-10-19T00:28:31.658169225Z   GGML_SYCL_ENABLE_FUSION: 1
+2026-10-19T00:28:31.658173205Z   GGML_SYCL_UPLOAD_STAGING_SLOTS: 4
+2026-10-19T00:28:31.658177165Z   GGML_SYCL_ENABLE_ESIMD: 1
+2026-10-19T00:28:31.658181145Z   GGML_SYCL_MMVQ_WIDE: 1
+2026-10-19T00:28:31.658185085Z   GGML_SYCL_PRIORITIZE_DMMV: 0
+2026-10-19T00:28:31.658189046Z   GGML_SYCL_USE_ASYNC_MEM_OP: 1
+2026-10-19T00:28:31.658193006Z   GGML_SYCL_USE_LEVEL_ZERO_API: 1
+2026-10-19T00:28:31.658196966Z   GGML_SYCL_USM_SYSTEM: 0
+2026-10-19T00:28:31.658201036Z   GGML_SYCL_ENABLE_HOST_PINNED_MEM: 1
+2026-10-19T00:28:31.658204996Z   GGML_SYCL_HOST_PINNED_MEM_2G: 0
+2026-10-19T00:28:31.658208966Z   GGML_SYCL_SPARSE_FA: 0
+2026-10-19T00:28:31.658212886Z   GGML_SYCL_SPARSE_FA_DEBUG: 0
+2026-10-19T00:28:31.658216886Z   GGML_SYCL_SPARSE_FA_MARGIN: 256
+2026-10-19T00:28:31.691567274Z [SYCL] call ggml_backend_sycl_print_sycl_devices
+2026-10-19T00:28:31.691581104Z Found 1 SYCL devices:
+2026-10-19T00:28:31.691586604Z |  |                   |                                       |       |Max    |        |Max  |Global |                     |
+2026-10-19T00:28:31.691591244Z |  |                   |                                       |       |compute|Max work|sub  |mem    |                     |
+2026-10-19T00:28:31.691595774Z |ID|        Device Type|                                   Name|Version|units  |group   |group|size   |       Driver version|
+2026-10-19T00:28:31.691599914Z |--|-------------------|---------------------------------------|-------|-------|--------|-----|-------|---------------------|
+2026-10-19T00:28:31.691660815Z | 0| [level_zero:gpu:0]|                Intel Graphics [0xe223]|   20.2|    256|    1024|   32| 32530M|         1.14.37020+3|
+2026-10-19T00:28:31.691669005Z SYCL Optimization Feature:
+2026-10-19T00:28:31.691672865Z |ID|        Device Type|Reorder|
+2026-10-19T00:28:31.691676255Z |--|-------------------|-------|
+2026-10-19T00:28:31.691679455Z [SYCL] call ggml_sycl_init
+2026-10-19T00:28:31.698751462Z | 0| [level_zero:gpu:0]|      Y|
+2026-10-19T00:28:31.700286697Z [SYCL] call ggml_backend_sycl_init
+2026-10-19T00:28:31.700294767Z [SYCL] ggml_check_sycl()
+2026-10-19T00:28:31.700299117Z [SYCL] call ggml_backend_sycl_reg
+2026-10-19T00:28:31.700304787Z [SYCL] call ggml_backend_sycl_device_get_memory
+2026-10-19T00:28:31.700308927Z [SYCL] [sycl_get_mem_info] g_ggml_sycl_get_mem_api=0
+2026-10-19T00:28:31.700318337Z [SYCL] call get_zes_init_res: zesInit result: 0
+2026-10-19T00:28:31.700326077Z [get_memory_size]GPU Name:          Intel(R) Graphics [0xe223]
+2026-10-19T00:28:31.700330167Z [get_memory_size]GPU Vendor:        Intel(R) Corporation
+2026-10-19T00:28:31.700334168Z [get_memory_size] Querying free memory using Level Zero API.
+2026-10-19T00:28:31.700338198Z [SYCL] call query_free_memory_by_ze: Querying free memory using Level Zero API.
+2026-10-19T00:28:31.700689243Z [SYCL] [sycl_get_mem_info] total = 34242297856 free = 33950756864
+2026-10-19T00:28:31.700698764Z [SYCL] call ggml_backend_sycl_device_get_memory total 34242297856 free 33950756864
+2026-10-19T00:28:31.940132375Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:31.940161636Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=q8_0 -> true
+2026-10-19T00:28:31.940167876Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:31.940172336Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:31.940176496Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:31.940180636Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:31.940184726Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:31.940188826Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:31.940192946Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:31.940197036Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:31.940203106Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:31.940207266Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:31.940211366Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:31.940215457Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:31.940219727Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:31.940223867Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:31.940227957Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:31.940232087Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:31.940236197Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:31.940248807Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:31.940256717Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:31.940260957Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:31.940265107Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:31.940273897Z [SYCL] call ggml_backend_sycl_reg
+2026-10-19T00:28:31.940289428Z [SYCL] call ggml_backend_sycl_buffer_type_alloc_buffer: size=4706560
+2026-10-19T00:28:31.940299698Z [SYCL] ggml_check_sycl()
+2026-10-19T00:28:31.940305118Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940309598Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448]
+2026-10-19T00:28:31.940313798Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940317918Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792]
+2026-10-19T00:28:31.940321998Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940326108Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:31.940333338Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p0-n4-m1-l2-wide':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384]
+2026-10-19T00:28:31.940337539Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:31.940341839Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:31.940349929Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p0-n4-m1-l2-s0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940354179Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:31.940358409Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:31.940362509Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p0-n4-m1-l2-s1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940366709Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[1024, 2, 1, 1];nb=[4, 4096, 8192, 8192]
+2026-10-19T00:28:31.940371189Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:31.940380289Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:31.940392979Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p0-n4-m1-l2-s2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940404550Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[1024, 3, 1, 1];nb=[4, 4096, 12288, 12288]
+2026-10-19T00:28:31.940408760Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:31.940412920Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:31.940417090Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p0-n4-m1-l2-s3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940421210Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384]
+2026-10-19T00:28:31.940425300Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[1024, 8, 1, 1];nb=[4, 4096, 32768, 32768]
+2026-10-19T00:28:31.940429420Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:31.940434500Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.962512583Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448] size=4456448 offset=0
+2026-10-19T00:28:31.963336016Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.963412217Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:31.963439108Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.963538759Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided size=65536 offset=0
+2026-10-19T00:28:31.963582760Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p0-n4-m1-l2-wide':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.963602270Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:31.963630431Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.963641821Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p0-n4-m1-l2-s0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.963666271Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:31.963690222Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.963703432Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p0-n4-m1-l2-s1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.963719132Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_8':type=f32;ne=[1024, 2, 1, 1];nb=[4, 4096, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:31.963745273Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:31.963768983Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.963784013Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p0-n4-m1-l2-s2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.963801434Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_12':type=f32;ne=[1024, 3, 1, 1];nb=[4, 4096, 12288, 12288] size=12288 offset=0
+2026-10-19T00:28:31.963827154Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:31.963850625Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.963864915Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p0-n4-m1-l2-s3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.963887565Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_16':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.963928926Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_17':type=f32;ne=[1024, 8, 1, 1];nb=[4, 4096, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:31.963944476Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.963976567Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:31.964195400Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p0-n4-m1-l2-wide':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.964232041Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448] size=4456448 offset=0
+2026-10-19T00:28:31.965852397Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.965880228Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p0-n4-m1-l2-s0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.965908648Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.965931259Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p0-n4-m1-l2-s1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.965945309Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_8':type=f32;ne=[1024, 2, 1, 1];nb=[4, 4096, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:31.965955079Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.965979919Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p0-n4-m1-l2-s2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.965993560Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_12':type=f32;ne=[1024, 3, 1, 1];nb=[4, 4096, 12288, 12288] size=12288 offset=0
+2026-10-19T00:28:31.966012200Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.966035240Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p0-n4-m1-l2-s3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.966049741Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_16':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:31.966078751Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[1024, 8, 1, 1];nb=[4, 4096, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:31.966108272Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.966115782Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.966140002Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.966155052Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:31.966185643Z [SYCL] ggml_sycl_compute_forward: dst=q8-p0-n4-m1-l2-wide, op=MUL_MAT
+2026-10-19T00:28:31.966191983Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p0-n4-m1-l2-wide':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384]	src0='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:32.064782682Z BOLT_ROUTE route=MMVQ_REORDERED weight=blk.1.ffn_latent_down.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p0-n4-m1-l2-wide src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=1024 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=4456448 nb3=4456448 src1_ne0=4096 src1_ne1=4 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16448 src1_nb2=65792 src1_nb3=65792 dst_ne0=1024 dst_ne1=4 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=4096 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=10 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:32.555500642Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl: dst='q8-p0-n4-m1-l2-wide':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384]	src0='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided : converting src1 to Q8_1
+2026-10-19T00:28:32.555669085Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl done
+2026-10-19T00:28:32.555684795Z Calling reorder_mul_mat_vec_q8_0_q8_1_sycl_switch_ncols ncols=4
+2026-10-19T00:28:45.205874082Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.205889352Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.205894813Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.205899533Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.205903933Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.205908283Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.205912313Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.205916313Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.205920363Z [SYCL] ggml_sycl_compute_forward: dst=q8-p0-n4-m1-l2-s0, op=MUL_MAT
+2026-10-19T00:28:45.205924453Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p0-n4-m1-l2-s0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.205928963Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_down.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p0-n4-m1-l2-s0 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=1024 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=4456448 nb3=4456448 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=1024 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=4096 dst_nb2=4096 dst_nb3=4096 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.712230752Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.712245382Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.712250902Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.712255972Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.712260342Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.712264792Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.712285862Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.712293903Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.712298013Z [SYCL] ggml_sycl_compute_forward: dst=q8-p0-n4-m1-l2-s1, op=MUL_MAT
+2026-10-19T00:28:45.712302113Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p0-n4-m1-l2-s1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.712327073Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_down.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p0-n4-m1-l2-s1 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=1024 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=4456448 nb3=4456448 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=1024 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=4096 dst_nb2=4096 dst_nb3=4096 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.712339683Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.712344963Z [SYCL] ggml_sycl_compute_forward: dst=node_8, op=CONCAT
+2026-10-19T00:28:45.712349303Z [SYCL][OP] call concat_impl_sycl: dst='node_8':type=f32;ne=[1024, 2, 1, 1];nb=[4, 4096, 8192, 8192]	src0='q8-p0-n4-m1-l2-s0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src1='q8-p0-n4-m1-l2-s1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.941304839Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.941317629Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.941323149Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.941327969Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.941332489Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.941336919Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.941340979Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.941344969Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.941348959Z [SYCL] ggml_sycl_compute_forward: dst=q8-p0-n4-m1-l2-s2, op=MUL_MAT
+2026-10-19T00:28:45.941353129Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p0-n4-m1-l2-s2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.941357620Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_down.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p0-n4-m1-l2-s2 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=1024 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=4456448 nb3=4456448 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=1024 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=4096 dst_nb2=4096 dst_nb3=4096 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.941367880Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.941375870Z [SYCL] ggml_sycl_compute_forward: dst=node_12, op=CONCAT
+2026-10-19T00:28:45.941380010Z [SYCL][OP] call concat_impl_sycl: dst='node_12':type=f32;ne=[1024, 3, 1, 1];nb=[4, 4096, 12288, 12288]	src0='node_8':type=f32;ne=[1024, 2, 1, 1];nb=[4, 4096, 8192, 8192]	src1='q8-p0-n4-m1-l2-s2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.941384370Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.941390210Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.941394350Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.941398700Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.941403130Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.941407630Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.941417591Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.941421701Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.941425711Z [SYCL] ggml_sycl_compute_forward: dst=q8-p0-n4-m1-l2-s3, op=MUL_MAT
+2026-10-19T00:28:45.941429841Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p0-n4-m1-l2-s3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0='blk.1.ffn_latent_down.weight':type=q8_0;ne=[4096, 1024, 1, 1];nb=[34, 4352, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.941434321Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_down.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p0-n4-m1-l2-s3 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=1024 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=4456448 nb3=4456448 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=1024 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=4096 dst_nb2=4096 dst_nb3=4096 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.941439171Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.941443181Z [SYCL] ggml_sycl_compute_forward: dst=node_16, op=CONCAT
+2026-10-19T00:28:45.941447251Z [SYCL][OP] call concat_impl_sycl: dst='node_16':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384]	src0='node_12':type=f32;ne=[1024, 3, 1, 1];nb=[4, 4096, 12288, 12288]	src1='q8-p0-n4-m1-l2-s3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.941451611Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.941455591Z [SYCL] ggml_sycl_compute_forward: dst=node_17, op=CONCAT
+2026-10-19T00:28:45.941462931Z [SYCL][OP] call concat_impl_sycl: dst='node_17':type=f32;ne=[1024, 8, 1, 1];nb=[4, 4096, 32768, 32768]	src0='q8-p0-n4-m1-l2-wide':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384]	src1='node_16':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4096, 16384, 16384]
+2026-10-19T00:28:45.941469031Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.941473081Z [SYCL] call ggml_backend_sycl_synchronize
+2026-10-19T00:28:45.942342886Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[1024, 8, 1, 1];nb=[4, 4096, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:45.942639111Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.942662251Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=q8_0 -> true
+2026-10-19T00:28:45.942671331Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.942692202Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.942698912Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.942703892Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.942708202Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.942712542Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.942716652Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.942720812Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.942724942Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.942729072Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.942733142Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.942737222Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.942741352Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.942750543Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.942758343Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.942762583Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.942766723Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.942770823Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.942774873Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.942778993Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.942783083Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.942787253Z [SYCL] call ggml_backend_sycl_buffer_type_alloc_buffer: size=4915456
+2026-10-19T00:28:45.942791363Z [SYCL] ggml_check_sycl()
+2026-10-19T00:28:45.942796713Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942801163Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448]
+2026-10-19T00:28:45.942805404Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942809534Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[1040, 4, 1, 1];nb=[4, 4160, 16640, 16640]
+2026-10-19T00:28:45.942813624Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942817734Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view)':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4160, 16640, 16640];strided
+2026-10-19T00:28:45.942821874Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p1-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:45.942825974Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.942830114Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942834244Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p1-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.942838664Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.942842764Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942846894Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p1-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.942854634Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]
+2026-10-19T00:28:45.942860564Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.942865085Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942869255Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p1-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.942873365Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]
+2026-10-19T00:28:45.942877525Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.942881665Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942885785Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p1-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.942889925Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:45.942894165Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072]
+2026-10-19T00:28:45.942898275Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.942902425Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.962196583Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448] size=4456448 offset=0
+2026-10-19T00:28:45.962405076Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.962425547Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='leaf_1':type=f32;ne=[1040, 4, 1, 1];nb=[4, 4160, 16640, 16640] size=16640 offset=0
+2026-10-19T00:28:45.962434027Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.962548019Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view)':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4160, 16640, 16640];strided size=16384 offset=0
+2026-10-19T00:28:45.962839724Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p1-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:45.962861234Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160] size=4096 offset=0
+2026-10-19T00:28:45.962865094Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.962893305Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p1-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.962906495Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160] size=4096 offset=0
+2026-10-19T00:28:45.962919365Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.962940215Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p1-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.962981536Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:45.962996476Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160] size=4096 offset=0
+2026-10-19T00:28:45.963007236Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.963032087Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p1-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.963091588Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152] size=49152 offset=0
+2026-10-19T00:28:45.963103698Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160] size=4096 offset=0
+2026-10-19T00:28:45.963116068Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.963141339Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p1-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.963214330Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:45.963355662Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:45.963382853Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.963407843Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='leaf_1':type=f32;ne=[1040, 4, 1, 1];nb=[4, 4160, 16640, 16640] size=16640 offset=0
+2026-10-19T00:28:45.963431483Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p1-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:45.963451934Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448] size=4456448 offset=0
+2026-10-19T00:28:45.963910871Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.963927002Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p1-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.963941072Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.963958612Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p1-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.963973412Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:45.963994173Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.964009843Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p1-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.964022743Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152] size=49152 offset=0
+2026-10-19T00:28:45.964040214Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.964057284Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p1-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:45.964080964Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:45.964093354Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:45.964120825Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.964139715Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.964155835Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.964170226Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:45.964186686Z [SYCL] ggml_sycl_compute_forward: dst=q8-p1-n4-m1-l2-wide, op=MUL_MAT
+2026-10-19T00:28:45.964195056Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p1-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448]	src1=' (view)':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4160, 16640, 16640];strided
+2026-10-19T00:28:45.964290418Z BOLT_ROUTE route=MMVQ_REORDERED weight=blk.1.ffn_latent_up.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p1-n4-m1-l2-wide src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=1024 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=1088 nb2=4456448 nb3=4456448 src1_ne0=1024 src1_ne1=4 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=4160 src1_nb2=16640 src1_nb3=16640 dst_ne0=4096 dst_ne1=4 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=65536 dst_nb3=65536 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=10 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.964312588Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl: dst='q8-p1-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448]	src1=' (view)':type=f32;ne=[1024, 4, 1, 1];nb=[4, 4160, 16640, 16640];strided : converting src1 to Q8_1
+2026-10-19T00:28:45.964323048Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl done
+2026-10-19T00:28:45.964326528Z Calling reorder_mul_mat_vec_q8_0_q8_1_sycl_switch_ncols ncols=4
+2026-10-19T00:28:45.964340989Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.964349159Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.964353389Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964357159Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.964362699Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964366349Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.964369569Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.964378059Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.964381859Z [SYCL] ggml_sycl_compute_forward: dst=q8-p1-n4-m1-l2-s0, op=MUL_MAT
+2026-10-19T00:28:45.964385649Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p1-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.964389309Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_up.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p1-n4-m1-l2-s0 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=1024 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=1088 nb2=4456448 nb3=4456448 src1_ne0=1024 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=4096 src1_nb2=4096 src1_nb3=4096 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.964421100Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.964428580Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.964432070Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964441460Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.964451330Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964455800Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.964459801Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.964463831Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.964467901Z [SYCL] ggml_sycl_compute_forward: dst=q8-p1-n4-m1-l2-s1, op=MUL_MAT
+2026-10-19T00:28:45.964472061Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p1-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.964476611Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_up.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p1-n4-m1-l2-s1 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=1024 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=1088 nb2=4456448 nb3=4456448 src1_ne0=1024 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=4096 src1_nb2=4096 src1_nb3=4096 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.964482271Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.964486281Z [SYCL] ggml_sycl_compute_forward: dst=node_8, op=CONCAT
+2026-10-19T00:28:45.964490361Z [SYCL][OP] call concat_impl_sycl: dst='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]	src0='q8-p1-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src1='q8-p1-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.964494761Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.964498771Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.964502821Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964508261Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.964513101Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964517361Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.964521372Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.964525372Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.964529372Z [SYCL] ggml_sycl_compute_forward: dst=q8-p1-n4-m1-l2-s2, op=MUL_MAT
+2026-10-19T00:28:45.964533462Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p1-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.964541222Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_up.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p1-n4-m1-l2-s2 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=1024 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=1088 nb2=4456448 nb3=4456448 src1_ne0=1024 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=4096 src1_nb2=4096 src1_nb3=4096 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.964548492Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.964552612Z [SYCL] ggml_sycl_compute_forward: dst=node_12, op=CONCAT
+2026-10-19T00:28:45.964556642Z [SYCL][OP] call concat_impl_sycl: dst='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]	src0='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]	src1='q8-p1-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.964561042Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.964565312Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:45.964569362Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964573612Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:45.964577732Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]	src0=' (view) (view)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4160, 4160, 4160]
+2026-10-19T00:28:45.964582363Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:45.964586943Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:45.964590963Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:45.964594953Z [SYCL] ggml_sycl_compute_forward: dst=q8-p1-n4-m1-l2-s3, op=MUL_MAT
+2026-10-19T00:28:45.964598993Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p1-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.1.ffn_latent_up.weight':type=q8_0;ne=[1024, 4096, 1, 1];nb=[34, 1088, 4456448, 4456448]	src1=' (view) (view) (cont)':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.964603513Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.1.ffn_latent_up.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p1-n4-m1-l2-s3 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=1024 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=1088 nb2=4456448 nb3=4456448 src1_ne0=1024 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=4096 src1_nb2=4096 src1_nb3=4096 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:45.964608353Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:45.964612333Z [SYCL] ggml_sycl_compute_forward: dst=node_16, op=CONCAT
+2026-10-19T00:28:45.964616413Z [SYCL][OP] call concat_impl_sycl: dst='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]	src1='q8-p1-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.964624473Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.964629993Z [SYCL] ggml_sycl_compute_forward: dst=node_17, op=CONCAT
+2026-10-19T00:28:45.964634063Z [SYCL][OP] call concat_impl_sycl: dst='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072]	src0='q8-p1-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src1='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:45.964638433Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:45.964642434Z [SYCL] call ggml_backend_sycl_synchronize
+2026-10-19T00:28:45.965132262Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:45.965386776Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.965391246Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=q8_0 -> true
+2026-10-19T00:28:45.965394786Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.965398266Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.965401626Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:45.965404906Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.965408206Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.965411486Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.965414776Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.965418046Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.965421446Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.965424707Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.965427967Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.965431237Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.965435117Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.965439967Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.965449327Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.965457197Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.965461407Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:45.965465507Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:45.965469607Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:45.965473707Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.965477797Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:45.965481907Z [SYCL] call ggml_backend_sycl_buffer_type_alloc_buffer: size=18383104
+2026-10-19T00:28:45.965485958Z [SYCL] ggml_check_sycl()
+2026-10-19T00:28:45.965490568Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.965494718Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]
+2026-10-19T00:28:45.965498958Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.965503068Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792]
+2026-10-19T00:28:45.965507148Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.965511258Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:45.965515418Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p2-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:45.965519568Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.965523678Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965527808Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p2-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965540148Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.965545349Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965548779Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p2-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965555699Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]
+2026-10-19T00:28:45.965562629Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.965566019Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965569329Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p2-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965572659Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]
+2026-10-19T00:28:45.965575979Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:45.965579289Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965582599Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p2-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:45.965586109Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:45.965589529Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072]
+2026-10-19T00:28:45.965592839Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:45.965596149Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.045134901Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792] size=17825792 offset=0
+2026-10-19T00:28:46.047536851Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.047618612Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.047624472Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.047701253Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided size=65536 offset=0
+2026-10-19T00:28:46.047772645Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p2-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.047799685Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.047824446Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.047850136Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p2-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.047874196Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.047899097Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.047925017Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p2-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.047965228Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:46.047991328Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.048017839Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.048047719Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p2-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.048100950Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152] size=49152 offset=0
+2026-10-19T00:28:46.048126641Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.048150631Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.048174051Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p2-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.048246923Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.048394495Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:46.048416605Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.048447436Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.048476346Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p2-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.048495277Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792] size=17825792 offset=0
+2026-10-19T00:28:46.049424072Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049451472Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p2-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049467642Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049473622Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p2-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049493573Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:46.049509523Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049519393Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p2-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049538533Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152] size=49152 offset=0
+2026-10-19T00:28:46.049556454Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049572004Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p2-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.049587724Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.049608345Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:46.049634005Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.049649235Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.049665186Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.049680206Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.049701926Z [SYCL] ggml_sycl_compute_forward: dst=q8-p2-n4-m1-l2-wide, op=MUL_MAT
+2026-10-19T00:28:46.049706876Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p2-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:46.050259495Z BOLT_ROUTE route=MMVQ_REORDERED weight=blk.7.attn_q.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p2-n4-m1-l2-wide src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=4 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16448 src1_nb2=65792 src1_nb3=65792 dst_ne0=4096 dst_ne1=4 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=65536 dst_nb3=65536 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=10 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.050285356Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl: dst='q8-p2-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided : converting src1 to Q8_1
+2026-10-19T00:28:46.050301716Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl done
+2026-10-19T00:28:46.050306836Z Calling reorder_mul_mat_vec_q8_0_q8_1_sycl_switch_ncols ncols=4
+2026-10-19T00:28:46.050313106Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.050317176Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.050321946Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050326387Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.050330717Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050335207Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.050340627Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.050344747Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.050348747Z [SYCL] ggml_sycl_compute_forward: dst=q8-p2-n4-m1-l2-s0, op=MUL_MAT
+2026-10-19T00:28:46.050352847Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p2-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.050357917Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_q.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p2-n4-m1-l2-s0 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.050366457Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.050370547Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.050374607Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050382177Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.050389688Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050394008Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.050398078Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.050402188Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.050406228Z [SYCL] ggml_sycl_compute_forward: dst=q8-p2-n4-m1-l2-s1, op=MUL_MAT
+2026-10-19T00:28:46.050410378Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p2-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.050415608Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_q.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p2-n4-m1-l2-s1 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.050420408Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.050424418Z [SYCL] ggml_sycl_compute_forward: dst=node_8, op=CONCAT
+2026-10-19T00:28:46.050428488Z [SYCL][OP] call concat_impl_sycl: dst='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]	src0='q8-p2-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src1='q8-p2-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.050433448Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.050437448Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.050441558Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050445799Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.050449859Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050454029Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.050457779Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.050460979Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.050464189Z [SYCL] ggml_sycl_compute_forward: dst=q8-p2-n4-m1-l2-s2, op=MUL_MAT
+2026-10-19T00:28:46.050467459Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p2-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.050473419Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_q.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p2-n4-m1-l2-s2 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.050479399Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.050482649Z [SYCL] ggml_sycl_compute_forward: dst=node_12, op=CONCAT
+2026-10-19T00:28:46.050485919Z [SYCL][OP] call concat_impl_sycl: dst='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]	src0='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]	src1='q8-p2-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.050514200Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.050521980Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.050526970Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050531620Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.050535960Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.050540360Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.050544460Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.050548440Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.050552440Z [SYCL] ggml_sycl_compute_forward: dst=q8-p2-n4-m1-l2-s3, op=MUL_MAT
+2026-10-19T00:28:46.050556540Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p2-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_q.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.050561220Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_q.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p2-n4-m1-l2-s3 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.050583791Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.050587451Z [SYCL] ggml_sycl_compute_forward: dst=node_16, op=CONCAT
+2026-10-19T00:28:46.050593351Z [SYCL][OP] call concat_impl_sycl: dst='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]	src1='q8-p2-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.050598181Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.050601391Z [SYCL] ggml_sycl_compute_forward: dst=node_17, op=CONCAT
+2026-10-19T00:28:46.050604681Z [SYCL][OP] call concat_impl_sycl: dst='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072]	src0='q8-p2-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src1='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:46.050608181Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.050611401Z [SYCL] call ggml_backend_sycl_synchronize
+2026-10-19T00:28:46.052744807Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:46.052944000Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.052949940Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=q8_0 -> true
+2026-10-19T00:28:46.052954310Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.052958530Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.052962740Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.052966850Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.052970900Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.052975060Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.052979160Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.052983281Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.052987381Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.052991481Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.052995561Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.052999691Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.053003801Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.053007901Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.053017071Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.053024961Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.053029191Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.053034221Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.053038361Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.053042462Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.053046582Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.053050672Z [SYCL] call ggml_backend_sycl_buffer_type_alloc_buffer: size=1287424
+2026-10-19T00:28:46.053054702Z [SYCL] ggml_check_sycl()
+2026-10-19T00:28:46.053058692Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.053063212Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]
+2026-10-19T00:28:46.053067472Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.053071632Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792]
+2026-10-19T00:28:46.053075752Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.053079832Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:46.053084832Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p3-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]
+2026-10-19T00:28:46.053089482Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.053093612Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.053097752Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p3-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.053101873Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.053105983Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.053112143Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p3-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.053120213Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048]
+2026-10-19T00:28:46.053126173Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.053130313Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.053134423Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p3-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.053138523Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072]
+2026-10-19T00:28:46.053143033Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.053147413Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.053151523Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p3-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.053155663Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]
+2026-10-19T00:28:46.053159803Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192]
+2026-10-19T00:28:46.053163904Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.053168054Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.058144186Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112] size=1114112 offset=0
+2026-10-19T00:28:46.058212357Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.058311478Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.058327699Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.058419590Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided size=65536 offset=0
+2026-10-19T00:28:46.058434360Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p3-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.058463141Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.058490721Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.058499041Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p3-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.058525032Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.058548742Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.058557452Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p3-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.058569263Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048] size=2048 offset=0
+2026-10-19T00:28:46.058595023Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.058618963Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.058628234Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p3-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.058639984Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072] size=3072 offset=0
+2026-10-19T00:28:46.058665894Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.058689795Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.058699615Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p3-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.058711865Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.058730745Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:46.058741536Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.058760416Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.058788366Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p3-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.058812507Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112] size=1114112 offset=0
+2026-10-19T00:28:46.058937299Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.058953909Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p3-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.058967189Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.058984390Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p3-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.058999470Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048] size=2048 offset=0
+2026-10-19T00:28:46.059023400Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.059030350Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p3-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.059046771Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072] size=3072 offset=0
+2026-10-19T00:28:46.059061691Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.059076461Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p3-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.059094251Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.059107422Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:46.059123092Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.059138102Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.059153742Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.059169583Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.059187073Z [SYCL] ggml_sycl_compute_forward: dst=q8-p3-n4-m1-l2-wide, op=MUL_MAT
+2026-10-19T00:28:46.059190733Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p3-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src0='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:46.059246624Z BOLT_ROUTE route=MMVQ_REORDERED weight=blk.7.attn_k.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p3-n4-m1-l2-wide src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=4 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16448 src1_nb2=65792 src1_nb3=65792 dst_ne0=256 dst_ne1=4 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=4096 dst_nb3=4096 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=10 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.059263914Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl: dst='q8-p3-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src0='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided : converting src1 to Q8_1
+2026-10-19T00:28:46.059280894Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl done
+2026-10-19T00:28:46.059285025Z Calling reorder_mul_mat_vec_q8_0_q8_1_sycl_switch_ncols ncols=4
+2026-10-19T00:28:46.059298575Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.059302615Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.059305925Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059309965Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.059313355Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059316835Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.059320535Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.059324895Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.059328185Z [SYCL] ggml_sycl_compute_forward: dst=q8-p3-n4-m1-l2-s0, op=MUL_MAT
+2026-10-19T00:28:46.059331975Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p3-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059335575Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_k.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p3-n4-m1-l2-s0 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.059353246Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.059356716Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.059360026Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059363456Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.059366836Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059374436Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.059379316Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.059382586Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.059385846Z [SYCL] ggml_sycl_compute_forward: dst=q8-p3-n4-m1-l2-s1, op=MUL_MAT
+2026-10-19T00:28:46.059389136Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p3-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059394106Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_k.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p3-n4-m1-l2-s1 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.059398676Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.059401936Z [SYCL] ggml_sycl_compute_forward: dst=node_8, op=CONCAT
+2026-10-19T00:28:46.059405177Z [SYCL][OP] call concat_impl_sycl: dst='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048]	src0='q8-p3-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src1='q8-p3-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.059409297Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.059412587Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.059415847Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059419257Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.059422577Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059426627Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.059429857Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.059433067Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.059436267Z [SYCL] ggml_sycl_compute_forward: dst=q8-p3-n4-m1-l2-s2, op=MUL_MAT
+2026-10-19T00:28:46.059439557Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p3-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059443647Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_k.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p3-n4-m1-l2-s2 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.059449937Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.059454407Z [SYCL] ggml_sycl_compute_forward: dst=node_12, op=CONCAT
+2026-10-19T00:28:46.059458037Z [SYCL][OP] call concat_impl_sycl: dst='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072]	src0='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048]	src1='q8-p3-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.059461517Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.059464738Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.059467978Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059471418Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.059475128Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059478548Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.059481728Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.059484968Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.059488188Z [SYCL] ggml_sycl_compute_forward: dst=q8-p3-n4-m1-l2-s3, op=MUL_MAT
+2026-10-19T00:28:46.059491948Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p3-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_k.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059495518Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_k.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p3-n4-m1-l2-s3 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.059499768Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.059502958Z [SYCL] ggml_sycl_compute_forward: dst=node_16, op=CONCAT
+2026-10-19T00:28:46.059506188Z [SYCL][OP] call concat_impl_sycl: dst='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src0='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072]	src1='q8-p3-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.059512448Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.059516838Z [SYCL] ggml_sycl_compute_forward: dst=node_17, op=CONCAT
+2026-10-19T00:28:46.059520068Z [SYCL][OP] call concat_impl_sycl: dst='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192]	src0='q8-p3-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src1='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]
+2026-10-19T00:28:46.059524218Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.059527449Z [SYCL] call ggml_backend_sycl_synchronize
+2026-10-19T00:28:46.059637490Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:46.059694991Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.059699111Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=q8_0 -> true
+2026-10-19T00:28:46.059702531Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.059705901Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.059709302Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.059718772Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.059722292Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.059725672Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.059729002Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.059732372Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.059735672Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.059738982Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.059742302Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.059745642Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.059757492Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.059761272Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.059764622Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.059771093Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.059776593Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.059779953Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.059783273Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.059786613Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.059790083Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.059793403Z [SYCL] call ggml_backend_sycl_buffer_type_alloc_buffer: size=1287424
+2026-10-19T00:28:46.059796713Z [SYCL] ggml_check_sycl()
+2026-10-19T00:28:46.059799963Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.059803253Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]
+2026-10-19T00:28:46.059806593Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.059809903Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792]
+2026-10-19T00:28:46.059813183Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.059816573Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:46.059819893Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p4-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]
+2026-10-19T00:28:46.059823203Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059826503Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059831154Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p4-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.059834474Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059837764Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059841064Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p4-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.059844374Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048]
+2026-10-19T00:28:46.059847674Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059854234Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059859374Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p4-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.059862714Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072]
+2026-10-19T00:28:46.059866284Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.059895535Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.059917655Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p4-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.059921655Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]
+2026-10-19T00:28:46.059925205Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192]
+2026-10-19T00:28:46.059928545Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.059931855Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.064800275Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112] size=1114112 offset=0
+2026-10-19T00:28:46.064853756Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.064921747Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.064943688Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065010919Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided size=65536 offset=0
+2026-10-19T00:28:46.065038189Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p4-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065055380Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.065078130Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065082890Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p4-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065108341Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.065135051Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065141391Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p4-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065154421Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048] size=2048 offset=0
+2026-10-19T00:28:46.065179972Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.065202532Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065211342Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p4-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065224082Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072] size=3072 offset=0
+2026-10-19T00:28:46.065249753Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.065276933Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065292874Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p4-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065303684Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065321194Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:46.065333224Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065351535Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.065377275Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p4-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065390825Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112] size=1114112 offset=0
+2026-10-19T00:28:46.065493887Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065509007Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p4-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065525377Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065541078Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p4-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065556248Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048] size=2048 offset=0
+2026-10-19T00:28:46.065573828Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065586918Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p4-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065602789Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072] size=3072 offset=0
+2026-10-19T00:28:46.065617089Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.065633179Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p4-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024] size=1024 offset=0
+2026-10-19T00:28:46.065648630Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065662300Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:46.065677580Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065693080Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065707470Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065722901Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.065742611Z [SYCL] ggml_sycl_compute_forward: dst=q8-p4-n4-m1-l2-wide, op=MUL_MAT
+2026-10-19T00:28:46.065746251Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p4-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src0='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:46.065786592Z BOLT_ROUTE route=MMVQ_REORDERED weight=blk.7.attn_v.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p4-n4-m1-l2-wide src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=4 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16448 src1_nb2=65792 src1_nb3=65792 dst_ne0=256 dst_ne1=4 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=4096 dst_nb3=4096 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=10 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.065804752Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl: dst='q8-p4-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src0='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided : converting src1 to Q8_1
+2026-10-19T00:28:46.065818402Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl done
+2026-10-19T00:28:46.065824102Z Calling reorder_mul_mat_vec_q8_0_q8_1_sycl_switch_ncols ncols=4
+2026-10-19T00:28:46.065828152Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.065831423Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.065834693Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.065838253Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.065842073Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.065845613Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.065849303Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.065852543Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.065855743Z [SYCL] ggml_sycl_compute_forward: dst=q8-p4-n4-m1-l2-s0, op=MUL_MAT
+2026-10-19T00:28:46.065859053Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p4-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.065863023Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_v.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p4-n4-m1-l2-s0 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.065872183Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.065875623Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.065879323Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.065882743Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.065886043Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.065892954Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.065898924Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.065902184Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.065905384Z [SYCL] ggml_sycl_compute_forward: dst=q8-p4-n4-m1-l2-s1, op=MUL_MAT
+2026-10-19T00:28:46.065908664Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p4-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.065912294Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_v.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p4-n4-m1-l2-s1 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.065916504Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.065919714Z [SYCL] ggml_sycl_compute_forward: dst=node_8, op=CONCAT
+2026-10-19T00:28:46.065922954Z [SYCL][OP] call concat_impl_sycl: dst='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048]	src0='q8-p4-n4-m1-l2-s0':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src1='q8-p4-n4-m1-l2-s1':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.065926834Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.065930044Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.065933314Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.065936724Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.065940314Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.065943734Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.065947434Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.065950645Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.065953845Z [SYCL] ggml_sycl_compute_forward: dst=q8-p4-n4-m1-l2-s2, op=MUL_MAT
+2026-10-19T00:28:46.065965585Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p4-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.065971095Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_v.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p4-n4-m1-l2-s2 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.065986535Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.065992745Z [SYCL] ggml_sycl_compute_forward: dst=node_12, op=CONCAT
+2026-10-19T00:28:46.065996105Z [SYCL][OP] call concat_impl_sycl: dst='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072]	src0='node_8':type=f32;ne=[256, 2, 1, 1];nb=[4, 1024, 2048, 2048]	src1='q8-p4-n4-m1-l2-s2':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.065999645Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.066002905Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.066006185Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.066009625Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.066012956Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.066016416Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.066023156Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.066026416Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.066029606Z [SYCL] ggml_sycl_compute_forward: dst=q8-p4-n4-m1-l2-s3, op=MUL_MAT
+2026-10-19T00:28:46.066032846Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p4-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]	src0='blk.7.attn_v.weight':type=q8_0;ne=[4096, 256, 1, 1];nb=[34, 4352, 1114112, 1114112]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066036416Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_v.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p4-n4-m1-l2-s3 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=256 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=1114112 nb3=1114112 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=256 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=1024 dst_nb2=1024 dst_nb3=1024 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.066040306Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.066043526Z [SYCL] ggml_sycl_compute_forward: dst=node_16, op=CONCAT
+2026-10-19T00:28:46.066046776Z [SYCL][OP] call concat_impl_sycl: dst='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src0='node_12':type=f32;ne=[256, 3, 1, 1];nb=[4, 1024, 3072, 3072]	src1='q8-p4-n4-m1-l2-s3':type=f32;ne=[256, 1, 1, 1];nb=[4, 1024, 1024, 1024]
+2026-10-19T00:28:46.066053226Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.066056506Z [SYCL] ggml_sycl_compute_forward: dst=node_17, op=CONCAT
+2026-10-19T00:28:46.066062196Z [SYCL][OP] call concat_impl_sycl: dst='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192]	src0='q8-p4-n4-m1-l2-wide':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]	src1='node_16':type=f32;ne=[256, 4, 1, 1];nb=[4, 1024, 4096, 4096]
+2026-10-19T00:28:46.066066926Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.066070126Z [SYCL] call ggml_backend_sycl_synchronize
+2026-10-19T00:28:46.066173028Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[256, 8, 1, 1];nb=[4, 1024, 8192, 8192] size=8192 offset=0
+2026-10-19T00:28:46.066275840Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.066283950Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=q8_0 -> true
+2026-10-19T00:28:46.066288070Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.066291530Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.066294850Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=NONE op->type=f32 -> true
+2026-10-19T00:28:46.066298130Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.066301430Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.066304730Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.066308030Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.066311340Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.066314631Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.066317941Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.066321221Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.066324521Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.066327811Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.066331091Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.066334371Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.066337671Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.066340941Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=VIEW op->type=f32 -> true
+2026-10-19T00:28:46.066347991Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONT op->type=f32 -> true
+2026-10-19T00:28:46.066354221Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=MUL_MAT op->type=f32 -> true
+2026-10-19T00:28:46.066357611Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.066360941Z [SYCL] call ggml_backend_sycl_device_supports_op op->op=CONCAT op->type=f32 -> true
+2026-10-19T00:28:46.066365371Z [SYCL] call ggml_backend_sycl_buffer_type_alloc_buffer: size=18383104
+2026-10-19T00:28:46.066368691Z [SYCL] ggml_check_sycl()
+2026-10-19T00:28:46.066371981Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.066375302Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]
+2026-10-19T00:28:46.066378642Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.066381902Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792]
+2026-10-19T00:28:46.066385182Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.066388462Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:46.066391762Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p5-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:46.066395072Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.066398382Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066401672Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p5-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066404962Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.066408322Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066411632Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p5-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066414932Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]
+2026-10-19T00:28:46.066418232Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.066422342Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066430102Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p5-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066434762Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]
+2026-10-19T00:28:46.066438153Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.066441503Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066444803Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='q8-p5-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.066448193Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:46.066451483Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072]
+2026-10-19T00:28:46.066454803Z [SYCL] call ggml_backend_sycl_buffer_init_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096]
+2026-10-19T00:28:46.066458113Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.144883476Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792] size=17825792 offset=0
+2026-10-19T00:28:46.145975544Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.146055856Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.146079846Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.146185478Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided size=65536 offset=0
+2026-10-19T00:28:46.146260419Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p5-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.146297770Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.146331680Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146354660Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p5-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146385991Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.146403651Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146429242Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p5-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146484703Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:46.146510973Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.146533513Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146558934Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p5-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146616345Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152] size=49152 offset=0
+2026-10-19T00:28:46.146646115Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448] size=16384 offset=0
+2026-10-19T00:28:46.146668486Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146692476Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='q8-p5-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.146771047Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.146913030Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:46.146928160Z [SYCL] call ggml_backend_sycl_buffer_set_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.146958190Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='leaf_1':type=f32;ne=[4112, 4, 1, 1];nb=[4, 16448, 65792, 65792] size=65792 offset=0
+2026-10-19T00:28:46.146985971Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p5-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.147006171Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792] size=17825792 offset=0
+2026-10-19T00:28:46.147935557Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.147956257Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p5-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.147968297Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.147980977Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p5-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.147995908Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768] size=32768 offset=0
+2026-10-19T00:28:46.148018008Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.148029808Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p5-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.148045158Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152] size=49152 offset=0
+2026-10-19T00:28:46.148059519Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.148077039Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='q8-p5-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384] size=16384 offset=0
+2026-10-19T00:28:46.148092069Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536] size=65536 offset=0
+2026-10-19T00:28:46.148111760Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
+2026-10-19T00:28:46.148135530Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_0':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.148152200Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_1':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.148167420Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_2':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.148182081Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='sent_3':type=f32;ne=[1024, 1, 1, 1];nb=[4, 4096, 4096, 4096] size=4096 offset=0
+2026-10-19T00:28:46.148199921Z [SYCL] ggml_sycl_compute_forward: dst=q8-p5-n4-m1-l2-wide, op=MUL_MAT
+2026-10-19T00:28:46.148205421Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p5-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided
+2026-10-19T00:28:46.148304793Z BOLT_ROUTE route=MMVQ_REORDERED weight=blk.7.attn_output.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p5-n4-m1-l2-wide src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=4 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16448 src1_nb2=65792 src1_nb3=65792 dst_ne0=4096 dst_ne1=4 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=65536 dst_nb3=65536 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=10 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.148324363Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl: dst='q8-p5-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view)':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16448, 65792, 65792];strided : converting src1 to Q8_1
+2026-10-19T00:28:46.148339753Z [SYCL][OP] call ggml_sycl_op_mul_mat/quantize_row_q8_1_sycl done
+2026-10-19T00:28:46.148343783Z Calling reorder_mul_mat_vec_q8_0_q8_1_sycl_switch_ncols ncols=4
+2026-10-19T00:28:46.148353504Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.148357574Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.148361054Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148364554Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.148368444Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148371964Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.148375664Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.148378934Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.148382144Z [SYCL] ggml_sycl_compute_forward: dst=q8-p5-n4-m1-l2-s0, op=MUL_MAT
+2026-10-19T00:28:46.148385464Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p5-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.148389754Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_output.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p5-n4-m1-l2-s0 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.148407344Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.148412365Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.148415965Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148419615Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.148423765Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148427345Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.148434735Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.148439975Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.148444075Z [SYCL] ggml_sycl_compute_forward: dst=q8-p5-n4-m1-l2-s1, op=MUL_MAT
+2026-10-19T00:28:46.148448995Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p5-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.148453565Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_output.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p5-n4-m1-l2-s1 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.148458415Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.148462415Z [SYCL] ggml_sycl_compute_forward: dst=node_8, op=CONCAT
+2026-10-19T00:28:46.148466465Z [SYCL][OP] call concat_impl_sycl: dst='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]	src0='q8-p5-n4-m1-l2-s0':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src1='q8-p5-n4-m1-l2-s1':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.148471376Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.148475486Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.148479576Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148500136Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.148504716Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148508406Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.148512596Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.148516026Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.148519226Z [SYCL] ggml_sycl_compute_forward: dst=q8-p5-n4-m1-l2-s2, op=MUL_MAT
+2026-10-19T00:28:46.148547277Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p5-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.148552647Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_output.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p5-n4-m1-l2-s2 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.148564097Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.148569457Z [SYCL] ggml_sycl_compute_forward: dst=node_12, op=CONCAT
+2026-10-19T00:28:46.148576657Z [SYCL][OP] call concat_impl_sycl: dst='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]	src0='node_8':type=f32;ne=[4096, 2, 1, 1];nb=[4, 16384, 32768, 32768]	src1='q8-p5-n4-m1-l2-s2':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.148580237Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.148583467Z [SYCL] ggml_sycl_compute_forward: dst= (view) (view) (cont), op=CONT
+2026-10-19T00:28:46.148589927Z [SYCL][OP] call ggml_sycl_dup: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148593498Z ggml_sycl_cpy: src0->type=f32, src1->type=f32
+2026-10-19T00:28:46.148596838Z [SYCL][OP] call ggml_sycl_cpy: dst=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0=' (view) (view)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16448, 16448, 16448]
+2026-10-19T00:28:46.148600278Z ggml_sycl_cpy: memcpy path
+2026-10-19T00:28:46.148606558Z [SYCL][OP] call ggml_sycl_cpy done
+2026-10-19T00:28:46.148609818Z [SYCL][OP] call ggml_sycl_dup done
+2026-10-19T00:28:46.148613018Z [SYCL] ggml_sycl_compute_forward: dst=q8-p5-n4-m1-l2-s3, op=MUL_MAT
+2026-10-19T00:28:46.148616268Z [SYCL][OP] call ggml_sycl_mul_mat: dst='q8-p5-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]	src0='blk.7.attn_output.weight':type=q8_0;ne=[4096, 4096, 1, 1];nb=[34, 4352, 17825792, 17825792]	src1=' (view) (view) (cont)':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.148624528Z BOLT_ROUTE route=DMMV_ESIMD weight=blk.7.attn_output.weight aux_weight=- op=MUL_MAT op_id=29 dst_name=q8-p5-n4-m1-l2-s3 src0_type=q8_0 aux_type=- src1_type=f32 dst_type=f32 ne0=4096 ne1=4096 ne2=1 ne3=1 nb0=34 nb1=4352 nb2=17825792 nb3=17825792 src1_ne0=4096 src1_ne1=1 src1_ne2=1 src1_ne3=1 src1_nb0=4 src1_nb1=16384 src1_nb2=16384 src1_nb3=16384 dst_ne0=4096 dst_ne1=1 dst_ne2=1 dst_ne3=1 dst_nb0=4 dst_nb1=16384 dst_nb2=16384 dst_nb3=16384 ids_ne0=0 ids_ne1=0 ids_ne2=0 ids_ne3=0 ids_nb0=0 ids_nb1=0 ids_nb2=0 ids_nb3=0 reorder=1 src1_prec=0 operand_prec=-1 accum_prec=0 dynamic_prec=0 device=0 backend_ctx=0x17e628c0 expert=-1 result=-1
+2026-10-19T00:28:46.148628448Z [SYCL][OP] call ggml_sycl_mul_mat done
+2026-10-19T00:28:46.148631728Z [SYCL] ggml_sycl_compute_forward: dst=node_16, op=CONCAT
+2026-10-19T00:28:46.148634998Z [SYCL][OP] call concat_impl_sycl: dst='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src0='node_12':type=f32;ne=[4096, 3, 1, 1];nb=[4, 16384, 49152, 49152]	src1='q8-p5-n4-m1-l2-s3':type=f32;ne=[4096, 1, 1, 1];nb=[4, 16384, 16384, 16384]
+2026-10-19T00:28:46.148641418Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.148647228Z [SYCL] ggml_sycl_compute_forward: dst=node_17, op=CONCAT
+2026-10-19T00:28:46.148651709Z [SYCL][OP] call concat_impl_sycl: dst='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072]	src0='q8-p5-n4-m1-l2-wide':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]	src1='node_16':type=f32;ne=[4096, 4, 1, 1];nb=[4, 16384, 65536, 65536]
+2026-10-19T00:28:46.148655649Z [SYCL][OP] call concat_impl_sycl done
+2026-10-19T00:28:46.148658879Z [SYCL] call ggml_backend_sycl_synchronize
+2026-10-19T00:28:46.150369267Z [SYCL] call ggml_backend_sycl_buffer_get_tensor: tensor='node_17':type=f32;ne=[4096, 8, 1, 1];nb=[4, 16384, 131072, 131072] size=131072 offset=0
