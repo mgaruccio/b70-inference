@@ -71,6 +71,29 @@ class TimingContracts(unittest.TestCase):
         self.assertEqual(C['name']('VSPF-A1'), C['PREFIX'] + 'vspf-a1')
         self.assertEqual('VSB-W3', C['base_cell']('VSPF-W3a'))
 
+    def test_fresh_container_identity_and_image_are_checked(self):
+        with tempfile.TemporaryDirectory(dir=SCRATCH) as directory:
+            public = _fake_public()
+            public['OUT'] = Path(directory)
+            C['configure'](public)
+            base = dict(Name='/qualified-vsb-a', Id='a' * 64, Image='sha256:qualified',
+                        Config=dict(Hostname='a' * 12, Cmd=C['make_create']('VSPF-A1', None)[-3:],
+                                    Env=['A=1'], Image='image:tag'),
+                        HostConfig={'OomKillDisable': None}, Mounts=[])
+            C['save'](Path(directory) / 'VSB-A/container-before.json', base)
+            actual = copy.deepcopy(base)
+            actual.update(Name='/' + C['name']('VSPF-A1'), Id='b' * 64)
+            actual['Config']['Hostname'] = 'b' * 12
+            self.assertTrue(C['check_container'](actual, 'VSPF-A1', None))
+            for key, value in (('Image', 'sha256:drift'), ('Name', base['Name'])):
+                changed = copy.deepcopy(actual)
+                changed[key] = value
+                with self.assertRaises(AssertionError):
+                    C['check_container'](changed, 'VSPF-A1', None)
+            actual['Config']['Hostname'] = base['Config']['Hostname']
+            with self.assertRaises(AssertionError):
+                C['check_container'](actual, 'VSPF-A1', None)
+
     def test_w7_is_rejected_and_abba_schedule_has_24_rows(self):
         with self.assertRaises(AssertionError):
             C['eligible_order']({7})

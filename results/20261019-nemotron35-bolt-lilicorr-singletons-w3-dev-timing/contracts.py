@@ -22,7 +22,7 @@ ROOT = Path('/home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-singletons-w
 QUALIFIED_PACKAGE = PACKAGE_ROOT.parent / '20261019-nemotron35-bolt-lilicorr-verify-singletons'
 WIDTH_SWEEP_PACKAGE = PACKAGE_ROOT.parent / '20261018-nemotron35-bolt-lilicorr-width-sweep'
 
-PREFIX = 'bolt-lilicorr-singletons-w3-dev-timing-r1-'
+PREFIX = 'bolt-lilicorr-singletons-w3-dev-timing-r2-'
 ORIGINAL = 'nemotron-bolt-probe'
 CELLS = ('VSPF-A1', 'VSPF-W3a', 'VSPF-W3b', 'VSPF-A2')
 ROLES = {'VSPF-A1': 'A', 'VSPF-W3a': 'W3', 'VSPF-W3b': 'W3', 'VSPF-A2': 'A'}
@@ -42,7 +42,7 @@ TIMING_ORDER = CELLS
 ARMS = ('A', 'W3')
 MODE = 'timing'
 TIER = 'development'
-OUT = ROOT / 'run-r1'
+OUT = ROOT / 'run-r2'
 # These are the adapter files whose bytes are recorded before a lead run and
 # checked again by the independent analyzer.  Existing qualified/source pins
 # are checked through public-gate.py; this is only the adapter's own code.
@@ -467,15 +467,8 @@ def check_container(record, cell, h):
     assert record['Config']['Cmd'] == make_create(cell, h)[-3:]
     assert re.fullmatch(r'[0-9a-f]{64}', record['Id'])
     assert record['Config']['Hostname'] == record['Id'][:12]
-    for key in ('Cmd', 'Env', 'Hostname'):
-        actual = record['Config'].get(key)
-        expected = base['Config'].get(key)
-        if key == 'Cmd':
-            continue
-        if key == 'Env':
-            assert _env_map(actual) == _env_map(expected)
-        else:
-            assert actual == expected
+    assert record['Image'] == base['Image'], 'resolved container image drift'
+    assert _env_map(record['Config']['Env']) == _env_map(base['Config']['Env'])
     expected_config = {key: value for key, value in base['Config'].items()
                        if key not in ('Cmd', 'Env', 'Hostname')}
     actual_config = {key: value for key, value in record['Config'].items()

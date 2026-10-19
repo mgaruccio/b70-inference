@@ -328,7 +328,7 @@ def main():
     assert HERE == C['ROOT'], (HERE, C['ROOT'])
     p, k, h = R['load_dependencies']()
     C['configure'](p)
-    out = C['ROOT'] / 'run-r1'
+    out = C['OUT']
     # This independent live check is deliberately before analysis-r1 exists and
     # before any raw timing file is read.
     R['Runtime'](h, out).verify_restored(out / 'analysis-live-restoration.json')

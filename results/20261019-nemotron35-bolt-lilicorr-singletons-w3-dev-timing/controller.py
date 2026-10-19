@@ -141,6 +141,7 @@ class Runtime(_RuntimeBase):
         self.adapter_hashes = C['adapter_code_hashes']()
         self.hashes = C['source_binary_hashes'](self.h)
         self.before_hw = self.h['runner']['hardware']()
+        C['save'](self.out / 'hardware-before.json', self.before_hw)
         reference_hw = C['load'](self.off['REFERENCE'] / 'run-r1/hardware-before.json')
         assert self.before_hw == reference_hw, 'hardware/capability snapshot differs from prerequisite'
         live = self.inspect(self.original_name)
@@ -360,7 +361,7 @@ def main():
     assert __debug__ and socket.gethostname() == 'inference-host'
     assert HERE == C['ROOT'], (HERE, C['ROOT'])
     p, k, h = load_dependencies()
-    out = C['ROOT'] / 'run-r1'
+    out = C['OUT']
     out.mkdir(exist_ok=False)
     (out / 'declaration.md').write_text((HERE / 'README.md').read_text())
     summary = capture(Runtime(h, out))

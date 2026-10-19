@@ -5,6 +5,14 @@ package. It is not a publishable benchmark, a full-suite result, a statistical
 significance claim, a deployment change, or a promotion decision. W7 is
 explicitly excluded because the qualified W7 run rejected two long cases.
 
+Attempt r1 stopped before native startup or timing because its container validator
+incorrectly compared fresh Docker hostnames; the restoration verifier also lacked
+`hardware-before.json`. Its raw failure evidence and exact code are retained in
+`run-r1/` and `attempt-r1-source/`. The original subsequently passed the existing
+qualified live-restoration checks and a fresh READY response. Attempt r2 repairs
+those lifecycle checks, uses fresh names/output, and keeps the same benchmark,
+qualification gates, and measurement settings. No failed measurement is discarded.
+
 The user-authorized scope is only a controlled baseline-vs-qualified-W3
 comparison using the already-qualified r2 source, model, serving arguments,
 and prompts. Existing experiments and launchers are read-only.
@@ -72,15 +80,15 @@ Lead commands:
 ```bash
 cd /home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-singletons-w3-dev-timing
 bash cpu-checks.sh
-python3 -B controller.py --lead-run-timing 2>&1 | tee controller-r1.log
+python3 -B controller.py --lead-run-timing 2>&1 | tee controller-r2.log
 # only after the controller reports restored:
-python3 -B analyze-timing.py --lead-after-timing-restore 2>&1 | tee analyzer-r1.log
+python3 -B analyze-timing.py --lead-after-timing-restore 2>&1 | tee analyzer-r2.log
 ```
 
 `analyze-timing.py` performs its independent live restoration check before
 reading timing artifacts. It retains partial/failing rows and refuses a
 summary unless cardinality is exactly six per arm/point and all raw/fidelity
-checks pass. Raw artifacts are retained under `run-r1/`; they are the source of
+checks pass. Raw artifacts are retained under `run-r2/`; they are the source of
 truth. No remote runtime, Docker, API, GPU, or SSH work is performed by the
 worker or by CPU fixtures.
 
