@@ -52,3 +52,26 @@ Source hypotheses to measure: IQ2 width-four token-serial dispatch, NVFP4 MoE
 ID-copy/wait and per-expert fallback, and draft callback cost. Existing acceptance
 logs already show position rates short `(0.791, 0.674, 0.488)` and long
 `(0.800, 0.667, 0.356)`; do not assume every third draft token is rejected.
+
+## Executable capture and collection window
+
+```bash
+python3 -B test-profile.py -v
+python3 -B run-profile.py --lead-capture
+```
+
+The official tool supports an external named-session control interface. Start
+collection paused, then issue `unitrace --resume <session>` inside the existing
+cell immediately before its real request and `--pause <session>` in `finally`.
+This excludes model initialization/warmup from the collection window; the request
+still includes short55 prefill and greedy128 generation. No application code,
+ITT calls, queue properties, or benchmark-request parameters change. Unit tests
+check resume/request/pause ordering, including request failure. See the pinned
+unitrace README's temporal/out-of-application control section.
+
+The CPU build succeeded and actual hashes are pinned in `run-profile.py`. Its
+out-of-tree generated embedded Git-version headers emitted Git discovery warnings;
+the explicit source checkout assertion passed and the tool/library linked with
+all dependencies resolved. No missing embedded version is treated as a source pin.
+The reviewed lifecycle/mount binding was subsequently narrowed with this official
+collection-window control and tested separately before execution.
