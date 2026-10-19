@@ -1,0 +1,585 @@
+--- a/common/speculative.cpp
++++ b/common/speculative.cpp
+@@ -16,6 +16,9 @@
+ #include <cassert>
+ #include <cmath>
+ #include <cstring>
++// LILICORR_PROFILE_ONLY_BEGIN
++#include <cstdlib>
++// LILICORR_PROFILE_ONLY_END
+ #include <iomanip>
+ #include <map>
+ #include <cinttypes>
+@@ -30,6 +33,13 @@
+ #define SPEC_VOCAB_MAX_SIZE_DIFFERENCE  128
+ #define SPEC_VOCAB_CHECK_START_TOKEN_ID 5
+ 
++// LILICORR_PROFILE_ONLY_BEGIN
++// Development profiling only. No new synchronization: submit != device compute.
++static bool lilicorr_profile_enabled(bool is_lilicorr) {
++    const char * value = is_lilicorr ? std::getenv("LLAMA_LILICORR_PROFILE") : nullptr;
++    return value && std::strcmp(value, "1") == 0;
++}
++// LILICORR_PROFILE_ONLY_END
+ // Rebuild seq_id's draft sampler at the target's temperature: rejection weighs q against p, so
+ // both have to sample alike. Only temp and seed carry over; the draft keeps its own top_k.
+ static void spec_retune(
+@@ -1186,6 +1196,10 @@
+         }
+ 
+         const int32_t n_tokens = batch_in.size();
++        // LILICORR_PROFILE_ONLY_BEGIN
++        const bool profile = lilicorr_profile_enabled(is_lilicorr);
++        const int64_t profile_begin = profile ? ggml_time_us() : 0;
++        // LILICORR_PROFILE_ONLY_END
+ 
+         // per-seq inclusive batch range (assumes each seq's tokens are contiguous in the batch)
+         std::vector<int32_t> i_batch_beg(n_seq, -1);
+@@ -1224,6 +1238,9 @@
+ 
+                 // gather target features per extract layer; the fused decode encodes and
+                 // injects them into the K/V cache at the target positions
++                // LILICORR_PROFILE_ONLY_BEGIN
++                const int64_t profile_t0 = profile ? ggml_time_us() : 0;
++                // LILICORR_PROFILE_ONLY_END
+                 features_buf.resize((size_t) n_chunk * n_embd_enc);
+                 for (uint32_t k = 0; k < target_layer_ids_n; ++k) {
+                     const float * layer = llama_get_embeddings_layer_inp(ctx_tgt, (uint32_t) target_layer_ids[k]);
+@@ -1237,13 +1254,22 @@
+                     }
+                 }
+ 
++                // LILICORR_PROFILE_ONLY_BEGIN
++                const int64_t profile_t1 = profile ? ggml_time_us() : 0;
++                // LILICORR_PROFILE_ONLY_END
+                 batch_inject.clear();
+                 for (int32_t i = 0; i < n_chunk; ++i) {
+                     const llama_pos p = batch_in.tokens[i_batch_beg[seq_id] + offset + i].pos[0];
+                     const llama_pos pos_arr[4] = { p, p, p, 0 };
+                     batch_inject.add_embd({ features_buf.data() + (size_t) i * n_embd_enc, 1, (size_t) n_embd_enc }, pos_arr, seq_id, false);
+                 }
++                // LILICORR_PROFILE_ONLY_BEGIN
++                const int64_t profile_t2 = profile ? ggml_time_us() : 0;
++                // LILICORR_PROFILE_ONLY_END
+                 const int32_t rc = llama_process(ctx_dft, LLAMA_PROCESS_TYPE_DECODE, batch_inject.get());
++                // LILICORR_PROFILE_ONLY_BEGIN
++                const int64_t profile_t3 = profile ? ggml_time_us() : 0;
++                // LILICORR_PROFILE_ONLY_END
+                 if (rc != 0) {
+                     LOG_ERR("%s: llama_process(ctx_dft) failed rc=%d (n_tokens=%d, offset=%d)\n",
+                             __func__, rc, (int) n_chunk, (int) offset);
+@@ -1252,6 +1278,9 @@
+                 if (is_lilicorr) {
+                     // Ordinary DFlash can write to the KV cache, but LiliCorr needs to store embeddings across sequences.
+                     const float * projected = llama_get_embeddings_nextn(ctx_dft);
++                    // LILICORR_PROFILE_ONLY_BEGIN
++                    const int64_t profile_t4 = profile ? ggml_time_us() : 0;
++                    // LILICORR_PROFILE_ONLY_END
+                     if (projected) {
+                         const size_t seq_offset = (size_t) seq_id * lilicorr_rows;
+                         const llama_pos pos_min = std::max(0, batch_inject.tokens.back().pos[0] - block_size);
+@@ -1266,15 +1295,36 @@
+                             lilicorr_pos[slot] = pos;
+                         }
+                     }
+-                }
+-            }
+-        }
+-
++                    // LILICORR_PROFILE_ONLY_BEGIN
++                    if (profile) {
++                        const int64_t profile_t5 = ggml_time_us();
++                        LOG_INF("LLAMA_LILICORR_PROFILE v=1 stage=process_chunk seq=%d batch_rows=%d seq_rows=%d offset=%d rows=%d pos0=%d pos1=%d projected=%d begin_us=%" PRId64 " end_us=%" PRId64 " gather_us=%" PRId64 " prepare_us=%" PRId64 " submit_us=%" PRId64 " projected_wait_us=%" PRId64 " ring_us=%" PRId64 "\n",
++                                seq_id, n_tokens, n_rows, offset, n_chunk,
++                                batch_inject.tokens.front().pos[0], batch_inject.tokens.back().pos[0], projected != nullptr,
++                                profile_t0, profile_t5, profile_t1 - profile_t0, profile_t2 - profile_t1,
++                                profile_t3 - profile_t2, profile_t4 - profile_t3, profile_t5 - profile_t4);
++                    }
++                    // LILICORR_PROFILE_ONLY_END
++                }
++            }
++        }
++
++        // LILICORR_PROFILE_ONLY_BEGIN
++        if (profile) {
++            const int64_t profile_end = ggml_time_us();
++            LOG_INF("LLAMA_LILICORR_PROFILE v=1 stage=process_batch rows=%d begin_us=%" PRId64 " end_us=%" PRId64 "\n",
++                    n_tokens, profile_begin, profile_end);
++        }
++        // LILICORR_PROFILE_ONLY_END
+         return true;
+     }
+ 
+     void draft(common_speculative_draft_params_vec & dparams) override {
+         auto & ctx_dft = params.ctx_dft;
++        // LILICORR_PROFILE_ONLY_BEGIN
++        const bool profile = lilicorr_profile_enabled(is_lilicorr);
++        const int64_t profile_t0 = profile ? ggml_time_us() : 0;
++        // LILICORR_PROFILE_ONLY_END
+ 
+         batch.clear();
+ 
+@@ -1313,7 +1363,17 @@
+         }
+ 
+         // decode all sequence's noise block in a single batch
++        // LILICORR_PROFILE_ONLY_BEGIN
++        const int64_t profile_t1 = profile ? ggml_time_us() : 0;
++        // LILICORR_PROFILE_ONLY_END
+         int ret = llama_process(ctx_dft, LLAMA_PROCESS_TYPE_DECODE, batch.get());
++        // LILICORR_PROFILE_ONLY_BEGIN
++        if (profile) {
++            const int64_t profile_t2 = ggml_time_us();
++            LOG_INF("LLAMA_LILICORR_PROFILE v=1 stage=draft_batch rows=%d rc=%d begin_us=%" PRId64 " end_us=%" PRId64 " prepare_us=%" PRId64 " submit_us=%" PRId64 "\n",
++                    (int) batch.size(), ret, profile_t0, profile_t2, profile_t1 - profile_t0, profile_t2 - profile_t1);
++        }
++        // LILICORR_PROFILE_ONLY_END
+         if (ret != 0) {
+             LOG_WRN("%s: llama_process returned %d\n", __func__, ret);
+             return;
+@@ -1334,7 +1394,13 @@
+ 
+             if (is_dflash2 || is_lilicorr) {
+                 // Both DFlash and LiliCorr greedily walk the candidate lattice.
++                // LILICORR_PROFILE_ONLY_BEGIN
++                const int64_t profile_t3 = profile ? ggml_time_us() : 0;
++                // LILICORR_PROFILE_ONLY_END
+                 const float * lattice = llama_get_embeddings_nextn(ctx_dft);
++                // LILICORR_PROFILE_ONLY_BEGIN
++                const int64_t profile_t4 = profile ? ggml_time_us() : 0;
++                // LILICORR_PROFILE_ONLY_END
+                 GGML_ASSERT(lattice && "DFlash2 selector produced no lattice");
+ 
+                 int32_t predecessor = 0;
+@@ -1361,6 +1427,14 @@
+                 if (result.size() < (size_t) params.n_min) {
+                     result.clear();
+                 }
++                // LILICORR_PROFILE_ONLY_BEGIN
++                if (profile) {
++                    const int64_t profile_t5 = ggml_time_us();
++                    LOG_INF("LLAMA_LILICORR_PROFILE v=1 stage=draft_select seq=%d rows=%d pos0=%d selected=%d limit=%d begin_us=%" PRId64 " end_us=%" PRId64 " lattice_wait_us=%" PRId64 " walk_us=%" PRId64 "\n",
++                            seq_id, n_block_tokens, (int) dp.pos0, (int) result.size(), (int) dp.n_max, profile_t3, profile_t5,
++                            profile_t4 - profile_t3, profile_t5 - profile_t4);
++                }
++                // LILICORR_PROFILE_ONLY_END
+                 continue;
+             }
+ 
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -17,6 +17,9 @@
+ #include <cinttypes>
+ #include <cmath>
+ #include <cstring>
++// LILICORR_PROFILE_ONLY_BEGIN
++#include <cstdlib>
++// LILICORR_PROFILE_ONLY_END
+ #include <limits>
+ #include <stdexcept>
+ #include <string>
+@@ -1505,6 +1508,12 @@
+ }
+ 
+ llm_graph_result * llama_context::process_ubatch(const llama_ubatch & ubatch, llm_graph_type gtype, llama_memory_context_i * mctx, ggml_status & ret) {
++    // LILICORR_PROFILE_ONLY_BEGIN
++    const char * profile_env = model.hparams.lilicorr_candidate_topk > 0 ? std::getenv("LLAMA_LILICORR_PROFILE") : nullptr;
++    const bool profile = profile_env && std::strcmp(profile_env, "1") == 0;
++    const int64_t profile_t0 = profile ? ggml_time_us() : 0;
++    const auto profile_reused_before = n_reused;
++    // LILICORR_PROFILE_ONLY_END
+     if (mctx && !mctx->apply()) {
+         LLAMA_LOG_ERROR("%s: failed to apply memory context\n", __func__);
+         ret = GGML_STATUS_FAILED;
+@@ -1557,6 +1566,9 @@
+         gf_res_prev_active = res;
+     }
+ 
++    // LILICORR_PROFILE_ONLY_BEGIN
++    const int64_t profile_t1 = profile ? ggml_time_us() : 0;
++    // LILICORR_PROFILE_ONLY_END
+     // set the input data for the input tensors
+     {
+         //const auto t_start_us = ggml_time_us();
+@@ -1567,7 +1579,18 @@
+         //LLAMA_LOG_INFO("graph set inputs time: %.3f ms\n", (ggml_time_us() - t_start_us)/1000.0);
+     }
+ 
++    // LILICORR_PROFILE_ONLY_BEGIN
++    const int64_t profile_t2 = profile ? ggml_time_us() : 0;
++    // LILICORR_PROFILE_ONLY_END
+     const auto status = graph_compute(res->get_gf(), ubatch.n_tokens > 1);
++    // LILICORR_PROFILE_ONLY_BEGIN
++    if (profile) {
++        const int64_t profile_t3 = ggml_time_us();
++        LLAMA_LOG_INFO("LLAMA_LILICORR_PROFILE v=1 stage=ubatch rows=%u gtype=%d nodes=%d reused=%d rc=%d begin_us=%" PRId64 " end_us=%" PRId64 " build_alloc_us=%" PRId64 " inputs_us=%" PRId64 " submit_us=%" PRId64 "\n",
++                ubatch.n_tokens, (int) gtype, ggml_graph_n_nodes(res->get_gf()), n_reused != profile_reused_before, (int) status,
++                profile_t0, profile_t3, profile_t1 - profile_t0, profile_t2 - profile_t1, profile_t3 - profile_t2);
++    }
++    // LILICORR_PROFILE_ONLY_END
+     if (status != GGML_STATUS_SUCCESS) {
+         LLAMA_LOG_ERROR("%s: failed to compute graph, compute status: %d\n", __func__, status);
+         ret = status;
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -15,6 +15,9 @@
+ #include <assert.h>
+ #include <atomic>
+ #include <cctype>
++// LILICORR_SYCL_PROFILE_ONLY_BEGIN
++#include <chrono>
++// LILICORR_SYCL_PROFILE_ONLY_END
+ #include <cinttypes>
+ #include <cstddef>
+ #include <cstdint>
+@@ -7212,20 +7215,170 @@
+     return skip;
+ }
+ 
++// LILICORR_SYCL_PROFILE_ONLY_BEGIN
++// Development-only host wall accounting for the actual LiliCorr graph dispatches.  It
++// deliberately records no SYCL events, waits, queue commands, or device durations.
++static int64_t lilicorr_sycl_profile_now_us() {
++    return std::chrono::duration_cast<std::chrono::microseconds>(
++        std::chrono::steady_clock::now().time_since_epoch()).count();
++}
++
++static bool lilicorr_sycl_profile_requested() {
++    const char * value = std::getenv("LLAMA_LILICORR_PROFILE");
++    return value && std::strcmp(value, "1") == 0;
++}
++
++static bool lilicorr_sycl_profile_marker(const ggml_tensor * tensor) {
++    return tensor && tensor->name[0] && std::strstr(tensor->name, "lilicorr") != nullptr;
++}
++
++static const ggml_tensor * lilicorr_sycl_profile_graph_marker(const ggml_cgraph * cgraph) {
++    for (int i = 0; i < cgraph->n_nodes; ++i) {
++        const ggml_tensor * node = cgraph->nodes[i];
++        if (lilicorr_sycl_profile_marker(node)) {
++            return node;
++        }
++        for (int j = 0; j < GGML_MAX_SRC; ++j) {
++            if (lilicorr_sycl_profile_marker(node->src[j])) {
++                return node->src[j];
++            }
++        }
++    }
++    return nullptr;
++}
++
++static const char * lilicorr_sycl_profile_name(const ggml_tensor * tensor) {
++    return tensor && tensor->name[0] ? tensor->name : "-";
++}
++
++static const char * lilicorr_sycl_profile_type(const ggml_tensor * tensor) {
++    return tensor ? ggml_type_name(tensor->type) : "-";
++}
++
++static const char * lilicorr_sycl_profile_op(const ggml_tensor * tensor) {
++    return tensor ? ggml_op_name(tensor->op) : "-";
++}
++
++static std::string lilicorr_sycl_profile_ranges(const std::vector<unsigned char> & covered) {
++    std::string result;
++    for (size_t i = 0; i < covered.size();) {
++        if (!covered[i]) {
++            ++i;
++            continue;
++        }
++        const size_t first = i;
++        while (i + 1 < covered.size() && covered[i + 1]) {
++            ++i;
++        }
++        if (!result.empty()) {
++            result += ',';
++        }
++        result += std::to_string(first);
++        if (i != first) {
++            result += '-';
++            result += std::to_string(i);
++        }
++        ++i;
++    }
++    return result.empty() ? "-" : result;
++}
++
++struct lilicorr_sycl_profile_span {
++    int first_index;
++    int last_index;
++    int count;
++    int64_t begin_us;
++    int64_t end_us;
++    const char * group;
++    const ggml_tensor * first;
++    const ggml_tensor * last;
++};
++
++struct lilicorr_sycl_profile_scope {
++    bool enabled;
++    int first_index;
++    int consumed = 0;
++    int64_t begin_us;
++    const char * group = nullptr;
++    const ggml_tensor * first;
++    const ggml_cgraph * cgraph;
++    std::vector<lilicorr_sycl_profile_span> * records;
++    std::vector<unsigned char> * covered;
++
++    lilicorr_sycl_profile_scope(bool enabled_, int first_index_, const ggml_tensor * first_,
++                                const ggml_cgraph * cgraph_,
++                                std::vector<lilicorr_sycl_profile_span> * records_,
++                                std::vector<unsigned char> * covered_)
++        : enabled(enabled_), first_index(first_index_), begin_us(enabled_ ? lilicorr_sycl_profile_now_us() : 0),
++          first(first_), cgraph(cgraph_), records(records_), covered(covered_) {
++    }
++
++    void consume(int count, const char * group_) {
++        consumed = count;
++        group = group_;
++    }
++
++    ~lilicorr_sycl_profile_scope() {
++        if (!enabled || consumed <= 0) {
++            return;
++        }
++        const int last_index = std::min(first_index + consumed - 1, cgraph->n_nodes - 1);
++        const int64_t end_us = lilicorr_sycl_profile_now_us();
++        records->push_back({first_index, last_index, consumed, begin_us, end_us,
++                            group ? group : "unknown", first, cgraph->nodes[last_index]});
++        for (int i = first_index; i <= last_index; ++i) {
++            (*covered)[i] = 1;
++        }
++    }
++};
++// LILICORR_SYCL_PROFILE_ONLY_END
+ static void ggml_backend_sycl_graph_compute_impl(ggml_backend_sycl_context * sycl_ctx, ggml_cgraph * cgraph) {
+     ggml_sycl_set_main_device(sycl_ctx->device);
+ 
++    // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++    const bool profile_requested = lilicorr_sycl_profile_requested();
++    const ggml_tensor * profile_marker = profile_requested ? lilicorr_sycl_profile_graph_marker(cgraph) : nullptr;
++    const bool profile_enabled = profile_marker != nullptr;
++    static std::atomic<uint64_t> profile_graph_sequence{0};
++    const uint64_t profile_graph_id = profile_requested ?
++        profile_graph_sequence.fetch_add(1, std::memory_order_relaxed) + 1 : 0;
++    std::vector<lilicorr_sycl_profile_span> profile_records;
++    std::vector<unsigned char> profile_covered;
++    if (profile_enabled) {
++        profile_records.reserve((size_t) cgraph->n_nodes);
++        profile_covered.assign((size_t) cgraph->n_nodes, 0);
++    }
++    int profile_skipped_nodes = 0;
++    const int64_t profile_core_begin = profile_enabled ? lilicorr_sycl_profile_now_us() : 0;
++    // LILICORR_SYCL_PROFILE_ONLY_END
+     for (int i = 0; i < cgraph->n_nodes; i++) {
+         ggml_tensor * node = cgraph->nodes[i];
+         if (ggml_sycl_is_view_or_noop(node)) {
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            if (profile_enabled) {
++                ++profile_skipped_nodes;
++            }
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             continue;
+         }
+         if ((node->flags & GGML_TENSOR_FLAG_COMPUTE) == 0) {
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            if (profile_enabled) {
++                ++profile_skipped_nodes;
++            }
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             continue;
+         }
+ 
++        // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++        lilicorr_sycl_profile_scope profile_scope(profile_enabled, i, node, cgraph,
++                                                  &profile_records, &profile_covered);
++        // LILICORR_SYCL_PROFILE_ONLY_END
+         const int nodes_to_skip = ggml_sycl_fuse(*sycl_ctx, cgraph, i);
+         if (nodes_to_skip != 0) {
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(std::max(1, nodes_to_skip + 1), "sycl_fuse");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i += nodes_to_skip;
+             continue;
+         }
+@@ -7240,6 +7393,9 @@
+         if (node->op == GGML_OP_UNARY) {
+             const int router_skip = ggml_sycl_router_fused(*sycl_ctx, cgraph, i);
+             if (router_skip != 0) {
++                // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++                profile_scope.consume(std::max(1, router_skip + 1), "router_fused");
++                // LILICORR_SYCL_PROFILE_ONLY_END
+                 i += router_skip;
+                 continue;
+             }
+@@ -7250,6 +7406,9 @@
+             const int gdn_nodes_to_skip = ggml_sycl_try_gdn_cache_fusion(cgraph, i, fused_state_cpy);
+             if (gdn_nodes_to_skip > 0) {
+                 ggml_sycl_op_gated_delta_net_fused_cache(*sycl_ctx, node, fused_state_cpy);
++                // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++                profile_scope.consume(gdn_nodes_to_skip + 1, "gdn_cache_fused");
++                // LILICORR_SYCL_PROFILE_ONLY_END
+                 i += gdn_nodes_to_skip;
+                 continue;
+             }
+@@ -7257,12 +7416,18 @@
+         if (node->op == GGML_OP_RMS_NORM &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_MUL, GGML_OP_ADD }, {})) {
+             ggml_sycl_op_rms_norm_fused_add(*sycl_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(3, "rms_norm_mul_add_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i += 2;
+             continue;
+         }
+         if (node->op == GGML_OP_RMS_NORM &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_MUL }, {})) {
+             ggml_sycl_op_rms_norm_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(2, "rms_norm_mul_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i++;
+             continue;
+         }
+@@ -7271,18 +7436,27 @@
+         if (node->op == GGML_OP_RMS_NORM &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_SCALE }, {})) {
+             ggml_sycl_op_rms_norm_scale_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(2, "rms_norm_scale_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i++;
+             continue;
+         }
+         if (node->op == GGML_OP_ADD &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_ADD, GGML_OP_ADD }, {})) {
+             ggml_sycl_op_add_add_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(2, "add_add_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i++;
+             continue;
+         }
+         if (node->op == GGML_OP_UNARY &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_MUL }, { ggml_get_unary_op(node) })) {
+             ggml_sycl_op_unary_mul_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(2, "unary_mul_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i++;
+             continue;
+         }
+@@ -7293,6 +7467,9 @@
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_ADD, GGML_OP_UNARY, GGML_OP_MUL },
+                                { ggml_get_unary_op(cgraph->nodes[i + 1]) })) {
+             ggml_sycl_op_add_unary_mul_fused(*sycl_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(3, "add_unary_mul_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i += 2;
+             continue;
+         }
+@@ -7303,6 +7480,9 @@
+         if (node->op == GGML_OP_L2_NORM) {
+             const int l2_batch_skip = ggml_sycl_l2_norm_batch_fused(*sycl_ctx, cgraph, i);
+             if (l2_batch_skip > 0) {
++                // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++                profile_scope.consume(l2_batch_skip + 1, "l2_norm_batch_fused");
++                // LILICORR_SYCL_PROFILE_ONLY_END
+                 i += l2_batch_skip;
+                 continue;
+             }
+@@ -7311,6 +7491,9 @@
+         if (node->op == GGML_OP_SSM_CONV &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_SSM_CONV, GGML_OP_ADD, GGML_OP_UNARY }, { GGML_UNARY_OP_SILU })) {
+             ggml_sycl_ssm_conv_fused(*sycl_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(3, "ssm_conv_add_unary_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i += 2;
+             continue;
+         }
+@@ -7318,11 +7501,17 @@
+         if (node->op == GGML_OP_SSM_CONV &&
+             ggml_sycl_can_fuse(cgraph, i, { GGML_OP_SSM_CONV, GGML_OP_UNARY }, { GGML_UNARY_OP_SILU })) {
+             ggml_sycl_ssm_conv_fused(*sycl_ctx, node, nullptr, cgraph->nodes[i + 1]);
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(2, "ssm_conv_unary_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i++;
+             continue;
+         }
+ 
+         if (node->op == GGML_OP_MUL_MAT && ggml_sycl_mul_mat_glu_mmvq_fused(*sycl_ctx, cgraph, i)) {
++            // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++            profile_scope.consume(3, "mul_mat_glu_mmvq_fused");
++            // LILICORR_SYCL_PROFILE_ONLY_END
+             i += 2;
+             continue;
+         }
+@@ -7332,7 +7521,64 @@
+             GGML_LOG_ERROR("%s: error: op not supported %s (%s)\n", __func__, node->name, ggml_op_name(node->op));
+         }
+         GGML_ASSERT(ok);
++        // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++        profile_scope.consume(1, "compute_forward");
++        // LILICORR_SYCL_PROFILE_ONLY_END
++    }
++    // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++    const int64_t profile_core_end = profile_enabled ? lilicorr_sycl_profile_now_us() : 0;
++    if (profile_requested) {
++        const int64_t profile_log_begin = lilicorr_sycl_profile_now_us();
++        const char * marker_name = lilicorr_sycl_profile_name(profile_marker);
++        if (!profile_enabled) {
++            GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=gate graph=%" PRIu64 " requested=1 enabled=0 marker=0 graph_nodes=%d marker_name=%s\n",
++                          profile_graph_id, cgraph->n_nodes, marker_name);
++            GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=graph graph=%" PRIu64 " requested=1 enabled=0 marker=0 graph_nodes=%d covered_nodes=0 uncovered_nodes=%d skipped_nodes=0 spans=0 first_index=-1 last_index=-1 begin_us=0 end_us=0 core_wall_us=0 event_wall_us=0 uncounted_wall_us=0 log_wall_us=0 covered_ranges=- uncovered_ranges=all marker_name=%s\n",
++                          profile_graph_id, cgraph->n_nodes, cgraph->n_nodes, marker_name);
++        } else {
++            GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=gate graph=%" PRIu64 " requested=1 enabled=1 marker=1 graph_nodes=%d marker_name=%s\n",
++                          profile_graph_id, cgraph->n_nodes, marker_name);
++            int64_t event_wall_us = 0;
++            for (const lilicorr_sycl_profile_span & span : profile_records) {
++                event_wall_us += span.end_us - span.begin_us;
++                const ggml_tensor * src0 = span.first->src[0];
++                const ggml_tensor * src1 = span.first->src[1];
++                GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=op graph=%" PRIu64 " first_index=%d last_index=%d count=%d begin_us=%" PRId64 " end_us=%" PRId64 " elapsed_host_us=%" PRId64 " group=%s first_op=%s last_op=%s first_name=%s last_name=%s src0_name=%s src0_type=%s src1_name=%s src1_type=%s dst_type=%s ne0=%" PRId64 " ne1=%" PRId64 " ne2=%" PRId64 " ne3=%" PRId64 " src0_ne0=%" PRId64 " src0_ne1=%" PRId64 " src0_ne2=%" PRId64 " src0_ne3=%" PRId64 " dst_ne0=%" PRId64 " dst_ne1=%" PRId64 " dst_ne2=%" PRId64 " dst_ne3=%" PRId64 "\n",
++                              profile_graph_id, span.first_index, span.last_index, span.count,
++                              span.begin_us, span.end_us, span.end_us - span.begin_us, span.group,
++                              lilicorr_sycl_profile_op(span.first), lilicorr_sycl_profile_op(span.last),
++                              lilicorr_sycl_profile_name(span.first), lilicorr_sycl_profile_name(span.last),
++                              lilicorr_sycl_profile_name(src0), lilicorr_sycl_profile_type(src0),
++                              lilicorr_sycl_profile_name(src1), lilicorr_sycl_profile_type(src1),
++                              lilicorr_sycl_profile_type(span.first),
++                              span.first->ne[0], span.first->ne[1], span.first->ne[2], span.first->ne[3],
++                              src0 ? src0->ne[0] : 0, src0 ? src0->ne[1] : 0,
++                              src0 ? src0->ne[2] : 0, src0 ? src0->ne[3] : 0,
++                              span.first->ne[0], span.first->ne[1], span.first->ne[2], span.first->ne[3]);
++            }
++            size_t covered_nodes = 0;
++            for (unsigned char covered : profile_covered) {
++                covered_nodes += covered != 0;
++            }
++            const size_t uncovered_nodes = profile_covered.size() - covered_nodes;
++            const int64_t core_wall_us = profile_core_end - profile_core_begin;
++            const int64_t uncounted_wall_us = core_wall_us - event_wall_us;
++            const std::string covered_ranges = lilicorr_sycl_profile_ranges(profile_covered);
++            std::vector<unsigned char> uncovered(profile_covered.size(), 1);
++            for (size_t i = 0; i < profile_covered.size(); ++i) {
++                uncovered[i] = profile_covered[i] ? 0 : 1;
++            }
++            const std::string uncovered_ranges = lilicorr_sycl_profile_ranges(uncovered);
++            const int64_t profile_log_end = lilicorr_sycl_profile_now_us();
++            GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=graph graph=%" PRIu64 " requested=1 enabled=1 marker=1 graph_nodes=%d covered_nodes=%zu uncovered_nodes=%zu skipped_nodes=%d spans=%zu first_index=%d last_index=%d begin_us=%" PRId64 " end_us=%" PRId64 " core_wall_us=%" PRId64 " event_wall_us=%" PRId64 " uncounted_wall_us=%" PRId64 " log_wall_us=%" PRId64 " covered_ranges=%s uncovered_ranges=%s marker_name=%s\n",
++                          profile_graph_id, cgraph->n_nodes, covered_nodes, uncovered_nodes, profile_skipped_nodes,
++                          profile_records.size(), profile_records.empty() ? -1 : profile_records.front().first_index,
++                          profile_records.empty() ? -1 : profile_records.back().last_index,
++                          profile_core_begin, profile_core_end, core_wall_us, event_wall_us, uncounted_wall_us,
++                          profile_log_end - profile_log_begin, covered_ranges.c_str(), uncovered_ranges.c_str(), marker_name);
++        }
+     }
++    // LILICORR_SYCL_PROFILE_ONLY_END
+ }
+ 
+ #ifdef GGML_SYCL_GRAPH
