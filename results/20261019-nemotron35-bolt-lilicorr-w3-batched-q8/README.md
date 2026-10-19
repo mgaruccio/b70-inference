@@ -122,3 +122,35 @@ Outstanding: actual frozen-SDK compilation of the 2D ESIMD instantiation and its
 barrier/local-accessor lowering, real native bit equivalence, public qualification,
 and performance. Local checks cannot discharge these. This commit completes only
 candidate preparation; the lead continues build/fidelity/performance iterations.
+
+## Candidate-bound execution
+
+`run-performance.py` reuses the completed ABBA controller and independent raw
+analyzer from `20261019-nemotron35-bolt-lilicorr-singletons-w3-dev-timing`.
+Only private loaded namespaces receive fresh output/container names and the
+explicit r2-parent-to-candidate `/src:ro` bind. Qualification namespaces and
+saved observations are never rebound or rewritten. Actual Docker records are
+checked against the explicitly derived expected mount; all other configuration,
+image, PID, native, public, telemetry, and restoration checks remain required.
+The completed baseline runner's six source hashes are checked against its saved
+r3 pins. New driver/package bytes and actual candidate source/binary proofs are
+checked before/after execution. Candidate proof requires the successful build
+and exactly the declared three-file/backend-library-only change.
+
+Lead commands, on `inference-host` in this package (after a successful build):
+
+```bash
+set -euo pipefail
+python3 -B test-performance.py -v 2>&1 | tee performance-cpu.log
+python3 -B run-performance.py --lead-run-timing 2>&1 | tee performance-capture-r1.log
+python3 -B run-performance.py --lead-after-timing-restore 2>&1 | tee performance-analysis-r1.log
+```
+
+Output is `timing-r1/`; no existing attempt is reused. The binding fixtures check
+actual inherited function-global wiring, exact name/source-bind deltas, strict
+synthetic Docker comparisons, and no mutation of observations. Desktop result:
+five passed, one host-only test skipped. An initial direct import of the frozen
+qualification gate on the desktop correctly failed because its actual absolute
+prerequisite paths are remote; the host-only check is explicit, with no fake
+hostname/path or weakened source assertion. All six must pass on the host before
+capture. This is still preparation, not a native/public/performance result.
