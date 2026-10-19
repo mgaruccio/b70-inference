@@ -36,26 +36,60 @@ def _frozen_reference(p, h, job):
     return p['read_result'](h, h['off']['ROOT'] / 'run-r1/A0', job)
 
 
+def _parsed_sse_bodies(raw):
+    bodies, done = [], 0
+    for line in raw.splitlines():
+        if not line.startswith(b'data: '):
+            continue
+        data = line[6:].strip()
+        if data == b'[DONE]':
+            done += 1
+            continue
+        bodies.append(json.loads(data))
+    assert done == 1
+    return bodies
+
+
 def _event_timing(stem, raw, transport):
     events = C['load'](_artifact(stem, '.events.json'))
-    previous = -1.0
+    bodies = _parsed_sse_bodies(raw)
+    assert [event['body'] for event in events] == bodies
+    elapsed_total = transport['elapsed_s']
+    assert isinstance(elapsed_total, (int, float))
+    assert math.isfinite(elapsed_total) and elapsed_total > 0
+    previous = 0.0
     first_content = None
     for event in events:
         elapsed = event['elapsed_s']
         assert isinstance(elapsed, (int, float)) and math.isfinite(elapsed)
+        assert 0 <= elapsed <= elapsed_total
         assert elapsed >= previous
         previous = elapsed
         if first_content is None and any(
                 choice.get('delta', {}).get('content')
                 for choice in event['body'].get('choices', [])):
             first_content = elapsed
-    assert raw.count(b'data: [DONE]') == 1
     assert transport['complete'] and transport['status'] == 200
     assert transport['bytes'] == len(raw)
     assert first_content is not None
     assert transport['ttfc_s'] == first_content
-    assert transport['elapsed_s'] > transport['ttfc_s']
+    assert 0 <= transport['ttfc_s'] < elapsed_total
     return events
+
+
+def _augment_timing(stem, raw, protocol_result, transport):
+    """Attach only independently reread HTTP/SSE clocks to protocol fields."""
+    assert 'elapsed_s' not in protocol_result and 'ttfc_s' not in protocol_result
+    _event_timing(stem, raw, transport)
+    result = dict(protocol_result)
+    result.update(elapsed_s=transport['elapsed_s'], ttfc_s=transport['ttfc_s'])
+    return result
+
+
+def _compare_stored_result(stem, result):
+    stored = C['load'](_artifact(stem, '.result.json'))
+    assert result == stored, 'normalized raw response plus reread clocks differs from saved result'
+    return stored
 
 
 def check_runtime_evidence(p, h, out, cell):
@@ -119,13 +153,12 @@ def reread_measurement(p, h, out, job):
     stem = out / cell / point / f"measured-{ordinal:02}"
     payload = C['timing_jobs'](h)[point]['payload']
     raw = h['analysis']['read_http'](stem, payload, '/v1/chat/completions')
-    result = h['analysis']['normalize'](raw, payload)
-    stored = C['load'](_artifact(stem, '.result.json'))
-    assert result == stored, 'normalized raw response differs from saved result'
+    protocol_result = h['analysis']['normalize'](raw, payload)
     transport = C['load'](_artifact(stem, '.http.json'))
+    result = _augment_timing(stem, raw, protocol_result, transport)
+    stored = _compare_stored_result(stem, result)
     assert stored['elapsed_s'] == transport['elapsed_s']
     assert stored['ttfc_s'] == transport['ttfc_s']
-    _event_timing(stem, raw, transport)
     metrics = C['timing_metrics'](result)
     telemetry = C['load'](_artifact(stem, '.telemetry.json'))
     assert C['telemetry'](telemetry['samples'], telemetry['window_duration_s']) == telemetry
@@ -138,6 +171,7 @@ def reread_measurement(p, h, out, job):
     saved_rows = C['load'](out / cell / 'timing-rows.json')
     matching = [saved for saved in saved_rows
                 if saved['point'] == point and saved['ordinal'] == ordinal]
+    assert len(matching) == 1, (cell, point, ordinal, matching)
     for key in ('cell', 'point', 'phase', 'ordinal', 'artifact', 'passed',
                 'actual', 'timings', 'metrics', 'equals_no_draft'):
         assert matching[0][key] == row[key], key
@@ -196,6 +230,37 @@ def summarize(rows):
         }
     return report
 
+def _validate_timing_rows(rows, cell):
+    expected = [job for job in C['expected_measurements']() if job['cell'] == cell]
+    keys = [(row['point'], row['ordinal']) for row in rows]
+    expected_keys = [(job['point'], job['ordinal']) for job in expected]
+    assert len(rows) == 6, (cell, len(rows))
+    assert len(set(keys)) == 6, (cell, keys)
+    assert set(keys) == set(expected_keys), (cell, keys, expected_keys)
+    assert all(row['cell'] == cell and row['phase'] == 'measured' and row['passed']
+               for row in rows)
+
+
+def _timing_rows_schema(out, cell):
+    rows = C['load'](Path(out) / cell / 'timing-rows.json')
+    _validate_timing_rows(rows, cell)
+    for point in C['POINTS']:
+        for phase, ordinals in (('warmup', (0,)), ('measured', range(3))):
+            for ordinal in ordinals:
+                stem = Path(out) / cell / point / f'{phase}-{ordinal:02}'
+                for suffix in ('.request.json', '.request-body', '.http-request.json',
+                               '.http-body', '.http.json', '.events.json', '.result.json',
+                               '.check.json'):
+                    assert _artifact(stem, suffix).is_file(), str(_artifact(stem, suffix))
+                if phase == 'measured':
+                    assert _artifact(stem, '.telemetry.json').is_file(), str(stem)
+    return rows
+
+
+def _timing_schema(out):
+    rows = [_timing_rows_schema(out, cell) for cell in C['CELLS']]
+    assert sum(len(value) for value in rows) == len(C['expected_measurements']()) == 24
+
 
 _summarize = summarize
 
@@ -220,6 +285,7 @@ def analyze(out, p, h):
         assert C['load'](out / 'restoration.json')['passed']
         smoke = C['load'](out / 'restored-smoke.result.json')
         assert smoke['text'].strip() == 'READY' and smoke['finish_reason'] == 'stop'
+        _timing_schema(out)
     except BaseException as exc:
         report['errors'].append(dict(scope='completion/restoration', error=repr(exc)))
 

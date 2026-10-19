@@ -97,8 +97,16 @@ def artifact(stem, suffix):
 
 
 def adapter_code_hashes():
-    return {str(PACKAGE_ROOT / filename): sha(PACKAGE_ROOT / filename)
-            for filename in FILES if (PACKAGE_ROOT / filename).is_file()}
+    paths = [PACKAGE_ROOT / filename for filename in FILES]
+    missing = [str(path) for path in paths if not path.is_file()]
+    assert not missing, ('declared adapter files missing', missing)
+    return {str(path): sha(path) for path in paths}
+
+
+def check_adapter_code(expected):
+    actual = adapter_code_hashes()
+    assert actual == expected, ('adapter code drift', {'expected': expected, 'actual': actual})
+    return actual
 
 
 def _public():

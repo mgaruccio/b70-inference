@@ -35,6 +35,41 @@ else:
 if _BOOT_K is not None:
     _BOOT_K['C'] = C
 
+def _bind_inherited_contract_namespace(namespace):
+    """Bind every loaded K function to this adapter's private contract map.
+
+    ``runpy.run_path`` returns a namespace copy, while functions retain the
+    execution globals used by the loaded file.  Updating only ``namespace['C']``
+    therefore leaves inherited methods pointing at K's old contracts module.
+    Walk the actual loaded functions/classes and patch only those private
+    globals; the qualified P namespace is never changed.
+    """
+    import inspect
+
+    namespace['C'] = C
+    functions = []
+    for value in namespace.values():
+        if inspect.isfunction(value):
+            functions.append(value)
+        elif inspect.isclass(value):
+            for member in value.__dict__.values():
+                if isinstance(member, (staticmethod, classmethod)):
+                    member = member.__func__
+                if inspect.isfunction(member):
+                    functions.append(member)
+    seen = set()
+    for function in functions:
+        globals_map = function.__globals__
+        if id(globals_map) in seen:
+            continue
+        seen.add(id(globals_map))
+        if 'C' in globals_map:
+            globals_map['C'] = C
+
+
+if _BOOT_K is not None:
+    _bind_inherited_contract_namespace(_BOOT_K)
+
 
 def load_dependencies():
     """Load the qualified gate and patch only this adapter's K namespace."""
@@ -48,8 +83,14 @@ def load_dependencies():
     # K functions resolve C through their own globals.  This adapter-local
     # substitution gives inherited cleanup the new C.PREFIX without touching
     # the qualified P namespace or its original ancestry.
-    K['C'] = C
+    _bind_inherited_contract_namespace(K)
     return P, K, P['C']['helpers']()
+
+
+def _save_raw_startup(directory, raw):
+    for stream in ('stdout', 'stderr'):
+        (Path(directory) / ('native-and-startup.raw.' + stream + '.log')).write_bytes(
+            getattr(raw, stream))
 
 
 class Runtime(_RuntimeBase):
@@ -155,6 +196,7 @@ class Runtime(_RuntimeBase):
         self.save_logs(cell, 'native-and-startup', self._cell_name(cell))
         raw = subprocess.run(['docker', 'logs', self._cell_name(cell)], capture_output=True,
                              timeout=90, check=True)
+        _save_raw_startup(directory, raw)
         startup = (raw.stdout + raw.stderr).decode('utf-8')
         contract = P['check_startup'](startup, self._base_cell(cell), self.h)
         self.preserve_native(cell, 'ready', required=True)
@@ -287,8 +329,8 @@ class Runtime(_RuntimeBase):
             ('p_candidate_proof', lambda: P['candidate_proof']()),
             ('p_n9_equivalence', lambda: P['check_n9_equivalence'](self.h)),
             ('p_tested_code', lambda: P['check_tested'](self.h)),
-            ('adapter_code', lambda: C['adapter_code_hashes']() ==
-             C['load'](self.out / 'adapter-code-hashes-before.json')),
+            ('adapter_code', lambda: C['check_adapter_code'](
+             C['load'](self.out / 'adapter-code-hashes-before.json'))),
             ('stopped_cells', self.stopped_cells),
         )
         for key, fn in checks:
