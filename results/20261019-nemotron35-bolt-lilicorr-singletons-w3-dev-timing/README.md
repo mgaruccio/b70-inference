@@ -13,6 +13,14 @@ qualified live-restoration checks and a fresh READY response. Attempt r2 repairs
 those lifecycle checks, uses fresh names/output, and keeps the same benchmark,
 qualification gates, and measurement settings. No failed measurement is discarded.
 
+Attempt r2 also stopped before native startup or any timing: Docker's `Binds`
+list had identical entries in a different order. Its code and evidence remain
+in `attempt-r2-source/` and `run-r2/`. The original again passed independent
+qualified restoration and READY checks. The corrected validator passed on the
+actual, unmodified stopped r2 container (including exact image, configuration,
+and mount values). Attempt r3 uses new names/output and the same qualified **r2
+model build**, workloads, gates, and measurement schedule.
+
 The user-authorized scope is only a controlled baseline-vs-qualified-W3
 comparison using the already-qualified r2 source, model, serving arguments,
 and prompts. Existing experiments and launchers are read-only.
@@ -80,15 +88,15 @@ Lead commands:
 ```bash
 cd /home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-singletons-w3-dev-timing
 bash cpu-checks.sh
-python3 -B controller.py --lead-run-timing 2>&1 | tee controller-r2.log
+python3 -B controller.py --lead-run-timing 2>&1 | tee controller-r3.log
 # only after the controller reports restored:
-python3 -B analyze-timing.py --lead-after-timing-restore 2>&1 | tee analyzer-r2.log
+python3 -B analyze-timing.py --lead-after-timing-restore 2>&1 | tee analyzer-r3.log
 ```
 
 `analyze-timing.py` performs its independent live restoration check before
 reading timing artifacts. It retains partial/failing rows and refuses a
 summary unless cardinality is exactly six per arm/point and all raw/fidelity
-checks pass. Raw artifacts are retained under `run-r2/`; they are the source of
+checks pass. Raw artifacts are retained under `run-r3/`; they are the source of
 truth. No remote runtime, Docker, API, GPU, or SSH work is performed by the
 worker or by CPU fixtures.
 
