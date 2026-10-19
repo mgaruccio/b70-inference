@@ -255,7 +255,7 @@ def freeze(h):
     hashes.update({str(OLD_N9 / 'n9-equivalence.py'): C['sha'](OLD_N9 / 'n9-equivalence.py')})
     callsite = ROOT.parent / '20261018-nemotron35-bolt-lilicorr-router-callsite'
     for file in ('n9/run-control.py', 'n9/n9-equivalence.py', 'check-source.py',
-                 'router-callsite.patch', 'source-hashes.json'):
+                 'router-callsite.patch'):
         hashes[str(callsite / file)] = C['sha'](callsite / file)
     parser = ROOT.parent / '20261017-nemotron35-bolt-lilicorr-route-trace/analyze-trace.py'
     hashes[str(parser)] = C['sha'](parser)
