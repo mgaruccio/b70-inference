@@ -1,0 +1,85 @@
+docker inspect nemotron-bolt-probe
+docker ps -a --format '{{.Names}}'
+lspci -Dnn -s 0000:0b:00.0
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+docker inspect nemotron-bolt-probe
+docker stop -t 90 nemotron-bolt-probe
+docker inspect nemotron-bolt-probe
+sudo -n id -u
+docker create --name bolt-lilicorr-width-sweep-r1-vsn9b-parent --label b70.experiment=bolt-fusion --ipc=host -p 127.0.0.1:18098:18098 --device /dev/dri --group-add 987 -v /dev/dri:/dev/dri:ro -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-callsite-r1:/src:ro -v /home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF:/models:ro -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro -e ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE -e ZE_AFFINITY_MASK=0 -e ONEAPI_DEVICE_SELECTOR=level_zero:0 -e GGML_SYCL_ENABLE_ESIMD=1 -e GGML_SYCL_ENABLE_FUSION=1 -e GGML_SYCL_ENABLE_GRAPH=0 -e BOLT_TRACE_TENSORS=0 -e ONEDNN_VERBOSE=0 -e GGML_SYCL_ENABLE_DNN=1 -e GGML_SYCL_ENABLE_OPT=1 -e GGML_SYCL_ENABLE_VMM=1 -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh:/native-outprod.sh:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py:/iq2-single2-gate/run-trace.py:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py:/iq2-single2-gate/analyze-trace.py:ro -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2/build-sycl/bin/test-backend-ops:/src/build-sycl/bin/test-backend-ops:ro intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04 bash -lc 'set -eo pipefail
+source /opt/intel/oneapi/setvars.sh --force
+export LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}
+export GGML_SYCL_ENABLE_DNN=1 GGML_SYCL_ENABLE_OPT=1 GGML_SYCL_ENABLE_VMM=1
+export GGML_SYCL_ENABLE_ESIMD=1 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_ENABLE_GRAPH=0
+export BOLT_TRACE_TENSORS=0 ONEDNN_VERBOSE=0 GGML_SYCL_DEBUG=1
+mkdir /tmp/router-n9-capture
+export BOLT_VERIFY_CAPTURE_DIR=/tmp/router-n9-capture
+ldd /src/build-sycl/bin/test-backend-ops
+exec /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p '"'"'^router_columns8=1,router_single2=1,weight=blk\.48\.ffn_gate_inp\.weight,layout=0,type_a=f32,type_b=f32,m=496,n=9,'"'"''
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-parent
+lspci -Dnn -s 0000:0b:00.0
+sudo -n id -u
+docker ps --format '{{.Names}}'
+docker start bolt-lilicorr-width-sweep-r1-vsn9b-parent
+docker wait bolt-lilicorr-width-sweep-r1-vsn9b-parent
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-parent
+lspci -Dnn -s 0000:0b:00.0
+sudo -n id -u
+docker ps --format '{{.Names}}'
+docker inspect nemotron-bolt-probe
+sudo -n id -u
+docker create --name bolt-lilicorr-width-sweep-r1-vsn9b-candidate --label b70.experiment=bolt-fusion --ipc=host -p 127.0.0.1:18098:18098 --device /dev/dri --group-add 987 -v /dev/dri:/dev/dri:ro -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-singletons-r2:/src:ro -v /home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF:/models:ro -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro -e ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE -e ZE_AFFINITY_MASK=0 -e ONEAPI_DEVICE_SELECTOR=level_zero:0 -e GGML_SYCL_ENABLE_ESIMD=1 -e GGML_SYCL_ENABLE_FUSION=1 -e GGML_SYCL_ENABLE_GRAPH=0 -e BOLT_TRACE_TENSORS=0 -e ONEDNN_VERBOSE=0 -e GGML_SYCL_ENABLE_DNN=1 -e GGML_SYCL_ENABLE_OPT=1 -e GGML_SYCL_ENABLE_VMM=1 -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh:/native-outprod.sh:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py:/iq2-single2-gate/run-trace.py:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py:/iq2-single2-gate/analyze-trace.py:ro -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-router-n9-control-r2/build-sycl/bin/test-backend-ops:/src/build-sycl/bin/test-backend-ops:ro intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04 bash -lc 'set -eo pipefail
+source /opt/intel/oneapi/setvars.sh --force
+export LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}
+export GGML_SYCL_ENABLE_DNN=1 GGML_SYCL_ENABLE_OPT=1 GGML_SYCL_ENABLE_VMM=1
+export GGML_SYCL_ENABLE_ESIMD=1 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_ENABLE_GRAPH=0
+export BOLT_TRACE_TENSORS=0 ONEDNN_VERBOSE=0 GGML_SYCL_DEBUG=1
+mkdir /tmp/router-n9-capture
+export BOLT_VERIFY_CAPTURE_DIR=/tmp/router-n9-capture
+ldd /src/build-sycl/bin/test-backend-ops
+exec /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p '"'"'^router_columns8=1,router_single2=1,weight=blk\.48\.ffn_gate_inp\.weight,layout=0,type_a=f32,type_b=f32,m=496,n=9,'"'"''
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-candidate
+lspci -Dnn -s 0000:0b:00.0
+sudo -n id -u
+docker ps --format '{{.Names}}'
+docker start bolt-lilicorr-width-sweep-r1-vsn9b-candidate
+docker wait bolt-lilicorr-width-sweep-r1-vsn9b-candidate
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-candidate
+lspci -Dnn -s 0000:0b:00.0
+sudo -n id -u
+docker ps --format '{{.Names}}'
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-parent
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-parent
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-candidate
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-candidate
+docker inspect nemotron-bolt-probe
+docker start nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+lspci -Dnn -s 0000:0b:00.0
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-parent
+docker inspect bolt-lilicorr-width-sweep-r1-vsn9b-candidate
