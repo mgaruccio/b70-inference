@@ -58,5 +58,7 @@ See `padded-parent-control-r1/offline-analysis.json` and preserved raw output.
 Source diagnosis identifies the non-contiguous RHS branch's hardcoded
 `quantize_row_q8_1_sycl<quantize_q8_1>`: it emits ordinary AoS data even when the
 selected reordered kernel expects SoA. The contiguous branch uses `quantize_f`.
-A fresh r2 is being prepared to use that selected quantizer in the strided branch
-as well, without changing routes, fixtures, counts, tolerances, or byte gates.
+The fresh r2 uses that selected quantizer in the strided branch without changing
+routes, fixtures, counts, tolerances, or byte gates. Its native controls pass and
+W3 qualifies; W7 remains rejected. See
+[`r2 results`](../20261019-nemotron35-bolt-lilicorr-verify-singletons/RESULTS.md).
