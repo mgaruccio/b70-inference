@@ -24,6 +24,15 @@ def save(path, value):
     path.write_text(json.dumps(value))
 
 
+def saved_stderr(directory):
+    raw = directory / 'server.stderr.log'
+    packed = directory / 'server.stderr.log.gz'
+    data = raw.read_bytes() if raw.is_file() else gzip.decompress(packed.read_bytes())
+    if raw.is_file() and packed.is_file():
+        assert data == gzip.decompress(packed.read_bytes()), 'retained log representations differ'
+    return data.decode()
+
+
 class PatchTests(unittest.TestCase):
     def test_zero_fuzz_forward_reverse_and_insertion_only_operation_order(self):
         pins = S['load'](HERE / 'source-hashes.json')
@@ -243,6 +252,22 @@ def synthetic_events(base=100, proposed=3):
 
 
 class AnalyzerTests(unittest.TestCase):
+    def test_retained_raw_and_gzip_log_forms(self):
+        with tempfile.TemporaryDirectory(dir=HERE / '.scratch') as temporary:
+            root = Path(temporary)
+            data = b'retained server log\n'
+            packed = root / 'server.stderr.log.gz'
+            raw = root / 'server.stderr.log'
+            packed.write_bytes(gzip.compress(data))
+            self.assertEqual(data.decode(), saved_stderr(root))
+            raw.write_bytes(data)
+            self.assertEqual(data.decode(), saved_stderr(root))
+            packed.write_bytes(gzip.compress(b'different bytes'))
+            with self.assertRaises(AssertionError):
+                saved_stderr(root)
+            packed.unlink()
+            self.assertEqual(data.decode(), saved_stderr(root))
+
     def fixture(self):
         rows = [dict(A['event'](line), line=i+1) for i, line in enumerate(synthetic_events())]
         req = dict(task=7, first_line=1, last_line=10, events=rows, prompts=[55])
@@ -289,8 +314,7 @@ class AnalyzerTests(unittest.TestCase):
 
     def test_real_Q8_log_order_and_missing_profile_refused(self):
         for cell in ('VSPF-A1', 'VSPF-W3a', 'VSPF-W3b', 'VSPF-A2'):
-            path = D['Q']['HERE'] / 'timing-r2' / cell / 'server.stderr.log.gz'
-            text = gzip.decompress(path.read_bytes()).decode()
+            text = saved_stderr(D['Q']['HERE'] / 'timing-r2' / cell)
             reqs, startup = A['requests'](text)
             self.assertEqual(33, len(reqs))
             self.assertEqual([[55]] * 4 + [[8270]] * 4, [r['prompts'] for r in reqs[-8:]])
@@ -314,7 +338,7 @@ class AnalyzerTests(unittest.TestCase):
             save(out / 'analysis-live-restoration.json', {'passed': True, 'fixture_only': True})
             for cell in c['CELLS']:
                 (out / cell).mkdir()
-                text = gzip.decompress((old / cell / 'server.stderr.log.gz').read_bytes()).decode()
+                text = saved_stderr(old / cell)
                 reqs, _ = A['requests'](text)
                 if c['role_for'](cell) == 'W3':
                     for index, job in enumerate([j for j in c['schedule']() if j['cell'] == cell], 25):
