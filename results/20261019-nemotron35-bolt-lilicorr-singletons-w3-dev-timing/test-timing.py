@@ -5,12 +5,13 @@ No Docker, native process, socket, API, /proc, /sys, or DRM access is allowed.
 Remote qualification artifacts are exercised only by the lead-side run.
 """
 import copy
+import json
 import os
 import runpy
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 HERE = Path(__file__).resolve().parent
 SCRATCH = Path(os.environ.get('BOLT_SINGLETONS_W3_CPU_SCRATCH', HERE / 'worker-scratch')).resolve()
@@ -119,6 +120,142 @@ class TimingContracts(unittest.TestCase):
         with self.assertRaises(AssertionError):
             C['check_name_collisions']([C['name']('VSPF-A1')])
 
+
+    def test_inherited_functions_bind_the_adapter_contract_namespace(self):
+        adapter_contracts = R['C']
+        self.assertIs(R['_BOOT_K']['C'], adapter_contracts)
+        functions = []
+        for owner in R['Runtime'].__mro__[1:]:
+            for name in ('end', 'restore', 'run_job', 'timed_request', 'save_logs'):
+                function = owner.__dict__.get(name)
+                if function is not None:
+                    functions.append(function)
+        for name in ('stream_chat', 'sampled_request', 'capture', '_save_exception'):
+            function = R['_BOOT_K'].get(name)
+            if function is not None:
+                functions.append(function)
+        self.assertTrue(functions)
+        for function in functions:
+            self.assertIs(function.__globals__['C'], adapter_contracts, function.__qualname__)
+
+    def test_actual_inherited_restore_and_end_use_synthetic_adapter_names(self):
+        adapter_contracts = R['C']
+        out = Path(tempfile.mkdtemp(dir=SCRATCH))
+        cell = 'VSPF-A1'
+        directory = out / cell
+        directory.mkdir()
+        (directory / 'native-and-startup.stdout.log').write_bytes(
+            b'raw stdout' + bytes((0,)))
+        (directory / 'native-and-startup.stderr.log').write_bytes(
+            b'raw stderr' + bytes((0xff,)))
+        commands = []
+        runtime = object.__new__(R['Runtime'])
+        runtime.out = out
+        runtime.h = {}
+        runtime.hashes = {'source': 'same'}
+        runtime.active = cell
+        runtime.pid = Mock(return_value={'argv': ['synthetic']})
+        runtime.observe = Mock()
+        runtime.save_logs = Mock(return_value='server log')
+        runtime.off = {'check_off_log': Mock()}
+        runtime.ownership = Mock()
+        runtime.command = lambda *argv, **kwargs: commands.append((argv, kwargs)) or ''
+        runtime.inspect = Mock(side_effect=[
+            {'State': {'Running': True}}, {'State': {'Running': False}}])
+        with patch.dict(adapter_contracts, {
+                'source_binary_hashes': lambda _h: {'source': 'same'},
+                'log_duration_stats': lambda _text: {'available': True}}, clear=False):
+            R['Runtime'].end(runtime, cell)
+        expected_name = adapter_contracts['PREFIX'] + cell.lower()
+        self.assertIn((('docker', 'stop', '-t', '90', expected_name), {}), commands)
+        runtime.pid.assert_called_once_with(cell, 'after')
+        runtime.observe.assert_called_once_with(cell + '-after', expected_name)
+
+        commands.clear()
+        created = 'VSPF-W3a'
+        runtime = object.__new__(R['Runtime'])
+        runtime.out = out
+        runtime.h = {}
+        runtime.created = [created]
+        runtime.prefixes = {}
+        runtime.original_was_running = False
+        runtime.command = lambda *argv, **kwargs: commands.append((argv, kwargs)) or ''
+        runtime.inspect = Mock(return_value={'State': {'Running': True}})
+        runtime._preserve_restore_log = Mock()
+        runtime.verify_restored = Mock(return_value={'passed': True})
+        runtime.capacity = Mock(return_value={'fits': True})
+        self.assertEqual([], R['Runtime'].restore(runtime))
+        expected_name = adapter_contracts['PREFIX'] + created.lower()
+        self.assertIn((('docker', 'stop', '-t', '90', expected_name), {}), commands)
+        runtime._preserve_restore_log.assert_called_once_with(created, expected_name)
+        restoration = adapter_contracts['load'](out / 'restoration.json')
+        self.assertTrue(restoration['passed'])
+
+    def test_raw_startup_bytes_are_saved_without_decode_loss(self):
+        out = Path(tempfile.mkdtemp(dir=SCRATCH))
+        stdout = bytes((0x80,)) + b'stdout' + bytes((10,))
+        stderr = bytes((0xff,)) + b'stderr' + bytes((10,))
+        raw = Mock(stdout=stdout, stderr=stderr)
+        R['_save_raw_startup'](out, raw)
+        self.assertEqual(stdout, (out / 'native-and-startup.raw.stdout.log').read_bytes())
+        self.assertEqual(stderr, (out / 'native-and-startup.raw.stderr.log').read_bytes())
+
+    def test_adapter_hashes_reject_missing_files_and_drift(self):
+        hashes = C['adapter_code_hashes']()
+        drifted = dict(hashes)
+        first = next(iter(drifted))
+        drifted[first] = '0' * 64
+        with self.assertRaises(AssertionError):
+            C['check_adapter_code'](drifted)
+        missing_root = Path(tempfile.mkdtemp(dir=SCRATCH))
+        with patch.dict(C['adapter_code_hashes'].__globals__,
+                        {'PACKAGE_ROOT': missing_root}, clear=False):
+            with self.assertRaises(AssertionError):
+                C['adapter_code_hashes']()
+
+    def test_raw_analysis_round_trip_rejects_mutated_events_and_result(self):
+        out = Path(tempfile.mkdtemp(dir=SCRATCH))
+        stem = out / 'VSPF-A1' / 'short' / 'measured-00'
+        stem.parent.mkdir(parents=True)
+        bodies = [
+            {'choices': [{'delta': {'content': 'hello'}}]},
+            {'choices': [{'delta': {'content': ' world'}}]},
+        ]
+        line_ending = bytes((10,))
+        raw = b''.join(b'data: ' + json.dumps(body).encode() + line_ending
+                       for body in bodies)
+        raw += b'data: [DONE]' + line_ending
+        events = [dict(elapsed_s=0.5, body=bodies[0]),
+                  dict(elapsed_s=1.0, body=bodies[1])]
+        transport = dict(status=200, headers=[], complete=True, bytes=len(raw),
+                         elapsed_s=1.5, ttfc_s=0.5)
+        A['C']['save'](A['_artifact'](stem, '.events.json'), events)
+        A['C']['save'](A['_artifact'](stem, '.http.json'), transport)
+        normalize = lambda _raw, _payload: dict(
+            text='hello world', finish_reason='stop', usage={}, timings={})
+        protocol = normalize(raw, {})
+        self.assertNotIn('elapsed_s', protocol)
+        self.assertNotIn('ttfc_s', protocol)
+        result = A['_augment_timing'](stem, raw, protocol, transport)
+        A['C']['save'](A['_artifact'](stem, '.result.json'), result)
+        self.assertEqual(result, A['_compare_stored_result'](stem, result))
+
+        events[1]['elapsed_s'] = 2.0
+        A['C']['save'](A['_artifact'](stem, '.events.json'), events)
+        with self.assertRaises(AssertionError):
+            A['_event_timing'](stem, raw, transport)
+        bad_result = dict(result, text='mutated')
+        A['C']['save'](A['_artifact'](stem, '.result.json'), bad_result)
+        with self.assertRaises(AssertionError):
+            A['_compare_stored_result'](stem, result)
+
+    def test_timing_rows_require_six_distinct_rows_per_cell(self):
+        rows = [row for row in _rows() if row['cell'] == 'VSPF-A1']
+        A['_validate_timing_rows'](rows, 'VSPF-A1')
+        duplicate = copy.deepcopy(rows)
+        duplicate[-1] = copy.deepcopy(duplicate[0])
+        with self.assertRaises(AssertionError):
+            A['_validate_timing_rows'](duplicate, 'VSPF-A1')
     def test_raw_timing_and_fidelity_rejection(self):
         result = _result()
         result['ttfc_s'] = result['elapsed_s']
@@ -138,7 +275,6 @@ class TimingContracts(unittest.TestCase):
         C['configure'](_fake_public())
         K = R['_BOOT_K']
         self.assertIsNotNone(K)
-        K['C'] = C
         out = Path(tempfile.mkdtemp(dir=SCRATCH))
         events = []
 
