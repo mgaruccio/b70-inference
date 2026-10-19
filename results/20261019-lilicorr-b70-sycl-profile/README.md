@@ -34,7 +34,7 @@ The inherited Q8 adapter supplies the exact unchanged drafter file
 package does not restate or mutate that controller/model contract.
 
 The new backend code is gated by **both** `LLAMA_LILICORR_PROFILE=1` and a
-`lilicorr` tensor name present in the graph. It records no SYCL events, waits,
+tensor named exactly `lilicorr_lattice` or beginning with `lilicorr.`. It records no SYCL events, waits,
 queue commands, graph replay, kernel/math/precision changes, or synchronization.
 It wraps the existing dispatch/fusion branches without reordering them. Host
 wall intervals are not device timings and include backend submission/wait
@@ -59,7 +59,7 @@ record:
 ## Files and lead-only build
 
 `lilicorr-profile.patch` is a zero-fuzz combined patch. `fixtures/` contains
-exact gzip downloads of all three parent source files, including the SYCL backend. The combined-startup-measured fixture is derived from the retained first-profile JSON and raw/gzip stderr, and exercises the nested 43/45-round scheduler shape.
+exact gzip downloads of all three parent source files, including the SYCL backend. The combined fixture uses real first-profile JSON/request logs but **synthetic backend records**. It tests parser logic, not live emission; the full-pipeline regression puts those records inside the actual request boundaries.
 `source-proof.py` reuses the first package's qualified ancestry, complete
 source-map, and six-binary proof, extended to the three changed source files.
 The expected changed libraries are exactly `libllama-common.so`,
@@ -67,7 +67,7 @@ The expected changed libraries are exactly `libllama-common.so`,
 closed.
 
 The build is lead-only on `inference-host` in the frozen SDK; it performs no
-host install, GPU mount, remote write, or launcher change:
+host install, GPU mount, protected-source modification, or launcher change:
 
 ```bash
 bash results/20261019-lilicorr-b70-sycl-profile/build-candidate.sh
@@ -88,12 +88,19 @@ second process. Run the full phase analyzer and this operation analyzer after
 restoration. No-draft A cells must contain no new SYCL diagnostic events.
 
 Expected analysis artifacts are `analysis-r1/profile.json` (inherited phase
-records plus per-request SYCL records) and the retained raw server logs. The
-startup metadata and warmup diagnostics are retained separately from measured `graphs`; measured scheduler coverage records expected, covered, and uncovered ubatch/node totals, including every eight-row draft ubatch.
-analyzer fails closed on missing/duplicate/negative/overlapping graph or op
-records, incomplete node ranges, missing/duplicate scheduler graph owners, timed target/A spans, mismatched 33-request order, or changed
-proposal/acceptance counts. Nested operation spans are not added to graph core
-wall; all results remain development-only.
+records plus per-request SYCL records) and the retained raw server logs.
+Startup, public-prevalidation and warmup diagnostics are retained separately from
+measured `graphs`; the opt-in is active during public validation too. No-draft A
+must emit no diagnostic records. Every measured eight-row draft ubatch must have
+backend records; missing an entire measured request or draft round fails closed.
+Injection graphs and scheduler segments without the exact marker may be absent:
+their node counts remain explicitly uninstrumented, never claimed as covered.
+Multiple nonoverlapping backend segments can belong to one scheduler ubatch;
+local segment node indices are not global scheduler indices. Parsing rejects
+negative/overlapping/duplicate or inconsistent spans and changed proposal/acceptance
+counts. Nested spans are not added to graph core wall. Post-loop log formatting
+is inside the outer phase timer; use core wall for attribution, never a clean
+speed comparison. All results remain development-only.
 
 ## Local preparation verification
 

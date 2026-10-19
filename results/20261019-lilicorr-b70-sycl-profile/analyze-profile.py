@@ -37,7 +37,10 @@ INTEGER_FIELDS = {
 
 def _parse_fields(line):
     assert line.count(MARKER) == 1
-    fields = line.split(MARKER, 1)[1].strip().split()
+    # ggml itself names views/copies with spaces, e.g. "Kcur (view)".
+    # Split at field keys, not inside a tensor name; numeric/schema validation
+    # below still rejects unknown, duplicate, missing, or malformed fields.
+    fields = re.split(r'\s+(?=[a-z][a-z0-9_]*=)', line.split(MARKER, 1)[1].strip())
     row = {}
     for field in fields:
         key, sep, value = field.partition('=')
@@ -310,15 +313,13 @@ def request_sycl(request, phase_request):
     assert enabled_bundles, 'profile gate did not cover any LiliCorr graph'
     phase_events = phase_request['events']
     expected = _scheduler_owners(phase_events)
-    owner_by_ubatch = {}
+    owner_by_ubatch = defaultdict(list)
     graph_reports = []
     for bundle in enabled_bundles:
         parent = _phase_parent(bundle, phase_events)
         owner_line = parent['ubatch_line']
-        assert owner_line not in owner_by_ubatch, 'duplicate SYCL graph owner'
         summary = bundle['summary']
-        assert summary['graph_nodes'] == parent['ubatch_nodes'], 'graph/scheduler node count mismatch'
-        owner_by_ubatch[owner_line] = (bundle, parent)
+        owner_by_ubatch[owner_line].append(bundle)
         graph_reports.append(dict(graph=bundle['graph'], line=summary['line'],
             graph_nodes=summary['graph_nodes'], covered_nodes=summary['covered_nodes'],
             uncovered_nodes=summary['uncovered_nodes'], covered_ranges=summary['covered_ranges'],
@@ -328,17 +329,26 @@ def request_sycl(request, phase_request):
             operation_refs=[dict(line=op['line'], first_index=op['first_index'],
                 last_index=op['last_index'], group=op['group'],
                 elapsed_host_us=op['elapsed_host_us']) for op in bundle['ops']]))
-    expected_lines = set(expected)
-    assert set(owner_by_ubatch) == expected_lines, 'missing/extra scheduler graph owner'
-    assert not [bundle for bundle in bundles if not bundle['summary']['enabled']], \
-        'disabled graph owner in measured request'
-    expected_nodes = sum(ubatch['nodes'] for ubatch, _ in expected.values())
-    covered_nodes = sum(item['covered_nodes'] for item in graph_reports)
-    uncovered_nodes = sum(item['uncovered_nodes'] for item in graph_reports)
-    assert expected_nodes == covered_nodes + uncovered_nodes
+    for owner_line, segments in owner_by_ubatch.items():
+        segments.sort(key=lambda b: b['summary']['begin_us'])
+        assert all(a['summary']['end_us'] <= b['summary']['begin_us']
+                   for a, b in zip(segments, segments[1:])), 'overlapping scheduler graph segments'
+        assert sum(b['summary']['graph_nodes'] for b in segments) <= expected[owner_line][0]['nodes'], \
+            'backend graph segments exceed scheduler nodes'
     expected_drafts = {line for line, (_, parent) in expected.items()
                        if parent['stage'] == 'draft_batch'}
     covered_drafts = expected_drafts & set(owner_by_ubatch)
+    assert covered_drafts == expected_drafts, 'missing measured draft graph owner'
+    assert not [bundle for bundle in bundles if not bundle['summary']['enabled']], \
+        'disabled graph owner in measured request'
+    # The marker need not occur in injection graphs or every scheduler split.
+    # Require every draft round, but explicitly retain uninstrumented nodes;
+    # local backend node indices are never presented as global scheduler indices.
+    expected_nodes = sum(ubatch['nodes'] for ubatch, _ in expected.values())
+    observed_backend_nodes = sum(item['graph_nodes'] for item in graph_reports)
+    covered_nodes = sum(item['covered_nodes'] for item in graph_reports)
+    uncovered_nodes = expected_nodes - covered_nodes
+    assert 0 <= covered_nodes <= observed_backend_nodes <= expected_nodes
     graph_core = sum(item['core_wall_us'] for item in graph_reports)
     return dict(graph_count=len(bundles), enabled_graph_count=len(graph_reports),
         disabled_graph_count=0, event_count=len(events), graphs=sorted(graph_reports,
@@ -353,6 +363,8 @@ def request_sycl(request, phase_request):
             uncovered_ubatches=len(expected) - len(owner_by_ubatch),
             expected_draft_ubatches=len(expected_drafts), covered_draft_ubatches=len(covered_drafts),
             uncovered_draft_ubatches=len(expected_drafts - covered_drafts), expected_nodes=expected_nodes,
+            observed_backend_nodes=observed_backend_nodes,
+            uninstrumented_scheduler_nodes=expected_nodes - observed_backend_nodes,
             covered_nodes=covered_nodes, uncovered_nodes=uncovered_nodes))
 
 
@@ -361,9 +373,7 @@ def _startup_sycl(lines):
 
 
 def _nonmeasured_sycl(request):
-    parsed = _unattributed_sycl(parse_sycl(request['lines'], request['first_line']))
-    assert parsed['enabled_graph_count'] == 0, 'timed SYCL graph outside measured schedule'
-    return parsed
+    return _unattributed_sycl(parse_sycl(request['lines'], request['first_line']))
 
 
 def analyze(out, c):
@@ -394,6 +404,7 @@ def analyze(out, c):
             public = [_nonmeasured_sycl(request) for request in requests[:25]]
             report['sycl_diagnostic']['public'].append(dict(cell=cell, requests=public))
             if c['role_for'](cell) == 'A':
+                assert MARKER not in stderr, 'no-draft baseline emitted SYCL diagnostic records'
                 assert not any(item['enabled_graph_count'] for item in public)
                 assert startup['enabled_graph_count'] == 0, 'no-draft baseline was profiled'
                 for request in requests[25:]:
@@ -408,11 +419,10 @@ def analyze(out, c):
                 request = requests[index]
                 phase_request = phase_requests[index - 25]
                 events = parse_sycl(request['lines'], request['first_line'])
-                if not events:
-                    parsed = _empty_sycl_report()
-                elif job['phase'] == 'warmup' and not any(r['stage'] == 'op' for r in events):
+                if job['phase'] == 'warmup':
                     parsed = _unattributed_sycl(events)
                 else:
+                    # Missing every diagnostic row is a failure, not an empty success.
                     parsed = request_sycl(request, phase_request)
                 assert request['prompts'] == [phase_request['counters']['prompt']]
                 phase_request['sycl'] = parsed

@@ -205,6 +205,17 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(len(report['operator_totals']), 2)
         self.assertEqual(len(report['operator_totals'][0]['raw_refs']), 1)
 
+    def test_ggml_view_names_with_spaces_remain_lossless(self):
+        line = self.lines()[1].replace('first_name=a ', 'first_name=Kcur (view) ')
+        line = line.replace('src1_name=x ', 'src1_name=inp_g_embeddings (reshaped) ')
+        row = A['event'](line)
+        self.assertEqual('Kcur (view)', row['first_name'])
+        self.assertEqual('inp_g_embeddings (reshaped)', row['src1_name'])
+        with self.assertRaises(AssertionError):
+            A['event'](line + ' ne0=5')
+        with self.assertRaises(AssertionError):
+            A['event'](line + ' unknown=5')
+
     def test_parser_rejects_overlap_missing_coverage_negative_duration_and_marker_drift(self):
         rows = self.lines()
         overlap = rows[2].replace('begin_us=125 end_us=135', 'begin_us=115 end_us=135 elapsed_host_us=20')
@@ -245,13 +256,14 @@ class AnalyzerTests(unittest.TestCase):
         fixture = combined_fixture()
         self.assertTrue(fixture['source']['stderr_raw_equals_gzip'])
         source = fixture['source']
-        source_profile = Path('/home/mike/code/b70-inference/results/20261019-lilicorr-b70-profile/profile-r1/analysis-r1/profile.json')
-        source_raw = Path('/home/mike/code/b70-inference/results/20261019-lilicorr-b70-profile/profile-r1/VSPF-W3a/server.stderr.log')
-        source_gzip = source_raw.with_name(source_raw.name + '.gz')
+        source_profile = FIRST / 'profile-r1/analysis-r1/profile.json'
+        source_directory = FIRST / 'profile-r1/VSPF-W3a'
+        source_gzip = source_directory / 'server.stderr.log.gz'
+        source_bytes = saved_stderr(source_directory).encode()
         self.assertEqual(source['profile_sha256'], hashlib.sha256(source_profile.read_bytes()).hexdigest())
-        self.assertEqual(source['stderr_sha256'], hashlib.sha256(source_raw.read_bytes()).hexdigest())
-        self.assertEqual(source['stderr_gzip_sha256'], hashlib.sha256(source_gzip.read_bytes()).hexdigest())
-        self.assertEqual(source_raw.read_bytes(), gzip.decompress(source_gzip.read_bytes()))
+        self.assertEqual(source['stderr_sha256'], hashlib.sha256(source_bytes).hexdigest())
+        if source_gzip.is_file():
+            self.assertEqual(source['stderr_gzip_sha256'], hashlib.sha256(source_gzip.read_bytes()).hexdigest())
         startup = A['_startup_sycl'](fixture['startup_lines'])
         self.assertEqual(1, startup['graph_count'])
         self.assertEqual(0, startup['enabled_graph_count'])
@@ -293,6 +305,95 @@ class AnalyzerTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             A['request_sycl']({'lines': request['lines'], 'first_line': request['first_line']},
                               ambiguous)
+
+    def test_uninstrumented_injection_and_partial_scheduler_are_explicit(self):
+        request = combined_fixture()['requests'][1]
+        bundles = A['_graph_bundles'](A['parse_sycl'](request['lines'], request['first_line']))
+        draft_ids = {b['graph'] for b in bundles
+                     if A['_phase_parent'](b, request['phase_request']['events'])['stage'] == 'draft'}
+        lines = [line for line in request['lines'] if A['MARKER'] not in line
+                 or A['event'](line)['graph'] in draft_ids]
+        parsed = A['request_sycl']({'lines': lines, 'first_line': request['first_line']},
+                                   request['phase_request'])
+        coverage = parsed['scheduler_coverage']
+        self.assertEqual(43, coverage['covered_draft_ubatches'])
+        self.assertGreater(coverage['uncovered_ubatches'], 0)
+        self.assertGreater(coverage['uninstrumented_scheduler_nodes'], 0)
+        missing_id = next(iter(draft_ids))
+        missing = [line for line in lines if A['MARKER'] not in line
+                   or A['event'](line)['graph'] != missing_id]
+        with self.assertRaisesRegex(AssertionError, 'missing measured draft'):
+            A['request_sycl']({'lines': missing, 'first_line': request['first_line']},
+                              request['phase_request'])
+        phase = self.phase_events()
+        phase[1]['nodes'] = 7
+        partial = A['request_sycl']({'lines': self.lines(), 'first_line': 1}, {'events': phase})
+        self.assertEqual(2, partial['scheduler_coverage']['uninstrumented_scheduler_nodes'])
+
+    def test_full_pipeline_retains_public_spans_and_rejects_absent_measured_records(self):
+        fixture = combined_fixture()
+        text = saved_stderr(FIRST / 'profile-r1/VSPF-W3a')
+        requests, _ = A['BASE']['requests'](text)
+        blocks = []
+        for index, item in enumerate(fixture['requests'], 25):
+            old = '\n'.join(requests[index]['lines'])
+            self.assertEqual(1, text.count(old))
+            by_begin = {}
+            events = A['parse_sycl'](item['lines'], item['first_line'])
+            for bundle in A['_graph_bundles'](events):
+                owner = A['_phase_parent'](bundle, item['phase_request']['events'])
+                ubatch = next(row for row in item['phase_request']['events']
+                              if row['stage'] == 'ubatch' and row['line'] == owner['ubatch_line'])
+                records = [line for line in item['lines'] if A['MARKER'] in line
+                           and A['event'](line)['graph'] == bundle['graph']]
+                by_begin.setdefault(ubatch['begin_us'], []).extend(records)
+            lines = []
+            for line in item['lines']:
+                if A['MARKER'] in line:
+                    continue
+                if A['BASE']['MARKER'] in line:
+                    event = A['BASE']['event'](line)
+                    if event['stage'] == 'ubatch':
+                        lines.extend(by_begin.pop(event['begin_us'], []))
+                lines.append(line)
+            self.assertFalse(by_begin)
+            blocks.append('\n'.join(lines))
+            text = text.replace(old, blocks[-1])
+        public_records = [line.replace('graph=1001 ', 'graph=777777 ')
+                          for line in fixture['requests'][0]['lines']
+                          if A['MARKER'] in line and 'graph=1001 ' in line]
+        self.assertEqual(4, len(public_records))
+        text = text.replace(requests[0]['lines'][-1],
+                            '\n'.join(public_records) + '\n' + requests[0]['lines'][-1], 1)
+        # Synthetic backend records over real request/phase boundaries are parser
+        # tests only. They do not establish live producer behavior or performance.
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            c = D['bind']()[2]
+            phase_report = dict(status='analyzed', errors=[], requests=[], startup_events={})
+            for cell in c['CELLS']:
+                (out / cell).mkdir()
+                stderr = text if 'W3' in cell else saved_stderr(FIRST / 'profile-r1' / cell)
+                (out / cell / 'server.stderr.log').write_text(stderr)
+                (out / cell / 'server.stdout.log').write_text('')
+                if 'W3' in cell:
+                    for item in fixture['requests']:
+                        phase_report['requests'].append(dict(cell=cell, phase=item['phase'],
+                            point=item['point'], ordinal=item['ordinal'], **copy.deepcopy(item['phase_request'])))
+            with mock.patch.dict(A['BASE'], {'analyze': lambda *_args: copy.deepcopy(phase_report)}):
+                result = A['analyze'](out, c)
+                self.assertEqual('analyzed', result['status'], result['errors'])
+                public = next(r for r in result['sycl_diagnostic']['public'] if 'W3' in r['cell'])
+                self.assertEqual(1, public['requests'][0]['enabled_graph_count'])
+                self.assertEqual(12, len(result['sycl_diagnostic']['graphs']))
+                old = blocks[1]
+                clean = '\n'.join(line for line in old.splitlines() if A['MARKER'] not in line)
+                path = out / 'VSPF-W3a/server.stderr.log'
+                self.assertEqual(1, path.read_text().count(old))
+                path.write_text(path.read_text().replace(old, clean, 1))
+                failed = A['analyze'](out, c)
+                self.assertEqual('failed', failed['status'])
+                self.assertIn('missing SYCL diagnostic events', str(failed['errors']))
 
 
 class AdapterTests(unittest.TestCase):
