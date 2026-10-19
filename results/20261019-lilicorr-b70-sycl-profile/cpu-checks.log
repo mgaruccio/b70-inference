@@ -1,5 +1,5 @@
 $ date -u
-Mon Oct 19 10:45:49 PM UTC 2026
+Mon Oct 19 11:03:06 PM UTC 2026
 $ hostname
 desktop
 $ python3 --version
@@ -8,23 +8,50 @@ $ patch --version | head -1
 GNU patch 2.8
 $ c++ --version | head -1
 c++ (GCC) 16.2.1 20260810
+$ git diff --check
+$ python3 -B results/20261019-lilicorr-b70-profile/test-profile.py
+test_analyzer_missing_inherited_evidence_has_no_success (__main__.AnalyzerTests.test_analyzer_missing_inherited_evidence_has_no_success) ... ok
+test_full_analyzer_on_explicitly_synthetic_profile_plus_saved_Q8_requests (__main__.AnalyzerTests.test_full_analyzer_on_explicitly_synthetic_profile_plus_saved_Q8_requests) ... ok
+test_missing_duplicate_and_ambiguous_events_fail_closed (__main__.AnalyzerTests.test_missing_duplicate_and_ambiguous_events_fail_closed) ... ok
+test_nested_costs_and_graph_attribution (__main__.AnalyzerTests.test_nested_costs_and_graph_attribution) ... ok
+test_real_Q8_log_order_and_missing_profile_refused (__main__.AnalyzerTests.test_real_Q8_log_order_and_missing_profile_refused) ... ok
+test_retained_raw_and_gzip_log_forms (__main__.AnalyzerTests.test_retained_raw_and_gzip_log_forms) ... ok
+test_strict_marker_parser (__main__.AnalyzerTests.test_strict_marker_parser) ... ok
+test_actual_inspect_is_not_mutated_and_drift_rejected (__main__.BindingTests.test_actual_inspect_is_not_mutated_and_drift_rejected) ... ok
+test_exact_A_and_W3_delta_and_shared_private_namespace (__main__.BindingTests.test_exact_A_and_W3_delta_and_shared_private_namespace) ... ok
+test_real_pid_extra_opt_in_is_required_without_sanitization (__main__.BindingTests.test_real_pid_extra_opt_in_is_required_without_sanitization) ... ok
+test_build_is_cpu_only_and_exact_source_scope (__main__.PatchTests.test_build_is_cpu_only_and_exact_source_scope) ... ok
+test_zero_fuzz_forward_reverse_and_insertion_only_operation_order (__main__.PatchTests.test_zero_fuzz_forward_reverse_and_insertion_only_operation_order) ... ok
+test_every_before_after_wrapper_rehashes_source_and_binaries_after_code_capture (__main__.ProofTests.test_every_before_after_wrapper_rehashes_source_and_binaries_after_code_capture) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.387s
+
+OK
 $ python3 -B results/20261019-lilicorr-b70-sycl-profile/test-profile.py
+test_actual_make_create_wrapper_has_exact_w3_delta_and_no_qualified_rebind (__main__.AdapterTests.test_actual_make_create_wrapper_has_exact_w3_delta_and_no_qualified_rebind) ... ok
+test_actual_root_out_prefix_source_bind_and_container_identity (__main__.AdapterTests.test_actual_root_out_prefix_source_bind_and_container_identity) ... ok
+test_actual_source_binary_model_wrappers_reject_same_size_mutations (__main__.AdapterTests.test_actual_source_binary_model_wrappers_reject_same_size_mutations) ... ok
+test_original_first_package_thirteen_cpu_tests_are_inherited_unchanged (__main__.AdapterTests.test_original_first_package_thirteen_cpu_tests_are_inherited_unchanged) ... ok
+test_combined_fixture_missing_whole_graph_and_duplicate_owner_fail_closed (__main__.AnalyzerTests.test_combined_fixture_missing_whole_graph_and_duplicate_owner_fail_closed) ... ok
+test_combined_startup_warmup_fixture_covers_all_real_rounds (__main__.AnalyzerTests.test_combined_startup_warmup_fixture_covers_all_real_rounds) ... ok
 test_event_parser_and_phase_correlation (__main__.AnalyzerTests.test_event_parser_and_phase_correlation) ... ok
 test_gate_disabled_is_not_claimed_as_coverage (__main__.AnalyzerTests.test_gate_disabled_is_not_claimed_as_coverage) ... ok
-test_parser_rejects_overlap_missing_coverage_and_negative_duration (__main__.AnalyzerTests.test_parser_rejects_overlap_missing_coverage_and_negative_duration) ... ok
+test_parser_rejects_overlap_missing_coverage_negative_duration_and_marker_drift (__main__.AnalyzerTests.test_parser_rejects_overlap_missing_coverage_negative_duration_and_marker_drift) ... ok
 test_private_namespace_rebound_without_qualified_ancestry_rebind (__main__.BindingTests.test_private_namespace_rebound_without_qualified_ancestry_rebind) ... ok
 test_backend_gate_scope_order_and_no_synchronous_logging (__main__.PatchTests.test_backend_gate_scope_order_and_no_synchronous_logging) ... ok
 test_exact_fixtures_and_zero_fuzz_forward_reverse (__main__.PatchTests.test_exact_fixtures_and_zero_fuzz_forward_reverse) ... ok
 test_retained_log_accepts_raw_or_gzip_and_detects_mismatch (__main__.PatchTests.test_retained_log_accepts_raw_or_gzip_and_detects_mismatch) ... ok
+test_shared_clock_helper_stub_compiles_and_runs (__main__.PatchTests.test_shared_clock_helper_stub_compiles_and_runs) ... ok
 test_source_scope_build_script_and_expected_binary_delta (__main__.PatchTests.test_source_scope_build_script_and_expected_binary_delta) ... ok
 
 ----------------------------------------------------------------------
-Ran 8 tests in 0.045s
+Ran 15 tests in 1.717s
 
 OK
 $ bash -n results/20261019-lilicorr-b70-sycl-profile/build-candidate.sh
 $ python3 -m py_compile results/20261019-lilicorr-b70-sycl-profile/*.py
 $ extracted helper compile/run
-PASS (c++ -std=c++17 -Wall; executable returned 0; isolated unused-function warnings only)
+PASS (shared ggml_time_us() stub is compiled and executable returned 0)
 
 No build, GPU access, remote mutation, install, or live end-to-end journey was run; those remain lead-only gates.

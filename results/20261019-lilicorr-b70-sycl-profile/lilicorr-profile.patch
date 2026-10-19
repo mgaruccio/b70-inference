@@ -82,10 +82,6 @@
                              lilicorr_pos[slot] = pos;
                          }
                      }
--                }
--            }
--        }
--
 +                    // LILICORR_PROFILE_ONLY_BEGIN
 +                    if (profile) {
 +                        const int64_t profile_t5 = ggml_time_us();
@@ -96,9 +92,10 @@
 +                                profile_t3 - profile_t2, profile_t4 - profile_t3, profile_t5 - profile_t4);
 +                    }
 +                    // LILICORR_PROFILE_ONLY_END
-+                }
-+            }
-+        }
+                 }
+             }
+         }
+-
 +
 +        // LILICORR_PROFILE_ONLY_BEGIN
 +        if (profile) {
@@ -222,17 +219,7 @@
          ret = status;
 --- a/ggml/src/ggml-sycl/ggml-sycl.cpp
 +++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
-@@ -15,6 +15,9 @@
- #include <assert.h>
- #include <atomic>
- #include <cctype>
-+// LILICORR_SYCL_PROFILE_ONLY_BEGIN
-+#include <chrono>
-+// LILICORR_SYCL_PROFILE_ONLY_END
- #include <cinttypes>
- #include <cstddef>
- #include <cstdint>
-@@ -7212,20 +7215,170 @@
+@@ -7212,20 +7212,169 @@
      return skip;
  }
  
@@ -240,8 +227,7 @@
 +// Development-only host wall accounting for the actual LiliCorr graph dispatches.  It
 +// deliberately records no SYCL events, waits, queue commands, or device durations.
 +static int64_t lilicorr_sycl_profile_now_us() {
-+    return std::chrono::duration_cast<std::chrono::microseconds>(
-+        std::chrono::steady_clock::now().time_since_epoch()).count();
++    return ggml_time_us();
 +}
 +
 +static bool lilicorr_sycl_profile_requested() {
@@ -250,7 +236,7 @@
 +}
 +
 +static bool lilicorr_sycl_profile_marker(const ggml_tensor * tensor) {
-+    return tensor && tensor->name[0] && std::strstr(tensor->name, "lilicorr") != nullptr;
++    return tensor && tensor->name[0] && (std::strcmp(tensor->name, "lilicorr_lattice") == 0 || std::strncmp(tensor->name, "lilicorr.", 9) == 0);
 +}
 +
 +static const ggml_tensor * lilicorr_sycl_profile_graph_marker(const ggml_cgraph * cgraph) {
@@ -361,7 +347,7 @@
 +    const ggml_tensor * profile_marker = profile_requested ? lilicorr_sycl_profile_graph_marker(cgraph) : nullptr;
 +    const bool profile_enabled = profile_marker != nullptr;
 +    static std::atomic<uint64_t> profile_graph_sequence{0};
-+    const uint64_t profile_graph_id = profile_requested ?
++    const uint64_t profile_graph_id = profile_enabled ?
 +        profile_graph_sequence.fetch_add(1, std::memory_order_relaxed) + 1 : 0;
 +    std::vector<lilicorr_sycl_profile_span> profile_records;
 +    std::vector<unsigned char> profile_covered;
@@ -403,7 +389,7 @@
              i += nodes_to_skip;
              continue;
          }
-@@ -7240,6 +7393,9 @@
+@@ -7240,6 +7389,9 @@
          if (node->op == GGML_OP_UNARY) {
              const int router_skip = ggml_sycl_router_fused(*sycl_ctx, cgraph, i);
              if (router_skip != 0) {
@@ -413,7 +399,7 @@
                  i += router_skip;
                  continue;
              }
-@@ -7250,6 +7406,9 @@
+@@ -7250,6 +7402,9 @@
              const int gdn_nodes_to_skip = ggml_sycl_try_gdn_cache_fusion(cgraph, i, fused_state_cpy);
              if (gdn_nodes_to_skip > 0) {
                  ggml_sycl_op_gated_delta_net_fused_cache(*sycl_ctx, node, fused_state_cpy);
@@ -423,7 +409,7 @@
                  i += gdn_nodes_to_skip;
                  continue;
              }
-@@ -7257,12 +7416,18 @@
+@@ -7257,12 +7412,18 @@
          if (node->op == GGML_OP_RMS_NORM &&
              ggml_sycl_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_MUL, GGML_OP_ADD }, {})) {
              ggml_sycl_op_rms_norm_fused_add(*sycl_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2]);
@@ -442,7 +428,7 @@
              i++;
              continue;
          }
-@@ -7271,18 +7436,27 @@
+@@ -7271,18 +7432,27 @@
          if (node->op == GGML_OP_RMS_NORM &&
              ggml_sycl_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_SCALE }, {})) {
              ggml_sycl_op_rms_norm_scale_fused(*sycl_ctx, node, cgraph->nodes[i + 1]);
@@ -470,7 +456,7 @@
              i++;
              continue;
          }
-@@ -7293,6 +7467,9 @@
+@@ -7293,6 +7463,9 @@
              ggml_sycl_can_fuse(cgraph, i, { GGML_OP_ADD, GGML_OP_UNARY, GGML_OP_MUL },
                                 { ggml_get_unary_op(cgraph->nodes[i + 1]) })) {
              ggml_sycl_op_add_unary_mul_fused(*sycl_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2]);
@@ -480,7 +466,7 @@
              i += 2;
              continue;
          }
-@@ -7303,6 +7480,9 @@
+@@ -7303,6 +7476,9 @@
          if (node->op == GGML_OP_L2_NORM) {
              const int l2_batch_skip = ggml_sycl_l2_norm_batch_fused(*sycl_ctx, cgraph, i);
              if (l2_batch_skip > 0) {
@@ -490,7 +476,7 @@
                  i += l2_batch_skip;
                  continue;
              }
-@@ -7311,6 +7491,9 @@
+@@ -7311,6 +7487,9 @@
          if (node->op == GGML_OP_SSM_CONV &&
              ggml_sycl_can_fuse(cgraph, i, { GGML_OP_SSM_CONV, GGML_OP_ADD, GGML_OP_UNARY }, { GGML_UNARY_OP_SILU })) {
              ggml_sycl_ssm_conv_fused(*sycl_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2]);
@@ -500,7 +486,7 @@
              i += 2;
              continue;
          }
-@@ -7318,11 +7501,17 @@
+@@ -7318,11 +7497,17 @@
          if (node->op == GGML_OP_SSM_CONV &&
              ggml_sycl_can_fuse(cgraph, i, { GGML_OP_SSM_CONV, GGML_OP_UNARY }, { GGML_UNARY_OP_SILU })) {
              ggml_sycl_ssm_conv_fused(*sycl_ctx, node, nullptr, cgraph->nodes[i + 1]);
@@ -518,7 +504,7 @@
              i += 2;
              continue;
          }
-@@ -7332,7 +7521,64 @@
+@@ -7332,7 +7517,62 @@
              GGML_LOG_ERROR("%s: error: op not supported %s (%s)\n", __func__, node->name, ggml_op_name(node->op));
          }
          GGML_ASSERT(ok);
@@ -532,10 +518,8 @@
 +        const int64_t profile_log_begin = lilicorr_sycl_profile_now_us();
 +        const char * marker_name = lilicorr_sycl_profile_name(profile_marker);
 +        if (!profile_enabled) {
-+            GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=gate graph=%" PRIu64 " requested=1 enabled=0 marker=0 graph_nodes=%d marker_name=%s\n",
-+                          profile_graph_id, cgraph->n_nodes, marker_name);
-+            GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=graph graph=%" PRIu64 " requested=1 enabled=0 marker=0 graph_nodes=%d covered_nodes=0 uncovered_nodes=%d skipped_nodes=0 spans=0 first_index=-1 last_index=-1 begin_us=0 end_us=0 core_wall_us=0 event_wall_us=0 uncounted_wall_us=0 log_wall_us=0 covered_ranges=- uncovered_ranges=all marker_name=%s\n",
-+                          profile_graph_id, cgraph->n_nodes, cgraph->n_nodes, marker_name);
++            // No exact LiliCorr marker: emit no gate or summary record.
++            return;
 +        } else {
 +            GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=gate graph=%" PRIu64 " requested=1 enabled=1 marker=1 graph_nodes=%d marker_name=%s\n",
 +                          profile_graph_id, cgraph->n_nodes, marker_name);
