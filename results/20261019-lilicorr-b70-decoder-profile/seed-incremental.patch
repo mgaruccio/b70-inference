@@ -1,0 +1,11 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -7225,7 +7225,7 @@
+ }
+ 
+ static bool lilicorr_sycl_profile_marker(const ggml_tensor * tensor) {
+-    return tensor && tensor->name[0] && (std::strcmp(tensor->name, "lilicorr_lattice") == 0 || std::strncmp(tensor->name, "lilicorr.", 9) == 0);
++    return tensor && tensor->name[0] && (std::strcmp(tensor->name, "lilicorr_lattice") == 0 || std::strcmp(tensor->name, "inp_noise_embd") == 0 || std::strncmp(tensor->name, "lilicorr.", 9) == 0);
+ }
+ 
+ static const ggml_tensor * lilicorr_sycl_profile_graph_marker(const ggml_cgraph * cgraph) {
