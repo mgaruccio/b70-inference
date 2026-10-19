@@ -59,7 +59,7 @@ record:
 ## Files and lead-only build
 
 `lilicorr-profile.patch` is a zero-fuzz combined patch. `fixtures/` contains
-exact gzip downloads of all three parent source files, including the SYCL backend.
+exact gzip downloads of all three parent source files, including the SYCL backend. The combined-startup-measured fixture is derived from the retained first-profile JSON and raw/gzip stderr, and exercises the nested 43/45-round scheduler shape.
 `source-proof.py` reuses the first package's qualified ancestry, complete
 source-map, and six-binary proof, extended to the three changed source files.
 The expected changed libraries are exactly `libllama-common.so`,
@@ -89,8 +89,9 @@ restoration. No-draft A cells must contain no new SYCL diagnostic events.
 
 Expected analysis artifacts are `analysis-r1/profile.json` (inherited phase
 records plus per-request SYCL records) and the retained raw server logs. The
+startup metadata and warmup diagnostics are retained separately from measured `graphs`; measured scheduler coverage records expected, covered, and uncovered ubatch/node totals, including every eight-row draft ubatch.
 analyzer fails closed on missing/duplicate/negative/overlapping graph or op
-records, incomplete node ranges, mismatched 33-request order, or changed
+records, incomplete node ranges, missing/duplicate scheduler graph owners, timed target/A spans, mismatched 33-request order, or changed
 proposal/acceptance counts. Nested operation spans are not added to graph core
 wall; all results remain development-only.
 
@@ -102,8 +103,11 @@ bash -n results/20261019-lilicorr-b70-sycl-profile/build-candidate.sh
 ```
 
 The CPU suite uses only local fixtures (raw or gzip logs where available),
-checks zero-fuzz forward/reverse application, opt-in and branch order, exact
-source hashes, strict event parsing/coverage, private namespace rebinding, and
-same-size drift rejection. It does not build, access a GPU, mutate a remote
-host, or establish a performance result. The benchmark publication checklist
-remains incomplete until the lead executes and reviews the defined journey.
+checks zero-fuzz forward/reverse application, shared-clock and exact-marker
+behavior, strict nested event/scheduler coverage, startup and warmup separation,
+private namespace/container rebinding, and same-size source/binary/model drift
+rejection through the actual adapter wrappers. It also runs the unchanged first
+package's 13-test CPU suite as inherited coverage. It does not build, access a
+GPU, mutate a remote host, or establish a performance result. The benchmark
+publication checklist remains incomplete until the lead executes and reviews
+the defined journey.

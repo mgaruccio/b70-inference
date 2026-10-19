@@ -23,6 +23,7 @@ OWN_FILES = (
     'analyze-profile.py', 'test-profile.py', 'source-hashes.json', 'lilicorr-profile.patch',
     'fixtures/common/speculative.cpp.gz', 'fixtures/src/llama-context.cpp.gz',
     'fixtures/ggml/src/ggml-sycl/ggml-sycl.cpp.gz',
+    'fixtures/combined-startup-measured.json.gz',
     '../20261019-lilicorr-b70-profile/run-profile.py',
     '../20261019-lilicorr-b70-profile/analyze-profile.py',
     '../20261019-lilicorr-b70-profile/source-proof.py',

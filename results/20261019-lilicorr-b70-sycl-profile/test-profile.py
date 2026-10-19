@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
 """CPU-only tests for the second diagnostic; no Docker, GPU, network, or remote mutation."""
+import copy
 import gzip
 import hashlib
 import json
 import re
 import runpy
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
+FIRST = HERE.parent / '20261019-lilicorr-b70-profile'
 D = runpy.run_path(str(HERE / 'run-profile.py'))
 S = D['S']
 A = runpy.run_path(str(HERE / 'analyze-profile.py'))
+QUALIFIED = HERE.parent / '20261019-nemotron35-bolt-lilicorr-verify-singletons/qualification-r1'
+
+
+def save(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value))
 
 
 def pins():
@@ -35,6 +45,12 @@ def saved_stderr(directory):
     if raw_data is not None and packed_data is not None:
         assert raw_data == packed_data, 'retained log representations differ'
     return (raw_data if raw_data is not None else packed_data).decode()
+
+
+def combined_fixture():
+    data = gzip.decompress((HERE / 'fixtures/combined-startup-measured.json.gz').read_bytes())
+    return json.loads(data)
+
 
 def strip_blocks(text, marker):
     return re.sub(r'^[ \t]*// ' + re.escape(marker) + r'_BEGIN\n.*?^[ \t]*// ' +
@@ -68,6 +84,10 @@ class PatchTests(unittest.TestCase):
                 marker = ('LILICORR_SYCL_PROFILE_ONLY' if name.startswith('ggml/')
                           else 'LILICORR_PROFILE_ONLY')
                 self.assertEqual(original, strip_blocks(text, marker).encode())
+                if name.startswith('ggml/'):
+                    self.assertNotIn('std::chrono', text)
+                    self.assertNotIn('steady_clock', text)
+                    self.assertIn('return ggml_time_us();', text)
             result = subprocess.run(
                 ['patch', '--fuzz=0', '--batch', '--reverse', '-p1',
                  '-i', str(HERE / 'lilicorr-profile.patch')],
@@ -84,18 +104,20 @@ class PatchTests(unittest.TestCase):
         self.assertIn('lilicorr-profile.patch', script)
         subprocess.run(['bash', '-n', str(HERE / 'build-candidate.sh')], check=True)
         self.assertEqual(sorted(S['SOURCE_SCOPE']), [
-            'common/speculative.cpp', 'ggml/src/ggml-sycl/ggml-sycl.cpp', 'src/llama-context.cpp'])
+            'common/speculative.cpp', 'ggml/src/ggml-sycl/ggml-sycl.cpp',
+            'src/llama-context.cpp'])
         self.assertEqual(S['CHANGED_BINARIES'], [
             'libggml-sycl.so.0', 'libllama-common.so', 'libllama.so.0.7.0'])
+
     def test_retained_log_accepts_raw_or_gzip_and_detects_mismatch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            payload = b'profile log\\n'
+            payload = b'profile log\n'
             (root / 'server.stderr.log').write_bytes(payload)
             self.assertEqual(saved_stderr(root), payload.decode())
             (root / 'server.stderr.log.gz').write_bytes(gzip.compress(payload))
             self.assertEqual(saved_stderr(root), payload.decode())
-            (root / 'server.stderr.log').write_bytes(b'different\\n')
+            (root / 'server.stderr.log').write_bytes(b'different\n')
             with self.assertRaises(AssertionError):
                 saved_stderr(root)
 
@@ -117,16 +139,33 @@ class PatchTests(unittest.TestCase):
         self.assertIn('lilicorr_sycl_profile_scope', patched)
         self.assertIn('profile_records.reserve', patched)
         self.assertIn('LLAMA_LILICORR_SYCL_PROFILE ', patched)
-        self.assertNotRegex(patched, r'LLAMA_LILICORR_SYCL_PROFILE\\n')
+        self.assertNotIn('std::chrono', patched)
+        self.assertNotIn('steady_clock', patched)
+        self.assertIn('return ggml_time_us();', patched)
+        self.assertNotRegex(patched, r'LLAMA_LILICORR_SYCL_PROFILE\n')
         added = '\n'.join(re.findall(
-            r'^[ \\t]*// LILICORR_SYCL_PROFILE_ONLY_BEGIN\\n(.*?)^[ \\t]*// LILICORR_SYCL_PROFILE_ONLY_END\\n',
+            r'^[ \t]*// LILICORR_SYCL_PROFILE_ONLY_BEGIN\n(.*?)^[ \t]*// LILICORR_SYCL_PROFILE_ONLY_END\n',
             patched, flags=re.M | re.S))
         self.assertNotRegex(added, r'\.wait\s*\(|queue\.wait|sycl::event|memcpy\s*\(')
         self.assertLess(patched.index('bool ok = ggml_sycl_compute_forward'),
                         patched.index('stage=op'))
         self.assertEqual(original, strip_blocks(patched, 'LILICORR_SYCL_PROFILE_ONLY'))
 
-
+    def test_shared_clock_helper_stub_compiles_and_runs(self):
+        source = r'''
+#include <cstdint>
+static int64_t ggml_time_us() { return 1234; }
+static int64_t lilicorr_sycl_profile_now_us() { return ggml_time_us(); }
+int main() { return lilicorr_sycl_profile_now_us() == 1234 ? 0 : 1; }
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cpp = root / 'clock-helper.cpp'
+            exe = root / 'clock-helper'
+            cpp.write_text(source)
+            subprocess.run(['c++', '-std=c++17', '-Wall', str(cpp), '-o', str(exe)],
+                           check=True, capture_output=True, text=True)
+            subprocess.run([str(exe)], check=True)
 
 
 class AnalyzerTests(unittest.TestCase):
@@ -145,8 +184,11 @@ class AnalyzerTests(unittest.TestCase):
         return [self.prefix + row for row in rows]
 
     def phase_events(self):
-        return [dict(stage='ubatch', line=4, begin_us=100, build_alloc_us=2,
-                     inputs_us=3, submit_us=48, rows=2, gtype=1, nodes=5)]
+        return [
+            dict(stage='process_chunk', line=3, begin_us=95, end_us=160, rows=5),
+            dict(stage='ubatch', line=4, begin_us=100, end_us=150, build_alloc_us=2,
+                 inputs_us=3, submit_us=48, rows=5, gtype=1, nodes=5),
+        ]
 
     def test_event_parser_and_phase_correlation(self):
         rows = A['parse_sycl'](self.lines(), first_line=20)
@@ -158,10 +200,12 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(report['graph_core_wall_us'], 40)
         self.assertEqual(report['operation_wall_us'], 20)
         self.assertEqual(report['graphs'][0]['phase']['stage'], 'process')
+        self.assertEqual(report['scheduler_coverage']['expected_ubatches'], 1)
+        self.assertEqual(report['scheduler_coverage']['covered_ubatches'], 1)
         self.assertEqual(len(report['operator_totals']), 2)
         self.assertEqual(len(report['operator_totals'][0]['raw_refs']), 1)
 
-    def test_parser_rejects_overlap_missing_coverage_and_negative_duration(self):
+    def test_parser_rejects_overlap_missing_coverage_negative_duration_and_marker_drift(self):
         rows = self.lines()
         overlap = rows[2].replace('begin_us=125 end_us=135', 'begin_us=115 end_us=135 elapsed_host_us=20')
         with self.assertRaises(AssertionError):
@@ -174,17 +218,222 @@ class AnalyzerTests(unittest.TestCase):
         negative = rows[1].replace('end_us=120 elapsed_host_us=10', 'end_us=109 elapsed_host_us=-1')
         with self.assertRaises(AssertionError):
             A['event'](negative)
+        bad_marker = rows[0].replace('marker_name=lilicorr.out_head', 'marker_name=not_lilicorr')
+        with self.assertRaises(AssertionError):
+            A['event'](bad_marker)
 
     def test_gate_disabled_is_not_claimed_as_coverage(self):
         rows = self.lines()
         disabled_gate = rows[0].replace('enabled=1 marker=1', 'enabled=0 marker=0').replace(
             'marker_name=lilicorr.out_head', 'marker_name=-')
-        disabled_graph = rows[3].replace(
-            'enabled=1 marker=1 covered_nodes=3 uncovered_nodes=2 skipped_nodes=2 spans=2 first_index=0 last_index=3 begin_us=100 end_us=150 core_wall_us=50 event_wall_us=20 uncounted_wall_us=30 log_wall_us=4 covered_ranges=0-1,3 uncovered_ranges=2,4 marker_name=lilicorr.out_head',
-            'enabled=0 marker=0 covered_nodes=0 uncovered_nodes=5 skipped_nodes=0 spans=0 first_index=-1 last_index=-1 begin_us=0 end_us=0 core_wall_us=0 event_wall_us=0 uncounted_wall_us=0 log_wall_us=0 covered_ranges=- uncovered_ranges=all marker_name=-')
+        disabled_graph = (rows[3].replace('enabled=1 marker=1', 'enabled=0 marker=0')
+                           .replace('covered_nodes=3 uncovered_nodes=2', 'covered_nodes=0 uncovered_nodes=5')
+                           .replace('skipped_nodes=2 spans=2', 'skipped_nodes=0 spans=0')
+                           .replace('first_index=0 last_index=3', 'first_index=-1 last_index=-1')
+                           .replace('begin_us=105 end_us=145 core_wall_us=40 event_wall_us=20 uncounted_wall_us=20',
+                                    'begin_us=0 end_us=0 core_wall_us=0 event_wall_us=0 uncounted_wall_us=0')
+                           .replace('log_wall_us=4 covered_ranges=0-1,3 uncovered_ranges=2,4 marker_name=lilicorr.out_head',
+                                    'log_wall_us=0 covered_ranges=- uncovered_ranges=all marker_name=-'))
+        report = A['_unattributed_sycl'](A['parse_sycl']([disabled_gate, disabled_graph], 1))
+        self.assertEqual(0, report['enabled_graph_count'])
+        self.assertEqual(1, report['disabled_graph_count'])
         with self.assertRaises(AssertionError):
             A['request_sycl']({'lines': [disabled_gate, disabled_graph], 'first_line': 1},
                               {'events': self.phase_events()})
+
+    def test_combined_startup_warmup_fixture_covers_all_real_rounds(self):
+        fixture = combined_fixture()
+        self.assertTrue(fixture['source']['stderr_raw_equals_gzip'])
+        source = fixture['source']
+        source_profile = Path('/home/mike/code/b70-inference/results/20261019-lilicorr-b70-profile/profile-r1/analysis-r1/profile.json')
+        source_raw = Path('/home/mike/code/b70-inference/results/20261019-lilicorr-b70-profile/profile-r1/VSPF-W3a/server.stderr.log')
+        source_gzip = source_raw.with_name(source_raw.name + '.gz')
+        self.assertEqual(source['profile_sha256'], hashlib.sha256(source_profile.read_bytes()).hexdigest())
+        self.assertEqual(source['stderr_sha256'], hashlib.sha256(source_raw.read_bytes()).hexdigest())
+        self.assertEqual(source['stderr_gzip_sha256'], hashlib.sha256(source_gzip.read_bytes()).hexdigest())
+        self.assertEqual(source_raw.read_bytes(), gzip.decompress(source_gzip.read_bytes()))
+        startup = A['_startup_sycl'](fixture['startup_lines'])
+        self.assertEqual(1, startup['graph_count'])
+        self.assertEqual(0, startup['enabled_graph_count'])
+        self.assertEqual(1, startup['disabled_graph_count'])
+        self.assertEqual(8, len(fixture['requests']))
+        for request in fixture['requests']:
+            parsed = A['request_sycl'](
+                {'lines': request['lines'], 'first_line': request['first_line']},
+                request['phase_request'])
+            draft_rounds = 43 if request['point'] == 'short' else 45
+            scheduler = parsed['scheduler_coverage']
+            self.assertEqual(89 if request['point'] == 'short' else 101,
+                             scheduler['expected_ubatches'])
+            self.assertEqual(draft_rounds, scheduler['expected_draft_ubatches'])
+            self.assertEqual(draft_rounds, scheduler['covered_draft_ubatches'])
+            self.assertEqual(0, scheduler['uncovered_draft_ubatches'])
+            self.assertEqual(0, scheduler['uncovered_ubatches'])
+            self.assertGreater(scheduler['uncovered_nodes'], 0)
+            self.assertEqual(scheduler['expected_nodes'],
+                             scheduler['covered_nodes'] + scheduler['uncovered_nodes'])
+
+    def test_combined_fixture_missing_whole_graph_and_duplicate_owner_fail_closed(self):
+        fixture = combined_fixture()
+        request = fixture['requests'][0]
+        marker = A['MARKER']
+        first_graph = [line for line in request['lines'] if marker in line and 'graph=1001 ' in line]
+        self.assertEqual(4, len(first_graph))
+        dropped = [line for line in request['lines'] if line != first_graph[-1]]
+        with self.assertRaises(AssertionError):
+            A['request_sycl']({'lines': dropped, 'first_line': request['first_line']},
+                              request['phase_request'])
+        duplicate = [line.replace('graph=1001 ', 'graph=999999 ') for line in first_graph]
+        with self.assertRaises(AssertionError):
+            A['request_sycl']({'lines': request['lines'] + duplicate,
+                               'first_line': request['first_line']}, request['phase_request'])
+        ambiguous = copy.deepcopy(request['phase_request'])
+        ambiguous['events'].append(copy.deepcopy(next(
+            event for event in ambiguous['events'] if event['stage'] == 'process_chunk')))
+        with self.assertRaises(AssertionError):
+            A['request_sycl']({'lines': request['lines'], 'first_line': request['first_line']},
+                              ambiguous)
+
+
+class AdapterTests(unittest.TestCase):
+    def setUp(self):
+        self.runtime, self.analysis, self.c = D['bind']()
+        self.public = dict(OUT=QUALIFIED, C={}, CANDIDATE=S['PARENT'],
+                      make_create=lambda cell, _h: S['load'](QUALIFIED / cell / 'create-argv.json'))
+        self.c['configure'](self.public)
+        self.source_bind = D['_FIRST_RUN']['source_bind']
+
+    def _container_fixture(self, cell):
+        record = S['load'](self.c['qualified_dir'](self.c['role_for'](cell)) / 'container-before.json')
+        record.update(Name='/' + self.c['name'](cell), Id='b' * 64)
+        record['Config']['Hostname'] = 'b' * 12
+        record['Config']['Cmd'] = self.c['make_create'](cell, None)[-3:]
+        if self.c['role_for'](cell) == 'W3':
+            record['Config']['Env'].append(D['PROFILE_ENV'] + '=1')
+            substitutions = {
+                D['Q']['old_draft_bind'](): D['Q']['candidate_draft_bind'](),
+                self.source_bind(S['PARENT']): self.source_bind(S['CANDIDATE']),
+            }
+            record['HostConfig']['Binds'] = [substitutions.get(x, x)
+                                              for x in record['HostConfig']['Binds']]
+            record['Mounts'] = D['Q']['_expected_mounts'](record, cell)
+            next(m for m in record['Mounts'] if m['Destination'] == '/src')['Source'] = str(S['CANDIDATE'])
+        return record
+
+    def test_actual_root_out_prefix_source_bind_and_container_identity(self):
+        runtime, analysis, contract = D['bind']()
+        self.assertIsNotNone(runtime)
+        self.assertIsNotNone(analysis)
+        self.assertEqual(contract['ROOT'], D['ROOT'])
+        self.assertEqual(contract['OUT'], D['OUT'])
+        self.assertEqual(contract['PREFIX'], D['PREFIX'])
+        self.assertEqual(D['ROOT'], Path('/home/mike/b70-evals/20261019-lilicorr-b70-sycl-profile'))
+        self.assertEqual(D['OUT'], D['ROOT'] / 'profile-r1')
+        self.assertEqual(D['PREFIX'], 'bolt-lilicorr-b70-sycl-profile-r1-')
+        self.assertEqual(self.source_bind(S['PARENT']), str(S['PARENT']) + ':/src:ro')
+        self.assertEqual(self.source_bind(S['CANDIDATE']), str(S['CANDIDATE']) + ':/src:ro')
+        for cell in self.c['CELLS']:
+            record = self._container_fixture(cell)
+            before = copy.deepcopy(record)
+            self.assertTrue(self.c['check_container'](record, cell, None))
+            self.assertEqual(before, record)
+        pristine = self._container_fixture('VSPF-W3a')
+        bad = copy.deepcopy(pristine)
+        bad['Config']['Env'].append(D['PROFILE_ENV'] + '=0')
+        with self.assertRaises(AssertionError):
+            self.c['check_container'](bad, 'VSPF-W3a', None)
+
+    def test_actual_make_create_wrapper_has_exact_w3_delta_and_no_qualified_rebind(self):
+        for cell in self.c['CELLS']:
+            base_cell = self.c['base_cell'](cell)
+            base = self.public['make_create'](base_cell, None)
+            argv = self.c['make_create'](cell, None)
+            self.assertEqual(base[-3:], argv[-3:])
+            self.assertEqual(self.c['server_argv'](base), self.c['server_argv'](argv))
+            if self.c['role_for'](cell) == 'W3':
+                self.assertIn(self.source_bind(S['CANDIDATE']), argv)
+                self.assertNotIn(self.source_bind(S['PARENT']), argv)
+                self.assertEqual(1, sum(D['PROFILE_ENV'] in item for item in argv))
+            else:
+                self.assertNotIn(self.source_bind(S['CANDIDATE']), argv)
+                self.assertFalse(any(D['PROFILE_ENV'] in item for item in argv))
+        self.assertEqual(S['PARENT'], D['S']['PARENT'])
+
+    def test_actual_source_binary_model_wrappers_reject_same_size_mutations(self):
+        runtime, analysis, c = D['bind']()
+        with tempfile.TemporaryDirectory(dir=HERE / '.scratch') as directory:
+            root = Path(directory)
+            parent, candidate = root / 'parent', root / 'candidate'
+            for tree in (parent, candidate):
+                tree.mkdir()
+                (tree / 'UPSTREAM_COMMIT').write_text(pins()['upstream_commit'] + '\n')
+                for name in S['SOURCE_SCOPE']:
+                    path = tree / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(fixture_bytes(name))
+                for name in S['ARTIFACTS']:
+                    path = tree / 'build-sycl/bin' / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes((name + ('profile' if tree == candidate and name in S['CHANGED_BINARIES'] else '')).encode())
+            subprocess.run(['patch', '--fuzz=0', '--batch', '-p1', '-i', str(HERE / 'lilicorr-profile.patch')],
+                           cwd=candidate, check=True, capture_output=True)
+            for name in ('source-hashes.json', 'lilicorr-profile.patch'):
+                (root / name).write_bytes((HERE / name).read_bytes())
+            for name in S['SOURCE_SCOPE']:
+                archive = root / 'fixtures' / (name + '.gz')
+                archive.parent.mkdir(parents=True, exist_ok=True)
+                archive.write_bytes((HERE / 'fixtures' / (name + '.gz')).read_bytes())
+            save(root / 'parent-binaries.json', S['binaries'](parent))
+            save(root / 'candidate-binaries.json', S['binaries'](candidate))
+            save(root / 'source-diff.json', dict(changed_relative_to_parent=S['SOURCE_SCOPE']))
+            (root / 'build-attempt-r1').mkdir()
+            (root / 'build-attempt-r1/exit-code.txt').write_text('0\n')
+            (root / 'runtime-precheck.log').write_text('LILICORR_PROFILE_DEPENDENCIES_PASSED')
+            (root / 'post-build-verification.log').write_text('LILICORR_PROFILE_BUILD_PASSED')
+            save(root / 'build-attempt-r1/image.json', {'fixture': True})
+            qualified = dict(source=S['source_map'](parent), binaries=S['binaries'](parent))
+            public = dict(CANDIDATE=parent, candidate_proof=lambda: qualified,
+                          C=dict(source_binary_hashes=lambda _h: {'qualified': True},
+                                 source_evidence=lambda _h: {'qualified': True}))
+            c['configure'](public)
+            q8 = root / 'q8.gguf'
+            q8.write_bytes(b'q8-fixture')
+            inherited = runpy.run_path(str(D['Q']['BASE'] / 'contracts.py'))['adapter_code_hashes']()
+            real_load = c['load']
+            def load(path):
+                return inherited if Path(path).name == 'adapter-code-hashes-before.json' else real_load(path)
+            real_sha = c['sha']
+            def sha(path):
+                path = Path(path)
+                name = str(path.relative_to(HERE)) if path.is_relative_to(HERE) else None
+                return real_sha(root / name) if name in D['BUILD_FILES'] else real_sha(path)
+            with mock.patch.dict(S['proof'].__globals__, HERE=root, PARENT=parent, CANDIDATE=candidate), \
+                 mock.patch.dict(S['proof'].__globals__['_BASE']['proof'].__globals__,
+                                 HERE=root, PARENT=parent, CANDIDATE=candidate), \
+                 mock.patch.dict(D['Q']['bind'].__globals__, CANDIDATE=q8,
+                                 CANDIDATE_SIZE=q8.stat().st_size, CANDIDATE_SHA256=real_sha(q8)), \
+                 mock.patch.dict(c, load=load, sha=sha):
+                c['adapter_code_hashes']()
+                for wrapper in ('source_binary_hashes', 'source_evidence'):
+                    c[wrapper](None)
+                    for path in (candidate / 'common/speculative.cpp',
+                                 candidate / 'build-sycl/bin/libllama-common.so', q8):
+                        original = path.read_bytes()
+                        path.write_bytes(b'X' + original[1:])
+                        with self.assertRaises(AssertionError, msg=str(path)):
+                            c[wrapper](None)
+                        path.write_bytes(original)
+                    extra = candidate / 'unapproved-source'
+                    extra.write_text('drift')
+                    with self.assertRaises(AssertionError):
+                        c[wrapper](None)
+                    extra.unlink()
+                    c[wrapper](None)
+
+    def test_original_first_package_thirteen_cpu_tests_are_inherited_unchanged(self):
+        result = subprocess.run([sys.executable, '-B', str(FIRST / 'test-profile.py')],
+                                cwd=FIRST, check=True, capture_output=True, text=True)
+        self.assertRegex(result.stdout + result.stderr, r'Ran 13 tests')
 
 
 class BindingTests(unittest.TestCase):
@@ -200,8 +449,10 @@ class BindingTests(unittest.TestCase):
         self.assertIn('../20261019-lilicorr-b70-profile/run-profile.py', D['OWN_FILES'])
         self.assertIn('../20261019-lilicorr-b70-profile/analyze-profile.py', D['OWN_FILES'])
         self.assertEqual(D['S']['SOURCE_SCOPE'], [
-            'common/speculative.cpp', 'ggml/src/ggml-sycl/ggml-sycl.cpp', 'src/llama-context.cpp'])
+            'common/speculative.cpp', 'ggml/src/ggml-sycl/ggml-sycl.cpp',
+            'src/llama-context.cpp'])
 
 
 if __name__ == '__main__':
+    (HERE / '.scratch').mkdir(exist_ok=True)
     unittest.main(verbosity=2)
