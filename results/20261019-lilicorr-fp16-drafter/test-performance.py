@@ -10,6 +10,7 @@ import json
 import runpy
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -101,6 +102,44 @@ class BindingTests(unittest.TestCase):
             link.symlink_to(path)
             with self.assertRaises(AssertionError):
                 D['file_pin'](link, len(payload), digest)
+
+    def test_source_wrappers_repin_after_adapter_hash_capture(self):
+        baseline = runpy.run_path(str(BASE / 'contracts.py'))
+        inherited = baseline['adapter_code_hashes']()
+        real_load = self.c['load']
+        adapter_globals = D['bind'].__globals__
+
+        def load(path):
+            if Path(path) == BASE / 'run-r3/adapter-code-hashes-before.json':
+                return inherited
+            return real_load(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            pin_file = Path(directory) / 'candidate.gguf'
+            first = b'candidate-one'
+            second = b'candidate-two'
+            self.assertEqual(len(first), len(second))
+            pin_file.write_bytes(first)
+            first_digest = hashlib.sha256(first).hexdigest()
+            with mock.patch.dict(adapter_globals, {
+                    'CANDIDATE': pin_file,
+                    'CANDIDATE_SIZE': len(first),
+                    'CANDIDATE_SHA256': first_digest,
+            }):
+                with mock.patch.dict(self.c, {
+                        'load': load,
+                        '_BASE': {
+                            'source_binary_hashes': lambda _h: {'stub': 'hash'},
+                            'source_evidence': lambda _h: {'stub': 'evidence'},
+                        },
+                }):
+                    captured = self.c['adapter_code_hashes']()
+                    self.assertEqual(first_digest, captured['candidate_file']['sha256'])
+                    pin_file.write_bytes(second)
+                    for wrapper in ('source_binary_hashes', 'source_evidence'):
+                        with self.subTest(wrapper=wrapper):
+                            with self.assertRaises(AssertionError):
+                                self.c[wrapper]({'fixture': True})
 
     def test_container_validation_inspects_candidate_file_bind_and_does_not_mutate(self):
         for cell in self.c['CELLS']:

@@ -138,10 +138,8 @@ def bind():
     base_hashes = c['source_binary_hashes']
     base_evidence = c['source_evidence']
     c.update(ROOT=ROOT, OUT=OUT, PREFIX=PREFIX)
-    candidate_pin = None
 
     def code_hashes():
-        nonlocal candidate_pin
         inherited = base_code()
         pinned = c['load'](BASE / 'run-r3/adapter-code-hashes-before.json')
         assert inherited == pinned, 'completed baseline benchmark code drift'
@@ -150,12 +148,10 @@ def bind():
         return dict(inherited, **own, candidate_file=candidate_pin)
 
     def source_binary_hashes(h):
-        pinned = candidate_pin or candidate_file_proof()
-        return dict(qualified_parent=base_hashes(h), candidate_file=pinned)
+        return dict(qualified_parent=base_hashes(h), candidate_file=candidate_file_proof())
 
     def source_evidence(h):
-        pinned = candidate_pin or candidate_file_proof()
-        return dict(qualified_parent=base_evidence(h), candidate_file=pinned)
+        return dict(qualified_parent=base_evidence(h), candidate_file=candidate_file_proof())
 
     def make_create(cell, h):
         # The inherited singleton make_create already derives the fresh name from
