@@ -45,6 +45,14 @@ def event_line(marker):
 
 
 class PatchAndContractTests(unittest.TestCase):
+    def test_build_markers_match_the_inherited_built_proof(self):
+        script = (HERE / 'build-candidate.sh').read_text()
+        proof = (HERE.parent / '20261019-lilicorr-b70-profile/source-proof.py').read_text()
+        for marker in ('LILICORR_PROFILE_BUILD_PASSED', 'LILICORR_PROFILE_DEPENDENCIES_PASSED'):
+            self.assertIn(marker, proof)
+            self.assertIn(marker, script)
+        subprocess.run(['bash', '-n', str(HERE / 'build-candidate.sh')], check=True)
+
     def test_combined_and_incremental_patches_apply_reverse_and_hash_exactly(self):
         pins = S['load'](HERE / 'source-hashes.json')
         S['check_fixtures']()

@@ -92,7 +92,7 @@ source /opt/intel/oneapi/setvars.sh --force
 export LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}
 for f in llama-server libllama-server-impl.so libggml-sycl.so.0 test-backend-ops libllama-common.so libllama.so.0.7.0; do ldd "/src/build-sycl/bin/$f"; done | tee /tmp/dependencies.log
 if grep -F "not found" /tmp/dependencies.log; then exit 1; fi
-echo LILICORR_DECODER_PROFILE_DEPENDENCIES_PASSED
+echo LILICORR_PROFILE_DEPENDENCIES_PASSED
 ' > "$ROOT/runtime-precheck.log" 2>&1
 check_protected
 python3 -B "$ROOT/source-proof.py" --candidate > "$ROOT/build-attempt-r1/candidate-source-after.json"
@@ -113,5 +113,5 @@ for name, data in [('parent-binaries.json', x), ('candidate-binaries.json', y),
 changed = sorted(k for k in s['ARTIFACTS'] if x[k] != y[k])
 print('Changed artifacts:', changed, flush=True)
 assert changed == s['CHANGED_BINARIES'], 'Unexpected binary delta: retain evidence, do not loosen pins'
-print('LILICORR_DECODER_PROFILE_BUILD_PASSED')
+print('LILICORR_PROFILE_BUILD_PASSED')
 PY
