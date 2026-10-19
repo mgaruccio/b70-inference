@@ -477,6 +477,7 @@ def check_container(record, cell, h):
     expected_host = dict(base['HostConfig'])
     actual_host = dict(record['HostConfig'])
     for host in (expected_host, actual_host):
+        host['Binds'] = sorted(host.get('Binds') or [])
         value = host.pop('OomKillDisable', None)
         assert value is None or value is False
     assert actual_host == expected_host

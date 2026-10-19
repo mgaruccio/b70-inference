@@ -79,17 +79,23 @@ class TimingContracts(unittest.TestCase):
             base = dict(Name='/qualified-vsb-a', Id='a' * 64, Image='sha256:qualified',
                         Config=dict(Hostname='a' * 12, Cmd=C['make_create']('VSPF-A1', None)[-3:],
                                     Env=['A=1'], Image='image:tag'),
-                        HostConfig={'OomKillDisable': None}, Mounts=[])
+                        HostConfig={'OomKillDisable': None, 'Binds': ['/a:/a:ro', '/b:/b:ro']}, Mounts=[])
             C['save'](Path(directory) / 'VSB-A/container-before.json', base)
             actual = copy.deepcopy(base)
             actual.update(Name='/' + C['name']('VSPF-A1'), Id='b' * 64)
             actual['Config']['Hostname'] = 'b' * 12
+            actual['HostConfig']['Binds'].reverse()
+            actual['HostConfig']['OomKillDisable'] = False
             self.assertTrue(C['check_container'](actual, 'VSPF-A1', None))
             for key, value in (('Image', 'sha256:drift'), ('Name', base['Name'])):
                 changed = copy.deepcopy(actual)
                 changed[key] = value
                 with self.assertRaises(AssertionError):
                     C['check_container'](changed, 'VSPF-A1', None)
+            changed = copy.deepcopy(actual)
+            changed['HostConfig']['Binds'][0] = '/b:/b:rw'
+            with self.assertRaises(AssertionError):
+                C['check_container'](changed, 'VSPF-A1', None)
             actual['Config']['Hostname'] = base['Config']['Hostname']
             with self.assertRaises(AssertionError):
                 C['check_container'](actual, 'VSPF-A1', None)
