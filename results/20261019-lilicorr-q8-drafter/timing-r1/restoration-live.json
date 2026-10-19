@@ -1,0 +1,61 @@
+{
+  "independently_live": true,
+  "health": {
+    "status": "ok"
+  },
+  "sole_live": [
+    "nemotron-bolt-probe"
+  ],
+  "ownership": {
+    "devices": [
+      "/dev/dri/card0",
+      "/dev/dri/renderD128"
+    ],
+    "pids": [
+      827593
+    ],
+    "allowed_pids": [
+      827593
+    ],
+    "stderr": "                     USER        PID ACCESS COMMAND\n/dev/dri/renderD128: root      F...m llama-server\n",
+    "returncode": 0,
+    "observation": "root fuser snapshot; not continuous ownership proof"
+  },
+  "telemetry": {
+    "pci_identity": "0000:0b:00.0 VGA compatible controller [0300]: Intel Corporation Battlemage G31 [Arc Pro B70] [8086:e223]\n",
+    "pci": "0000:0b:00.0",
+    "hwmon_name": "xe",
+    "paths": {
+      "energy1_path": "/sys/class/drm/card0/device/hwmon/hwmon2/energy1_input",
+      "energy2_path": "/sys/class/drm/card0/device/hwmon/hwmon2/energy2_input",
+      "freq0_path": "/sys/class/drm/card0/device/tile0/gt0/freq0/cur_freq",
+      "freq1_path": "/sys/class/drm/card0/device/tile0/gt1/freq0/cur_freq",
+      "temp_path": "/sys/class/drm/card0/device/hwmon/hwmon2/temp2_input"
+    },
+    "values": {
+      "energy1_path": "3726098975402",
+      "energy2_path": "2427851286376",
+      "freq0_path": "1200",
+      "freq1_path": "400",
+      "temp_path": "39000"
+    },
+    "missing": [],
+    "interval_s": 0.2,
+    "thermal_assumption": "no enforced equilibrium; record drift only"
+  },
+  "passed": false,
+  "errors": [
+    {
+      "check": "container",
+      "error": "FileNotFoundError(2, 'No such file or directory')"
+    },
+    {
+      "check": "hardware",
+      "error": "FileNotFoundError(2, 'No such file or directory')"
+    },
+    {
+      "check": "source_binaries",
+      "error": "FileNotFoundError(2, 'No such file or directory')"
+    }
+  ]
+}
