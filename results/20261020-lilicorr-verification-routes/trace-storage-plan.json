@@ -1,0 +1,20 @@
+{
+  "purpose": "Development full-trace storage planning, not measured artifact volume or a speed result",
+  "filesystem": "inference-host /dev/nvme0n1p2, shared by /home/mike/b70-evals and /var/lib/docker",
+  "available_bytes_observed_before_retry": 35019427840,
+  "vocab_size": 131072,
+  "float_bytes": 4,
+  "sampler_row_bytes": 524288,
+  "existing_clean_public_output_tokens_per_cell": 623,
+  "warmup_and_measured_output_tokens_per_cell": 1024,
+  "cells": ["VSPF-A1", "VSPF-W3a", "VSPF-W3b", "VSPF-A2"],
+  "output_count_based_logit_estimate_gib": 3.216796875,
+  "conservative_target_four_column_estimate_gib": 8.0419921875,
+  "caveats": [
+    "These estimates use the fixed successful clean output class; they are not exact sampler-call counts or a guaranteed bound.",
+    "Native/startup logs, route text, source proofs, unused final rows and any replay add overhead.",
+    "Full trace writes already-available CPU logits; it does not request a new backend readback.",
+    "Recheck available space before launch. Preserve the failed r1 and all new raw observations; do not delete or rewrite them for a passing result."
+  ],
+  "retention": "Retain raw sampler files and run data on inference-host, copy and SHA256-verify locally; use lossless compression for large committed text metadata/logs, not raw model or inference source files."
+}

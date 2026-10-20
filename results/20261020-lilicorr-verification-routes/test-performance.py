@@ -12,6 +12,7 @@ import runpy
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -40,7 +41,7 @@ sys.addaudithook(audit)
 def public_fixture():
     return {
         'OUT': QUALIFIED,
-        'C': {},
+        'C': {'width_for': lambda role: None if role == 'A' else 3},
         'MARKER': 'BOLT_VERIFY_ROUTER_VERIFY_PHASE_NATIVE_PASSED',
         'SINGLETON_MARKER': 'BOLT_VERIFY_SINGLETONS_NATIVE_PASSED',
         'A': {'check_router_native_output': assert_route},
@@ -74,9 +75,9 @@ def trace_helpers():
     for name, marker in markers.items():
         p['check_' + name + '_native_gate'] = lambda log, marker=marker: gate(log, marker)
     old = {
-        'N_RS_SEQ_RE': __import__('re').compile(r'never-used-(\d+)'),
-        'DFLASH_PARAMS_RE': __import__('re').compile(r'never-used'),
-        'DFLASH_BLOCK_RE': __import__('re').compile(r'never-used'),
+        'N_RS_SEQ_RE': __import__('re').compile(r'n_rs_seq\s*=\s*(\d+)'),
+        'DFLASH_PARAMS_RE': __import__('re').compile(r'n_max\s*=\s*(\d+),\s*n_min\s*=\s*(\d+)'),
+        'DFLASH_BLOCK_RE': __import__('re').compile(r'block_size\s*=\s*(\d+)'),
         'check_model_log': lambda _model, _label: True,
     }
     off = {
@@ -137,6 +138,28 @@ class FullTraceFixtures(unittest.TestCase):
         self.assertEqual(self.c['OUT'], D['OUT'])
         self.assertEqual(self.c['ROOT'], D['ROOT'])
 
+    def test_runtime_selects_qualified_public_namespace(self):
+        trace_runtime = self.runtime['Runtime']
+        base_runtime = trace_runtime.__mro__[1]
+        with patch.object(base_runtime, '__init__', lambda _self, _h, _out: None):
+            instance = trace_runtime(self.h, self.tmp)
+        self.assertIs(instance._trace_p, self.public)
+
+    def test_exact_w3_counts_fail_closed(self):
+        self.assertIs(self.analysis['analyze'].__globals__['reread_measurement'],
+                      self.analysis['reread_measurement'])
+        for cell in ('VSPF-W3a', 'VSPF-W3b'):
+            for point, pair in (('short', (129, 84)), ('long', (133, 82))):
+                job = dict(cell=cell, point=point)
+                row = dict(timings=dict(draft_n=pair[0], draft_n_accepted=pair[1]))
+                self.assertIs(D['check_w3_counts'](job, row), row)
+                for bad_pair in ((126, 85), (pair[0], pair[1] + 1)):
+                    bad = dict(timings=dict(draft_n=bad_pair[0], draft_n_accepted=bad_pair[1]))
+                    with self.assertRaises(AssertionError):
+                        D['check_w3_counts'](job, bad)
+        row = dict(timings={})
+        self.assertIs(D['check_w3_counts'](dict(cell='VSPF-A1', point='short'), row), row)
+
     def test_role_cell_mapping_and_q8_candidate_delta(self):
         self.assertEqual(
             {cell: D['role_for'](cell) for cell in D['CELLS']},
@@ -158,6 +181,14 @@ class FullTraceFixtures(unittest.TestCase):
         derived = D['make_create'](cell, None, self.tmp)
         self.assertTrue(D['assert_trace_argv'](base, derived, cell, self.tmp))
         self.assertEqual(self.c['server_argv'](base), self.c['server_argv'](derived))
+        self.assertEqual(derived[-4], base[-4])
+        capture = str(D['capture_path'](cell, self.tmp)) + ':/capture'
+        flags = ['-v', capture]
+        for key, value in D['TRACE_ENV'].items():
+            flags += ['-e', key + '=' + value]
+        bad_order = list(base[:-3]) + flags + list(derived[-3:])
+        with self.assertRaises(AssertionError):
+            D['assert_trace_argv'](base, bad_order, cell, self.tmp)
 
         bad_env = copy.deepcopy(derived)
         index = bad_env.index('LLAMA_TRACE=1')

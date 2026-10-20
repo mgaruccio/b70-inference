@@ -145,16 +145,19 @@ def assert_trace_argv(base, derived, cell, output=OUT):
     """Fail closed unless the argv delta is name-independent trace plumbing only."""
     assert base[:2] == ['docker', 'create']
     assert derived[:2] == ['docker', 'create']
+    assert base[-3:-1] == ['bash', '-lc']
+    assert derived[-4] == base[-4], 'Docker options must precede IMAGE, not become container argv'
     assert derived[derived.index('--name') + 1] == trace_name(cell)
     capture = str(capture_path(cell, output)) + ':/capture'
     assert derived.count(capture) == 1
     capture_index = derived.index(capture)
-    assert capture_index > 0 and derived[capture_index - 1] == '-v'
+    assert 0 < capture_index < len(derived) - 4 and derived[capture_index - 1] == '-v'
     assert all(not value.endswith(':/capture:ro') for value in derived)
 
     pairs = _env_pairs(derived)
     for key, value in TRACE_ENV.items():
         assert pairs.count(key + '=' + value) == 1
+        assert derived.index(key + '=' + value) < len(derived) - 4
     assert all('BOLT_VERIFY_CAPTURE_DIR=/tmp' != value for value in pairs)
     assert 'LLAMA_TRACE' not in _env_pairs(base)
 
@@ -178,8 +181,8 @@ def make_create(cell, h=None, output=OUT):
     base = base_create_argv(cell, h)
     assert base[base.index('--name') + 1] == trace_name(cell)
     capture = str(capture_path(cell, output)) + ':/capture'
-    image_index = len(base) - 3
-    assert image_index > 0 and base[image_index - 1] != 'bash'
+    image_index = len(base) - 4
+    assert image_index > 0 and base[image_index + 1:image_index + 3] == ['bash', '-lc']
     derived = list(base[:image_index])
     derived += ['-v', capture]
     for key, value in TRACE_ENV.items():
@@ -277,7 +280,8 @@ def check_trace_startup(log, cell, h):
     router = qualified['A']['check_router_native_output'](segment, 'router_single2')
     assert 'router_columns8=1,' not in log
     assert 'router_prefill=1,' not in log
-    assert 'verify_singletons=1,' not in native_log
+    assert 'verify_singletons=1,' not in log
+    assert 'call ggml_sycl_ssm_scan_prefill:' not in native_log
     width_for = qualified['C'].get('width_for', c['width_for'])
     width = width_for(role_for(cell))
     if width is None:
@@ -289,7 +293,17 @@ def check_trace_startup(log, cell, h):
         block = old['DFLASH_BLOCK_RE'].search(model)
         assert params and params.groups() == (str(width), '0')
         assert block and block.group(1) == '8'
-        result = dict(width=width)
+        spec = model.split('common_speculative_impl_draft_dflash', 1)[1].split('speculative decoding context', 1)[0]
+        assert 'clamp' not in spec.lower()
+        assert 'R (f32)' in model and 'S (f32)' in model
+        for key in ('n_outputs_max', 'n_outputs_max_per_seq'):
+            match = re.search(r'llama_context: ' + key + r'\s*=\s*(\d+)', model)
+            assert match and match.group(1) == str(width + 1), (key, match)
+        for key, value in (('DNN', 1), ('FUSION', 1), ('ESIMD', 1), ('OPT', 1), ('VMM', 1), ('GRAPH', 0)):
+            assert f'GGML_SYCL_ENABLE_{key}: {value}' in model
+        result = dict(width=width, target_n_rs_seq=width, draft_n_rs_seq=0,
+                      n_max=width, n_min=0, block_size=8, n_outputs_max=width + 1,
+                      n_outputs_max_per_seq=width + 1)
     return dict(result, router_single2=router,
                 evidence='unaltered raw startup and actual trace PID1')
 
@@ -303,8 +317,9 @@ def check_trace_server_log(log):
     native, serving = log.split(marker, 1)
     assert 'BOLT_ROUTE route=' in native
     assert 'GGML_SYCL_DEBUG: 0' in serving
-    for forbidden in ('GGML_ASSERT', 'SYCL exception', 'BOLT_VERIFY error',
-                      'BOLT_TENSOR_TRACE_ENABLED', 'BOLT_PROJECTION_REPEAT',
+    for forbidden in ('GGML_ASSERT', 'SYCL exception', 'BOLT_VERIFY error'):
+        assert forbidden not in log, forbidden
+    for forbidden in ('BOLT_TENSOR_TRACE_ENABLED', 'BOLT_PROJECTION_REPEAT',
                       'common_debug_cb_eval', 'onednn_verbose'):
         assert forbidden not in serving, forbidden
     assert 'BOLT_VERIFY sample ' in serving
@@ -377,6 +392,14 @@ def _check_runtime_evidence(c, p, h, out, cell):
     return dict(passed=True, capture_rows=len(manifest), raw_startup_bytes=len(raw_startup.encode()))
 
 
+def check_w3_counts(job, row):
+    if role_for(job['cell']) == 'W3':
+        expected = {'short': (129, 84), 'long': (133, 82)}[job['point']]
+        actual = tuple(row['timings'][key] for key in ('draft_n', 'draft_n_accepted'))
+        assert actual == expected, ('exact W3 proposal/acceptance drift', job, actual, expected)
+    return row
+
+
 def bind():
     """Bind the existing Q8 runner into a private namespace and add trace checks."""
     global _CURRENT_C, _CURRENT_RUNTIME, _BASE_MAKE, _Q8
@@ -420,7 +443,7 @@ def bind():
         def __init__(self, h, out):
             super().__init__(h, out)
             self._trace_c = c
-            self._trace_p = runtime.get('P') or h['off']['P']
+            self._trace_p = c['_public']()
 
         def pid(self, cell, phase):
             name = self._cell_name(cell)
@@ -507,6 +530,13 @@ def bind():
     analysis['check_runtime_evidence'] = trace_runtime_evidence
     analysis['analyze'].__globals__['check_runtime_evidence'] = trace_runtime_evidence
     analysis['analyze'].__globals__['C'] = c
+    base_reread = analysis['reread_measurement']
+
+    def trace_reread(p, h, out, job):
+        return check_w3_counts(job, base_reread(p, h, out, job))
+
+    analysis['reread_measurement'] = trace_reread
+    analysis['analyze'].__globals__['reread_measurement'] = trace_reread
     analysis['check_runtime_evidence'].__globals__['C'] = c
     return runtime, analysis, c
 

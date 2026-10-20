@@ -1,0 +1,3 @@
+Existing-controller route diagnosis on original Q8. Private OUT/PREFIX plus host-only capture logging export only; source/binaries/models/server argv/native/public/fidelity/restoration gates unchanged. No builds, installations, math changes, W7 or persistent launcher changes. Full A1/W3a/W3b/A2, 25 public jobs/cell, short55/long8270, warmup plus three measured, temp0 seed42 cache_prompt=false max128 ignoreEOS. Timings diagnostic only. Separate-process restoration required before analysis.
+
+Primary research: https://www.intel.com/content/www/us/en/docs/oneapi/optimization-guide-gpu/2025-2/kernel-launch.html — host submission is asynchronous; route/host-wall records are not GPU event times.
