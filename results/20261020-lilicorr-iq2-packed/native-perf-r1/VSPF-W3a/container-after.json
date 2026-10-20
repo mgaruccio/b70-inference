@@ -1,0 +1,369 @@
+{
+  "Id": "202a692c60de37780382dbbd7ae3ddc9844ef9daeb574c6587e8516c15ede297",
+  "Created": "2026-10-20T20:39:58.70300467Z",
+  "Path": "bash",
+  "Args": [
+    "-lc",
+    "\nset -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\nset -u\nunset LLAMA_LILICORR_PROFILE SYCL_UR_TRACE SYCL_PI_TRACE LD_DEBUG\nexport GGML_SYCL_ENABLE_DNN=1 GGML_SYCL_ENABLE_OPT=1 GGML_SYCL_ENABLE_VMM=1\nexport GGML_SYCL_ENABLE_ESIMD=1 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_ENABLE_GRAPH=0\nexport BOLT_TRACE_TENSORS=0 ONEDNN_VERBOSE=0\nroot=/tmp/lilicorr-native-perf\ntest ! -e \"$root\"\nmkdir \"$root\"\nfor variant in base packed; do\n if test \"$variant\" = base; then bin=/baseline/build-sycl/bin; else bin=/src/build-sycl/bin; fi\n directory=\"$root/$variant\"\n mkdir -p \"$directory/capture\"\n for kind in q8 iq2; do\n  log=\"$directory/verify-singletons-$kind.log\"\n  if env LD_LIBRARY_PATH=\"$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\" GGML_SYCL_DEBUG=1 BOLT_VERIFY_CAPTURE_DIR=\"$directory/capture\" \"$bin/test-backend-ops\" test -b SYCL0 -p \"^verify_singletons=1,case=$kind-\" -j 1 >\"$log\" 2>&1; then rc=0; else rc=$?; fi\n  printf '%s\\n' \"$rc\" >\"$log.exit-code\"\n  test \"$rc\" = 0\n  python3 -B /iq2-batch4/native-batch4.py --kind \"$kind\" \"$log\" >\"$log.check.json\"\n done\n # Host loader/UR call tracing only. No event profiling, queue flags or adapter changes.\n log=\"$directory/representative-diagnostic.log\"\n if env LD_LIBRARY_PATH=\"$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\" GGML_SYCL_DEBUG=1 LD_DEBUG=libs SYCL_UR_TRACE=2 \"$bin/test-backend-ops\" test -b SYCL0 -o MUL_MAT_ID --test-file /iq2-batch4/native-perf-cases.txt -j 1 >\"$log\" 2>&1; then rc=0; else rc=$?; fi\n printf '%s\\n' \"$rc\" >\"$log.exit-code\"\n test \"$rc\" = 0\n python3 -B - \"$log\" \"$bin\" <<'PY'\nimport sys\nfrom pathlib import Path\ntext=Path(sys.argv[1]).read_text()\nloaded=[line for line in text.splitlines() if 'calling init:' in line and 'libggml-sycl.so' in line]\nassert loaded and all(sys.argv[2]+'/' in line for line in loaded), loaded\nassert 'urEnqueueKernelLaunch' in text, 'UR launch trace missing'\nassert 'UR_QUEUE_FLAG_PROFILING_ENABLE' not in text, 'unexpected profiling queue'\nassert '2/2 tests passed' in text, 'representative CPU comparisons missing'\nassert not any(word in text.lower() for word in ('not supported', 'skipping large tensors'))\nprint('NATIVE_PERF_DLL_KERNEL_ROUTE_AND_TWO_CPU_COMPARISONS_PASSED',sys.argv[2])\nPY\ndone\nindex=0\nfor variant in base packed packed base base packed packed base base packed packed base; do\n if test \"$variant\" = base; then bin=/baseline/build-sycl/bin; else bin=/src/build-sycl/bin; fi\n log=\"$root/perf-$index-$variant.log\"\n if env -u BOLT_VERIFY_CAPTURE_DIR LD_LIBRARY_PATH=\"$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\" GGML_SYCL_DEBUG=0 \"$bin/test-backend-ops\" perf -b SYCL0 -o MUL_MAT_ID --test-file /iq2-batch4/native-perf-cases.txt >\"$log\" 2>&1; then rc=0; else rc=$?; fi\n printf '%s\\n' \"$rc\" >\"$log.exit-code\"\n test \"$rc\" = 0\n python3 -B - \"$log\" >\"$log.checked.json\" <<'PERF'\nimport json,math,re,sys\nfrom pathlib import Path\ntext=Path(sys.argv[1]).read_text()\nlines=[line for line in text.splitlines() if line.lstrip().startswith('MUL_MAT_ID(')]\nassert len(lines)==2, ('expected two measured operations',lines)\nrows=[]\nfor name in ('lilicorr-iq2-up-n4','lilicorr-iq2-down-n4'):\n matched=[line for line in lines if 'name='+name+',' in line]\n assert len(matched)==1, (name,matched)\n match=re.search(r'(\\d+) runs\\s*-\\s*(\\S+) us/run\\s*-',matched[0])\n assert match, ('missing performance result',matched[0])\n runs=int(match[1]);time_us=float(match[2])\n assert runs>0 and math.isfinite(time_us) and time_us>0,(runs,time_us)\n rows.append(dict(name=name,runs=runs,operator_graph_wall_us=time_us))\nassert not any(word in text.lower() for word in ('not supported','skipping large tensors'))\nprint(json.dumps(rows,sort_keys=True))\nPERF\n printf 'NATIVE_PERF_FINISHED index=%s variant=%s log=%s\\n' \"$index\" \"$variant\" \"$log\"\n index=$((index + 1))\ndone\necho NATIVE_IQ2_OPERATOR_PERF_CAPTURED_NOT_SERVING_SPEEDUP\n"
+  ],
+  "State": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-20T20:39:58.857126967Z",
+    "FinishedAt": "2026-10-20T20:47:45.348855969Z"
+  },
+  "Image": "sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0",
+  "ResolvConfPath": "/var/lib/docker/containers/202a692c60de37780382dbbd7ae3ddc9844ef9daeb574c6587e8516c15ede297/resolv.conf",
+  "HostnamePath": "/var/lib/docker/containers/202a692c60de37780382dbbd7ae3ddc9844ef9daeb574c6587e8516c15ede297/hostname",
+  "HostsPath": "/var/lib/docker/containers/202a692c60de37780382dbbd7ae3ddc9844ef9daeb574c6587e8516c15ede297/hosts",
+  "LogPath": "/var/lib/docker/containers/202a692c60de37780382dbbd7ae3ddc9844ef9daeb574c6587e8516c15ede297/202a692c60de37780382dbbd7ae3ddc9844ef9daeb574c6587e8516c15ede297-json.log",
+  "Name": "/bolt-lilicorr-iq2-native-perf-r1-vspf-w3a",
+  "RestartCount": 0,
+  "Driver": "overlayfs",
+  "Platform": "linux",
+  "MountLabel": "",
+  "ProcessLabel": "",
+  "AppArmorProfile": "",
+  "ExecIDs": null,
+  "HostConfig": {
+    "Binds": [
+      "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r2:/src:ro",
+      "/home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF:/models:ro",
+      "/home/mike/inference/src/oneDNN/install:/opt/onednn:ro",
+      "/home/mike/b70-evals/20261019-lilicorr-q8-drafter/lilicorr-q8-25.gguf:/draft/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr.gguf:ro",
+      "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py:/iq2-single2-gate/analyze-trace.py:ro",
+      "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase:/router-verify-phase:ro",
+      "/dev/dri:/dev/dri:ro",
+      "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh:/native-outprod.sh:ro",
+      "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py:/iq2-single2-gate/run-trace.py:ro",
+      "/home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-verify-singletons:/verify-singletons:ro",
+      "/home/mike/b70-evals/20261020-lilicorr-iq2-packed-r2:/iq2-batch4:ro",
+      "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1:/baseline:ro"
+    ],
+    "ContainerIDFile": "",
+    "LogConfig": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "NetworkMode": "bridge",
+    "PortBindings": {
+      "18098/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18098"
+        }
+      ]
+    },
+    "RestartPolicy": {
+      "Name": "no",
+      "MaximumRetryCount": 0
+    },
+    "AutoRemove": false,
+    "VolumeDriver": "",
+    "VolumesFrom": null,
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "CapAdd": null,
+    "CapDrop": null,
+    "CgroupnsMode": "private",
+    "Dns": null,
+    "DnsOptions": [],
+    "DnsSearch": [],
+    "ExtraHosts": null,
+    "GroupAdd": [
+      "987"
+    ],
+    "IpcMode": "host",
+    "Cgroup": "",
+    "Links": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyRootfs": false,
+    "SecurityOpt": [
+      "label=disable"
+    ],
+    "UTSMode": "",
+    "UsernsMode": "",
+    "ShmSize": 67108864,
+    "Runtime": "runc",
+    "Isolation": "",
+    "CpuShares": 0,
+    "Memory": 0,
+    "NanoCpus": 0,
+    "CgroupParent": "",
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": [],
+    "BlkioDeviceReadBps": [],
+    "BlkioDeviceWriteBps": [],
+    "BlkioDeviceReadIOps": [],
+    "BlkioDeviceWriteIOps": [],
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "Devices": [
+      {
+        "PathOnHost": "/dev/dri",
+        "PathInContainer": "/dev/dri",
+        "CgroupPermissions": "rwm"
+      }
+    ],
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "OomKillDisable": null,
+    "PidsLimit": null,
+    "Ulimits": [],
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "IOMaximumIOps": 0,
+    "IOMaximumBandwidth": 0,
+    "MaskedPaths": [
+      "/proc/acpi",
+      "/proc/asound",
+      "/proc/interrupts",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/sys/devices/virtual/powercap",
+      "/sys/firmware"
+    ],
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ]
+  },
+  "Storage": {
+    "RootFS": {
+      "Snapshot": {
+        "Name": "overlayfs"
+      }
+    }
+  },
+  "Mounts": [
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261020-lilicorr-iq2-packed-r2",
+      "Destination": "/iq2-batch4",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF",
+      "Destination": "/models",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py",
+      "Destination": "/iq2-single2-gate/analyze-trace.py",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/dev/dri",
+      "Destination": "/dev/dri",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1",
+      "Destination": "/baseline",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r2",
+      "Destination": "/src",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/oneDNN/install",
+      "Destination": "/opt/onednn",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261019-lilicorr-q8-drafter/lilicorr-q8-25.gguf",
+      "Destination": "/draft/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr.gguf",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase",
+      "Destination": "/router-verify-phase",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh",
+      "Destination": "/native-outprod.sh",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py",
+      "Destination": "/iq2-single2-gate/run-trace.py",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-verify-singletons",
+      "Destination": "/verify-singletons",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    }
+  ],
+  "Config": {
+    "Hostname": "202a692c60de",
+    "Domainname": "",
+    "User": "",
+    "AttachStdin": false,
+    "AttachStdout": true,
+    "AttachStderr": true,
+    "ExposedPorts": {
+      "18098/tcp": {}
+    },
+    "Tty": false,
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Env": [
+      "GGML_SYCL_ENABLE_ESIMD=1",
+      "GGML_SYCL_ENABLE_FUSION=1",
+      "BOLT_TRACE_TENSORS=0",
+      "ONEDNN_VERBOSE=0",
+      "GGML_SYCL_ENABLE_DNN=1",
+      "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+      "ZE_AFFINITY_MASK=0",
+      "ONEAPI_DEVICE_SELECTOR=level_zero:0",
+      "GGML_SYCL_ENABLE_GRAPH=0",
+      "GGML_SYCL_ENABLE_OPT=1",
+      "GGML_SYCL_ENABLE_VMM=1",
+      "PATH=/opt/intel/oneapi/mpi/2021.18/bin:/opt/intel/oneapi/mkl/2026.0/bin:/opt/intel/oneapi/dev-utilities/2026.0/bin:/opt/intel/oneapi/debugger/2026.0/opt/debugger/bin:/opt/intel/oneapi/compiler/2026.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LANG=C.UTF-8",
+      "CCL_CONFIGURATION=cpu_gpu_dpcpp",
+      "CCL_CONFIGURATION_PATH=",
+      "CCL_ROOT=/opt/intel/oneapi/ccl/2022.0",
+      "CLASSPATH=/opt/intel/oneapi/mpi/2021.18/share/java/mpi.jar",
+      "CMAKE_PREFIX_PATH=/opt/intel/oneapi/tbb/2023.0/env/..:/opt/intel/oneapi/pti/0.17/lib/cmake/pti:/opt/intel/oneapi/mkl/2026.0/lib/cmake:/opt/intel/oneapi/dpl/2022.12/lib/cmake/oneDPL:/opt/intel/oneapi/compiler/2026.0:/opt/intel/oneapi/ccl/2022.0/lib/cmake/oneCCL",
+      "CMPLR_ROOT=/opt/intel/oneapi/compiler/2026.0",
+      "CPATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/dev-utilities/2026.0/include:/opt/intel/oneapi/ccl/2022.0/include",
+      "CPLUS_INCLUDE_PATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/tbb/2023.0/env/../include:/opt/intel/oneapi/pti/0.17/include:/opt/intel/oneapi/mpi/2021.18/include:/opt/intel/oneapi/mkl/2026.0/include:/opt/intel/oneapi/dpl/2022.12/include",
+      "C_INCLUDE_PATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/tbb/2023.0/env/../include:/opt/intel/oneapi/pti/0.17/include:/opt/intel/oneapi/mpi/2021.18/include:/opt/intel/oneapi/mkl/2026.0/include",
+      "DIAGUTIL_PATH=/opt/intel/oneapi/compiler/2026.0/etc/compiler/sys_check/sys_check.sh",
+      "DPLROOT=/opt/intel/oneapi/dpl/2022.12",
+      "DPL_ROOT=/opt/intel/oneapi/dpl/2022.12",
+      "FI_PROVIDER_PATH=/opt/intel/oneapi/mpi/2021.18/opt/mpi/libfabric/lib/prov:/usr/lib/x86_64-linux-gnu/libfabric",
+      "GDB_INFO=/opt/intel/oneapi/debugger/2026.0/share/info/",
+      "INFOPATH=/opt/intel/oneapi/debugger/2026.0/share/info",
+      "INTEL_PYTHONHOME=/opt/intel/oneapi/debugger/2026.0/opt/debugger",
+      "I_MPI_ROOT=/opt/intel/oneapi/mpi/2021.18",
+      "LD_LIBRARY_PATH=/opt/intel/oneapi/tcm/1.5/lib:/opt/intel/oneapi/umf/1.1/lib:/opt/intel/oneapi/tcm/1.5/env/../lib:/opt/intel/oneapi/tbb/2023.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.17/lib:/opt/intel/oneapi/mpi/2021.18/opt/mpi/libfabric/lib:/opt/intel/oneapi/mpi/2021.18/lib:/opt/intel/oneapi/mkl/2026.0/lib:/opt/intel/oneapi/debugger/2026.0/opt/debugger/lib:/opt/intel/oneapi/compiler/2026.0/opt/compiler/lib:/opt/intel/oneapi/compiler/2026.0/lib:/opt/intel/oneapi/ccl/2022.0/lib/",
+      "LIBRARY_PATH=/opt/intel/oneapi/tcm/1.5/lib:/opt/intel/oneapi/umf/1.1/lib:/opt/intel/oneapi/tbb/2023.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.17/lib:/opt/intel/oneapi/mpi/2021.18/lib:/opt/intel/oneapi/mkl/2026.0/lib:/opt/intel/oneapi/compiler/2026.0/lib:/opt/intel/oneapi/ccl/2022.0/lib/",
+      "MANPATH=/opt/intel/oneapi/mpi/2021.18/share/man:/opt/intel/oneapi/debugger/2026.0/share/man:/opt/intel/oneapi/compiler/2026.0/share/man:",
+      "MKLROOT=/opt/intel/oneapi/mkl/2026.0",
+      "NLSPATH=/opt/intel/oneapi/compiler/2026.0/lib/compiler/locale/%l_%t/%N",
+      "OCL_ICD_FILENAMES=/opt/intel/oneapi/compiler/2026.0/lib/libintelocl.so",
+      "ONEAPI_ROOT=/opt/intel/oneapi",
+      "PKG_CONFIG_PATH=/opt/intel/oneapi/tbb/2023.0/env/../lib/pkgconfig:/opt/intel/oneapi/mpi/2021.18/lib/pkgconfig:/opt/intel/oneapi/mkl/2026.0/lib/pkgconfig:/opt/intel/oneapi/dpl/2022.12/lib/pkgconfig:/opt/intel/oneapi/compiler/2026.0/lib/pkgconfig:/opt/intel/oneapi/ccl/2022.0/lib/pkgconfig/",
+      "Pti_DIR=/opt/intel/oneapi/pti/0.17/lib/cmake/pti",
+      "SETVARS_COMPLETED=1",
+      "TBBROOT=/opt/intel/oneapi/tbb/2023.0/env/..",
+      "TCMROOT=/opt/intel/oneapi/tcm/1.5/env/..",
+      "TCM_ROOT=/opt/intel/oneapi/tcm/1.5",
+      "UMF_ROOT=/opt/intel/oneapi/umf/1.1"
+    ],
+    "Cmd": [
+      "bash",
+      "-lc",
+      "\nset -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\nset -u\nunset LLAMA_LILICORR_PROFILE SYCL_UR_TRACE SYCL_PI_TRACE LD_DEBUG\nexport GGML_SYCL_ENABLE_DNN=1 GGML_SYCL_ENABLE_OPT=1 GGML_SYCL_ENABLE_VMM=1\nexport GGML_SYCL_ENABLE_ESIMD=1 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_ENABLE_GRAPH=0\nexport BOLT_TRACE_TENSORS=0 ONEDNN_VERBOSE=0\nroot=/tmp/lilicorr-native-perf\ntest ! -e \"$root\"\nmkdir \"$root\"\nfor variant in base packed; do\n if test \"$variant\" = base; then bin=/baseline/build-sycl/bin; else bin=/src/build-sycl/bin; fi\n directory=\"$root/$variant\"\n mkdir -p \"$directory/capture\"\n for kind in q8 iq2; do\n  log=\"$directory/verify-singletons-$kind.log\"\n  if env LD_LIBRARY_PATH=\"$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\" GGML_SYCL_DEBUG=1 BOLT_VERIFY_CAPTURE_DIR=\"$directory/capture\" \"$bin/test-backend-ops\" test -b SYCL0 -p \"^verify_singletons=1,case=$kind-\" -j 1 >\"$log\" 2>&1; then rc=0; else rc=$?; fi\n  printf '%s\\n' \"$rc\" >\"$log.exit-code\"\n  test \"$rc\" = 0\n  python3 -B /iq2-batch4/native-batch4.py --kind \"$kind\" \"$log\" >\"$log.check.json\"\n done\n # Host loader/UR call tracing only. No event profiling, queue flags or adapter changes.\n log=\"$directory/representative-diagnostic.log\"\n if env LD_LIBRARY_PATH=\"$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\" GGML_SYCL_DEBUG=1 LD_DEBUG=libs SYCL_UR_TRACE=2 \"$bin/test-backend-ops\" test -b SYCL0 -o MUL_MAT_ID --test-file /iq2-batch4/native-perf-cases.txt -j 1 >\"$log\" 2>&1; then rc=0; else rc=$?; fi\n printf '%s\\n' \"$rc\" >\"$log.exit-code\"\n test \"$rc\" = 0\n python3 -B - \"$log\" \"$bin\" <<'PY'\nimport sys\nfrom pathlib import Path\ntext=Path(sys.argv[1]).read_text()\nloaded=[line for line in text.splitlines() if 'calling init:' in line and 'libggml-sycl.so' in line]\nassert loaded and all(sys.argv[2]+'/' in line for line in loaded), loaded\nassert 'urEnqueueKernelLaunch' in text, 'UR launch trace missing'\nassert 'UR_QUEUE_FLAG_PROFILING_ENABLE' not in text, 'unexpected profiling queue'\nassert '2/2 tests passed' in text, 'representative CPU comparisons missing'\nassert not any(word in text.lower() for word in ('not supported', 'skipping large tensors'))\nprint('NATIVE_PERF_DLL_KERNEL_ROUTE_AND_TWO_CPU_COMPARISONS_PASSED',sys.argv[2])\nPY\ndone\nindex=0\nfor variant in base packed packed base base packed packed base base packed packed base; do\n if test \"$variant\" = base; then bin=/baseline/build-sycl/bin; else bin=/src/build-sycl/bin; fi\n log=\"$root/perf-$index-$variant.log\"\n if env -u BOLT_VERIFY_CAPTURE_DIR LD_LIBRARY_PATH=\"$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}\" GGML_SYCL_DEBUG=0 \"$bin/test-backend-ops\" perf -b SYCL0 -o MUL_MAT_ID --test-file /iq2-batch4/native-perf-cases.txt >\"$log\" 2>&1; then rc=0; else rc=$?; fi\n printf '%s\\n' \"$rc\" >\"$log.exit-code\"\n test \"$rc\" = 0\n python3 -B - \"$log\" >\"$log.checked.json\" <<'PERF'\nimport json,math,re,sys\nfrom pathlib import Path\ntext=Path(sys.argv[1]).read_text()\nlines=[line for line in text.splitlines() if line.lstrip().startswith('MUL_MAT_ID(')]\nassert len(lines)==2, ('expected two measured operations',lines)\nrows=[]\nfor name in ('lilicorr-iq2-up-n4','lilicorr-iq2-down-n4'):\n matched=[line for line in lines if 'name='+name+',' in line]\n assert len(matched)==1, (name,matched)\n match=re.search(r'(\\d+) runs\\s*-\\s*(\\S+) us/run\\s*-',matched[0])\n assert match, ('missing performance result',matched[0])\n runs=int(match[1]);time_us=float(match[2])\n assert runs>0 and math.isfinite(time_us) and time_us>0,(runs,time_us)\n rows.append(dict(name=name,runs=runs,operator_graph_wall_us=time_us))\nassert not any(word in text.lower() for word in ('not supported','skipping large tensors'))\nprint(json.dumps(rows,sort_keys=True))\nPERF\n printf 'NATIVE_PERF_FINISHED index=%s variant=%s log=%s\\n' \"$index\" \"$variant\" \"$log\"\n index=$((index + 1))\ndone\necho NATIVE_IQ2_OPERATOR_PERF_CAPTURED_NOT_SERVING_SPEEDUP\n"
+    ],
+    "Image": "intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04",
+    "Volumes": null,
+    "WorkingDir": "",
+    "Entrypoint": null,
+    "Labels": {
+      "b70.experiment": "bolt-fusion",
+      "org.opencontainers.image.version": "24.04"
+    }
+  },
+  "NetworkSettings": {
+    "SandboxID": "",
+    "SandboxKey": "",
+    "Ports": {},
+    "Networks": {
+      "bridge": {
+        "IPAMConfig": null,
+        "Links": null,
+        "Aliases": null,
+        "DriverOpts": null,
+        "GwPriority": 0,
+        "NetworkID": "50dfd4e1162270e8aa4b5d5415ac066a0ae038c381f2c33f8413192ace398018",
+        "EndpointID": "",
+        "Gateway": "",
+        "IPAddress": "",
+        "MacAddress": "",
+        "IPPrefixLen": 0,
+        "IPv6Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "DNSNames": null
+      }
+    }
+  },
+  "ImageManifestDescriptor": {
+    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+    "digest": "sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0",
+    "size": 1377,
+    "platform": {
+      "architecture": "amd64",
+      "os": "linux"
+    }
+  }
+}
