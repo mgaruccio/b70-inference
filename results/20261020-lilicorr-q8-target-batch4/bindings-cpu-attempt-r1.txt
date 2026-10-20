@@ -1,0 +1,41 @@
+test_existing_numeric_routes_and_bytes_plus_seven_physical_records (__main__.NativeMetadataTests.test_existing_numeric_routes_and_bytes_plus_seven_physical_records) ... ok
+test_new_metadata_cannot_waive_byte_mismatch_or_escape_iq2_scope (__main__.NativeMetadataTests.test_new_metadata_cannot_waive_byte_mismatch_or_escape_iq2_scope) ... ok
+test_physical_metadata_missing_duplicate_negative_and_forged_fields_fail (__main__.NativeMetadataTests.test_physical_metadata_missing_duplicate_negative_and_forged_fields_fail) ... ok
+test_unmodified_old_logs_cannot_qualify_as_new_q8_candidate (__main__.NativeMetadataTests.test_unmodified_old_logs_cannot_qualify_as_new_q8_candidate) ... ok
+test_acceptance_is_exact (__main__.RuntimeTests.test_acceptance_is_exact) ... ok
+test_build_evidence_couples_current_source_and_binaries (__main__.RuntimeTests.test_build_evidence_couples_current_source_and_binaries) ... ok
+test_exact_container_identity_environment_mounts_and_no_rewriting (__main__.RuntimeTests.test_exact_container_identity_environment_mounts_and_no_rewriting) ... ok
+test_independent_reread_uses_private_native_dispatch_only_for_w3 (__main__.RuntimeTests.test_independent_reread_uses_private_native_dispatch_only_for_w3) ... ok
+test_native_dispatch_keeps_frozen_gates_and_requires_actual_batch (__main__.RuntimeTests.test_native_dispatch_keeps_frozen_gates_and_requires_actual_batch) ... FAIL
+test_private_globals_and_role_isolation (__main__.RuntimeTests.test_private_globals_and_role_isolation) ... ok
+test_real_argv_transform_is_reversible_and_fail_closed (__main__.RuntimeTests.test_real_argv_transform_is_reversible_and_fail_closed) ... ok
+test_frozen_renderer_and_actual_postcheck (__main__.SourceBuildTests.test_frozen_renderer_and_actual_postcheck) ... ok
+test_seed_cli_is_unwrapped_actual_map (__main__.SourceBuildTests.test_seed_cli_is_unwrapped_actual_map) ... ok
+test_source_build_graph_and_exit_records_are_mandatory (__main__.SourceBuildTests.test_source_build_graph_and_exit_records_are_mandatory) ... ok
+test_three_seed_files_five_original_files_one_library (__main__.SourceBuildTests.test_three_seed_files_five_original_files_one_library) ... ok
+test_whole_source_drift_and_protected_library_fail_closed (__main__.SourceBuildTests.test_whole_source_drift_and_protected_library_fail_closed) ... ok
+
+======================================================================
+FAIL: test_native_dispatch_keeps_frozen_gates_and_requires_actual_batch (__main__.RuntimeTests.test_native_dispatch_keeps_frozen_gates_and_requires_actual_batch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/mike/code/b70-inference/results/20261020-lilicorr-iq2-batch4/test-performance.py", line 113, in test_native_dispatch_keeps_frozen_gates_and_requires_actual_batch
+    D['check_native'](public, tag, 'unaltered\n')
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mike/code/b70-inference/results/20261020-lilicorr-q8-target-batch4/run-performance.py", line 27, in check_native
+    return N['check'](log, tag)
+           ~~~~~~~~~~^^^^^^^^^^
+  File "/home/mike/code/b70-inference/results/20261020-lilicorr-q8-target-batch4/native-batch4.py", line 54, in check
+    result = BASE['check'](log, kind)  # Frozen enumeration/negative/canary/numeric/byte checks first.
+  File "/home/mike/code/b70-inference/results/20261020-lilicorr-q8-target-batch4/iq2-native-base.py", line 114, in check
+    return FROZEN['check'](log, kind)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/mike/code/b70-inference/results/20261019-nemotron35-bolt-lilicorr-verify-singletons/native.py", line 158, in check
+    assert re.findall(r'(?m)^\s*(\d+)/(\d+) tests passed\s*$', log) == [(count, count)]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+----------------------------------------------------------------------
+Ran 16 tests in 1.826s
+
+FAILED (failures=1)
