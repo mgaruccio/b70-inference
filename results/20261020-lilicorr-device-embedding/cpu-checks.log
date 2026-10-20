@@ -1,0 +1,109 @@
+CPU preparation only. No remote builds, GPU execution, service control, or host installs.
+
+Observed preparation failures (before fixes; not performance measurements):
+1. Initial read-only SSH tar request listed src/llama-context.h and src/llama-cparams.h
+   both explicitly and through src/*.h. Tar emitted duplicate hardlink entries;
+   the local regular-file-only extraction assertion rejected them before writing
+   any fixtures. Reissued a unique input list and retained regular-file fixtures.
+2. Commands c++ -std=c++17 -fsyntax-only -Iresults/20261020-lilicorr-device-embedding/.prepare/src
+   -Iresults/20261020-lilicorr-device-embedding/.prepare/include
+   -Iresults/20261020-lilicorr-device-embedding/.prepare/ggml/include
+   -Iresults/20261020-lilicorr-device-embedding/.prepare/ggml/src
+   results/20261020-lilicorr-device-embedding/.prepare/src/llama-context.cpp
+   (and the same command for src/models/dflash.cpp) each exited 1:
+   c++: fatal error: cannot execute ‘cc1plus’: posix_spawnp: No such file or directory
+   compilation terminated.
+   Used the already installed clang++ instead; no compiler installation/change.
+3. First clang++ dflash.cpp syntax attempt exited 1:
+   src/models/dflash.cpp:1:10: fatal error: 'models.h' file not found
+   Added the exact original src/models/models.h to support fixtures (and original
+   ggml/src/ggml-sycl/dpct/helper.hpp for the default-queue order audit).
+4. python3 -B results/20261020-lilicorr-device-embedding/test-device-embedding.py
+   SourceTests.test_extracted_cpp_guards_copy_fence_ownership_and_failures initially
+   exited 1: the fake driver needed enum tags on ggml_backend_dev_type, the native
+   ggml_set_name return type (ggml_tensor *), and ggml_opt_context_t instead of void *.
+   All were driver-only declaration errors, corrected against exact native headers.
+   The actual patched full llama-context.cpp and dflash.cpp passed syntax checks.
+   Targeted rerun: 1 test, OK; source suite rerun: 6 tests, OK.
+
+Final retained verify follows (raw stdout/stderr). No speedup/live activation claim.
+cwd=/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding
+CXX=clang++
+$ uname -a
+Linux desktop 7.2.9-2-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 08 Oct 2026 15:06:16 +0000 x86_64 GNU/Linux
+exit=0
+$ python3 --version
+Python 3.14.7
+exit=0
+$ clang++ --version
+clang version 23.1.1
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+exit=0
+$ patch --version
+GNU patch 2.8
+Copyright 1989-2025 Free Software Foundation, Inc.
+Copyright 1984-1988 Larry Wall
+
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Larry Wall and Paul Eggert
+exit=0
+$ bash --version
+GNU bash, version 5.3.20(1)-release (x86_64-pc-linux-gnu)
+Copyright (C) 2025 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+
+This is free software; you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+exit=0
+$ git rev-parse HEAD
+941eda59bb29c3bcef1152403ad6c1b743c1556e
+exit=0
+$ bash -n /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/build-candidate.sh
+exit=0
+$ CXX=clang++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/test-device-embedding.py
+full patched llama-context.cpp + dflash.cpp syntax passed against exact original headers
+extracted placement: 24 guards, independent owners, fenced standard-byte copy, 6 failure paths passed
+test_actual_container_identity_env_mounts_and_no_rewriting (__main__.RunnerTests.test_actual_container_identity_env_mounts_and_no_rewriting) ... ok
+test_actual_private_function_globals_and_clean_abba_bindings (__main__.RunnerTests.test_actual_private_function_globals_and_clean_abba_bindings) ... ok
+test_placement_fails_closed_and_acceptance_is_exact (__main__.RunnerTests.test_placement_fails_closed_and_acceptance_is_exact) ... ok
+test_actual_translation_units_syntax_and_no_math_delta (__main__.SourceTests.test_actual_translation_units_syntax_and_no_math_delta) ... ok
+test_build_is_original_seed_incremental_cpu_only (__main__.SourceTests.test_build_is_original_seed_incremental_cpu_only) ... ok
+test_exact_forward_reverse_whole_tree_and_private_headers (__main__.SourceTests.test_exact_forward_reverse_whole_tree_and_private_headers) ... ok
+test_extracted_cpp_guards_copy_fence_ownership_and_failures (__main__.SourceTests.test_extracted_cpp_guards_copy_fence_ownership_and_failures) ... ok
+test_fresh_whole_source_and_each_of_six_binary_proofs (__main__.SourceTests.test_fresh_whole_source_and_each_of_six_binary_proofs) ... ok
+test_pinned_native_layout_and_default_queue_fence_assumptions (__main__.SourceTests.test_pinned_native_layout_and_default_queue_fence_assumptions) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 1.157s
+
+OK
+exit=0
+
+Close-gate formatting observation: git diff --cached --check initially reported seven
+trailing-space rows in the nested unified patch, all blank context indicators (not
+C++ whitespace). Regenerated a standard zero-context patch; all candidate source
+hashes are UNCHANGED, patch hash updated. The original source is hash-checked before
+application; forward/reverse exact-byte tests below still pass.
+$ CXX=clang++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/test-device-embedding.py
+full patched llama-context.cpp + dflash.cpp syntax passed against exact original headers
+extracted placement: 24 guards, independent owners, fenced standard-byte copy, 6 failure paths passed
+test_actual_container_identity_env_mounts_and_no_rewriting (__main__.RunnerTests.test_actual_container_identity_env_mounts_and_no_rewriting) ... ok
+test_actual_private_function_globals_and_clean_abba_bindings (__main__.RunnerTests.test_actual_private_function_globals_and_clean_abba_bindings) ... ok
+test_placement_fails_closed_and_acceptance_is_exact (__main__.RunnerTests.test_placement_fails_closed_and_acceptance_is_exact) ... ok
+test_actual_translation_units_syntax_and_no_math_delta (__main__.SourceTests.test_actual_translation_units_syntax_and_no_math_delta) ... ok
+test_build_is_original_seed_incremental_cpu_only (__main__.SourceTests.test_build_is_original_seed_incremental_cpu_only) ... ok
+test_exact_forward_reverse_whole_tree_and_private_headers (__main__.SourceTests.test_exact_forward_reverse_whole_tree_and_private_headers) ... ok
+test_extracted_cpp_guards_copy_fence_ownership_and_failures (__main__.SourceTests.test_extracted_cpp_guards_copy_fence_ownership_and_failures) ... ok
+test_fresh_whole_source_and_each_of_six_binary_proofs (__main__.SourceTests.test_fresh_whole_source_and_each_of_six_binary_proofs) ... ok
+test_pinned_native_layout_and_default_queue_fence_assumptions (__main__.SourceTests.test_pinned_native_layout_and_default_queue_fence_assumptions) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 1.172s
+
+OK
+exit=0
