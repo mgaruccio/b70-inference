@@ -1,9 +1,9 @@
 # LiliCorr device-local shared embedding — CPU-prepared experiment
 
-**Status: CPU preparation only. No remote build, GPU execution, live activation,
-performance result, promotion, or persistent launcher/model change.** Development
-tier; not a standard-compliant benchmark publication. The lead owns deployment,
-build, exclusive B70 execution, independent restoration checks, and comparison.
+**Status: CPU-prepared R2 build recovery; R1 stopped before compilation. No
+successful candidate SDK build, live activation, performance result, promotion,
+or persistent launcher/model change.** Development tier, not a standard-compliant
+benchmark publication. The lead owns build, B70 execution, restoration, and comparison.
 
 ## Request and bounded hypothesis
 
@@ -104,42 +104,74 @@ SSH inspection used `ssh -o BatchMode=yes -o ConnectTimeout=30 -o ControlMaster=
 -o ControlPath=none -o ForwardAgent=no inference-host 'bash -s'` with read-only
 `tar`, `sed`, `grep`, `test`, and `ls` on stdin (fish login).
 
-**Simpler qualified seed selected:** read-only inspection found the original has
-`build-sycl/build.ninja`, its original context/SYCL objects, and a complete cache
-(`CMAKE_HOME_DIRECTORY=/src`, `Release`, `icpx`, `Ninja`). Thus the build copies
-**the qualified original**, not any diagnostic variant. No diagnostic reversal or
-profiling wrapper is needed. Original `GGML_SYCL_GRAPH:BOOL=ON` is an inherited
-compile-time cache setting; runtime policy is unchanged and graphs are not enabled.
+## R2 build-only recovery
 
-Lead-only, after staging this package and its existing sibling dependencies at
-`/home/mike/b70-evals/20261020-lilicorr-device-embedding`:
+The lead's R1 build (`bf97b689c`) stopped at its dry-plan guard **before any
+compilation**: the original cache requested 331 whole-server actions, including
+unrelated SYCL kernels and always-dirty UI assets. Read-only SDK diagnosis found
+missing Ninja command-log lineage, not compiler/flag/source drift. Keep
+`build-candidate.sh`, failed source `...-lilicorr-device-embedding-r1`,
+`build-attempt-r1/`, and `build-diagnosis-r2/` through `build-diagnosis-r4/` untouched.
+Do not repair/import Ninja logs, touch timestamps, reconfigure, or widen the build.
+
+R2 clones the **qualified original** to a new `...-lilicorr-device-embedding-r2`
+and applies the exact same four-file patch. `build-module-r2.py` reads the actual
+final generated linker via `ninja -t commands`, tokenizes it with `shlex`, and
+cross-checks every link object against `ninja -t targets all` and `ninja -t query`.
+The complete closure is **44 objects: 33 `.cpp.o` + 11 Unity `.cxx.o`**. The R3
+33-object selection was incomplete and is not used. All 44 must appear in both the
+read-only plan and completed build; none of the modified module is silently reused.
+
+`build-r2-inputs.json.gz` preserves the established R4 linker, module commands,
+object list and plan. Target/query fixtures were derived locally, without execution,
+from read-only copies of the original generated Ninja graph; they match the R4
+commands. The driver pins graph/cache/compiler definitions and exact compile/link
+arguments; checks SDK icpx `2026.0.0.20260331`, CMake `3.28.3`, Ninja `1.11.1`;
+checks all 11 Unity wrappers against the original; and rehashes original GGML link
+libraries plus the five protected artifacts before/after. It invokes only existing
+module object rules, then the existing generated linker as a validated argv list
+(no shell, response file, flags/target substitution, or additional link action).
+No kernel, common, server, test, UI, or CMake-generation action is permitted.
+Ninja may write its normal build log/dependency records; no metadata is fabricated.
+
+Lead-only, stage the updated package and existing sibling dependencies, then:
 
 ```sh
 cd /home/mike/b70-evals/20261020-lilicorr-device-embedding
-bash build-candidate.sh
+bash build-candidate-r2.sh
 python3 -B source-proof.py --built
 ```
 
-Run long jobs with the lead's background-job mechanism, not in a foreground agent
-shell. Build target:
-`/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r1`.
+Use the lead's background-job mechanism for the build. All new build evidence,
+including exact commands, raw compiler/linker output, failure logs, source checks,
+image, six binary hashes and exit status, stays under **`build-attempt-r2/`**.
 Frozen SDK:
 `intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0`.
-No GPU mounts, host installs, configuration regeneration, or unrelated kernel
-rebuilds. SDK-container-only build dependencies match the prior build process.
-A dry build plan rejects compilation outside `src/CMakeFiles/llama.dir/`; retain
-and investigate a failure rather than relaxing it. The build preserves original
-source/binary proof before/after, all-source candidate scope before/after, six
-artifact hashes, dependency output, image inspection, raw build log and exit code.
-Expected original→candidate binary delta: **only `libllama.so.0.7.0`**. All of
-`llama-server`, `libllama-server-impl.so`, `libggml-sycl.so.0`, `test-backend-ops`,
-`libllama-common.so`, and `libllama.so.0.7.0` are rehashed. Unexpected deltas fail.
+Vendor setvars is sourced with `set -eo pipefail`; nounset is enabled only afterward.
+No host install or GPU mount. Runtime/profile/graph policy and the C++ source/pins
+are unchanged. Original `GGML_SYCL_GRAPH:BOOL=ON` is only the inherited cache value.
 
-`source-proof.py` directly reuses the first common proof in a private runpy
-namespace, extending scope to both private headers; it does not memoize or rebind
-the qualified gate. Exact historical `LILICORR_PROFILE_BUILD_PASSED` and
-`LILICORR_PROFILE_DEPENDENCIES_PASSED` marker names are intentionally preserved to
-satisfy that helper. They do not imply profiling code is present.
+The whole-tree/source-ancestry and six-artifact proof is unchanged in strength;
+its build files now resolve under R2, without rewriting R1 evidence. Historical
+`LILICORR_PROFILE_BUILD_PASSED` / `LILICORR_PROFILE_DEPENDENCIES_PASSED` markers
+remain, with a separate successful module-build marker. Expected binary delta is
+still **only `libllama.so.0.7.0`**. The original `llama-server`,
+`libllama-server-impl.so`, `libggml-sycl.so.0`, `test-backend-ops`, and
+`libllama-common.so` must remain byte-identical. Stop on any mismatch; do not relax
+that gate.
+
+Local recovery verification (no SDK build, GPU job, or service control):
+
+```sh
+python3 -B results/20261020-lilicorr-device-embedding/test-build-r2.py
+CXX=clang++ python3 -B results/20261020-lilicorr-device-embedding/test-device-embedding.py
+```
+
+Seven build tests validate the actual 44/Unity closure and reject missing/foreign
+objects, unsafe linker/target drift, changed compile flags, graph/input mismatches,
+nonmodule actions, and protected-library drift. The existing nine placement tests
+use R2 proof paths and additionally reject refreshed records for any of the five protected artifacts. `cpu-build-r2-checks.log`
+retains local output; simulated driver tests are not a completed SDK build.
 
 ## Defined lead E2E process (not executed by worker)
 
@@ -156,11 +188,13 @@ always mount original source. Only candidate W3 mounts the new source. Both
 captures retain the same pinned Q8 drafter bind, native IQ2/Q8 gates, public
 payloads, real PID1 argv/environment proof, mounts, ownership, and restoration.
 
-Execute **each line in a fresh process**, serially, stopping on any failure:
+The lead already completed the fresh original-Q8 baseline at
+`/home/mike/b70-evals/20261019-lilicorr-q8-drafter/timing-20261020-baseline-r1`:
+100 public checks, 24 measured outputs, native/acceptance gates and independent
+restoration passed. **Do not run another baseline.** Once the lead approves GPU
+execution after the R2 build proof, execute each candidate line in a fresh process:
 
 ```sh
-python3 -B run-performance.py --mode baseline --lead-run-timing
-python3 -B run-performance.py --mode baseline --lead-after-timing-restore
 python3 -B run-performance.py --mode candidate --lead-run-timing
 python3 -B run-performance.py --mode candidate --lead-after-timing-restore
 ```
@@ -180,11 +214,11 @@ verifies original identity/source/health/sole ownership again, then analyzes.
 Do not start the next capture if this fails. Do not modify persistent launchers.
 Keep failed attempts and artifacts, rather than overwriting/retrying the same path.
 
-Retain entire `baseline-r1/` and `candidate-r1/` (distinct prefixes), including
+Retain the entire completed baseline directory and `candidate-r1/`, including
 native/raw startup/logs, PID/container/mount/source proofs, capacity/ownership,
 HTTP/SSE outputs/events/timings, telemetry, failures, restoration records,
 `startup-placement.json`, and `analysis-r1/analysis.json`. Build evidence lives at
-`build-attempt-r1/` plus the root proof files. Existing sibling runner/qualified
+`build-attempt-r2/`; preserve R1 separately. Existing sibling runner/qualified
 packages must be staged unchanged; no recursive profiling runner dependency.
 
 Compare candidate **real W3 end-to-end** to fresh original-Q8 W3 and the fresh

@@ -173,13 +173,14 @@ class SourceTests(unittest.TestCase):
                     path = tree / 'build-sycl/bin' / name; path.parent.mkdir(parents=True, exist_ok=True)
                     path.write_text(name + (' changed' if tree == candidate and name in S['CHANGED_BINARIES'] else ' original'))
             (root / 'source-hashes.json').write_bytes((HERE / 'source-hashes.json').read_bytes())
-            (root / 'build-attempt-r1').mkdir()
-            (root / 'build-attempt-r1/exit-code.txt').write_text('0\n')
-            (root / 'post-build-verification.log').write_text('LILICORR_PROFILE_BUILD_PASSED\n')
-            (root / 'runtime-precheck.log').write_text('LILICORR_PROFILE_DEPENDENCIES_PASSED\n')
-            save(root / 'source-diff.json', dict(changed_relative_to_parent=S['SOURCE_SCOPE']))
-            save(root / 'parent-binaries.json', S['binaries'](parent))
-            save(root / 'candidate-binaries.json', S['binaries'](candidate))
+            attempt = root / 'build-attempt-r2'; attempt.mkdir()
+            (attempt / 'exit-code.txt').write_text('0\n')
+            (attempt / 'post-build-verification.log').write_text('LILICORR_PROFILE_BUILD_PASSED\n')
+            (attempt / 'runtime-precheck.log').write_text('LILICORR_PROFILE_DEPENDENCIES_PASSED\n')
+            (attempt / 'build.log').write_text('LILICORR_DEVICE_EMBEDDING_MODULE_R2_PASSED\n')
+            save(attempt / 'source-diff.json', dict(changed_relative_to_parent=S['SOURCE_SCOPE']))
+            save(attempt / 'parent-binaries.json', S['binaries'](parent))
+            save(attempt / 'candidate-binaries.json', S['binaries'](candidate))
             original = dict(source=S['source_map'](parent), binaries=S['binaries'](parent))
             calls = []
             def qualified():
@@ -195,10 +196,18 @@ class SourceTests(unittest.TestCase):
                         path = tree / 'build-sycl/bin' / name; data = path.read_bytes(); path.write_bytes(data + b'drift')
                         with self.assertRaises(AssertionError): S['proof'](p)
                         path.write_bytes(data)
+                # Even a refreshed candidate artifact record cannot authorize a second delta.
+                for name in set(S['ARTIFACTS']) - set(S['CHANGED_BINARIES']):
+                    path = candidate / 'build-sycl/bin' / name; data = path.read_bytes()
+                    path.write_bytes(data + b'drift')
+                    save(attempt / 'candidate-binaries.json', S['binaries'](candidate))
+                    with self.assertRaises(AssertionError): S['proof'](p)
+                    path.write_bytes(data)
+                save(attempt / 'candidate-binaries.json', S['binaries'](candidate))
                 path = candidate / 'src/llama-context.h'; data = path.read_bytes(); path.write_bytes(data + b'drift')
                 with self.assertRaises(AssertionError): S['proof'](p)
                 path.write_bytes(data)
-                (root / 'runtime-precheck.log').write_text('WRONG_MARKER')
+                (attempt / 'runtime-precheck.log').write_text('WRONG_MARKER')
                 with self.assertRaises(AssertionError): S['proof'](p)
 
     def test_build_is_original_seed_incremental_cpu_only(self):

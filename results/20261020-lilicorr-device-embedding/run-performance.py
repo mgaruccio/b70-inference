@@ -13,19 +13,21 @@ Q = runpy.run_path(str(HERE.parent / '20261019-lilicorr-q8-drafter/run-performan
 S = runpy.run_path(str(HERE / 'source-proof.py'))
 OWN_FILES = (
     'README.md', '.gitignore', 'run-performance.py', 'source-proof.py',
-    'build-candidate.sh', 'test-device-embedding.py', 'source-hashes.json',
+    'build-candidate.sh', 'build-candidate-r2.sh', 'build-module-r2.py', 'build-r2-inputs.json.gz',
+    'test-device-embedding.py', 'test-build-r2.py', 'source-hashes.json',
     'device-embedding.patch', 'fixtures/embedding-driver.cpp', 'fixtures/support.tar.gz',
     *(str(Path('fixtures') / (n + '.gz')) for n in S['SOURCE_SCOPE']),
     '../20261019-lilicorr-q8-drafter/run-performance.py',
     '../20261019-lilicorr-b70-profile/source-proof.py',
 )
-BUILD_FILES = (
+BUILD_FILES = tuple('build-attempt-r2/' + name for name in (
     'candidate-binaries.json', 'parent-binaries.json', 'source-diff.json',
-    'post-build-verification.log', 'runtime-precheck.log',
-    'build-attempt-r1/exit-code.txt', 'build-attempt-r1/image.json',
-    'build-attempt-r1/seed-built-before.json', 'build-attempt-r1/seed-built-after.json',
-    'build-attempt-r1/candidate-source-before.json', 'build-attempt-r1/candidate-source-after.json',
-)
+    'post-build-verification.log', 'runtime-precheck.log', 'exit-code.txt', 'image.json',
+    'seed-built-before.json', 'seed-built-after.json',
+    'candidate-source-before.json', 'candidate-source-after.json',
+    'build.log', 'module-objects.json', 'module-link.argv.json',
+    'module-plan.stdout.log', 'module-build.stdout.log', 'module-commands.stdout.log',
+))
 PLACEMENT = re.compile(r'lilicorr_device_embedding: active backend=(SYCL\d+) buffer=(SYCL\d+) '
                        r'type=q8_0 tensor_bytes=(\d+) buffer_bytes=(\d+)')
 
