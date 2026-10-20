@@ -1,0 +1,722 @@
++ uname -a
+Linux inference-host 7.2.0-1-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 20 Aug 2026 16:18:38 +0000 x86_64 GNU/Linux
++ docker version
+Client:
+ Version:           29.7.2
+ API version:       1.55
+ Go version:        go1.26.5-X:nodwarf5
+ Git commit:        a7dcaa6fdb
+ Built:             Thu Aug  6 16:36:45 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server:
+ Engine:
+  Version:          29.7.2
+  API version:      1.55 (minimum version 1.40)
+  Go version:       go1.26.5-X:nodwarf5
+  Git commit:       6a43e3d5af
+  Built:            Thu Aug  6 16:36:45 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.3.4
+  GitCommit:        db8809540e1a7a9da5d518876894933ff55692ab.m
+ runc:
+  Version:          1.5.1
+  GitCommit:        1.5.1-1-0-gce23c4c-dirty
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
++ docker image inspect intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-device-embedding-r1-build
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-device-embedding-r1-precheck
++ check_seed_built
++ python3 -B - /home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-verify-singletons
++ python3 -B /home/mike/b70-evals/20261020-lilicorr-device-embedding/source-proof.py
++ test -f /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-singletons-r2/build-sycl/build.ninja
++ grep -Fx CMAKE_HOME_DIRECTORY:INTERNAL=/src /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-singletons-r2/build-sycl/CMakeCache.txt
+CMAKE_HOME_DIRECTORY:INTERNAL=/src
++ patch --directory=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-singletons-r2 --fuzz=0 --dry-run --batch --forward -p1
+checking file src/llama-context.cpp
+checking file src/llama-context.h
+checking file src/llama-cparams.h
+checking file src/models/dflash.cpp
+++ du -sk /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-singletons-r2
+++ cut -f1
++ need=464628
+++ awk 'NR==2 {print $4}'
++++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r1
+++ df -Pk /home/mike/inference/src
++ available=34534096
++ test 34534096 -gt 5707508
+++ df -Pk /home/mike/b70-evals/20261020-lilicorr-device-embedding
+++ awk 'NR==2 {print $4}'
++ test 34534096 -gt 5242880
+++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r1
++ df -Pk /home/mike/b70-evals/20261020-lilicorr-device-embedding /home/mike/inference/src
+Filesystem     1024-blocks      Used Available Capacity Mounted on
+/dev/nvme0n1p2   484190196 445078096  34534096      93% /home
+/dev/nvme0n1p2   484190196 445078096  34534096      93% /home
++ cp -a --reflink=auto /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-singletons-r2 /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r1
++ python3 -B - /home/mike/b70-evals/20261020-lilicorr-device-embedding
++ patch --directory=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r1 --fuzz=0 --batch --forward -p1
+patching file src/llama-context.cpp
+patching file src/llama-context.h
+patching file src/llama-cparams.h
+patching file src/models/dflash.cpp
++ patch --directory=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r1 --fuzz=0 --dry-run --batch --reverse -p1
+checking file src/llama-context.cpp
+checking file src/llama-context.h
+checking file src/llama-cparams.h
+checking file src/models/dflash.cpp
++ python3 -B /home/mike/b70-evals/20261020-lilicorr-device-embedding/source-proof.py --candidate
++ docker run --rm --pull=never --name bolt-lilicorr-device-embedding-r1-build --cpus=6 -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r1:/src -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro -w /src intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0 bash -lc $'\nset -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\napt-get update -qq\nDEBIAN_FRONTEND=noninteractive apt-get install --no-upgrade -y -qq ninja-build libcurl4-openssl-dev pkg-config\ncmake --build /src/build-sycl --config Release -j6 --target llama-server test-backend-ops -- -n | tee /tmp/build-plan.log\n# Fail instead of regenerating configuration or compiling unrelated kernels/code.\nif grep -E "Re-running CMake|regenerate-during-build" /tmp/build-plan.log; then\n    echo UNEXPECTED_CONFIG_REGENERATION >&2\n    exit 1\nfi\nif grep -E "Building .* object " /tmp/build-plan.log | grep -v "object src/CMakeFiles/llama.dir/"; then\n    echo UNEXPECTED_COMPILE_SCOPE >&2\n    exit 1\nfi\ncmake --build /src/build-sycl --config Release -j6 --target llama-server test-backend-ops\n'
+ 
+:: initializing oneAPI environment ...
+   bash: BASH_VERSION = 5.2.21(1)-release
+   args: Using "$@" for setvars.sh arguments: --force
+:: ccl -- latest
+:: compiler -- latest
+:: debugger -- latest
+:: dev-utilities -- latest
+:: dpl -- latest
+:: mkl -- latest
+:: mpi -- latest
+:: pti -- latest
+:: tbb -- latest
+:: tcm -- latest
+:: umf -- latest
+:: oneAPI environment initialized ::
+ 
+debconf: delaying package configuration, since apt-utils is not installed
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 28099 files and directories currently installed.)
+Preparing to unpack .../curl_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking curl (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Preparing to unpack .../libcurl4t64_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl4t64:amd64 (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Preparing to unpack .../libcurl3t64-gnutls_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl3t64-gnutls:amd64 (8.5.0-2ubuntu10.16) over (8.5.0-2ubuntu10.8) ...
+Selecting previously unselected package libcurl4-openssl-dev:amd64.
+Preparing to unpack .../libcurl4-openssl-dev_8.5.0-2ubuntu10.16_amd64.deb ...
+Unpacking libcurl4-openssl-dev:amd64 (8.5.0-2ubuntu10.16) ...
+Selecting previously unselected package ninja-build.
+Preparing to unpack .../ninja-build_1.11.1-2_amd64.deb ...
+Unpacking ninja-build (1.11.1-2) ...
+Setting up libcurl4t64:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up libcurl3t64-gnutls:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up ninja-build (1.11.1-2) ...
+Setting up libcurl4-openssl-dev:amd64 (8.5.0-2ubuntu10.16) ...
+Setting up curl (8.5.0-2ubuntu10.16) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+[1/331] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml.c.o
+[2/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml.cpp.o
+[3/331] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-alloc.c.o
+[4/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.o
+[5/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o
+[6/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o
+[7/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o
+[8/331] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o
+[9/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o
+[10/331] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-dl.cpp.o
+[11/331] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-reg.cpp.o
+[12/331] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.c.o
+[13/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.cpp.o
+[14/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/repack.cpp.o
+[15/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/hbm.cpp.o
+[16/331] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/quants.c.o
+[17/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/traits.cpp.o
+[18/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/amx.cpp.o
+[19/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/mmq.cpp.o
+[20/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled.cpp.o
+[21/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled-kernel.cpp.o
+[22/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/binary-ops.cpp.o
+[23/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/unary-ops.cpp.o
+[24/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/vec.cpp.o
+[25/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ops.cpp.o
+[26/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/llamafile/sgemm.cpp.o
+[27/331] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/quants.c.o
+[28/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/repack.cpp.o
+[29/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/ggml-sycl.cpp.o
+[30/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/add-id.cpp.o
+[31/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/binbcast.cpp.o
+[32/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/col2im-1d.cpp.o
+[33/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/common.cpp.o
+[34/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/concat.cpp.o
+[35/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv.cpp.o
+[36/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv2d-dw.cpp.o
+[37/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv2d-transpose.cpp.o
+[38/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv2d.cpp.o
+[39/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv3d.cpp.o
+[40/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/convert.cpp.o
+[41/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/count-equal.cpp.o
+[42/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/cpy.cpp.o
+[43/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/cross_entropy_loss.cpp.o
+[44/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/cumsum.cpp.o
+[45/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/diag.cpp.o
+[46/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/dmmv.cpp.o
+[47/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/dsv4-hc.cpp.o
+[48/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/element_wise.cpp.o
+[49/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-mkl.cpp.o
+[50/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-onednn.cpp.o
+[51/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-sparse.cpp.o
+[52/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-tile.cpp.o
+[53/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn.cpp.o
+[54/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fill.cpp.o
+[55/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fused-gemm.cpp.o
+[56/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fusion.cpp.o
+[57/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fwht.cpp.o
+[58/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/gated_delta_net.cpp.o
+[59/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/getrows.cpp.o
+[60/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/gla.cpp.o
+[61/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/im2col.cpp.o
+[62/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/lightning-indexer.cpp.o
+[63/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/mem.cpp.o
+[64/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/memtrace.cpp.o
+[65/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/mmq.cpp.o
+[66/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/mmvq.cpp.o
+[67/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/norm.cpp.o
+[68/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/opt-step.cpp.o
+[69/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/outprod.cpp.o
+[70/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/pad.cpp.o
+[71/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/pad_reflect_1d.cpp.o
+[72/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/pool.cpp.o
+[73/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/repeat_back.cpp.o
+[74/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/roll.cpp.o
+[75/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/rope.cpp.o
+[76/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/set.cpp.o
+[77/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/set_rows.cpp.o
+[78/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/softmax.cpp.o
+[79/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/solve_tri.cpp.o
+[80/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/ssm_conv.cpp.o
+[81/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/ssm_scan.cpp.o
+[82/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/sycl_hw.cpp.o
+[83/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/topk-moe.cpp.o
+[84/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/topk-radix.cpp.o
+[85/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/tsembd.cpp.o
+[86/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/upscale.cpp.o
+[87/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/wkv.cpp.o
+[88/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq112-dv112.cpp.o
+[89/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq128-dv128.cpp.o
+[90/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq256-dv256.cpp.o
+[91/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq40-dv40.cpp.o
+[92/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq512-dv512.cpp.o
+[93/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq576-dv512.cpp.o
+[94/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq64-dv64.cpp.o
+[95/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq72-dv72.cpp.o
+[96/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq80-dv80.cpp.o
+[97/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq96-dv96.cpp.o
+[98/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-f16.cpp.o
+[99/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q4_0.cpp.o
+[100/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q4_1.cpp.o
+[101/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q5_0.cpp.o
+[102/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q5_1.cpp.o
+[103/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q8_0.cpp.o
+[104/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-f16.cpp.o
+[105/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q4_0.cpp.o
+[106/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q4_1.cpp.o
+[107/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q5_0.cpp.o
+[108/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q5_1.cpp.o
+[109/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q8_0.cpp.o
+[110/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-f16.cpp.o
+[111/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q4_0.cpp.o
+[112/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q4_1.cpp.o
+[113/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q5_0.cpp.o
+[114/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q5_1.cpp.o
+[115/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q8_0.cpp.o
+[116/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-f16.cpp.o
+[117/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q4_0.cpp.o
+[118/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q4_1.cpp.o
+[119/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q5_0.cpp.o
+[120/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q5_1.cpp.o
+[121/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q8_0.cpp.o
+[122/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-f16.cpp.o
+[123/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q4_0.cpp.o
+[124/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q4_1.cpp.o
+[125/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q5_0.cpp.o
+[126/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q5_1.cpp.o
+[127/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q8_0.cpp.o
+[128/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-f16.cpp.o
+[129/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q4_0.cpp.o
+[130/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q4_1.cpp.o
+[131/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q5_0.cpp.o
+[132/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q5_1.cpp.o
+[133/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q8_0.cpp.o
+[134/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_10_cxx.cxx.o
+[135/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_9_cxx.cxx.o
+[136/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_8_cxx.cxx.o
+[137/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_7_cxx.cxx.o
+[138/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_6_cxx.cxx.o
+[139/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_5_cxx.cxx.o
+[140/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_4_cxx.cxx.o
+[141/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_3_cxx.cxx.o
+[142/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_2_cxx.cxx.o
+[143/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_1_cxx.cxx.o
+[144/331] Building CXX object src/CMakeFiles/llama.dir/Unity/unity_0_cxx.cxx.o
+[145/331] Building CXX object src/CMakeFiles/llama.dir/llama.cpp.o
+[146/331] Building CXX object src/CMakeFiles/llama.dir/llama-adapter.cpp.o
+[147/331] Building CXX object src/CMakeFiles/llama.dir/llama-arch.cpp.o
+[148/331] Building CXX object src/CMakeFiles/llama.dir/llama-batch.cpp.o
+[149/331] Building CXX object src/CMakeFiles/llama.dir/llama-chat.cpp.o
+[150/331] Building CXX object src/CMakeFiles/llama.dir/llama-context.cpp.o
+[151/331] Building CXX object src/CMakeFiles/llama.dir/llama-cparams.cpp.o
+[152/331] Building CXX object src/CMakeFiles/llama.dir/llama-grammar.cpp.o
+[153/331] Building CXX object src/CMakeFiles/llama.dir/llama-graph.cpp.o
+[154/331] Building CXX object src/CMakeFiles/llama.dir/llama-hparams.cpp.o
+[155/331] Building CXX object src/CMakeFiles/llama.dir/llama-impl.cpp.o
+[156/331] Building CXX object src/CMakeFiles/llama.dir/llama-io.cpp.o
+[157/331] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache.cpp.o
+[158/331] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-iswa.cpp.o
+[159/331] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-dsa.cpp.o
+[160/331] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-dsa-iswa.cpp.o
+[161/331] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-msa.cpp.o
+[162/331] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache-dsv4.cpp.o
+[163/331] Building CXX object src/CMakeFiles/llama.dir/llama-memory.cpp.o
+[164/331] Building CXX object src/CMakeFiles/llama.dir/llama-moe-cache.cpp.o
+[165/331] Building CXX object src/CMakeFiles/llama.dir/llama-memory-hybrid.cpp.o
+[166/331] Building CXX object src/CMakeFiles/llama.dir/llama-memory-hybrid-iswa.cpp.o
+[167/331] Building CXX object src/CMakeFiles/llama.dir/llama-memory-hybrid-idx.cpp.o
+[168/331] Building CXX object src/CMakeFiles/llama.dir/llama-memory-recurrent.cpp.o
+[169/331] Building CXX object src/CMakeFiles/llama.dir/llama-mmap.cpp.o
+[170/331] Building CXX object src/CMakeFiles/llama.dir/llama-model-loader.cpp.o
+[171/331] Building CXX object src/CMakeFiles/llama.dir/llama-model-saver.cpp.o
+[172/331] Building CXX object src/CMakeFiles/llama.dir/llama-model.cpp.o
+[173/331] Building CXX object src/CMakeFiles/llama.dir/llama-quant.cpp.o
+[174/331] Building CXX object src/CMakeFiles/llama.dir/llama-sampler.cpp.o
+[175/331] Building CXX object src/CMakeFiles/llama.dir/llama-vocab.cpp.o
+[176/331] Building CXX object src/CMakeFiles/llama.dir/unicode-data.cpp.o
+[177/331] Building CXX object src/CMakeFiles/llama.dir/unicode.cpp.o
+[178/331] Building CXX object vendor/hash/CMakeFiles/vendor-hash.dir/hash.cpp.o
+[179/331] Building C object vendor/hash/CMakeFiles/vendor-hash.dir/xxhash/xxhash.c.o
+[180/331] Building CXX object vendor/hash/CMakeFiles/vendor-hash.dir/sha1/sha1.c.o
+[181/331] Building C object vendor/hash/CMakeFiles/vendor-hash.dir/sha256/sha256.c.o
+[182/331] Building CXX object vendor/cpp-httplib/CMakeFiles/cpp-httplib.dir/httplib.cpp.o
+[183/331] Building CXX object common/CMakeFiles/llama-common-base.dir/build-info.cpp.o
+[184/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/parsers.cpp.o
+[185/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/cohere2moe.cpp.o
+[186/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/deepseek.cpp.o
+[187/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/functionary-v3-2.cpp.o
+[188/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gemma4.cpp.o
+[189/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gigachat-v3.cpp.o
+[190/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gpt-oss.cpp.o
+[191/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/k2-horizon.cpp.o
+[192/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/kimi-k2.cpp.o
+[193/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/kimi-k3.cpp.o
+[194/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/ling3.cpp.o
+[195/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/lfm2.cpp.o
+[196/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/llm-jp-harmony.cpp.o
+[197/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/minicpm5.cpp.o
+[198/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/minimax-m3.cpp.o
+[199/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/ministral3.cpp.o
+[200/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/muse-glimmer.cpp.o
+[201/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/muse-spark.cpp.o
+[202/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/qwen3-coder.cpp.o
+[203/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/translate-gemma.cpp.o
+[204/331] Building CXX object common/CMakeFiles/llama-common.dir/arg.cpp.o
+[205/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-auto-parser-generator.cpp.o
+[206/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-auto-parser-helpers.cpp.o
+[207/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-diff-analyzer.cpp.o
+[208/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-peg-parser.cpp.o
+[209/331] Building CXX object common/CMakeFiles/llama-common.dir/chat.cpp.o
+[210/331] Building CXX object common/CMakeFiles/llama-common.dir/common.cpp.o
+[211/331] Building CXX object common/CMakeFiles/llama-common.dir/console.cpp.o
+[212/331] Building CXX object common/CMakeFiles/llama-common.dir/debug.cpp.o
+[213/331] Building CXX object common/CMakeFiles/llama-common.dir/download.cpp.o
+[214/331] Building CXX object common/CMakeFiles/llama-common.dir/fit.cpp.o
+[215/331] Building CXX object common/CMakeFiles/llama-common.dir/hf-cache.cpp.o
+[216/331] Building CXX object common/CMakeFiles/llama-common.dir/imatrix-loader.cpp.o
+[217/331] Building CXX object common/CMakeFiles/llama-common.dir/json-schema-to-grammar.cpp.o
+[218/331] Building CXX object common/CMakeFiles/llama-common.dir/json-schema.cpp.o
+[219/331] Building CXX object common/CMakeFiles/llama-common.dir/json.cpp.o
+[220/331] Building CXX object common/CMakeFiles/llama-common.dir/llguidance.cpp.o
+[221/331] Building CXX object common/CMakeFiles/llama-common.dir/log.cpp.o
+[222/331] Building CXX object common/CMakeFiles/llama-common.dir/ngram-cache.cpp.o
+[223/331] Building CXX object common/CMakeFiles/llama-common.dir/ngram-map.cpp.o
+[224/331] Building CXX object common/CMakeFiles/llama-common.dir/ngram-mod.cpp.o
+[225/331] Building CXX object common/CMakeFiles/llama-common.dir/peg-parser.cpp.o
+[226/331] Building CXX object common/CMakeFiles/llama-common.dir/preset.cpp.o
+[227/331] Building CXX object common/CMakeFiles/llama-common.dir/reasoning-budget.cpp.o
+[228/331] Building CXX object common/CMakeFiles/llama-common.dir/sampling.cpp.o
+[229/331] Building CXX object common/CMakeFiles/llama-common.dir/speculative.cpp.o
+[230/331] Building CXX object common/CMakeFiles/llama-common.dir/subproc.cpp.o
+[231/331] Building CXX object common/CMakeFiles/llama-common.dir/trie.cpp.o
+[232/331] Building CXX object common/CMakeFiles/llama-common.dir/unicode.cpp.o
+[233/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/lexer.cpp.o
+[234/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/parser.cpp.o
+[235/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/runtime.cpp.o
+[236/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/value.cpp.o
+[237/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/string.cpp.o
+[238/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/caps.cpp.o
+[239/331] Building CXX object tests/CMakeFiles/test-backend-ops.dir/test-backend-ops.cpp.o
+[240/331] Provisioning UI assets
+[241/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-chat.cpp.o
+[242/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-task.cpp.o
+[243/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-queue.cpp.o
+[244/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-common.cpp.o
+[245/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-decision.cpp.o
+[246/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-context.cpp.o
+[247/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-stream.cpp.o
+[248/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-tools.cpp.o
+[249/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-mcp.cpp.o
+[250/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-schema.cpp.o
+[251/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd.cpp.o
+[252/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-audio.cpp.o
+[253/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-image.cpp.o
+[254/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-helper.cpp.o
+[255/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-helper-gen.cpp.o
+[256/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/clip.cpp.o
+[257/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/cogvlm.cpp.o
+[258/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/conformer.cpp.o
+[259/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/deepseek4v.cpp.o
+[260/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/dots3note.cpp.o
+[261/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/dotsocr.cpp.o
+[262/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/exaone4_5.cpp.o
+[263/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4a.cpp.o
+[264/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4v.cpp.o
+[265/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4ua.cpp.o
+[266/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4uv.cpp.o
+[267/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/glm4v.cpp.o
+[268/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/granite-speech.cpp.o
+[269/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/granite4-vision.cpp.o
+[270/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/hunyuanvl.cpp.o
+[271/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/internvl.cpp.o
+[272/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/kimivl.cpp.o
+[273/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/kimik25.cpp.o
+[274/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/nemotron-v2-vl.cpp.o
+[275/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/nemotron-omni.cpp.o
+[276/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/muse-glimmer.cpp.o
+[277/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/muse-spark-audio.cpp.o
+[278/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/llama4.cpp.o
+[279/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/llava.cpp.o
+[280/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/minicpmv.cpp.o
+[281/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/paddleocr.cpp.o
+[282/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pixtral.cpp.o
+[283/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen2vl.cpp.o
+[284/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/minimax-m3.cpp.o
+[285/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3vl.cpp.o
+[286/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/ling3vl.cpp.o
+[287/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/mimovl.cpp.o
+[288/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3a.cpp.o
+[289/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/mimo-audio.cpp.o
+[290/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3tts-spkenc.cpp.o
+[291/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3tts-gen.cpp.o
+[292/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pockettts-seanet.cpp.o
+[293/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pockettts-spkenc.cpp.o
+[294/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pockettts-gen.cpp.o
+[295/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/step3vl.cpp.o
+[296/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/siglip.cpp.o
+[297/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/whisper-enc.cpp.o
+[298/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/voxtral-rt.cpp.o
+[299/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/deepseekocr.cpp.o
+[300/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/deepseekocr2.cpp.o
+[301/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/mobilenetv5.cpp.o
+[302/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/youtuvl.cpp.o
+[303/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/yasa2.cpp.o
+[304/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/parakeet.cpp.o
+[305/331] Linking CXX shared library bin/libggml-base.so.0.27.0
+[306/331] Linking CXX static library vendor/hash/libvendor-hash.a
+[307/331] Linking CXX static library vendor/cpp-httplib/libcpp-httplib.a
+[308/331] Linking CXX static library common/libllama-common-base.a
+[309/331] Building CXX object tools/ui/CMakeFiles/llama-ui.dir/ui.cpp.o
+[310/331] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server.cpp.o
+[311/331] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-http.cpp.o
+[312/331] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-models.cpp.o
+[313/331] Building CXX object tools/server/CMakeFiles/llama-server.dir/main.cpp.o
+[314/331] Creating library symlink bin/libggml-base.so.0 bin/libggml-base.so
+[315/331] Linking CXX static library tools/ui/libllama-ui.a
+[316/331] Linking CXX shared library bin/libggml-cpu.so.0.27.0
+[317/331] Linking CXX shared library bin/libggml-sycl.so.0.27.0
+[318/331] Creating library symlink bin/libggml-cpu.so.0 bin/libggml-cpu.so
+[319/331] Creating library symlink bin/libggml-sycl.so.0 bin/libggml-sycl.so
+[320/331] Linking CXX shared library bin/libggml.so.0.27.0
+[321/331] Creating library symlink bin/libggml.so.0 bin/libggml.so
+[322/331] Linking CXX shared library bin/libllama.so.0.7.0
+[323/331] Linking CXX executable bin/test-backend-ops
+[324/331] Creating library symlink bin/libllama.so.0 bin/libllama.so
+[325/331] Linking CXX shared library bin/libllama-common.so.0.7.0
+[326/331] Linking CXX shared library bin/libmtmd.so.0.7.0
+[327/331] Creating library symlink bin/libllama-common.so.0 bin/libllama-common.so
+[328/331] Creating library symlink bin/libmtmd.so.0 bin/libmtmd.so
+[329/331] Linking CXX static library tools/server/libserver-context.a
+[330/331] Linking CXX shared library bin/libllama-server-impl.so
+[331/331] Linking CXX executable bin/llama-server
+[1/331] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml.c.o
+[2/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml.cpp.o
+[3/331] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-alloc.c.o
+[4/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.o
+[5/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o
+[6/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o
+[7/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o
+[8/331] Building C object ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o
+[9/331] Building CXX object ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o
+[10/331] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-dl.cpp.o
+[11/331] Building CXX object ggml/src/CMakeFiles/ggml.dir/ggml-backend-reg.cpp.o
+[12/331] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.c.o
+[13/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ggml-cpu.cpp.o
+[14/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/repack.cpp.o
+[15/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/hbm.cpp.o
+[16/331] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/quants.c.o
+[17/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/traits.cpp.o
+[18/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/amx.cpp.o
+[19/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/mmq.cpp.o
+[20/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled.cpp.o
+[21/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/tiled/tiled-kernel.cpp.o
+[22/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/binary-ops.cpp.o
+[23/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/unary-ops.cpp.o
+[24/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/vec.cpp.o
+[25/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/ops.cpp.o
+[26/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/llamafile/sgemm.cpp.o
+[27/331] Building C object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/quants.c.o
+[28/331] Building CXX object ggml/src/CMakeFiles/ggml-cpu.dir/ggml-cpu/arch/x86/repack.cpp.o
+[29/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/ggml-sycl.cpp.o
+[30/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/add-id.cpp.o
+[31/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/binbcast.cpp.o
+[32/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/col2im-1d.cpp.o
+[33/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/common.cpp.o
+[34/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/concat.cpp.o
+[35/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv.cpp.o
+[36/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv2d-dw.cpp.o
+[37/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv2d-transpose.cpp.o
+[38/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv2d.cpp.o
+[39/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/conv3d.cpp.o
+[40/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/convert.cpp.o
+[41/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/count-equal.cpp.o
+[42/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/cpy.cpp.o
+[43/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/cross_entropy_loss.cpp.o
+[44/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/cumsum.cpp.o
+[45/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/diag.cpp.o
+[46/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/dmmv.cpp.o
+[47/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/dsv4-hc.cpp.o
+[48/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/element_wise.cpp.o
+[49/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-mkl.cpp.o
+[50/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-onednn.cpp.o
+[51/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-sparse.cpp.o
+[52/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn-tile.cpp.o
+[53/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fattn.cpp.o
+[54/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fill.cpp.o
+[55/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fused-gemm.cpp.o
+[56/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fusion.cpp.o
+[57/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/fwht.cpp.o
+[58/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/gated_delta_net.cpp.o
+[59/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/getrows.cpp.o
+[60/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/gla.cpp.o
+[61/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/im2col.cpp.o
+[62/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/lightning-indexer.cpp.o
+[63/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/mem.cpp.o
+[64/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/memtrace.cpp.o
+[65/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/mmq.cpp.o
+[66/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/mmvq.cpp.o
+[67/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/norm.cpp.o
+[68/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/opt-step.cpp.o
+[69/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/outprod.cpp.o
+[70/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/pad.cpp.o
+[71/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/pad_reflect_1d.cpp.o
+[72/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/pool.cpp.o
+[73/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/repeat_back.cpp.o
+[74/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/roll.cpp.o
+[75/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/rope.cpp.o
+[76/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/set.cpp.o
+[77/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/set_rows.cpp.o
+[78/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/softmax.cpp.o
+[79/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/solve_tri.cpp.o
+[80/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/ssm_conv.cpp.o
+[81/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/ssm_scan.cpp.o
+[82/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/sycl_hw.cpp.o
+[83/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/topk-moe.cpp.o
+[84/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/topk-radix.cpp.o
+[85/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/tsembd.cpp.o
+[86/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/upscale.cpp.o
+[87/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/wkv.cpp.o
+[88/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq112-dv112.cpp.o
+[89/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq128-dv128.cpp.o
+[90/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq256-dv256.cpp.o
+[91/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq40-dv40.cpp.o
+[92/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq512-dv512.cpp.o
+[93/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq576-dv512.cpp.o
+[94/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq64-dv64.cpp.o
+[95/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq72-dv72.cpp.o
+[96/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq80-dv80.cpp.o
+[97/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-tile-instance-dkq96-dv96.cpp.o
+[98/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-f16.cpp.o
+[99/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q4_0.cpp.o
+[100/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q4_1.cpp.o
+[101/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q5_0.cpp.o
+[102/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q5_1.cpp.o
+[103/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-f16-q8_0.cpp.o
+[104/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-f16.cpp.o
+[105/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q4_0.cpp.o
+[106/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q4_1.cpp.o
+[107/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q5_0.cpp.o
+[108/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q5_1.cpp.o
+[109/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_0-q8_0.cpp.o
+[110/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-f16.cpp.o
+[111/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q4_0.cpp.o
+[112/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q4_1.cpp.o
+[113/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q5_0.cpp.o
+[114/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q5_1.cpp.o
+[115/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q4_1-q8_0.cpp.o
+[116/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-f16.cpp.o
+[117/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q4_0.cpp.o
+[118/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q4_1.cpp.o
+[119/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q5_0.cpp.o
+[120/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q5_1.cpp.o
+[121/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_0-q8_0.cpp.o
+[122/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-f16.cpp.o
+[123/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q4_0.cpp.o
+[124/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q4_1.cpp.o
+[125/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q5_0.cpp.o
+[126/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q5_1.cpp.o
+[127/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q5_1-q8_0.cpp.o
+[128/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-f16.cpp.o
+[129/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q4_0.cpp.o
+[130/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q4_1.cpp.o
+[131/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q5_0.cpp.o
+[132/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q5_1.cpp.o
+[133/331] Building CXX object ggml/src/ggml-sycl/CMakeFiles/ggml-sycl.dir/template-instances/fattn-vec-instance-q8_0-q8_0.cpp.o
+[178/331] Building CXX object vendor/hash/CMakeFiles/vendor-hash.dir/hash.cpp.o
+[179/331] Building C object vendor/hash/CMakeFiles/vendor-hash.dir/xxhash/xxhash.c.o
+[180/331] Building CXX object vendor/hash/CMakeFiles/vendor-hash.dir/sha1/sha1.c.o
+[181/331] Building C object vendor/hash/CMakeFiles/vendor-hash.dir/sha256/sha256.c.o
+[182/331] Building CXX object vendor/cpp-httplib/CMakeFiles/cpp-httplib.dir/httplib.cpp.o
+[183/331] Building CXX object common/CMakeFiles/llama-common-base.dir/build-info.cpp.o
+[184/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/parsers.cpp.o
+[185/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/cohere2moe.cpp.o
+[186/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/deepseek.cpp.o
+[187/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/functionary-v3-2.cpp.o
+[188/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gemma4.cpp.o
+[189/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gigachat-v3.cpp.o
+[190/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/gpt-oss.cpp.o
+[191/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/k2-horizon.cpp.o
+[192/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/kimi-k2.cpp.o
+[193/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/kimi-k3.cpp.o
+[194/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/ling3.cpp.o
+[195/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/lfm2.cpp.o
+[196/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/llm-jp-harmony.cpp.o
+[197/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/minicpm5.cpp.o
+[198/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/minimax-m3.cpp.o
+[199/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/ministral3.cpp.o
+[200/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/muse-glimmer.cpp.o
+[201/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/muse-spark.cpp.o
+[202/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/qwen3-coder.cpp.o
+[203/331] Building CXX object common/CMakeFiles/llama-common.dir/parsers/translate-gemma.cpp.o
+[204/331] Building CXX object common/CMakeFiles/llama-common.dir/arg.cpp.o
+[205/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-auto-parser-generator.cpp.o
+[206/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-auto-parser-helpers.cpp.o
+[207/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-diff-analyzer.cpp.o
+[208/331] Building CXX object common/CMakeFiles/llama-common.dir/chat-peg-parser.cpp.o
+[209/331] Building CXX object common/CMakeFiles/llama-common.dir/chat.cpp.o
+[210/331] Building CXX object common/CMakeFiles/llama-common.dir/common.cpp.o
+[211/331] Building CXX object common/CMakeFiles/llama-common.dir/console.cpp.o
+[212/331] Building CXX object common/CMakeFiles/llama-common.dir/debug.cpp.o
+[213/331] Building CXX object common/CMakeFiles/llama-common.dir/download.cpp.o
+[214/331] Building CXX object common/CMakeFiles/llama-common.dir/fit.cpp.o
+[215/331] Building CXX object common/CMakeFiles/llama-common.dir/hf-cache.cpp.o
+[216/331] Building CXX object common/CMakeFiles/llama-common.dir/imatrix-loader.cpp.o
+[217/331] Building CXX object common/CMakeFiles/llama-common.dir/json-schema-to-grammar.cpp.o
+[218/331] Building CXX object common/CMakeFiles/llama-common.dir/json-schema.cpp.o
+[219/331] Building CXX object common/CMakeFiles/llama-common.dir/json.cpp.o
+[220/331] Building CXX object common/CMakeFiles/llama-common.dir/llguidance.cpp.o
+[221/331] Building CXX object common/CMakeFiles/llama-common.dir/log.cpp.o
+[222/331] Building CXX object common/CMakeFiles/llama-common.dir/ngram-cache.cpp.o
+[223/331] Building CXX object common/CMakeFiles/llama-common.dir/ngram-map.cpp.o
+[224/331] Building CXX object common/CMakeFiles/llama-common.dir/ngram-mod.cpp.o
+[225/331] Building CXX object common/CMakeFiles/llama-common.dir/peg-parser.cpp.o
+[226/331] Building CXX object common/CMakeFiles/llama-common.dir/preset.cpp.o
+[227/331] Building CXX object common/CMakeFiles/llama-common.dir/reasoning-budget.cpp.o
+[228/331] Building CXX object common/CMakeFiles/llama-common.dir/sampling.cpp.o
+[229/331] Building CXX object common/CMakeFiles/llama-common.dir/speculative.cpp.o
+[230/331] Building CXX object common/CMakeFiles/llama-common.dir/subproc.cpp.o
+[231/331] Building CXX object common/CMakeFiles/llama-common.dir/trie.cpp.o
+[232/331] Building CXX object common/CMakeFiles/llama-common.dir/unicode.cpp.o
+[233/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/lexer.cpp.o
+[234/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/parser.cpp.o
+[235/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/runtime.cpp.o
+[236/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/value.cpp.o
+[237/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/string.cpp.o
+[238/331] Building CXX object common/CMakeFiles/llama-common.dir/jinja/caps.cpp.o
+[239/331] Building CXX object tests/CMakeFiles/test-backend-ops.dir/test-backend-ops.cpp.o
+[241/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-chat.cpp.o
+[242/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-task.cpp.o
+[243/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-queue.cpp.o
+[244/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-common.cpp.o
+[245/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-decision.cpp.o
+[246/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-context.cpp.o
+[247/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-stream.cpp.o
+[248/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-tools.cpp.o
+[249/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-mcp.cpp.o
+[250/331] Building CXX object tools/server/CMakeFiles/server-context.dir/server-schema.cpp.o
+[251/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd.cpp.o
+[252/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-audio.cpp.o
+[253/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-image.cpp.o
+[254/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-helper.cpp.o
+[255/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/mtmd-helper-gen.cpp.o
+[256/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/clip.cpp.o
+[257/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/cogvlm.cpp.o
+[258/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/conformer.cpp.o
+[259/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/deepseek4v.cpp.o
+[260/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/dots3note.cpp.o
+[261/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/dotsocr.cpp.o
+[262/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/exaone4_5.cpp.o
+[263/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4a.cpp.o
+[264/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4v.cpp.o
+[265/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4ua.cpp.o
+[266/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/gemma4uv.cpp.o
+[267/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/glm4v.cpp.o
+[268/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/granite-speech.cpp.o
+[269/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/granite4-vision.cpp.o
+[270/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/hunyuanvl.cpp.o
+[271/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/internvl.cpp.o
+[272/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/kimivl.cpp.o
+[273/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/kimik25.cpp.o
+[274/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/nemotron-v2-vl.cpp.o
+[275/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/nemotron-omni.cpp.o
+[276/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/muse-glimmer.cpp.o
+[277/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/muse-spark-audio.cpp.o
+[278/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/llama4.cpp.o
+[279/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/llava.cpp.o
+[280/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/minicpmv.cpp.o
+[281/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/paddleocr.cpp.o
+[282/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pixtral.cpp.o
+[283/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen2vl.cpp.o
+[284/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/minimax-m3.cpp.o
+[285/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3vl.cpp.o
+[286/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/ling3vl.cpp.o
+[287/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/mimovl.cpp.o
+[288/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3a.cpp.o
+[289/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/mimo-audio.cpp.o
+[290/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3tts-spkenc.cpp.o
+[291/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/qwen3tts-gen.cpp.o
+[292/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pockettts-seanet.cpp.o
+[293/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pockettts-spkenc.cpp.o
+[294/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/pockettts-gen.cpp.o
+[295/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/step3vl.cpp.o
+[296/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/siglip.cpp.o
+[297/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/whisper-enc.cpp.o
+[298/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/voxtral-rt.cpp.o
+[299/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/deepseekocr.cpp.o
+[300/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/deepseekocr2.cpp.o
+[301/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/mobilenetv5.cpp.o
+[302/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/youtuvl.cpp.o
+[303/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/yasa2.cpp.o
+[304/331] Building CXX object tools/mtmd/CMakeFiles/mtmd.dir/models/parakeet.cpp.o
+[309/331] Building CXX object tools/ui/CMakeFiles/llama-ui.dir/ui.cpp.o
+[310/331] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server.cpp.o
+[311/331] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-http.cpp.o
+[312/331] Building CXX object tools/server/CMakeFiles/llama-server-impl.dir/server-models.cpp.o
+[313/331] Building CXX object tools/server/CMakeFiles/llama-server.dir/main.cpp.o
+UNEXPECTED_COMPILE_SCOPE
++ finish
++ rc=1
++ trap - EXIT
++ set +e
++ test -s /home/mike/b70-evals/20261020-lilicorr-device-embedding/build-attempt-r1/seed-built-before.json
++ check_seed_built
++ python3 -B - /home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-verify-singletons
++ cmp /home/mike/b70-evals/20261020-lilicorr-device-embedding/build-attempt-r1/seed-built-before.json /home/mike/b70-evals/20261020-lilicorr-device-embedding/build-attempt-r1/seed-built-after.json
++ test -s /home/mike/b70-evals/20261020-lilicorr-device-embedding/build-attempt-r1/candidate-source-before.json
++ python3 -B /home/mike/b70-evals/20261020-lilicorr-device-embedding/source-proof.py --candidate
++ cmp /home/mike/b70-evals/20261020-lilicorr-device-embedding/build-attempt-r1/candidate-source-before.json /home/mike/b70-evals/20261020-lilicorr-device-embedding/build-attempt-r1/candidate-source-after.json
++ printf '%s\n' 1
++ exit 1
