@@ -1,0 +1,285 @@
+--- a/ggml/src/ggml-sycl/common.hpp
++++ b/ggml/src/ggml-sycl/common.hpp
+@@ -27,6 +27,9 @@
+ #include "type.hpp"
+ #include "sycl_hw.hpp"
+ #include "memtrace.hpp"
++// LILICORR_DEVICE_ONLY_BEGIN
++#include "lilicorr-device-timing.hpp"
++// LILICORR_DEVICE_ONLY_END
+ 
+ namespace syclexp = sycl::ext::oneapi::experimental;
+ 
+@@ -401,6 +404,9 @@
+     optimize_feature opt_feature;
+ 
+     queue_ptr qptrs[GGML_SYCL_MAX_DEVICES][GGML_SYCL_MAX_STREAMS] = { { nullptr } };
++    // LILICORR_DEVICE_ONLY_BEGIN
++    std::unique_ptr<lilicorr_device_pending> lilicorr_device_events;
++    // LILICORR_DEVICE_ONLY_END
+ 
+     explicit ggml_backend_sycl_context(int device) :
+         device(device),
+--- a/ggml/src/ggml-sycl/dpct/helper.hpp
++++ b/ggml/src/ggml-sycl/dpct/helper.hpp
+@@ -791,8 +791,23 @@
+       void clear_queues() { _queues.clear(); }
+ 
+       void init_queues() {
++        // LILICORR_DEVICE_ONLY_BEGIN
++#ifndef DPCT_PROFILING_ENABLED
++        const char * profile = std::getenv("LLAMA_LILICORR_PROFILE");
++        const char * graphs = std::getenv("GGML_SYCL_ENABLE_GRAPH");
++        if (profile && profile[0] == '1' && profile[1] == '\0' &&
++            (!graphs || std::atoi(graphs) == 0) && has(sycl::aspect::queue_profiling)) {
++          _q_in_order = create_queue_impl(true, sycl::property::queue::in_order(),
++                                          sycl::property::queue::enable_profiling());
++        } else
++#endif
++        {
++        // LILICORR_DEVICE_ONLY_END
+         _q_in_order =
+             create_queue_impl(true, sycl::property::queue::in_order());
++        // LILICORR_DEVICE_ONLY_BEGIN
++        }
++        // LILICORR_DEVICE_ONLY_END
+         _q_out_of_order = create_queue_impl(true);
+         _saved_queue = default_queue();
+       }
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -7163,7 +7163,15 @@
+     GGML_SYCL_DEBUG("[SYCL] call %s\n", __func__);
+     ggml_backend_sycl_context * sycl_ctx = (ggml_backend_sycl_context *)backend->context;
+     const queue_ptr stream = sycl_ctx->stream(sycl_ctx->device, 0);
++    // LILICORR_DEVICE_ONLY_BEGIN
++    const int64_t device_wait_begin = sycl_ctx->lilicorr_device_events ? ggml_time_us() : 0;
++    // LILICORR_DEVICE_ONLY_END
+     SYCL_CHECK(CHECK_TRY_ERROR((stream)->wait()));
++    // LILICORR_DEVICE_ONLY_BEGIN
++    if (sycl_ctx->lilicorr_device_events) {
++        lilicorr_device_after_wait(sycl_ctx->lilicorr_device_events, device_wait_begin, ggml_time_us());
++    }
++    // LILICORR_DEVICE_ONLY_END
+ 
+     GGML_UNUSED(backend);
+ }
+@@ -7375,6 +7383,11 @@
+     int profile_skipped_nodes = 0;
+     const int64_t profile_core_begin = profile_enabled ? lilicorr_sycl_profile_now_us() : 0;
+     // LILICORR_SYCL_PROFILE_ONLY_END
++    // LILICORR_DEVICE_ONLY_BEGIN
++    lilicorr_device_scope device_scope(profile_enabled, g_ggml_sycl_enable_graph != 0, sycl_ctx->lilicorr_device_events,
++                                       profile_enabled ? sycl_ctx->stream() : nullptr, profile_graph_id,
++                                       sycl_ctx->device, cgraph->n_nodes);
++    // LILICORR_DEVICE_ONLY_END
+     for (int i = 0; i < cgraph->n_nodes; i++) {
+         ggml_tensor * node = cgraph->nodes[i];
+         if (ggml_sycl_is_view_or_noop(node)) {
+@@ -7398,6 +7411,9 @@
+         lilicorr_sycl_profile_scope profile_scope(profile_enabled, i, node, cgraph,
+                                                   &profile_records, &profile_covered);
+         // LILICORR_SYCL_PROFILE_ONLY_END
++        // LILICORR_DEVICE_ONLY_BEGIN
++        device_scope.set_node(i, node);
++        // LILICORR_DEVICE_ONLY_END
+         const int nodes_to_skip = ggml_sycl_fuse(*sycl_ctx, cgraph, i);
+         if (nodes_to_skip != 0) {
+             // LILICORR_SYCL_PROFILE_ONLY_BEGIN
+--- /dev/null
++++ b/ggml/src/ggml-sycl/lilicorr-device-timing.hpp
+@@ -0,0 +1,155 @@
++// Private, development-only LiliCorr Q8 event diagnostic. Not a general profiler.
++#pragma once
++#include <array>
++#include <cinttypes>
++#include <cstdio>
++#include <memory>
++#include <optional>
++#include <type_traits>
++#include <vector>
++
++struct lilicorr_device_record {
++    uint64_t graph;
++    int node, ordinal, device, k, rows;
++    bool quantizer;
++    std::array<char, GGML_MAX_NAME> name, weight;
++    int64_t submit_begin_us, submit_end_us;
++    const char * status; // literals only; no tensor/stack metadata survives submission
++    std::optional<sycl::event> event;
++};
++
++struct lilicorr_device_pending {
++    static constexpr size_t limit = 2048; // per backend, between existing synchronizations
++    std::vector<lilicorr_device_record> records;
++    ~lilicorr_device_pending() {
++        if (!records.empty()) {
++            GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=discard status=no_existing_synchronize records=%zu device_time=unavailable\n", records.size());
++        }
++    }
++};
++
++struct lilicorr_device_scope;
++inline thread_local lilicorr_device_scope * lilicorr_device_active = nullptr;
++
++struct lilicorr_device_scope {
++    lilicorr_device_scope * previous;
++    std::unique_ptr<lilicorr_device_pending> & pending;
++    sycl::queue * queue; // borrowed only for this synchronous dispatch scope
++    uint64_t graph;
++    int device, nodes, node = -1, submitted = 0, retained = 0, dropped = 0, failed = 0;
++    bool requested, enabled, selected = false;
++    std::array<char, GGML_MAX_NAME> name{}, weight{};
++
++    lilicorr_device_scope(bool requested_, bool graphs, std::unique_ptr<lilicorr_device_pending> & pending_,
++                          sycl::queue * queue_, uint64_t graph_, int device_, int nodes_)
++        : previous(lilicorr_device_active), pending(pending_), queue(queue_), graph(graph_), device(device_),
++          nodes(nodes_), requested(requested_), enabled(requested_ && !graphs) {
++        // An unscoped/nested target graph must suspend any outer drafter scope.
++        lilicorr_device_active = enabled ? this : nullptr;
++    }
++    ~lilicorr_device_scope() {
++        lilicorr_device_active = previous;
++        if (requested) {
++            GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=coverage graph=%" PRIu64 " device=%d graph_nodes=%d status=%s coverage=q8_reordered_ncols8_only submitted=%d retained=%d dropped=%d submit_errors=%d other_device_work=unmeasured\n",
++                          graph, device, nodes, enabled ? "partial" : "graphs_enabled_unsupported", submitted, retained, dropped, failed);
++        }
++    }
++    lilicorr_device_scope(const lilicorr_device_scope &) = delete;
++    lilicorr_device_scope & operator=(const lilicorr_device_scope &) = delete;
++
++    static void copy_name(std::array<char, GGML_MAX_NAME> & out, const char * in) {
++        std::snprintf(out.data(), out.size(), "%s", in);
++        for (char & c : out) {
++            if (c != '\0' && (static_cast<unsigned char>(c) <= 32 || c == '=')) { c = '_'; }
++        }
++    }
++    void set_node(int index, const ggml_tensor * tensor) {
++        if (!enabled) { return; }
++        node = index;
++        const ggml_tensor * x = tensor->src[0];
++        const ggml_tensor * y = tensor->src[1];
++        selected = tensor->op == GGML_OP_MUL_MAT && x && y && x->type == GGML_TYPE_Q8_0 &&
++                   y->ne[1] == 8 && y->ne[2] == 1 && y->ne[3] == 1;
++        if (selected) {
++            copy_name(name, tensor->name);
++            copy_name(weight, x->name);
++        }
++    }
++};
++
++// Two direct call sites only. This never submits commands, waits, or queries an event.
++struct lilicorr_device_submit {
++    lilicorr_device_scope * scope;
++    sycl::queue * queue;
++    bool quantizer, finished = false;
++    int k, rows, ordinal;
++    int64_t begin_us;
++
++    lilicorr_device_submit(bool selected, bool quantizer_, sycl::queue * queue_, int k_, int rows_)
++        : scope(selected && lilicorr_device_active && lilicorr_device_active->selected ? lilicorr_device_active : nullptr),
++          queue(queue_), quantizer(quantizer_), k(k_), rows(rows_), ordinal(scope ? ++scope->submitted : 0),
++          begin_us(scope ? ggml_time_us() : 0) {}
++    ~lilicorr_device_submit() {
++        if (scope && !finished) { ++scope->failed; } // original submission exception still propagates
++    }
++    void finish(const sycl::event & event) noexcept {
++        if (!scope) { return; }
++        const int64_t end_us = ggml_time_us(); // before metadata/storage overhead
++        finished = true;
++        try {
++            if (!scope->pending) { scope->pending = std::make_unique<lilicorr_device_pending>(); }
++            auto & records = scope->pending->records;
++            if (records.size() == lilicorr_device_pending::limit) { ++scope->dropped; return; }
++            const bool same_queue = queue == scope->queue;
++            const bool profiling = same_queue && queue->has_property<sycl::property::queue::enable_profiling>();
++            const char * status = !same_queue ? "foreign_queue" : !profiling ? "unsupported_profiling" : "pending";
++            lilicorr_device_record record{scope->graph, scope->node, ordinal, scope->device, k, rows, quantizer,
++                                         scope->name, scope->weight, begin_us, end_us, status, std::nullopt};
++            if (profiling) { record.event = event; }
++            records.push_back(std::move(record));
++            ++scope->retained;
++        } catch (...) {
++            ++scope->dropped; // allocation/event-copy/property errors are missing data, never zero device time
++        }
++    }
++};
++
++// Call ONLY after ggml_backend_sycl_synchronize's original queue wait has returned.
++// All retained events came from this backend's primary queue. No extra wait, even on error.
++inline void lilicorr_device_after_wait(std::unique_ptr<lilicorr_device_pending> & slot,
++                                      int64_t wait_begin_us, int64_t wait_end_us) {
++    if (!slot) { return; }
++    auto pending = std::move(slot);
++    const int64_t query_begin_us = ggml_time_us();
++    for (const auto & record : pending->records) {
++        const char * status = record.status;
++        char device_fields[192] = "device_start_ns=unavailable device_end_ns=unavailable device_elapsed_ns=unavailable";
++        if (record.event) {
++            try {
++                // Nonblocking defensive check: never let a profiling query create an implicit wait.
++                if (record.event->get_info<sycl::info::event::command_execution_status>() != sycl::info::event_command_status::complete) {
++                    status = "not_complete_after_wait";
++                } else {
++                    const uint64_t start = record.event->get_profiling_info<sycl::info::event_profiling::command_start>();
++                    const uint64_t end = record.event->get_profiling_info<sycl::info::event_profiling::command_end>();
++                    if (start == 0 || end < start) {
++                        status = "invalid_timestamps";
++                    } else {
++                        status = "ok";
++                        std::snprintf(device_fields, sizeof(device_fields), "device_start_ns=%" PRIu64 " device_end_ns=%" PRIu64 " device_elapsed_ns=%" PRIu64, start, end, end - start);
++                    }
++                }
++            } catch (...) {
++                status = "profiling_query_error";
++            }
++        }
++        GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=event graph=%" PRIu64 " node=%d ordinal=%d device=%d kernel=%s name=%s weight=%s k=%d rows=%d ncols=8 coverage=selected_kernel_only status=%s submit_begin_us=%" PRId64 " submit_end_us=%" PRId64 " submit_host_us=%" PRId64 " %s\n",
++                      record.graph, record.node, record.ordinal, record.device, record.quantizer ? "quantize_reorder_q8_1" : "mmvq_reordered_q8_0",
++                      record.name.data(), record.weight.data(), record.k, record.rows, status,
++                      record.submit_begin_us, record.submit_end_us, record.submit_end_us - record.submit_begin_us, device_fields);
++    }
++    const int64_t query_end_us = ggml_time_us();
++    GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=drain status=existing_wait_returned attribution=shared_queue_not_pure_drafter wait_begin_us=%" PRId64 " wait_end_us=%" PRId64 " wait_host_us=%" PRId64 " query_and_log_host_us=%" PRId64 " records=%zu other_device_work=unmeasured\n",
++                  wait_begin_us, wait_end_us, wait_end_us - wait_begin_us, query_end_us - query_begin_us, pending->records.size());
++    pending->records.clear(); // releases all event references; backend slot stays empty
++}
+--- a/ggml/src/ggml-sycl/mmvq.cpp
++++ b/ggml/src/ggml-sycl/mmvq.cpp
+@@ -1262,14 +1262,17 @@
+     const sycl::range<3> block_nums(1, 1, block_num_y);
+     const sycl::range<3> block_dims(1, GGML_SYCL_MMV_Y, num_subgroups * WARP_SIZE);
+ 
+-    stream->submit([&](sycl::handler & cgh) {
++    // LILICORR_DEVICE_ONLY_BEGIN
++    lilicorr_device_submit device_submit(ncols_dst == 8, false, stream, ncols, nrows);
++    // LILICORR_DEVICE_ONLY_END
++    /* LILICORR_DEVICE_INLINE_BEGIN */device_submit.finish(/* LILICORR_DEVICE_INLINE_END */stream->submit([&](sycl::handler & cgh) {
+         cgh.parallel_for(sycl::nd_range<3>(block_nums * block_dims, block_dims),
+                          [=](sycl::nd_item<3> nd_item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
+                              mul_mat_vec_q_reorder_ncols<reorder_vec_dot_q_sycl<GGML_TYPE_Q8_0>, ncols_dst>(
+                                  vx, /*vgate=*/ nullptr, vy, dst, ncols, nrows, stride_col_y_bytes, stride_col_dst,
+                                  /*glu_op=*/ GGML_GLU_OP_SWIGLU, nd_item);
+                          });
+-    });
++    })/* LILICORR_DEVICE_INLINE_BEGIN */)/* LILICORR_DEVICE_INLINE_END */;
+ }
+ 
+ static void reorder_mul_mat_vec_q8_0_q8_1_sycl_switch_ncols(
+--- a/ggml/src/ggml-sycl/quantize.hpp
++++ b/ggml/src/ggml-sycl/quantize.hpp
+@@ -126,8 +126,12 @@
+     auto global_range     = num_quant_blocks * local_range;
+     dpct::has_capability_or_fail(stream->get_device(), { sycl::aspect::fp16 });
+ 
+-    stream->parallel_for(sycl::nd_range<1>({ global_range }, { local_range }),
++    // LILICORR_DEVICE_ONLY_BEGIN
++    lilicorr_device_submit device_submit(ky == 8 && std::is_same<quantize_f<1>, quantize_and_reorder_q8_1_soa<1>>::value,
++                                         true, stream, kx, ky);
++    // LILICORR_DEVICE_ONLY_END
++    /* LILICORR_DEVICE_INLINE_BEGIN */device_submit.finish(/* LILICORR_DEVICE_INLINE_END */stream->parallel_for(sycl::nd_range<1>({ global_range }, { local_range }),
+                          [=](sycl::nd_item<1> it) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
+                              quantize_f<QK8_1 / WARP_SIZE>()(x, vy, kx, kx_padded, it);
+-                         });
++                         })/* LILICORR_DEVICE_INLINE_BEGIN */)/* LILICORR_DEVICE_INLINE_END */;
+ }
