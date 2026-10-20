@@ -4,9 +4,9 @@ import runpy
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-iq2-packed')
-OUT = ROOT / 'candidate-r1'
-PREFIX = 'bolt-lilicorr-iq2-packed-candidate-r1-'
+ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-iq2-packed-r2')
+OUT = ROOT / 'candidate-r2'
+PREFIX = 'bolt-lilicorr-iq2-packed-candidate-r2-'
 BASE_CASE = HERE.parent / '20261020-lilicorr-iq2-batch4'
 B = runpy.run_path(str(BASE_CASE / 'run-performance.py'))
 S = runpy.run_path(str(HERE / 'source-proof.py'))

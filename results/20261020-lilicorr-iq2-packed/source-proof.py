@@ -6,19 +6,19 @@ import runpy
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-iq2-packed')
+ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-iq2-packed-r2')
 BASE_CASE = HERE.parent / '20261020-lilicorr-iq2-batch4'
 BASE = runpy.run_path(str(BASE_CASE / 'source-proof.py'))
 PARENT = BASE['PARENT']
 SEED = BASE['CANDIDATE']
-CANDIDATE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r1')
+CANDIDATE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r2')
 SEED_SOURCE_FILE = 'ggml/src/ggml-sycl/mmvq.cpp'
 SOURCE_SCOPE = BASE['SOURCE_SCOPE']
 ARTIFACTS = BASE['ARTIFACTS']
 CHANGED_BINARIES = ['libggml-sycl.so.0']
 SEED_CHANGED_BINARIES = CHANGED_BINARIES
 BUILD_MARKER = 'LILICORR_IQ2_PACKED_GGML_SYCL_MODULE_PASSED'
-PATCH_SHA256 = 'dcf610546dc4cdef6c10044e0d1059f7211bcd19da2abe0193d8d66012c58314'
+PATCH_SHA256 = 'bc77f78f6e4e94cd89d5db7c6e94532e02e9c98b886265fb1144357364750583'
 sha, source_map, binaries = (BASE[k] for k in ('sha', 'source_map', 'binaries'))
 
 

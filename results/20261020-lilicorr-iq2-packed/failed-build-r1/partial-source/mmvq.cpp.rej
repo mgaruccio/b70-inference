@@ -1,0 +1,45 @@
+--- ggml/src/ggml-sycl/mmvq.cpp
++++ ggml/src/ggml-sycl/mmvq.cpp
+@@ -13,4 +13,42 @@
+                                                       const block_q8_1 * __restrict__ bq8_1,
+                                                       const int & iqs) {
+     return vec_dot_iq2_xxs_q8_1(vbq, bq8_1, iqs, iq2xxs_grid, ksigns_iq2xs, kmask_iq2xs);
++}
++
++// Private n==4 path: integer packing only; keep XXS signs, scales and FP order.
++static __dpct_inline__ float vec_dot_iq2_xxs_q8_1_moe_n4(const void * __restrict__ vbq,
++                                                        const block_q8_1 * __restrict__ bq8_1,
++                                                        const int & iqs) {
++#if QK_K == 256
++    const block_iq2_xxs * bq2 = (const block_iq2_xxs *) vbq;
++    const int ib32 = iqs;
++    const uint16_t * q2 = bq2->qs + 4*ib32;
++    const uint8_t * aux8 = (const uint8_t *) q2;
++    const int8_t * q8 = bq8_1[ib32].qs;
++    uint32_t aux32 = q2[2] | (q2[3] << 16);
++    int sumi = 0;
++    for (int l = 0; l < 4; ++l) {
++        const uint64_t grid = iq2xxs_grid[aux8[l]];
++        const uint8_t signs = ksigns_iq2xs[aux32 & 127];
++        const uint32_t signs0 = iq_sign_mask(signs);
++        const uint32_t signs1 = iq_sign_mask(signs >> 4);
++        // Grid bytes are {8,25,43}: per-byte negation cannot carry into a neighbor.
++        const int grid_l = ((uint32_t)grid ^ signs0) + (signs0 & 0x01010101);
++        const int grid_h = ((uint32_t)(grid >> 32) ^ signs1) + (signs1 & 0x01010101);
++        // Signed inputs select signed-byte extension. Copy avoids alias/alignment casts.
++        int q8_l, q8_h;
++        memcpy(&q8_l, q8, sizeof(q8_l));
++        memcpy(&q8_h, q8 + 4, sizeof(q8_h));
++        sumi = dpct::dp4a(grid_l, q8_l, sumi);
++        sumi = dpct::dp4a(grid_h, q8_h, sumi);
++        q8 += 8;
++        aux32 >>= 7;
++    }
++    // |sumi| <= 32 * 43 * 128 = 176128; no integer overflow or FP regrouping.
++    const float d = (float)bq2->d * (0.5f + aux32) * bq8_1[ib32].ds[0] * 0.25f;
++    return d * sumi;
++#else
++    assert(false);
++    return 0.f;
++#endif
+ }

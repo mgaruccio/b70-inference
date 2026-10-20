@@ -28,9 +28,9 @@ TAIL = ('    const float d = (float)bq2->d * (0.5f + aux32) * '
         'bq8_1[ib32].ds[0] * 0.25f;\n    return d * sumi;')
 
 
-def run(argv, cwd=ROOT):
+def run(argv, cwd=ROOT, *, input=None):
     print('+', shlex.join(map(str, argv)), flush=True)
-    subprocess.run(list(map(str, argv)), cwd=cwd, check=True, timeout=60)
+    subprocess.run(list(map(str, argv)), cwd=cwd, check=True, timeout=60, input=input)
 
 
 def sha(data):
@@ -333,16 +333,24 @@ def main():
     (HERE / '.scratch').mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='cpu-', dir=HERE / '.scratch') as tmp:
         work = Path(tmp)
+        gnu = work / 'gnu-pristine'
         for name, data in originals.items():
-            dst = work / REL / name
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.write_bytes(data)
+            for target in (work, gnu):
+                dst = target / REL / name
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_bytes(data)
         def apply(path, reverse=False):
             opts = ['-R'] if reverse else []
-            # --directory anchors the patch below this worktree; no unsafe paths.
+            # Independent pristine trees exercise both delivery paths, not a proxy.
             prefix = str(work.relative_to(ROOT))
             run(['git', 'apply', '--check', '--directory=' + prefix, *opts, path])
             run(['git', 'apply', '--directory=' + prefix, *opts, path])
+            direction = '--reverse' if reverse else '--forward'
+            command = ['patch', '--directory=' + str(gnu), '--fuzz=0', '--batch', direction, '-p1']
+            run([*command, '--dry-run'], input=path.read_bytes())
+            run(command, input=path.read_bytes())
+            assert all((gnu / REL / name).read_bytes() == (work / REL / name).read_bytes()
+                       for name in originals), 'GNU/Git composition differs'
         def files():
             return {name: (work / REL / name).read_bytes() for name in originals}
         apply(batch)
@@ -371,7 +379,7 @@ def main():
         apply(batch)
         apply(patch)
         assert files() == candidate
-        print('PASS pins; exact forward/reverse composition; only new helper + batch4 callee; all other bytes unchanged', flush=True)
+        print('PASS pins; exact GNU fuzz=0 and Git forward/reverse composition; only new helper + batch4 callee; all other bytes unchanged', flush=True)
         vec = originals['vecdotq.hpp'].decode()
         old = extract(vec, SCALAR)
         assert old.count(TAIL) == new.count(TAIL) == 1

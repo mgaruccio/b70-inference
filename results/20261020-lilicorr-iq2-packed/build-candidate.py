@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-iq2-packed')
+ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-iq2-packed-r2')
 TEMPLATE = HERE.parent / '20261020-lilicorr-host-boundary/build-candidate.sh'
 TEMPLATE_SHA256 = '83ac40c38fdcfee1ca021f0cc25cea02cb687e908d12a7f4ccee8bd78e4aa24d'
 OLD_POST = """pins = s['load_pins']()
@@ -20,11 +20,11 @@ def render():
     assert hashlib.sha256(data).hexdigest() == TEMPLATE_SHA256, 'frozen build template drift'
     text = data.decode()
     changes = (
-        ('20261020-lilicorr-host-boundary', '20261020-lilicorr-iq2-packed', 1),
+        ('20261020-lilicorr-host-boundary', '20261020-lilicorr-iq2-packed-r2', 1),
         ('llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-timing-r1', 'llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1', 1),
-        ('llama.cpp-bolt-b6334e37-nvfp4-lilicorr-host-boundary-r1', 'llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r1', 1),
+        ('llama.cpp-bolt-b6334e37-nvfp4-lilicorr-host-boundary-r1', 'llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r2', 1),
         ('20261020-lilicorr-device-timing', '20261020-lilicorr-iq2-batch4', 1),
-        ('bolt-lilicorr-host-boundary-r1', 'bolt-lilicorr-iq2-packed-r1', 1),
+        ('bolt-lilicorr-host-boundary-r1', 'bolt-lilicorr-iq2-packed-r2', 1),
         ('disable-device-profiling.patch', 'iq2-packed.patch', 2),
         ("s['HELPER']", "s['SEED_SOURCE_FILE']", 2),
         ('DEVICE_CASE', 'SEED_CASE', 2),

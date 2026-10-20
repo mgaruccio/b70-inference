@@ -71,7 +71,7 @@ The thin case bindings reuse the unchanged clean IQ2 lifecycle and native qualif
 python3 -B results/20261020-lilicorr-iq2-packed/test-bindings.py
 
 # Lead only, on inference-host, after staging and validating all case inputs
-cd /home/mike/b70-evals/20261020-lilicorr-iq2-packed
+cd /home/mike/b70-evals/20261020-lilicorr-iq2-packed-r2
 python3 -B build-candidate.py
 # Only after the build process/EXIT trap has completed:
 python3 -B source-proof.py --built
@@ -81,3 +81,12 @@ python3 -B run-performance.py --lead-after-timing-restore
 ```
 
 The generated build command is retained as `build-candidate.generated.sh`. It is code-hashed with all completed build evidence during the live lifecycle. `native-batch4.py` is an exact copy of the existing checker, not a new qualification relaxation. These commands are a declared process, not evidence that the still-pending SDK/public steps have passed.
+
+
+## R1 delivery failure; R2 exact application gate
+
+The first remote attempt failed **before compilation**: GNU `patch --fuzz=0` rejected the increment's first asymmetric-context hunk even though Git accepted it. The immutable seed still matched `aabdc95aac76ec817c46c5d3fe27bd0f95907cffdd96434007fc6cc6f47b3a42`; source/binary before/after checks passed, and the original service remained healthy at the same PID. The complete old package/build/reject files are retained under `failed-build-r1/`; its remote package and partial source are not changed or reused.
+
+R2 adds only standard trailing context to that hunk. GNU fuzz=0 and Git now apply the full base/increment sequence on independent pristine pinned trees, forward/reverse/re-forward, with identical output bytes. The resulting `mmvq.cpp` stays **`0f05037c825033930b2b663ac73b87898c9b798563568877ee869f62bd9b73ba`**; no kernel source or arithmetic changed. The patch-data SHA is now `bc77f78f6e4e94cd89d5db7c6e94532e02e9c98b886265fb1144357364750583`. A space-only unified-diff context line is intentional patch syntax and must not be stripped by a text-whitespace cleanup.
+
+Current lead bindings use a fresh remote package `20261020-lilicorr-iq2-packed-r2`, source `llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r2`, and capture `candidate-r2`. R1 remains failed, not silently retried or relabeled. `test-packed.py` now exercises the **actual GNU command with fuzz=0 and stdin patch input**, in addition to Git and extracted arithmetic tests. SDK/device/public/performance qualification remains pending.

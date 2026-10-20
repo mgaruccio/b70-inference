@@ -1,6 +1,6 @@
 --- a/ggml/src/ggml-sycl/mmvq.cpp
 +++ b/ggml/src/ggml-sycl/mmvq.cpp
-@@ -13,4 +13,42 @@
+@@ -13,6 +13,44 @@
                                                        const block_q8_1 * __restrict__ bq8_1,
                                                        const int & iqs) {
      return vec_dot_iq2_xxs_q8_1(vbq, bq8_1, iqs, iq2xxs_grid, ksigns_iq2xs, kmask_iq2xs);
@@ -43,6 +43,8 @@
 +    return 0.f;
 +#endif
  }
+ 
+ static __dpct_inline__ float vec_dot_iq2_xs_q8_1_moe(const void * __restrict__ vbq,
 @@ -3083,7 +3121,7 @@
              sycl::nd_range<3>(block_nums * block_dims, block_dims),
              [=](sycl::nd_item<3> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {

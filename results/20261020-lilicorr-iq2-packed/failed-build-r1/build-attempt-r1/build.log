@@ -1,0 +1,81 @@
++ uname -a
+Linux inference-host 7.2.0-1-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 20 Aug 2026 16:18:38 +0000 x86_64 GNU/Linux
++ docker version
+Client:
+ Version:           29.7.2
+ API version:       1.55
+ Go version:        go1.26.5-X:nodwarf5
+ Git commit:        a7dcaa6fdb
+ Built:             Thu Aug  6 16:36:45 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server:
+ Engine:
+  Version:          29.7.2
+  API version:      1.55 (minimum version 1.40)
+  Go version:       go1.26.5-X:nodwarf5
+  Git commit:       6a43e3d5af
+  Built:            Thu Aug  6 16:36:45 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.3.4
+  GitCommit:        db8809540e1a7a9da5d518876894933ff55692ab.m
+ runc:
+  Version:          1.5.1
+  GitCommit:        1.5.1-1-0-gce23c4c-dirty
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
++ docker image inspect intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-iq2-packed-r1-build
++ for name in "$PREFIX-build" "$PREFIX-precheck"
++ docker container inspect bolt-lilicorr-iq2-packed-r1-precheck
++ python3 -B /home/mike/b70-evals/20261020-lilicorr-iq2-batch4/source-proof.py --built
++ python3 -B /home/mike/b70-evals/20261020-lilicorr-iq2-packed/source-proof.py --parent
++ seed_source
++ python3 -B /home/mike/b70-evals/20261020-lilicorr-iq2-packed/source-proof.py --seed-sources
++ seed_binaries
++ python3 -B - /home/mike/b70-evals/20261020-lilicorr-iq2-packed
++ test -f /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1/build-sycl/build.ninja
++ grep -Fx CMAKE_HOME_DIRECTORY:INTERNAL=/src /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1/build-sycl/CMakeCache.txt
+CMAKE_HOME_DIRECTORY:INTERNAL=/src
+++ du -sk /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1
+++ cut -f1
++ need=464984
+++ awk 'NR==2 {print $4}'
++++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r1
+++ df -Pk /home/mike/inference/src
++ available=30412116
++ test 30412116 -gt 5707864
+++ df -Pk /home/mike/b70-evals/20261020-lilicorr-iq2-packed
+++ awk 'NR==2 {print $4}'
++ test 30412116 -gt 5242880
+++ dirname /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r1
++ df -Pk /home/mike/b70-evals/20261020-lilicorr-iq2-packed /home/mike/inference/src
+Filesystem     1024-blocks      Used Available Capacity Mounted on
+/dev/nvme0n1p2   484190196 449326508  30412116      94% /home
+/dev/nvme0n1p2   484190196 449326508  30412116      94% /home
++ cp -a --reflink=auto /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1 /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r1
++ python3 -B - /home/mike/b70-evals/20261020-lilicorr-iq2-packed
++ patch --directory=/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-packed-r1 --fuzz=0 --batch --forward -p1
+patching file ggml/src/ggml-sycl/mmvq.cpp
+Hunk #1 FAILED at 13.
+1 out of 2 hunks FAILED -- saving rejects to file ggml/src/ggml-sycl/mmvq.cpp.rej
++ finish
++ rc=1
++ trap - EXIT
++ set +e
++ test -s /home/mike/b70-evals/20261020-lilicorr-iq2-packed/build-attempt-r1/seed-source-before.json
++ seed_source
++ python3 -B /home/mike/b70-evals/20261020-lilicorr-iq2-packed/source-proof.py --seed-sources
++ cmp /home/mike/b70-evals/20261020-lilicorr-iq2-packed/build-attempt-r1/seed-source-before.json /home/mike/b70-evals/20261020-lilicorr-iq2-packed/build-attempt-r1/seed-source-after.json
++ test -s /home/mike/b70-evals/20261020-lilicorr-iq2-packed/build-attempt-r1/seed-built-before.json
++ seed_binaries
++ python3 -B - /home/mike/b70-evals/20261020-lilicorr-iq2-packed
++ cmp /home/mike/b70-evals/20261020-lilicorr-iq2-packed/build-attempt-r1/seed-built-before.json /home/mike/b70-evals/20261020-lilicorr-iq2-packed/build-attempt-r1/seed-built-after.json
++ test -s /home/mike/b70-evals/20261020-lilicorr-iq2-packed/build-attempt-r1/candidate-source-before.json
++ printf '%s\n' 1
++ exit 1
