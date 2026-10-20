@@ -55,20 +55,44 @@ class HostAnalysisTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=HERE / '.scratch') as temporary:
             out = Path(temporary)
             (out / 'analysis-r1').mkdir()
-            for name in ('analysis.json', 'profile.json'):
-                (out / 'analysis-r1' / name).write_text('unchanged baseline\n')
+            originals = {'analysis.json': json.dumps({'rows': [{'passed': True}] * 24}),
+                         'profile.json': 'unchanged baseline\n'}
+            for name, text in originals.items():
+                (out / 'analysis-r1' / name).write_text(text)
+            context = dict(status='analyzed', errors=[], requests=[{}] * 16)
+            validator = mock.Mock(return_value=context)
+            c = dict(load=lambda path: json.loads(Path(path).read_text()))
             meta = dict(text=synthetic_host_request(), cell='VSPF-W3a', point='short', phase='measured', ordinal=0)
-            with mock.patch.dict(A['D'], _run_context_validation=lambda *_a: {'requests': [{}] * 24},
-                                 _selected_requests=lambda *_a: ([meta], {}),
-                                 _context_graph_record=lambda *_a: {'graphs': [{'graph': 10, 'graph_nodes': 59}]}):
-                result = A['analyze'](out, {})
+            with mock.patch.dict(A['D']['CONTEXT_ANALYZER'], analyze=validator), \
+                    mock.patch.dict(A['D'], _selected_requests=lambda *_a: ([meta], {}),
+                                    _context_graph_record=lambda *_a: {'graphs': [{'graph': 10, 'graph_nodes': 59}]}):
+                result = A['analyze'](out, c)
             self.assertEqual(result['status'], 'analyzed')
             self.assertEqual(result['context_measured_outputs'], 24)
-            for name in ('analysis.json', 'profile.json'):
-                self.assertEqual((out / 'analysis-r1' / name).read_text(), 'unchanged baseline\n')
+            self.assertEqual(len(context['requests']), 16)
+            validator.assert_called_once()
+            validator.call_args.args[1]['save'](out / 'analysis-r1/profile.json', {'overwrite': True})
+            self.assertNotIn('save', c)
+            for name, text in originals.items():
+                self.assertEqual((out / 'analysis-r1' / name).read_text(), text)
             before = (out / 'analysis-r1/host-analysis.json').read_bytes()
-            with self.assertRaises(AssertionError): A['analyze'](out, {})
+            with self.assertRaises(AssertionError): A['analyze'](out, c)
             self.assertEqual((out / 'analysis-r1/host-analysis.json').read_bytes(), before)
+
+    def test_failed_context_or_measured_output_gates_still_fail_closed(self):
+        (HERE / '.scratch').mkdir(exist_ok=True)
+        valid = dict(status='analyzed', errors=[], requests=[{}] * 16)
+        for context, rows in ((dict(valid, status='failed'), [{'passed': True}] * 24),
+                              (dict(valid, errors=['failed gate']), [{'passed': True}] * 24),
+                              (valid, [{'passed': True}] * 23),
+                              (valid, [{'passed': True}] * 23 + [{'passed': False}])):
+            with self.subTest(context=context['status'], rows=len(rows)), \
+                    tempfile.TemporaryDirectory(dir=HERE / '.scratch') as temporary:
+                c = dict(load=lambda _path: {'rows': rows})
+                with mock.patch.dict(A['D']['CONTEXT_ANALYZER'], analyze=lambda *_a: context):
+                    result = A['analyze'](Path(temporary), c)
+                self.assertEqual(result['status'], 'failed')
+                self.assertTrue(result['errors'])
 
 
 if __name__ == '__main__':

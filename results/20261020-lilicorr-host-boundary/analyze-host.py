@@ -56,9 +56,15 @@ def analyze(out, c):
                   gpu_timestamps='unavailable', speed_comparison_permitted=False,
                   requests=[], errors=[])
     try:
-        context = D['_run_context_validation'](out, c)
+        # The unchanged analyzer validates 24 measured outputs but returns only
+        # the 16 W3 phase records; do not apply the device wrapper's row-count check.
+        shadow = dict(c, save=lambda *_a: None)
+        context = D['CONTEXT_ANALYZER']['analyze'](out, shadow)
+        assert context.get('status') == 'analyzed' and not context.get('errors'), 'unchanged context validation failed'
+        measured = c['load'](out / 'analysis-r1/analysis.json')['rows']
+        assert len(measured) == 24 and all(r['passed'] for r in measured)
         selected, excluded = D['_selected_requests'](out, c)
-        report['context_measured_outputs'] = len(context['requests'])
+        report['context_measured_outputs'] = len(measured)
         report['excluded_records'] = excluded
         for meta in selected:
             parsed = check_request(meta['text'])
