@@ -142,6 +142,19 @@ class PreparationTests(unittest.TestCase):
 
 
 class CoverageTests(unittest.TestCase):
+    def test_first_public_job_scope_probe_rejects_head_only_and_startup_only(self):
+        lines = next(item for item in fixture()['requests'] if item['phase'] == 'measured')['lines']
+        proof = D['check_first_job_scope']('\n'.join(lines))
+        self.assertTrue(proof['passed'])
+        self.assertGreater(proof['decoder_projection_records'], 0)
+        head_only = [line for line in lines if A['MARKER'] not in line
+                     or not (A['event'](line)['stage'] == 'op'
+                             and A['event'](line)['src0_name'] == 'blk.0.attn_q.weight')]
+        with self.assertRaisesRegex(AssertionError, 'no measured decoder projection'):
+            D['check_first_job_scope']('\n'.join(head_only))
+        with self.assertRaisesRegex(AssertionError, 'no current public request'):
+            D['check_first_job_scope']('\n'.join(line for line in lines if A['MARKER'] in line))
+
     def test_all_synthetic_requests_inside_real_boundaries_and_full_scope(self):
         f = fixture(); g = A['BASE']['requests'].__globals__
         for item in f['requests']:

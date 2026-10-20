@@ -134,6 +134,13 @@ identical; proposals/accepted short 129/84 and long 133/82; context coverage gat
 passes every measured W3 request. Full eight blocks, 7x8 noncausal lattice and
 rejected-KV behavior remain intact. No NVFP4 or DFlash tuning.
 
+After the first unchanged public job in each W3 cell, the lead runner reads that
+request's actual `docker logs` stderr and requires both a context-scoped BF16
+decoder projection and lattice operations. A missing scope aborts early through
+the existing restoration lifecycle; no additional request is introduced. Raw
+probe stdout/stderr and `scope-probe-first-job.json` are retained. This is an early
+presence check, not a substitute for full per-round coverage or any fidelity gate.
+
 Retain exact commands/environment, build-attempt logs/exit status, seed/source
 proofs, six-binary/dependency proof, native/public artifacts, raw server logs,
 actual PID/mount/environment/source/model/ownership records, restoration records,

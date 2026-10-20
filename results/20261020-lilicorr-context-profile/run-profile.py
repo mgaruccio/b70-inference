@@ -3,6 +3,7 @@
 import argparse
 import runpy
 import socket
+import subprocess
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -42,6 +43,27 @@ BUILD_FILES = (
 )
 
 
+def check_first_job_scope(stderr):
+    """Validate live coverage after an unchanged public request, before more GPU work."""
+    reader = runpy.run_path(str(HERE / 'analyze-profile.py'))
+    lines = stderr.splitlines()
+    starts = [i for i, line in enumerate(lines) if reader['BASE']['START'].search(line)]
+    assert starts, 'scope probe has no current public request'
+    start = starts[-1]
+    rows = reader['parse_sycl'](lines[start:], start + 1)
+    gates = [row for row in rows if row['stage'] == 'gate']
+    assert gates and all(row['marker_name'] == 'lilicorr.context' for row in gates), 'no explicit context scope'
+    ops = [row for row in rows if row['stage'] == 'op']
+    decoder = [row for row in ops if row['first_op'] == 'MUL_MAT'
+               and row['src0_name'] == 'blk.0.attn_q.weight' and row['src0_type'].lower() == 'bf16']
+    head = [row for row in ops if row['src0_name'].startswith('lilicorr.')]
+    assert decoder, 'first public job has no measured decoder projection; stop before full capture'
+    assert head, 'first public job has no measured lattice operations'
+    return dict(passed=True, request_start_line=start + 1, scope_label='lilicorr.context',
+                decoder_projection_records=len(decoder), lattice_operation_records=len(head),
+                first_decoder_line=decoder[0]['line'])
+
+
 def bind():
     _FIRST_GLOBALS.update(HERE=HERE, ROOT=ROOT, OUT=OUT, PREFIX=PREFIX, S=S,
                           OWN_FILES=OWN_FILES, BUILD_FILES=BUILD_FILES)
@@ -52,6 +74,27 @@ def bind():
     assert Q['CANDIDATE'] == _FIRST_RUN['Q']['CANDIDATE']
     assert Q['CANDIDATE_SIZE'] == _FIRST_RUN['Q']['CANDIDATE_SIZE']
     assert Q['CANDIDATE_SHA256'] == _FIRST_RUN['Q']['CANDIDATE_SHA256']
+
+    class ScopeValidatedRuntime(runtime['Runtime']):
+        def run_job(self, cell, job, *args, **kwargs):
+            result = super().run_job(cell, job, *args, **kwargs)
+            if contract['role_for'](cell) == 'W3' and cell not in getattr(self, '_scope_probe_cells', set()):
+                directory = self.out / cell
+                try:
+                    raw = subprocess.run(['docker', 'logs', self._cell_name(cell)],
+                                         capture_output=True, check=True, timeout=90)
+                    for stream in ('stdout', 'stderr'):
+                        (directory / ('scope-probe-first-job.' + stream + '.log')).write_bytes(getattr(raw, stream))
+                    proof = check_first_job_scope(raw.stderr.decode('utf-8'))
+                    proof['job_stem'] = job['stem']
+                    contract['save'](directory / 'scope-probe-first-job.json', proof)
+                except Exception as exc:
+                    contract['save'](directory / 'scope-probe-first-job.json', dict(passed=False, error=repr(exc)))
+                    raise contract['InfraFailure']('first W3 public request did not demonstrate decoder scope') from exc
+                self._scope_probe_cells = getattr(self, '_scope_probe_cells', set()) | {cell}
+            return result
+
+    runtime['Runtime'] = ScopeValidatedRuntime
     return runtime, analysis, contract
 
 
