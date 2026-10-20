@@ -1,0 +1,127 @@
+F32 R3 CPU preparation only. No remote edits, SDK build, GPU execution/enumeration, service control, deployment, host install or baseline rerun.
+Existing Q8 artifacts remain unchanged. Native numerical proof uses pinned source implementations, not a hand formula; device operations remain mocked.
+Preparation issues: native ggml-impl.h unused static helpers under -Werror were resolved by treating that pinned internal include directory as a system header, without modifying it.
+After making UBSan errors fatal, its function-type check reported the upstream block_q8_0* -> ggml_to_float_t void* callback cast. Only extracted native C function-type metadata is disabled (-fno-sanitize=function); the original functions/traits are unchanged, ASan and other UBSan checks stay fatal.
+ReadSeek Python diagnostics: zero errors for runner/source proof. Its C++ parser reports two pre-existing PRId64 format-macro lines (candidate 821/1166 = original 697/1042); real full-TU Clang syntax checks pass.
+ModuleBuildTests simulate the module driver. Their MODULE_R2_PASSED marker is not an R3 SDK build result.
+cwd=/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding
+
+$ CC=clang CXX=clang++ date --iso-8601=seconds
+2026-10-20T00:35:37-04:00
+exit=0
+
+$ CC=clang CXX=clang++ uname -a
+Linux desktop 7.2.9-2-cachyos #1 SMP PREEMPT_DYNAMIC Thu, 08 Oct 2026 15:06:16 +0000 x86_64 GNU/Linux
+exit=0
+
+$ CC=clang CXX=clang++ python3 --version
+Python 3.14.7
+exit=0
+
+$ CC=clang CXX=clang++ clang --version
+clang version 23.1.1
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+exit=0
+
+$ CC=clang CXX=clang++ clang++ --version
+clang version 23.1.1
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+exit=0
+
+$ CC=clang CXX=clang++ git rev-parse HEAD
+3c05a2f99ccd4e14edc1d6a9216d0443fe7f23a7
+exit=0
+
+$ CC=clang CXX=clang++ bash -n /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/build-candidate-r3.sh
+exit=0
+
+$ CC=clang CXX=clang++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/test-device-embedding.py
+extracted placement: 30 guards, independent F32 owners, chunk/scratch fences, 8 failure paths passed
+native CPU Q8 traits/GET_ROWS: ncols=32, bit-exact F32, all 65536 half patterns, int8 extremes, signed zero, 16MiB boundaries/tails, fenced poisoned scratch passed
+native CPU Q8 traits/GET_ROWS: ncols=4096, bit-exact F32, all 65536 half patterns, int8 extremes, signed zero, 16MiB boundaries/tails, fenced poisoned scratch passed
+test_actual_container_identity_env_mounts_and_no_rewriting (__main__.RunnerTests.test_actual_container_identity_env_mounts_and_no_rewriting) ... ok
+test_actual_private_function_globals_and_clean_abba_bindings (__main__.RunnerTests.test_actual_private_function_globals_and_clean_abba_bindings) ... ok
+test_placement_fails_closed_and_acceptance_is_exact (__main__.RunnerTests.test_placement_fails_closed_and_acceptance_is_exact) ... ok
+test_actual_translation_units_syntax_and_no_math_delta (__main__.SourceTests.test_actual_translation_units_syntax_and_no_math_delta) ... ERROR
+test_build_is_original_seed_incremental_cpu_only (__main__.SourceTests.test_build_is_original_seed_incremental_cpu_only) ... ok
+test_exact_forward_reverse_whole_tree_and_private_headers (__main__.SourceTests.test_exact_forward_reverse_whole_tree_and_private_headers) ... ok
+test_extracted_cpp_guards_copy_fence_ownership_and_failures (__main__.SourceTests.test_extracted_cpp_guards_copy_fence_ownership_and_failures) ... ok
+test_fresh_whole_source_and_each_of_six_binary_proofs (__main__.SourceTests.test_fresh_whole_source_and_each_of_six_binary_proofs) ... ok
+test_native_cpu_reference_f32_chunk_boundaries_and_edge_values (__main__.SourceTests.test_native_cpu_reference_f32_chunk_boundaries_and_edge_values) ... ok
+test_pinned_native_layout_and_default_queue_fence_assumptions (__main__.SourceTests.test_pinned_native_layout_and_default_queue_fence_assumptions) ... ok
+
+======================================================================
+ERROR: test_actual_translation_units_syntax_and_no_math_delta (__main__.SourceTests.test_actual_translation_units_syntax_and_no_math_delta)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/test-device-embedding.py", line 165, in test_actual_translation_units_syntax_and_no_math_delta
+    q8_context = context.replace(function(context, signature), function(q8_additions, signature), 1)
+                                                               ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/test-device-embedding.py", line 62, in function
+    return text[index:text.index('\n}\n', index) + 3]
+                      ~~~~~~~~~~^^^^^^^^^^^^^^^^
+ValueError: substring not found
+
+----------------------------------------------------------------------
+Ran 10 tests in 2.190s
+
+FAILED (errors=1)
+exit=1
+
+Final verification after fixing the test-only R2 comparison: apply the preserved zero-context Q8 patch to fresh fixtures rather than parse addition-only lines (shared closing braces are not additions). No production change or weakened assertion.
+
+$ CC=clang CXX=clang++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/test-device-embedding.py
+full patched llama-context.cpp + dflash.cpp syntax passed against exact original headers
+extracted placement: 30 guards, independent F32 owners, chunk/scratch fences, 8 failure paths passed
+native CPU Q8 traits/GET_ROWS: ncols=32, bit-exact F32, all 65536 half patterns, int8 extremes, signed zero, 16MiB boundaries/tails, fenced poisoned scratch passed
+native CPU Q8 traits/GET_ROWS: ncols=4096, bit-exact F32, all 65536 half patterns, int8 extremes, signed zero, 16MiB boundaries/tails, fenced poisoned scratch passed
+test_actual_container_identity_env_mounts_and_no_rewriting (__main__.RunnerTests.test_actual_container_identity_env_mounts_and_no_rewriting) ... ok
+test_actual_private_function_globals_and_clean_abba_bindings (__main__.RunnerTests.test_actual_private_function_globals_and_clean_abba_bindings) ... ok
+test_placement_fails_closed_and_acceptance_is_exact (__main__.RunnerTests.test_placement_fails_closed_and_acceptance_is_exact) ... ok
+test_actual_translation_units_syntax_and_no_math_delta (__main__.SourceTests.test_actual_translation_units_syntax_and_no_math_delta) ... ok
+test_build_is_original_seed_incremental_cpu_only (__main__.SourceTests.test_build_is_original_seed_incremental_cpu_only) ... ok
+test_exact_forward_reverse_whole_tree_and_private_headers (__main__.SourceTests.test_exact_forward_reverse_whole_tree_and_private_headers) ... ok
+test_extracted_cpp_guards_copy_fence_ownership_and_failures (__main__.SourceTests.test_extracted_cpp_guards_copy_fence_ownership_and_failures) ... ok
+test_fresh_whole_source_and_each_of_six_binary_proofs (__main__.SourceTests.test_fresh_whole_source_and_each_of_six_binary_proofs) ... ok
+test_native_cpu_reference_f32_chunk_boundaries_and_edge_values (__main__.SourceTests.test_native_cpu_reference_f32_chunk_boundaries_and_edge_values) ... ok
+test_pinned_native_layout_and_default_queue_fence_assumptions (__main__.SourceTests.test_pinned_native_layout_and_default_queue_fence_assumptions) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 2.837s
+
+OK
+exit=0
+
+$ CC=clang CXX=clang++ python3 -B /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/test-build-r2.py
+LILICORR_DEVICE_EMBEDDING_MODULE_R2_PASSED
+test_driver_executes_only_complete_module_then_validated_link_argv (__main__.ModuleBuildTests.test_driver_executes_only_complete_module_then_validated_link_argv) ... ok
+test_driver_stops_before_compilation_on_bad_plan_or_library (__main__.ModuleBuildTests.test_driver_stops_before_compilation_on_bad_plan_or_library) ... ok
+test_missing_foreign_duplicate_unsafe_link_and_target_drift (__main__.ModuleBuildTests.test_missing_foreign_duplicate_unsafe_link_and_target_drift) ... ok
+test_plan_rejects_every_widening_or_incomplete_object_build (__main__.ModuleBuildTests.test_plan_rejects_every_widening_or_incomplete_object_build) ... ok
+test_r2_paths_frozen_sdk_and_nounset_safe_setvars (__main__.ModuleBuildTests.test_r2_paths_frozen_sdk_and_nounset_safe_setvars) ... ok
+test_real_r4_link_selects_all_44_including_11_unity (__main__.ModuleBuildTests.test_real_r4_link_selects_all_44_including_11_unity) ... ok
+test_targets_queries_and_compile_flags_must_agree (__main__.ModuleBuildTests.test_targets_queries_and_compile_flags_must_agree) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.086s
+
+OK
+exit=0
+
+$ CC=clang CXX=clang++ bash -n /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/build-candidate-r3.sh
+exit=0
+
+$ CC=clang CXX=clang++ git diff --check
+exit=0
+
+$ CC=clang CXX=clang++ git diff --exit-code HEAD -- /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/device-embedding.patch /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/source-hashes.json /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/fixtures /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/build-candidate.sh /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/build-candidate-r2.sh /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/build-module-r2.py /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/build-r2-inputs.json.gz /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/cpu-checks.log /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-embedding/results/20261020-lilicorr-device-embedding/cpu-build-r2-checks.log
+exit=0
+
+R2 -> F32 private-source delta: ['src/llama-context.cpp']
+Exact initializer-only C++ delta, unchanged cparams/DFlash/owners, and unchanged R2 module/link recipe: tests passed.
+Protected Q8 patch/pins/fixtures/R1-R2 drivers/module helper/input pins/CPU logs unchanged: git diff --exit-code HEAD passed.
+Final result: 10 source/placement/numeric tests + 7 module tests passed; no SDK or GPU execution.

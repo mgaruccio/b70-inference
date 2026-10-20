@@ -16,11 +16,14 @@ OWN_FILES = (
     'build-candidate.sh', 'build-candidate-r2.sh', 'build-module-r2.py', 'build-r2-inputs.json.gz',
     'test-device-embedding.py', 'test-build-r2.py', 'source-hashes.json',
     'device-embedding.patch', 'fixtures/embedding-driver.cpp', 'fixtures/support.tar.gz',
+    'build-candidate-r3.sh', 'source-hashes-f32.json', 'device-embedding-f32.patch',
+    'fixtures-f32/embedding-driver.cpp', 'fixtures-f32/ggml/src/ggml-quants.c.gz',
+    'fixtures-f32/ggml/src/ggml-cpu/ops.cpp.gz',
     *(str(Path('fixtures') / (n + '.gz')) for n in S['SOURCE_SCOPE']),
     '../20261019-lilicorr-q8-drafter/run-performance.py',
     '../20261019-lilicorr-b70-profile/source-proof.py',
 )
-BUILD_FILES = tuple('build-attempt-r2/' + name for name in (
+BUILD_FILES = tuple('build-attempt-r3/' + name for name in (
     'candidate-binaries.json', 'parent-binaries.json', 'source-diff.json',
     'post-build-verification.log', 'runtime-precheck.log', 'exit-code.txt', 'image.json',
     'seed-built-before.json', 'seed-built-after.json',
@@ -29,7 +32,7 @@ BUILD_FILES = tuple('build-attempt-r2/' + name for name in (
     'module-plan.stdout.log', 'module-build.stdout.log', 'module-commands.stdout.log',
 ))
 PLACEMENT = re.compile(r'lilicorr_device_embedding: active backend=(SYCL\d+) buffer=(SYCL\d+) '
-                       r'type=q8_0 tensor_bytes=(\d+) buffer_bytes=(\d+)')
+                       r'source_type=q8_0 source_bytes=(\d+) type=f32 tensor_bytes=(\d+) buffer_bytes=(\d+)')
 
 
 def source_bind(source):
@@ -57,12 +60,13 @@ def check_placement(text, active):
     assert len(lines) == 1, 'missing, repeated, or inactive placement: do not time as optimized'
     match = PLACEMENT.search(lines[0])
     assert match, lines[0]
-    backend, buffer, tensor_bytes, buffer_bytes = match.groups()
+    backend, buffer, source_bytes, tensor_bytes, buffer_bytes = match.groups()
     assert backend == buffer == 'SYCL0'
-    assert int(tensor_bytes) == 570425344  # Qualified shared Q8 table: 544 MiB.
-    assert int(buffer_bytes) >= int(tensor_bytes)
-    return dict(active=True, backend=backend, buffer=buffer,
-                tensor_bytes=int(tensor_bytes), buffer_bytes=int(buffer_bytes))
+    assert int(source_bytes) == 570425344  # Unchanged qualified Q8 source: 544 MiB.
+    assert int(tensor_bytes) == 2147483648  # Exact CPU-reference F32 table: 2 GiB.
+    assert int(tensor_bytes) <= int(buffer_bytes) <= (3 << 30)
+    return dict(active=True, backend=backend, buffer=buffer, source_type='q8_0', type='f32',
+                source_bytes=int(source_bytes), tensor_bytes=int(tensor_bytes), buffer_bytes=int(buffer_bytes))
 
 
 def check_acceptance(row):
@@ -107,8 +111,9 @@ def check_container(c, record, cell, h, mode):
 def bind(mode):
     assert mode in ('baseline', 'candidate')
     runtime, analysis, c = Q['bind']()  # Fresh private namespaces; never change qualified P.
-    out = ROOT / (mode + '-r1')
-    prefix = 'bolt-lilicorr-device-embedding-' + mode + '-r1-'
+    run_name = 'candidate-r2' if mode == 'candidate' else 'baseline-r1'
+    out = ROOT / run_name
+    prefix = 'bolt-lilicorr-device-embedding-' + run_name + '-'
     c.update(ROOT=ROOT, OUT=out, PREFIX=prefix)
     base_make = c['make_create']
     base_code = c['adapter_code_hashes']

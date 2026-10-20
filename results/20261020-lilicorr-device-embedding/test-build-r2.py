@@ -137,11 +137,20 @@ class ModuleBuildTests(unittest.TestCase):
         self.assertEqual(2, script.count('set -eo pipefail\nsource /opt/intel/oneapi/setvars.sh --force\nset -u'))
         self.assertIn('aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0', script)
         runner = runpy.run_path(str(HERE / 'run-performance.py'))
-        self.assertTrue(str(runner['S']['CANDIDATE']).endswith('device-embedding-r2'))
+        self.assertTrue(str(runner['S']['CANDIDATE']).endswith('device-embedding-r3'))
         self.assertEqual(['libllama.so.0.7.0'], runner['S']['CHANGED_BINARIES'])
         self.assertEqual(6, len(runner['S']['ARTIFACTS']))
-        self.assertTrue(all(n.startswith('build-attempt-r2/') for n in runner['BUILD_FILES']))
+        self.assertTrue(all(n.startswith('build-attempt-r3/') for n in runner['BUILD_FILES']))
         for name in ('build-candidate-r2.sh', 'build-module-r2.py', 'build-r2-inputs.json.gz'):
+            self.assertIn(name, runner['OWN_FILES'])
+        r3 = HERE / 'build-candidate-r3.sh'
+        subprocess.run(['bash', '-n', str(r3)], check=True)
+        expected = script.replace('build-attempt-r2', 'build-attempt-r3').replace('device-embedding-r2', 'device-embedding-r3')
+        expected = expected.replace('device-embedding.patch', 'device-embedding-f32.patch')
+        expected = expected.replace('Fresh R2 source; preserve failed R1 and all original source/build bytes.',
+                                    'Fresh F32 R3 source; preserve R1/R2 and all original source/build bytes.')
+        self.assertEqual(expected, r3.read_text())  # No new build recipe or relaxed closure.
+        for name in ('build-candidate-r3.sh', 'source-hashes-f32.json', 'device-embedding-f32.patch'):
             self.assertIn(name, runner['OWN_FILES'])
 
 

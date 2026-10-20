@@ -19,6 +19,7 @@ D = runpy.run_path(str(HERE / 'run-performance.py'))
 S = D['S']
 QUALIFIED = HERE.parent / '20261019-nemotron35-bolt-lilicorr-verify-singletons/qualification-r1'
 CXX = os.environ.get('CXX', 'clang++')
+SANITIZER_ENV = dict(os.environ, ASAN_OPTIONS='detect_leaks=1:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
 
 
 def temp():
@@ -37,12 +38,16 @@ def materialize(root):
         dest = root / name
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(gzip.decompress((HERE / 'fixtures' / (name + '.gz')).read_bytes()))
-    (root / 'UPSTREAM_COMMIT').write_text(S['load'](HERE / 'source-hashes.json')['upstream_commit'] + '\n')
+    for name in S['load'](HERE / 'source-hashes-f32.json')['cpu_reference_fixtures']:
+        dest = root / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(gzip.decompress((HERE / 'fixtures-f32' / (name + '.gz')).read_bytes()))
+    (root / 'UPSTREAM_COMMIT').write_text(S['load'](HERE / 'source-hashes-f32.json')['upstream_commit'] + '\n')
 
 
 def patch(root, *flags):
     result = subprocess.run(['patch', '--fuzz=0', '--batch', '-p1', *flags,
-                             '-i', str(HERE / 'device-embedding.patch')], cwd=root,
+                             '-i', str(HERE / 'device-embedding-f32.patch')], cwd=root,
                             check=True, capture_output=True, text=True)
     assert not re.search(r'fuzz|offset|failed', (result.stdout + result.stderr).lower())
 
@@ -57,9 +62,66 @@ def function(text, start):
     return text[index:text.index('\n}\n', index) + 3]
 
 
+def build_driver(root):
+    """Compile extracted production/control code with the actual native C converter."""
+    S['check_fixtures']()
+    materialize(root); patch(root, '--forward')
+    context = (root / 'src/llama-context.cpp').read_text()
+    header = (root / 'src/llama-context.h').read_text()
+    params = (root / 'src/llama-cparams.h').read_text()
+    core = (root / 'ggml/src/ggml.c').read_text()
+    quants = (root / 'ggml/src/ggml-quants.c').read_text()
+    cpu_ops = (root / 'ggml/src/ggml-cpu/ops.cpp').read_text()
+    parts = dict(
+        INIT=function(context, 'void llama_context::init_lilicorr_device_embedding()'),
+        DESTRUCTOR=function(context, 'llama_context::~llama_context()'),
+        OWNERS=header[header.index('    void init_lilicorr_device_embedding();'):
+                      header.index('    ggml_backend_buffer_ptr lilicorr_embd_buf;') + len('    ggml_backend_buffer_ptr lilicorr_embd_buf;')],
+        CPARAMS_POINTER=next(line for line in params.splitlines() if 'struct ggml_tensor * lilicorr_tok_embd' in line),
+        NEW2D=function(core, 'struct ggml_tensor * ggml_new_tensor_2d('),
+        CPU_GET_ROWS=function(cpu_ops, 'static void ggml_compute_forward_get_rows_q('),
+    )
+    driver = (HERE / 'fixtures-f32/embedding-driver.cpp').read_text()
+    for key, value in parts.items():
+        marker = '// EXTRACTED_' + key
+        assert driver.count(marker) == 1
+        driver = driver.replace(marker, value)
+    # Keep native initializer entries and function bodies verbatim. No substitute
+    # half/quantization formula: ggml-impl.h supplies the pinned native half helper.
+    entries = re.findall(r'^    \[GGML_TYPE_(?:F32|Q8_0)\] = \{\n.*?^    \},', core, re.M | re.S)
+    assert len(entries) == 2
+    native = '#include "ggml-quants.h"\n#include "ggml-impl.h"\n#include <math.h>\n'
+    native += function(quants, 'void quantize_row_q8_0_ref(')
+    native += function(quants, 'void dequantize_row_q8_0(')
+    native += 'static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] = {\n' + '\n'.join(entries) + '\n};\n'
+    for start in ('const struct ggml_type_traits * ggml_get_type_traits(', 'const char * ggml_type_name(',
+                  'size_t ggml_type_size(', 'int64_t ggml_nelements(', 'int64_t ggml_nrows('):
+        native += function(core, start)
+    cpp, cfile, obj, exe = (root / name for name in ('driver.cpp', 'native-reference.c', 'native-reference.o', 'driver'))
+    cpp.write_text(driver); cfile.write_text(native)
+    flags = ['-O1', '-g', '-fsanitize=address,undefined', '-fno-omit-frame-pointer', '-Wall', '-Wextra', '-Werror',
+             '-I' + str(root / 'ggml/include'), '-isystem', str(root / 'ggml/src')]
+    # Native GGML intentionally casts block_q8_0* callbacks to ggml_to_float_t's
+    # void* signature. Omit function-type metadata ONLY in this extracted C TU
+    # (as in the real unsanitized GGML library); keep all other ASan/UBSan checks.
+    for command in ([os.environ.get('CC', 'clang'), '-std=c11', *flags, '-fno-sanitize=function', '-c', str(cfile), '-o', str(obj)],
+                    [CXX, '-std=c++17', *flags, str(cpp), str(obj), '-lm', '-o', str(exe)]):
+        result = subprocess.run(command, capture_output=True, text=True)
+        assert result.returncode == 0, (command, result.stdout, result.stderr)
+    return exe
+
+
 class SourceTests(unittest.TestCase):
     def test_exact_forward_reverse_whole_tree_and_private_headers(self):
         S['check_fixtures']()
+        old_pins = S['load'](HERE / 'source-hashes.json')
+        new_pins = S['load'](HERE / 'source-hashes-f32.json')
+        self.assertEqual(old_pins['parent'], new_pins['parent'])
+        self.assertEqual(old_pins['fixtures'], new_pins['fixtures'])
+        self.assertEqual(old_pins['support_archive_sha256'], new_pins['support_archive_sha256'])
+        self.assertEqual(old_pins['support'], new_pins['support'])
+        for name in S['SOURCE_SCOPE'][1:]:
+            self.assertEqual(old_pins['candidate'][name], new_pins['candidate'][name])
         with temp() as directory:
             root = Path(directory); parent, candidate = root / 'parent', root / 'candidate'
             materialize(parent); materialize(candidate)
@@ -97,6 +159,17 @@ class SourceTests(unittest.TestCase):
             self.assertIn('ggml_get_rows(ctx0, tok_embd, ggml_reshape_1d(ctx0, cand_run, nodes * n_blocks))', after)
             self.assertIn('build_lilicorr_scores(*this, model, tok_embd, inp_anchor)', after)
             context = (root / 'src/llama-context.cpp').read_text()
+            legacy = root / 'q8-reference'; materialize(legacy)
+            result = subprocess.run(['patch', '--fuzz=0', '--batch', '-p1', '--forward',
+                                     '-i', str(HERE / 'device-embedding.patch')], cwd=legacy,
+                                    check=True, capture_output=True, text=True)
+            self.assertNotRegex(result.stdout + result.stderr, r'fuzz|offset|failed')
+            q8_context = (legacy / 'src/llama-context.cpp').read_text()
+            self.assertEqual(S['load'](HERE / 'source-hashes.json')['candidate']['src/llama-context.cpp'],
+                             hashlib.sha256(q8_context.encode()).hexdigest())
+            signature = 'void llama_context::init_lilicorr_device_embedding()'
+            self.assertEqual(context, q8_context.replace(function(q8_context, signature),
+                                                        function(context, signature), 1))  # Only initializer/log changed.
             self.assertLess(context.index('    init_lilicorr_device_embedding();'), context.index('    // init the memory module'))
             header = (root / 'src/llama-context.h').read_text()
             self.assertLess(header.index('ggml_context_ptr lilicorr_embd_ctx'), header.index('ggml_backend_buffer_ptr lilicorr_embd_buf'))
@@ -110,33 +183,15 @@ class SourceTests(unittest.TestCase):
 
     def test_extracted_cpp_guards_copy_fence_ownership_and_failures(self):
         with temp() as directory:
-            root = Path(directory); materialize(root); patch(root, '--forward')
-            context = (root / 'src/llama-context.cpp').read_text()
-            header = (root / 'src/llama-context.h').read_text()
-            params = (root / 'src/llama-cparams.h').read_text()
-            native = (root / 'ggml/src/ggml-backend.cpp').read_text()
-            core = (root / 'ggml/src/ggml.c').read_text()
-            parts = dict(
-                INIT=function(context, 'void llama_context::init_lilicorr_device_embedding()'),
-                DESTRUCTOR=function(context, 'llama_context::~llama_context()'),
-                OWNERS=header[header.index('    void init_lilicorr_device_embedding();'):
-                              header.index('    ggml_backend_buffer_ptr lilicorr_embd_buf;') + len('    ggml_backend_buffer_ptr lilicorr_embd_buf;')],
-                CPARAMS_POINTER=next(line for line in params.splitlines() if 'struct ggml_tensor * lilicorr_tok_embd' in line),
-                DUP=function(core, 'struct ggml_tensor * ggml_dup_tensor('),
-                COPY=function(native, 'void ggml_backend_tensor_copy('),
-            )
-            driver = (HERE / 'fixtures/embedding-driver.cpp').read_text()
-            for key, value in parts.items():
-                marker = '// EXTRACTED_' + key
-                self.assertEqual(1, driver.count(marker))
-                driver = driver.replace(marker, value)
-            cpp, exe = root / 'driver.cpp', root / 'driver'
-            cpp.write_text(driver)
-            result = subprocess.run([CXX, '-std=c++17', '-Wall', '-Wextra', '-Werror',
-                                     '-I' + str(root / 'ggml/include'), str(cpp), '-o', str(exe)],
-                                    capture_output=True, text=True)
+            exe = build_driver(Path(directory))
+            result = subprocess.run([str(exe)], capture_output=True, text=True, env=SANITIZER_ENV)
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-            result = subprocess.run([str(exe)], capture_output=True, text=True)
+            print(result.stdout.strip())
+
+    def test_native_cpu_reference_f32_chunk_boundaries_and_edge_values(self):
+        with temp() as directory:
+            exe = build_driver(Path(directory))
+            result = subprocess.run([str(exe), 'numeric'], capture_output=True, text=True, env=SANITIZER_ENV)
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             print(result.stdout.strip())
 
@@ -157,6 +212,11 @@ class SourceTests(unittest.TestCase):
         self.assertIn('.wait()', getter)
         self.assertIn('default_queue() { return in_order_queue(); }', queues)
         self.assertIn('get_rows_sycl<QK8_0, QR8_0, dequantize_q8_0>', getrows)
+        self.assertNotIn('case GGML_TYPE_F32:', init)  # F32 receives no Q8 reorder extras.
+        f32 = getrows[getrows.index('case GGML_TYPE_F32:'):getrows.index('case GGML_TYPE_I32:')]
+        self.assertIn('(const float *)dst->src[0]->data', f32)
+        self.assertIn('(float *)dst->data', f32)
+        self.assertIn('dst_row[i00] = src0_row[i00];', function(getrows, 'static void k_get_rows_float('))
         self.assertNotIn('reorder', getrows)
         reorder = function(sycl, 'static bool should_reorder_tensor(ggml_backend_sycl_context&')
         self.assertIn('dst->op == GGML_OP_MUL_MAT', reorder)
@@ -172,8 +232,8 @@ class SourceTests(unittest.TestCase):
                 for name in S['ARTIFACTS']:
                     path = tree / 'build-sycl/bin' / name; path.parent.mkdir(parents=True, exist_ok=True)
                     path.write_text(name + (' changed' if tree == candidate and name in S['CHANGED_BINARIES'] else ' original'))
-            (root / 'source-hashes.json').write_bytes((HERE / 'source-hashes.json').read_bytes())
-            attempt = root / 'build-attempt-r2'; attempt.mkdir()
+            (root / 'source-hashes-f32.json').write_bytes((HERE / 'source-hashes-f32.json').read_bytes())
+            attempt = root / 'build-attempt-r3'; attempt.mkdir()
             (attempt / 'exit-code.txt').write_text('0\n')
             (attempt / 'post-build-verification.log').write_text('LILICORR_PROFILE_BUILD_PASSED\n')
             (attempt / 'runtime-precheck.log').write_text('LILICORR_PROFILE_DEPENDENCIES_PASSED\n')
@@ -241,8 +301,9 @@ class RunnerTests(unittest.TestCase):
         for mode in ('baseline', 'candidate'):
             runtime, analysis, c, p = self.bound(mode); contracts.append(c)
             before = copy.deepcopy(p)
-            self.assertEqual(c['OUT'], D['ROOT'] / (mode + '-r1'))
-            self.assertEqual(c['PREFIX'], 'bolt-lilicorr-device-embedding-' + mode + '-r1-')
+            run_name = 'candidate-r2' if mode == 'candidate' else 'baseline-r1'
+            self.assertEqual(c['OUT'], D['ROOT'] / run_name)
+            self.assertEqual(c['PREFIX'], 'bolt-lilicorr-device-embedding-' + run_name + '-')
             self.assertIs(c['configure'].__globals__, c)
             self.assertIs(analysis['analyze'].__globals__['C'], c)
             for method in ('pid', 'verify_restored', '__init__'):
@@ -290,11 +351,17 @@ class RunnerTests(unittest.TestCase):
                     with self.assertRaises(AssertionError): c['check_container'](bad, cell, None)
 
     def test_placement_fails_closed_and_acceptance_is_exact(self):
-        good = 'lilicorr_device_embedding: active backend=SYCL0 buffer=SYCL0 type=q8_0 tensor_bytes=570425344 buffer_bytes=570425344\n'
+        good = ('lilicorr_device_embedding: active backend=SYCL0 buffer=SYCL0 source_type=q8_0 '
+                'source_bytes=570425344 type=f32 tensor_bytes=2147483648 buffer_bytes=2147483648\n')
         self.assertTrue(D['check_placement'](good, True)['active'])
         self.assertFalse(D['check_placement']('', False)['active'])
         for bad in ('', good + good, 'lilicorr_device_embedding: inactive reason=oom',
-                    good.replace('SYCL0', 'CPU'), good.replace('570425344', '1')):
+                    good.replace('SYCL0', 'CPU'), good.replace('570425344', '1'),
+                    good.replace('tensor_bytes=2147483648', 'tensor_bytes=570425344'),
+                    good.replace('type=f32', 'type=q8_0'), good.replace('source_type=q8_0', 'source_type=f32'),
+                    good.replace('buffer_bytes=2147483648', 'buffer_bytes=3221225473'),
+                    good.replace('buffer_bytes=2147483648', 'buffer_bytes=2147483647'),
+                    'lilicorr_device_embedding: active backend=SYCL0 buffer=SYCL0 type=q8_0 tensor_bytes=570425344 buffer_bytes=570425344'):
             with self.assertRaises(AssertionError): D['check_placement'](bad, True)
         with self.assertRaises(AssertionError): D['check_placement'](good, False)
         for point, counts in [('short', (129, 84)), ('long', (133, 82))]:
@@ -302,6 +369,8 @@ class RunnerTests(unittest.TestCase):
             self.assertIs(row, D['check_acceptance'](row))
             row['timings']['draft_n_accepted'] -= 1
             with self.assertRaises(AssertionError): D['check_acceptance'](row)
+        failed_q8 = dict(cell='VSPF-W3a', point='short', timings=dict(draft_n=126, draft_n_accepted=85))
+        with self.assertRaises(AssertionError): D['check_acceptance'](failed_q8)
 
 
 if __name__ == '__main__':

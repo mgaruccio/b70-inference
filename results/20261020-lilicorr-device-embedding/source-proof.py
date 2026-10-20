@@ -12,10 +12,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-device-embedding')
 QUALIFIED = ROOT.parent / '20261019-nemotron35-bolt-lilicorr-verify-singletons'
 PARENT = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-verify-singletons-r2')
-# Retain the qualified original source and six artifacts; R2 rebuilds only its
-# complete llama object closure because whole-server Ninja log lineage is missing.
+# R3 uses the unchanged R2 complete-module build recipe and qualified original seed.
 SEED = PARENT
-CANDIDATE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r2')
+CANDIDATE = Path('/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-embedding-r3')
 SOURCE_SCOPE = ['src/llama-context.cpp', 'src/llama-context.h', 'src/llama-cparams.h', 'src/models/dflash.cpp']
 ARTIFACTS = ('llama-server', 'libllama-server-impl.so', 'libggml-sycl.so.0',
              'test-backend-ops', 'libllama-common.so', 'libllama.so.0.7.0')
@@ -27,8 +26,8 @@ source_map, binaries = _BASE['source_map'], _BASE['binaries']
 
 
 def check_fixtures(here=HERE):
-    pins = load(here / 'source-hashes.json')
-    assert sha(here / 'device-embedding.patch') == pins['patch_sha256']
+    pins = load(here / 'source-hashes-f32.json')
+    assert sha(here / 'device-embedding-f32.patch') == pins['patch_sha256']
     assert sorted(pins['parent']) == sorted(pins['candidate']) == SOURCE_SCOPE
     for name in SOURCE_SCOPE:
         archive = here / 'fixtures' / (name + '.gz')
@@ -44,17 +43,23 @@ def check_fixtures(here=HERE):
             assert not Path(member.name).is_absolute() and '..' not in Path(member.name).parts
             actual[member.name] = hashlib.sha256(stream.extractfile(member).read()).hexdigest()
         assert actual == pins['support']
+    for name, pin in pins['cpu_reference_fixtures'].items():
+        archive = here / 'fixtures-f32' / (name + '.gz')
+        assert sha(archive) == pin['compressed_sha256'], name
+        assert hashlib.sha256(gzip.decompress(archive.read_bytes())).hexdigest() == pin['decompressed_sha256'], name
 
 
 def check_sources(parent=PARENT, candidate=None):
     check_fixtures()
-    pins = load(HERE / 'source-hashes.json')
+    pins = load(HERE / 'source-hashes-f32.json')
     for label, source in [('parent', parent)] + ([('candidate', candidate)] if candidate else []):
         assert not (source / '.git').exists(), 'expected qualified exported source'
         assert (source / 'UPSTREAM_COMMIT').read_text().strip() == pins['upstream_commit']
         assert {name: sha(source / name) for name in SOURCE_SCOPE} == pins[label], label
     # These are exact original headers and backend bytes used by CPU syntax/layout tests.
     assert {name: sha(parent / name) for name in pins['support']} == pins['support']
+    for name, pin in pins['cpu_reference_fixtures'].items():
+        assert sha(parent / name) == pin['decompressed_sha256'], name
     before = source_map(parent)
     if candidate is None:
         return dict(parent=before)
@@ -65,7 +70,7 @@ def check_sources(parent=PARENT, candidate=None):
 
 
 def proof(p=None):
-    """Same qualified whole-tree/six-binary gate, with R2-local build evidence."""
+    """Same qualified whole-tree/six-binary gate, with R3-local build evidence."""
     assert __debug__, 'assertions required'
     if p is None:
         p = runpy.run_path(str(QUALIFIED / 'public-gate.py'))
@@ -73,7 +78,7 @@ def proof(p=None):
     qualified = p['candidate_proof']()  # Never rebind or memoize qualified ancestry.
     sources = check_sources(PARENT, CANDIDATE)
     assert sources['parent'] == qualified['source']
-    attempt = HERE / 'build-attempt-r2'
+    attempt = HERE / 'build-attempt-r3'
     assert (attempt / 'exit-code.txt').read_text().strip() == '0'
     assert 'LILICORR_PROFILE_BUILD_PASSED' in (attempt / 'post-build-verification.log').read_text()
     assert 'LILICORR_PROFILE_DEPENDENCIES_PASSED' in (attempt / 'runtime-precheck.log').read_text()
@@ -84,7 +89,7 @@ def proof(p=None):
     assert candidate_bins == load(attempt / 'candidate-binaries.json')
     assert sorted(k for k in ARTIFACTS if parent_bins[k] != candidate_bins[k]) == CHANGED_BINARIES
     return dict(path=str(CANDIDATE), source=sources['candidate'], binaries=candidate_bins,
-                parent_binaries=parent_bins, upstream_commit=load(HERE / 'source-hashes.json')['upstream_commit'])
+                parent_binaries=parent_bins, upstream_commit=load(HERE / 'source-hashes-f32.json')['upstream_commit'])
 
 
 _G = proof.__globals__  # The CPU tests bind only this private runpy namespace.

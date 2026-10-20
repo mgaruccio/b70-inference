@@ -1,0 +1,151 @@
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -472,0 +473,2 @@
++
++    init_lilicorr_device_embedding();
+@@ -572,0 +575,122 @@
++}
++
++void llama_context::init_lilicorr_device_embedding() {
++    // This experiment is only the existing, single-device Q8 shared-table LiliCorr path.
++    if (model.arch != LLM_ARCH_DFLASH || !model.lilicorr_pass_hidden_proj ||
++            model.hparams.lilicorr_candidate_topk == 0) {
++        return;
++    }
++    auto inactive = [](const char * reason) {
++        LLAMA_LOG_INFO("lilicorr_device_embedding: inactive reason=%s\n", reason);
++    };
++    if (model.tok_embd || !cparams.ctx_other || !cparams.op_offload ||
++            model.hparams.vocab_only || model.hparams.no_alloc ||
++            model.n_gpu_layers() == 0 || model.devices.size() != 1) {
++        inactive("not-shared-single-device-offload");
++        return;
++    }
++    auto * source = llama_get_model(cparams.ctx_other)->tok_embd;
++    if (!source || !source->buffer || !source->data ||
++            !ggml_backend_buffer_is_host(source->buffer) || source->extra || source->view_src ||
++            source->op != GGML_OP_NONE || source->type != GGML_TYPE_Q8_0 ||
++            !ggml_is_contiguous(source) || source->ne[2] != 1 || source->ne[3] != 1) {
++        inactive("not-standard-host-q8-table");
++        return;
++    }
++    ggml_backend_t backend = nullptr;
++    for (const auto & item : backends) {
++        auto dev = ggml_backend_get_device(item.get());
++        auto reg = dev ? ggml_backend_dev_backend_reg(dev) : nullptr;
++        if (dev == model.devices.front().dev && reg &&
++                ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_GPU &&
++                strcmp(ggml_backend_reg_name(reg), "SYCL") == 0) {
++            backend = item.get();
++            break;
++        }
++    }
++    if (!backend) {
++        inactive("no-sycl-gpu-backend");
++        return;
++    }
++    auto buft = ggml_backend_get_default_buffer_type(backend);
++    // CPU GET_ROWS uses this exact native Q8 -> F32 conversion. The SYCL Q8
++    // GET_ROWS path rounds through half with GGML_SYCL_F16, so do not use it here.
++    const auto * traits = ggml_get_type_traits(GGML_TYPE_Q8_0);
++    const ggml_to_float_t to_float = traits->to_float;
++    const size_t chunk_limit = size_t(16) << 20;
++    const size_t device_limit = size_t(3) << 30;
++    if (!to_float || source->ne[0] <= 0 || source->ne[1] <= 0 ||
++            source->ne[0] % traits->blck_size != 0 ||
++            uint64_t(source->ne[0]) > chunk_limit / sizeof(float)) {
++        inactive("unsupported-cpu-row-conversion");
++        return;
++    }
++    const size_t row_bytes = size_t(source->ne[0]) * sizeof(float);
++    // The pinned SYCL allocator may use host USM for >=4 GiB (2 MiB rounded).
++    // Keep the F32 table <=3 GiB including padding, well below that threshold.
++    if (ggml_backend_buft_is_host(buft) || ggml_nbytes(source) == 0 ||
++            uint64_t(source->ne[1]) > device_limit / row_bytes) {
++        inactive("unsupported-device-allocation");
++        return;
++    }
++    ggml_context_ptr ctx(ggml_init({ggml_tensor_overhead(), nullptr, true}));
++    if (!ctx) {
++        throw std::runtime_error("LiliCorr device embedding metadata allocation failed");
++    }
++    auto * copy = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_F32, source->ne[0], source->ne[1]);
++    ggml_set_name(copy, "lilicorr.shared_token_embd");
++    if (ggml_backend_buft_get_alloc_size(buft, copy) > device_limit) {
++        inactive("unsupported-device-allocation");
++        return;
++    }
++    {
++        ggml_context_ptr probe(ggml_init({2 * ggml_tensor_overhead(), nullptr, true}));
++        if (!probe) {
++            throw std::runtime_error("LiliCorr device embedding probe allocation failed");
++        }
++        auto * ids = ggml_new_tensor_1d(probe.get(), GGML_TYPE_I32, 1);
++        auto * rows = ggml_get_rows(probe.get(), copy, ids);
++        if (!ggml_backend_dev_supports_op(ggml_backend_get_device(backend), rows)) {
++            inactive("get-rows-unsupported");
++            return;
++        }
++    }
++    const size_t ncols = size_t(source->ne[0]);
++    const size_t nrows = size_t(source->ne[1]);
++    const size_t chunk_rows = std::min(nrows, chunk_limit / row_bytes);
++    // Scratch outlives buffer cleanup: an exceptional upload/fence can leave
++    // work to drain on the default queue before this host storage is released.
++    std::vector<float> scratch(chunk_rows * ncols);
++    ggml_backend_buffer_ptr buffer(ggml_backend_alloc_ctx_tensors_from_buft(ctx.get(), buft));
++    if (!buffer) {
++        // No silent OOM fallback: a failed candidate must not be timed as optimized.
++        throw std::runtime_error("LiliCorr device embedding buffer allocation failed");
++    }
++    ggml_backend_buffer_set_usage(buffer.get(), GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
++    // Fresh F32 metadata/allocation has no Q8 reorder state. Only GET_ROWS uses it.
++    const auto * src = static_cast<const uint8_t *>(source->data);
++    for (size_t row = 0; row < nrows; row += chunk_rows) {
++        const size_t count = std::min(chunk_rows, nrows - row);
++        for (size_t i = 0; i < count; ++i) {
++            to_float(src + (row + i) * source->nb[1], scratch.data() + i * ncols, source->ne[0]);
++        }
++        const size_t offset = row * row_bytes;
++        const size_t bytes = count * row_bytes;
++        uint32_t expected = 0, ready = 0;
++        memcpy(&expected, scratch.data() + count * ncols - 1, sizeof(expected));
++        ggml_backend_tensor_set(copy, scratch.data(), offset, bytes);
++        // set_tensor may stage async on the default buffer queue, distinct from
++        // backend_synchronize's compute queue. A blocking get on that in-order
++        // default queue fences ALL this chunk's writes before scratch reuse/free.
++        ggml_backend_tensor_get(copy, &ready, offset + bytes - sizeof(ready), sizeof(ready));
++        if (ready != expected) {
++            throw std::runtime_error("LiliCorr device embedding upload failed");
++        }
++    }
++    lilicorr_embd_ctx = std::move(ctx);
++    lilicorr_embd_buf = std::move(buffer);
++    cparams.lilicorr_tok_embd = copy;
++    LLAMA_LOG_INFO("lilicorr_device_embedding: active backend=%s buffer=%s source_type=%s source_bytes=%zu type=%s tensor_bytes=%zu buffer_bytes=%zu\n",
++            ggml_backend_name(backend), ggml_backend_buffer_name(lilicorr_embd_buf.get()),
++            ggml_type_name(source->type), ggml_nbytes(source),
++            ggml_type_name(copy->type), ggml_nbytes(copy), ggml_backend_buffer_get_size(lilicorr_embd_buf.get()));
+--- a/src/llama-context.h
++++ b/src/llama-context.h
+@@ -303,0 +304,6 @@
++    void init_lilicorr_device_embedding();
++    // Declared before memory/scheduler/graphs: they die first, after synchronize().
++    // Buffer dies before its tensor metadata, including on constructor exceptions.
++    ggml_context_ptr lilicorr_embd_ctx;
++    ggml_backend_buffer_ptr lilicorr_embd_buf;
++
+--- a/src/llama-cparams.h
++++ b/src/llama-cparams.h
+@@ -69,0 +70,3 @@
++
++    // Private, context-owned LiliCorr input table; never changes either model's weights.
++    struct ggml_tensor * lilicorr_tok_embd = nullptr;
+--- a/src/models/dflash.cpp
++++ b/src/models/dflash.cpp
+@@ -918,2 +918,3 @@
+-    // tok_embd from the target model (shared via ctx_other)
+-    auto * tok_embd = model.tok_embd;
++    // Both noise and lattice candidate GET_ROWS use the context-owned copy, if active.
++    // Otherwise retain the original shared target table; neither model is mutated.
++    auto * tok_embd = model.tok_embd ? model.tok_embd : cparams.lilicorr_tok_embd;
