@@ -1,0 +1,64 @@
+--- a/ggml/src/ggml-sycl/mmvq.cpp
++++ b/ggml/src/ggml-sycl/mmvq.cpp
+@@ -15,6 +15,51 @@
+     return vec_dot_iq2_xxs_q8_1(vbq, bq8_1, iqs, iq2xxs_grid, ksigns_iq2xs, kmask_iq2xs);
+ }
+ 
++// Private n==4 path: packed integer dot with two independent accumulators; keep XXS signs, scales and FP order.
++static __dpct_inline__ float vec_dot_iq2_xxs_q8_1_moe_n4_acc2(const void * __restrict__ vbq,
++                                                               const block_q8_1 * __restrict__ bq8_1,
++                                                               const int & iqs) {
++#if QK_K == 256
++    const block_iq2_xxs * bq2 = (const block_iq2_xxs *) vbq;
++    const int ib32 = iqs;
++    const uint16_t * q2 = bq2->qs + 4*ib32;
++    const uint8_t * aux8 = (const uint8_t *) q2;
++    const int8_t * q8 = bq8_1[ib32].qs;
++    uint32_t aux32 = q2[2] | (q2[3] << 16);
++    int sumi0 = 0;
++    int sumi1 = 0;
++    for (int l = 0; l < 4; ++l) {
++        const uint64_t grid = iq2xxs_grid[aux8[l]];
++        const uint8_t signs = ksigns_iq2xs[aux32 & 127];
++        const uint32_t signs0 = iq_sign_mask(signs);
++        const uint32_t signs1 = iq_sign_mask(signs >> 4);
++        // Grid bytes are {8,25,43}: per-byte negation cannot carry into a neighbor.
++        const int grid_l = ((uint32_t)grid ^ signs0) + (signs0 & 0x01010101);
++        const int grid_h = ((uint32_t)(grid >> 32) ^ signs1) + (signs1 & 0x01010101);
++        // Signed inputs select signed-byte extension. Copy avoids alias/alignment casts.
++        int q8_l, q8_h;
++        memcpy(&q8_l, q8, sizeof(q8_l));
++        memcpy(&q8_h, q8 + 4, sizeof(q8_h));
++        if (l < 2) {
++            sumi0 = dpct::dp4a(grid_l, q8_l, sumi0);
++            sumi0 = dpct::dp4a(grid_h, q8_h, sumi0);
++        } else {
++            sumi1 = dpct::dp4a(grid_l, q8_l, sumi1);
++            sumi1 = dpct::dp4a(grid_h, q8_h, sumi1);
++        }
++        q8 += 8;
++        aux32 >>= 7;
++    }
++    const int sumi = sumi0 + sumi1;
++    // |sumi| <= 32 * 43 * 128 = 176128; no integer overflow or FP regrouping.
++    const float d = (float)bq2->d * (0.5f + aux32) * bq8_1[ib32].ds[0] * 0.25f;
++    return d * sumi;
++#else
++    assert(false);
++    return 0.f;
++#endif
++}
++
+ static __dpct_inline__ float vec_dot_iq2_xs_q8_1_moe(const void * __restrict__ vbq,
+                                                      const block_q8_1 * __restrict__ bq8_1,
+                                                      const int & iqs) {
+@@ -3083,7 +3128,7 @@
+             sycl::nd_range<3>(block_nums * block_dims, block_dims),
+             [=](sycl::nd_item<3> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
+                 const size_t token = item.get_group(0);
+-                mul_mat_vec_q_moe<QK_K, QI2_XXS/2, block_iq2_xxs, VDR_IQ2_XXS_Q8_1_MMVQ, vec_dot_iq2_xxs_q8_1_moe>(
++                mul_mat_vec_q_moe<QK_K, QI2_XXS/2, block_iq2_xxs, VDR_IQ2_XXS_Q8_1_MMVQ, vec_dot_iq2_xxs_q8_1_moe_n4_acc2>(
+                     vx_base, (const char *) vy + token * src1_token_stride,
+                     (float *) ((char *) dst_base + token * dst_token_stride),
+                     (const int32_t *) ((const char *) ids_dev + token * ids_token_stride),
+                     ncols, nrows, expert_weight_stride, dst_row_stride, src1_row_stride, item);
