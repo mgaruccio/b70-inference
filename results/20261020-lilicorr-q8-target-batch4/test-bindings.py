@@ -142,7 +142,10 @@ class NativeMetadataTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.n = R['N']
-        raw = HERE.parent / '20261020-lilicorr-iq2-packed/native-perf-r1/VSPF-W3a/raw/base'
+        fixture_roots = [HERE.parent / name / 'native-perf-r1/VSPF-W3a/raw/base'
+                         for name in ('20261020-lilicorr-iq2-packed', '20261020-lilicorr-iq2-packed-r2')]
+        raw = next(path for path in fixture_roots if (path / 'verify-singletons-q8.log.gz').is_file()
+                   or (path / 'verify-singletons-q8.log').is_file())
         def read_fixture(name):
             path = raw / (name + '.gz')
             if path.exists():

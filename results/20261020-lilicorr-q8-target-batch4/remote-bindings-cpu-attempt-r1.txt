@@ -1,0 +1,36 @@
+setUpClass (__main__.NativeMetadataTests) ... ERROR
+test_acceptance_is_exact (__main__.RuntimeTests.test_acceptance_is_exact) ... ok
+test_build_evidence_couples_current_source_and_binaries (__main__.RuntimeTests.test_build_evidence_couples_current_source_and_binaries) ... ok
+test_exact_container_identity_environment_mounts_and_no_rewriting (__main__.RuntimeTests.test_exact_container_identity_environment_mounts_and_no_rewriting) ... ok
+test_independent_reread_uses_private_native_dispatch_only_for_w3 (__main__.RuntimeTests.test_independent_reread_uses_private_native_dispatch_only_for_w3) ... ok
+test_native_dispatch_keeps_frozen_gates_and_requires_actual_batch (__main__.RuntimeTests.test_native_dispatch_keeps_frozen_gates_and_requires_actual_batch) ... ok
+test_private_globals_and_role_isolation (__main__.RuntimeTests.test_private_globals_and_role_isolation) ... ok
+test_real_argv_transform_is_reversible_and_fail_closed (__main__.RuntimeTests.test_real_argv_transform_is_reversible_and_fail_closed) ... ok
+test_frozen_renderer_and_actual_postcheck (__main__.SourceBuildTests.test_frozen_renderer_and_actual_postcheck) ... ok
+test_seed_cli_is_unwrapped_actual_map (__main__.SourceBuildTests.test_seed_cli_is_unwrapped_actual_map) ... ok
+test_source_build_graph_and_exit_records_are_mandatory (__main__.SourceBuildTests.test_source_build_graph_and_exit_records_are_mandatory) ... ok
+test_three_seed_files_five_original_files_one_library (__main__.SourceBuildTests.test_three_seed_files_five_original_files_one_library) ... ok
+test_whole_source_drift_and_protected_library_fail_closed (__main__.SourceBuildTests.test_whole_source_drift_and_protected_library_fail_closed) ... ok
+
+======================================================================
+ERROR: setUpClass (__main__.NativeMetadataTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261020-lilicorr-q8-target-batch4/test-bindings.py", line 152, in setUpClass
+    cls.original = read_fixture('verify-singletons-q8.log')
+                   ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mike/b70-evals/20261020-lilicorr-q8-target-batch4/test-bindings.py", line 151, in read_fixture
+    return (raw / name).read_text()
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 787, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/mike/b70-evals/20261020-lilicorr-iq2-packed/native-perf-r1/VSPF-W3a/raw/base/verify-singletons-q8.log'
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.245s
+
+FAILED (errors=1)
