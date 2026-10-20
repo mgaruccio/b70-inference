@@ -1,0 +1,108 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -6233,6 +6233,44 @@
+     return true;
+ }
+ 
++// Called only after single2 eligibility and ALL singleton-view preflights.
++static bool ggml_sycl_mul_mat_id_iq2_batch4(
++    ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
++    const ggml_tensor * src1, const ggml_tensor * ids, ggml_tensor * dst)
++{
++    const int64_t n = src1->ne[2];
++    if (n < 2 || n > 4 || !ggml_is_contiguous(src1)) return false;
++    // The old n=2 path permits aliases; concurrent tokens must not write any input.
++    for (const ggml_tensor * t : {src0, src1, ids}) {
++        if (!ggml_sycl_verify_singletons_disjoint(ctx, t, dst)) return false;
++    }
++    // Eligibility already bounds ne10 padding and ne11*n (including quantizer int products).
++    const int padded_cols = GGML_PAD((int) src1->ne[0], MATRIX_ROW_PADDING);
++    const int qrows = (int) (src1->ne[1] * n);
++    const size_t bytes_per_qrow = (size_t) (padded_cols / QK8_1) * sizeof(block_q8_1);
++    // Private candidate: cap live scratch at 1 MiB, with room for pool look-ahead/alignment.
++    const size_t max_q8_bytes = std::min<size_t>(1u << 20,
++        ggml_backend_sycl_buffer_type_get_max_size(src1->buffer->buft) / 2);
++    if (bytes_per_qrow > max_q8_bytes / qrows) return false;
++
++    const queue_ptr stream = ctx.stream();
++    ggml_sycl_pool_alloc<char> src1_q8_alloc(ctx.pool(), (size_t) qrows * bytes_per_qrow);
++    char * src1_ddq = src1_q8_alloc.get();
++    if (!src1_ddq) return false; // No enqueue has occurred.
++    // Same per-row quantizer, then GEMV on the same existing in-order queue.
++    quantize_row_q8_1_sycl<quantize_q8_1>(
++        (const float *) src1->data, src1_ddq, (int) src1->ne[0], qrows, padded_cols, stream);
++    ggml_sycl_mul_mat_vec_q_id_iq2_batch4(
++        src0->data, src1_ddq, (const int32_t *) ids->data, (float *) dst->data,
++        (int) src1->ne[0], (int) src0->ne[1], (int) ids->ne[0], (int) n,
++        src0->nb[2], dst->nb[1], src1->ne[1] == 1 ? 0 : bytes_per_qrow,
++        (size_t) src1->ne[1] * bytes_per_qrow, ids->nb[1], dst->nb[2], stream);
++    // One physical GEMV launch: report parent dimensions/strides, never singleton records.
++    bolt_route_record("MOE_IQ2_BATCH4_MMVQ_PLAIN_Q8_1",
++                      ctx, src0, src1, dst, ctx.device, bolt_route_src1_precision(dst), -1, nullptr, ids, -1, -1);
++    return true;
++}
++
+ static bool ggml_sycl_mul_mat_id_iq2_single2(
+     ggml_backend_sycl_context & ctx, const ggml_tensor * src0,
+     const ggml_tensor * src1, const ggml_tensor * ids, ggml_tensor * dst)
+@@ -6256,6 +6294,7 @@
+             !ggml_sycl_iq2_single2_range(ctx, &ids_token[t]) ||
+             !ggml_sycl_iq2_single2_range(ctx, &dst_token[t])) return false;
+     }
++    if (ggml_sycl_mul_mat_id_iq2_batch4(ctx, src0, src1, ids, dst)) return true;
+     for (int64_t t = 0; t < n; ++t) {
+         // ctx.stream()/pool() share the existing in-order queue; scratch reuse is ordered.
+         // The helper extracts pointers/scalars, not descriptor references, for kernels.
+--- a/ggml/src/ggml-sycl/mmvq.cpp
++++ b/ggml/src/ggml-sycl/mmvq.cpp
+@@ -3067,6 +3067,31 @@
+     });
+ }
+ 
++// Plain IQ2 only. Each token calls the unchanged singleton arithmetic with its own pointers.
++void ggml_sycl_mul_mat_vec_q_id_iq2_batch4(
++    const void * vx_base, const void * vy, const int32_t * ids_dev, float * dst_base,
++    const int ncols, const int nrows, const int n_experts_used, const int n_tokens,
++    const size_t expert_weight_stride, const size_t dst_row_stride, const size_t src1_row_stride,
++    const size_t src1_token_stride, const size_t ids_token_stride, const size_t dst_token_stride,
++    dpct::queue_ptr stream) {
++    GGML_ASSERT(n_tokens >= 2 && n_tokens <= 4);
++    const int            block_num_y = (nrows + GGML_SYCL_MMV_Y - 1) / GGML_SYCL_MMV_Y;
++    const sycl::range<3> block_nums((unsigned) n_tokens, (unsigned) n_experts_used, (unsigned) block_num_y);
++    const sycl::range<3> block_dims(1, GGML_SYCL_MMV_Y, WARP_SIZE);
++    stream->submit([&](sycl::handler & cgh) {
++        cgh.parallel_for(
++            sycl::nd_range<3>(block_nums * block_dims, block_dims),
++            [=](sycl::nd_item<3> item) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {
++                const size_t token = item.get_group(0);
++                mul_mat_vec_q_moe<QK_K, QI2_XXS/2, block_iq2_xxs, VDR_IQ2_XXS_Q8_1_MMVQ, vec_dot_iq2_xxs_q8_1_moe>(
++                    vx_base, (const char *) vy + token * src1_token_stride,
++                    (float *) ((char *) dst_base + token * dst_token_stride),
++                    (const int32_t *) ((const char *) ids_dev + token * ids_token_stride),
++                    ncols, nrows, expert_weight_stride, dst_row_stride, src1_row_stride, item);
++            });
++    });
++}
++
+ bool ggml_sycl_mul_mat_vec_q_id(
+     enum ggml_type     src0_type,
+     const void *       vx_base,
+--- a/ggml/src/ggml-sycl/mmvq.hpp
++++ b/ggml/src/ggml-sycl/mmvq.hpp
+@@ -45,6 +45,16 @@
+     size_t             dst_row_stride,       // bytes between dst rows
+     size_t             src1_row_stride,      // 0 = shared src1, else per-expert stride in bytes
+     dpct::queue_ptr    stream);
++
++// Preflighted plain IQ2_XXS, 2..4 tokens; vy is plain Q8_1. All strides are bytes.
++// Caller must validate ranges, input/output disjointness and all singleton layouts before enqueue.
++// src1_row_stride is zero for shared activations. Token strides preserve IDs/dst parent layout.
++void ggml_sycl_mul_mat_vec_q_id_iq2_batch4(
++    const void * vx_base, const void * vy, const int32_t * ids_dev, float * dst_base,
++    const int ncols, const int nrows, const int n_experts_used, const int n_tokens,
++    const size_t expert_weight_stride, const size_t dst_row_stride, const size_t src1_row_stride,
++    const size_t src1_token_stride, const size_t ids_token_stride, const size_t dst_token_stride,
++    dpct::queue_ptr stream);
+ 
+ // Reorder (SoA) variant of the fused MoE expert GEMV.
+ // vx_base: each expert slice (stride expert_weight_stride == src0->nb[2]) is a self-contained reorder/SoA layout.

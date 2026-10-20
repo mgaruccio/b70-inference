@@ -1,0 +1,55 @@
+CPU/source checks only; no compiler, GPU, or remote runtime.
+/home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-batch4
+Linux 7.2.9-2-cachyos x86_64 GNU/Linux
+Python 3.14.7
+git version 2.56.0
+$ python3 -B results/20261020-lilicorr-iq2-batch4/test-candidate.py
+test_all_original_code_and_fallbacks_unchanged (__main__.CandidateTests.test_all_original_code_and_fallbacks_unchanged) ... ok
+test_geometry_and_iq2_specialization (__main__.CandidateTests.test_geometry_and_iq2_specialization) ... ok
+test_preflight_and_enqueue_order (__main__.CandidateTests.test_preflight_and_enqueue_order) ... ok
+test_quantizer_flattened_row_offsets_and_padding (__main__.CandidateTests.test_quantizer_flattened_row_offsets_and_padding) ... ok
+test_scratch_cap_and_integer_boundaries (__main__.CandidateTests.test_scratch_cap_and_integer_boundaries) ... ok
+test_source_pins (__main__.CandidateTests.test_source_pins) ... ok
+test_token_offsets_ids_duplicates_and_canaries (__main__.CandidateTests.test_token_offsets_ids_duplicates_and_canaries) ... ok
+test_truthful_parent_route_and_frozen_parser_rejection (__main__.CandidateTests.test_truthful_parent_route_and_frozen_parser_rejection) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.351s
+
+OK
+
+Source-parser diagnostic observation (not a compiler check):
+Tool calls, from /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-batch4:
+  ast_grep {kind:"ERROR", language:"cpp", paths:[".scratch/base/ggml/src/ggml-sycl/ggml-sycl.cpp", ".scratch/base/ggml/src/ggml-sycl/mmvq.cpp", ".scratch/base/ggml/src/ggml-sycl/mmvq.hpp"], maxResults:30}
+  ast_grep {kind:"ERROR", language:"cpp", paths:[".scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp", ".scratch/candidate/ggml/src/ggml-sycl/mmvq.cpp", ".scratch/candidate/ggml/src/ggml-sycl/mmvq.hpp"], maxResults:30}
+Both reported 23 ERROR nodes. The same excerpts were observed in baseline and candidate;
+there were no new ERROR nodes in the additions. All observed nodes, base -> candidate line:
+mmvq.cpp 12 -> 12: static __dpct_inline__ float vec_dot_iq2_xxs_q8_1_moe(const void * __restrict__ vbq,
+mmvq.cpp 18 -> 18: static __dpct_inline__ float vec_dot_iq2_xs_q8_1_moe(const void * __restrict__ vbq,
+mmvq.cpp 24 -> 24: static __dpct_inline__ float vec_dot_iq3_xxs_q8_1_moe(const void * __restrict__ vbq,
+mmvq.cpp 30 -> 30: static __dpct_inline__ float vec_dot_iq3_s_q8_1_moe(const void * __restrict__ vbq,
+mmvq.cpp 36 -> 36: static __dpct_inline__ float vec_dot_iq1_s_q8_1_moe(const void * __restrict__ vbq,
+mmvq.cpp 561 -> 561: static __dpct_inline__ float vec_dot_iq3_s_q8_1_adapter(
+ggml-sycl.cpp 232 -> 232: "BOLT_ROUTE route=%s weight=%s aux_weight=%s op=%s op_id=%" PRId32 " dst_name=%s "
+ggml-sycl.cpp 790 -> 790: GGML_API void ggml_backend_sycl_get_gpu_list(int *id_list, int max_len) try {
+ggml-sycl.cpp 2467 -> 2467: __dpct_inline__ static void
+ggml-sycl.cpp 3178 -> 3178: GGML_TENSOR_LOCALS_1(int64_t, ne, src, ne);
+ggml-sycl.cpp 3179 -> 3179: GGML_TENSOR_LOCALS(int64_t, nb, src, nb);
+ggml-sycl.cpp 3333 -> 3333: else
+ggml-sycl.cpp 3381 -> 3381: else
+ggml-sycl.cpp 3936 -> 3936: GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne);
+ggml-sycl.cpp 3938 -> 3938: GGML_TENSOR_LOCALS(int64_t, ne1, src1, ne);
+ggml-sycl.cpp 4595 -> 4595: else
+ggml-sycl.cpp 6041 -> 6041: __dpct_inline__ static void k_copy_src1_to_contiguous(
+ggml-sycl.cpp 6064 -> 6064: __dpct_inline__ static void k_copy_dst_from_contiguous(
+ggml-sycl.cpp 6321 -> 6360: const queue_ptr stream = ctx.stream();
+ggml-sycl.cpp 6990 -> 7029: GGML_API void ggml_backend_sycl_get_device_description(int device, char *description,
+ggml-sycl.cpp 7422 -> 7461: } else
+ggml-sycl.cpp 7918 -> 7957: #ifdef GGML_SYCL_HAS_BF16
+ggml-sycl.cpp 7920 -> 7959: #endif
+
+Expected qualification blocker exercised by test_truthful_parent_route_and_frozen_parser_rejection:
+  Frozen native.check_routes([synthetic_parent_batch_record], ('iq2',0,4,1,0,1), 'wide')
+  raises AssertionError((('iq2',0,4,1,0,1), 'wide', ['MOE_IQ2_BATCH4_MMVQ_PLAIN_Q8_1'])).
+No numerical comparisons or negative-route guards were modified. This rejection is expected,
+not a native run and not a gate waiver. No compiler/native/GPU/public-SSE execution occurred.
