@@ -177,7 +177,7 @@ def main():
     if args.built:
         result = proof()
     elif args.seed_sources:
-        result = dict(seed=source_map(_assert_source_root(SEED)))
+        result = source_map(_assert_source_root(SEED))
     else:
         result = check_sources(PARENT, CANDIDATE if args.candidate_sources else None)
     print(json.dumps(result, sort_keys=True, indent=2))

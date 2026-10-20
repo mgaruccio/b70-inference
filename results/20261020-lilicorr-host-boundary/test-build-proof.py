@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """CPU-only guards for the host-boundary source proof and 105-object build slice."""
 import gzip
+import contextlib
+import io
 import importlib.util
 import json
 import shutil
@@ -126,6 +128,22 @@ class BuildProofTests(unittest.TestCase):
         self.assertEqual(seed['changed_relative_to_seed'], [ACTUAL.HELPER])
         self.assertEqual(ACTUAL.source_map(self.seed)[ACTUAL.HELPER], FIXTURE.PINS['device_diagnostic'][ACTUAL.HELPER])
         self.assertEqual(ACTUAL.source_map(self.candidate)[ACTUAL.HELPER], FIXTURE.PINS['diagnostic'][ACTUAL.HELPER])
+
+    def test_seed_sources_cli_emits_the_unwrapped_map_consumed_by_proof(self):
+        saved = sys.argv
+        output = io.StringIO()
+        try:
+            sys.argv = ['source-proof.py', '--seed-sources']
+            with contextlib.redirect_stdout(output):
+                ACTUAL.main()
+        finally:
+            sys.argv = saved
+        emitted = json.loads(output.getvalue())
+        consumed = ACTUAL.check_seed(self.seed, self.candidate)['seed']
+        self.assertEqual(emitted, consumed)
+        self.assertNotIn('seed', emitted)
+        self.assertTrue(all(isinstance(name, str) and isinstance(value, str)
+                            for name, value in emitted.items()))
 
     def test_full_map_drift_extra_missing_and_source_escape_rejected(self):
         extra_name = 'unlisted-source.cpp'
