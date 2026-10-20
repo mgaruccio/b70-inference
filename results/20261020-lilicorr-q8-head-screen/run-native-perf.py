@@ -14,9 +14,16 @@ R = runpy.run_path(str(QUALIFIED_CASE / 'run-performance.py'))
 # Keep the qualified target runner's source/build/protected-config ancestry and
 # reference root.  Only the output root, container prefix, and native package
 # are new for this bounded screen.
-QUALIFIED_HERE = R['HERE']
-QUALIFIED_ROOT = R['ROOT']
-QUALIFIED_OWN_FILES = tuple(R['OWN_FILES'])
+QUALIFIED_GLOBALS = R['bind'].__globals__
+assert R['configure'].__globals__ is QUALIFIED_GLOBALS
+assert R['main'].__globals__ is QUALIFIED_GLOBALS
+QUALIFIED_HERE = QUALIFIED_GLOBALS['HERE']
+QUALIFIED_ROOT = QUALIFIED_GLOBALS['ROOT']
+QUALIFIED_QUALIFIER_BIND = QUALIFIED_GLOBALS['QUALIFIER_BIND']
+QUALIFIED_OWN_FILES = tuple(QUALIFIED_GLOBALS['OWN_FILES'])
+SOURCE_PROOF_GLOBALS = R['S']['proof'].__globals__
+SOURCE_PROOF_HERE = SOURCE_PROOF_GLOBALS['HERE']
+SOURCE_PROOF_ROOT = SOURCE_PROOF_GLOBALS['ROOT']
 ROOT = Path('/home/mike/b70-evals/20261020-lilicorr-q8-head-screen')
 OUT = ROOT / 'native-perf-r1'
 PREFIX = 'bolt-lilicorr-q8-head-screen-native-perf-r1-'
@@ -25,18 +32,26 @@ PACKAGE_DEST = '/q8-head-screen'
 PACKAGE_BIND = str(HERE) + ':' + PACKAGE_DEST + ':ro'
 PACKAGE_MOUNT = dict(Type='bind', Source=str(HERE), Destination=PACKAGE_DEST,
                      Mode='ro', RW=False, Propagation='rprivate')
-BASE_QUALIFIER_BIND = R['QUALIFIER_BIND']
+BASE_QUALIFIER_BIND = QUALIFIED_QUALIFIER_BIND
 OWN_FILES = ('run-native-perf.py', 'test-native-perf.py',
              'native-perf-cases.txt', 'NATIVE_PERF_PLAN.md')
 # The qualified target package remains the read-only source of native-batch4.py;
 # this package contributes only the case file/checks and is mounted separately.
-R['OUT'] = OUT
-R['PREFIX'] = PREFIX
-R['OWN_FILES'] = QUALIFIED_OWN_FILES + tuple(str(HERE / name) for name in OWN_FILES)
+QUALIFIED_GLOBALS.update(
+    OUT=OUT,
+    PREFIX=PREFIX,
+    OWN_FILES=QUALIFIED_OWN_FILES + tuple(str(HERE / name) for name in OWN_FILES),
+)
+assert QUALIFIED_GLOBALS['HERE'] == QUALIFIED_HERE
+assert QUALIFIED_GLOBALS['ROOT'] == QUALIFIED_ROOT
+assert QUALIFIED_GLOBALS['QUALIFIER_BIND'] == QUALIFIED_QUALIFIER_BIND
 assert R['HERE'] == QUALIFIED_HERE
 assert R['ROOT'] == QUALIFIED_ROOT
 assert R['QUALIFIER_BIND'] == BASE_QUALIFIER_BIND
-
+assert SOURCE_PROOF_GLOBALS['HERE'] == SOURCE_PROOF_HERE
+assert SOURCE_PROOF_GLOBALS['ROOT'] == SOURCE_PROOF_ROOT
+assert R['S']['HERE'] == SOURCE_PROOF_HERE
+assert R['S']['ROOT'] == SOURCE_PROOF_ROOT
 CASE_NAMES = ('q8-head-n1', 'q8-head-n4', 'q8-head-n8')
 
 # This is intentionally a source-supported diagnostic, not a claim that a UR

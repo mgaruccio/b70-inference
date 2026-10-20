@@ -150,6 +150,63 @@ class NativePerfTests(unittest.TestCase):
         reverse[-1] = original[-1]
         self.assertEqual(reverse, original)
 
+    def test_live_binding_retargets_output_prefix_and_hashes_actual_package_without_remote_processes(self):
+        qualified = P['R']['bind'].__globals__
+        self.assertIs(qualified, P['R']['configure'].__globals__)
+        self.assertIs(qualified, P['R']['main'].__globals__)
+        self.assertEqual(qualified['OUT'], P['OUT'])
+        self.assertEqual(qualified['PREFIX'], P['PREFIX'])
+        self.assertEqual(qualified['HERE'], P['QUALIFIED_HERE'])
+        self.assertEqual(qualified['ROOT'], P['QUALIFIED_ROOT'])
+        self.assertEqual(qualified['QUALIFIER_BIND'], P['BASE_QUALIFIER_BIND'])
+        source_globals = P['R']['S']['proof'].__globals__
+        source_roots = (source_globals['HERE'], source_globals['ROOT'])
+
+        # Binding is a local contract operation.  Keep the test from silently
+        # turning into Docker/SSH execution while exercising the real bind().
+        blocked = AssertionError('remote process launched by CPU binding test')
+        with patch.object(P['subprocess'], 'run', side_effect=blocked), \
+                patch.object(P['subprocess'], 'Popen', side_effect=blocked):
+            runtime, c, capture, cls = P['bind']()
+
+        self.assertEqual(c['OUT'], P['OUT'])
+        self.assertEqual(c['PREFIX'], P['PREFIX'])
+        self.assertIs(capture.__globals__['C'], c)
+        self.assertTrue(issubclass(cls, runtime['Runtime']))
+        self.assertEqual((source_globals['HERE'], source_globals['ROOT']), source_roots)
+
+        # The completed candidate GGUF and baseline pin are inference-host-only
+        # inputs.  Replace only those unavailable proof reads; the qualified
+        # adapter hash function still hashes this package's real files.
+        adapter_hashes = c['adapter_code_hashes']
+        drafter_hashes = adapter_hashes.__closure__[0].cell_contents
+        inherited_hashes = drafter_hashes.__closure__[0].cell_contents()
+        drafter_contract = drafter_hashes.__closure__[1].cell_contents
+        drafter_globals = drafter_hashes.__globals__
+        original_load = drafter_contract['load']
+
+        def load(path):
+            if str(path).endswith('/run-r3/adapter-code-hashes-before.json'):
+                return inherited_hashes
+            return original_load(path)
+
+        def remote_candidate_file_proof(*_args, **_kwargs):
+            return dict(path='remote-candidate-omitted', size_bytes=0,
+                        sha256='remote-candidate-omitted')
+
+        with patch.dict(drafter_contract, load=load), \
+                patch.dict(drafter_globals, candidate_file_proof=remote_candidate_file_proof):
+            hashes = adapter_hashes()
+
+        hashed_paths = {path for value in hashes.values() if isinstance(value, dict)
+                        for path in value}
+        expected = {str(HERE / name) for name in P['OWN_FILES']}
+        self.assertTrue(expected <= hashed_paths)
+        for path in expected:
+            self.assertEqual(next(value[path] for value in hashes.values()
+                                  if isinstance(value, dict) and path in value),
+                             c['sha'](Path(path)))
+
     def package_record(self):
         return dict(
             HostConfig=dict(Binds=['other:/keep:ro', P['PACKAGE_BIND']], ShmSize=123),
