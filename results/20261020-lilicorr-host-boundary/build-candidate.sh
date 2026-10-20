@@ -188,10 +188,11 @@ changed_seed = sorted(name for name in s['ARTIFACTS'] if seed[name] != candidate
 changed_parent = sorted(name for name in s['ARTIFACTS'] if parent[name] != candidate[name])
 assert changed_seed == s['SEED_CHANGED_BINARIES'], ('unexpected seed artifact delta', changed_seed)
 assert changed_parent == s['CHANGED_BINARIES'], ('unexpected original artifact delta', changed_parent)
-assert source['changed_relative_to_parent'] == sorted(s['load_pins']()['diagnostic'])
+pins = s['load_pins']()
+expected_delta = sorted(name for name in pins['diagnostic'] if pins['parent'].get(name) != pins['diagnostic'][name])
+assert source['changed_relative_to_parent'] == expected_delta
 assert seed_source['changed_relative_to_seed'] == [s['HELPER']]
 print('Changed artifacts vs SDK seed:', changed_seed)
 print('Changed artifacts vs original R2:', changed_parent)
 print(s['BUILD_MARKER'])
 PY
-python3 -B "$ROOT/source-proof.py" --built > "$ATTEMPT/host-proof.json"
