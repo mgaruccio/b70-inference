@@ -10,8 +10,8 @@
 +    const ggml_tensor * src1, const ggml_tensor * ids, ggml_tensor * dst)
 +{
 +    const int64_t n = src1->ne[2];
-+    if (n < 2 || n > 4 || !ggml_is_contiguous(src1)) return false;
-+    // The old n=2 path permits aliases; concurrent tokens must not write any input.
++    if (n != 4 || !ggml_is_contiguous(src1)) return false;
++    // Concurrent token outputs must not alias any parent input.
 +    for (const ggml_tensor * t : {src0, src1, ids}) {
 +        if (!ggml_sycl_verify_singletons_disjoint(ctx, t, dst)) return false;
 +    }

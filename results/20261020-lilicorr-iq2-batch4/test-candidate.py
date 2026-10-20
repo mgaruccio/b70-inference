@@ -75,7 +75,7 @@ class CandidateTests(unittest.TestCase):
     def test_preflight_and_enqueue_order(self):
         text = self.patched['ggml-sycl.cpp']
         self.assertIn('!ggml_sycl_iq2_single2_range(ctx, &dst_token[t])) return false;\n    }\n' + CALL, text)
-        self.assertIn('if (n < 2 || n > 4 || !ggml_is_contiguous(src1)) return false;', self.host)
+        self.assertIn('if (n != 4 || !ggml_is_contiguous(src1)) return false;', self.host)
         self.assertIn('for (const ggml_tensor * t : {src0, src1, ids}) {\n'
                       '        if (!ggml_sycl_verify_singletons_disjoint(ctx, t, dst)) return false;', self.host)
         enqueue = self.host.index('    quantize_row_q8_1_sycl<quantize_q8_1>(')

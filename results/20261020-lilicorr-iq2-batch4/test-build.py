@@ -95,6 +95,14 @@ class ModuleBuildTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             M['check_plan'](R['plan'] + '[106/106] unexpected action\n', objects, completed=True)
 
+    def test_plan_accepts_parallel_completion_order_without_changing_link_order(self):
+        objects = R['objects']
+        completed = '\n'.join(
+            f'[{i}/105] Building CXX object {name}'
+            for i, name in enumerate(reversed(objects), 1)) + '\n'
+        M['check_plan'](completed, objects, completed=True)
+        self.closure()
+
     def simulated_main(self, bad_plan=False, corrupt_protected=False, bad_query=False):
         """Exercise the driver boundary without Ninja, compiler, or a container."""
         calls = []

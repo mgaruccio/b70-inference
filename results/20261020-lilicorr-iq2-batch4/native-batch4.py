@@ -3,7 +3,7 @@
 
 The frozen native checker remains the authority for case enumeration, byte
 comparisons, and all non-batch routes.  This module only replaces its private
-route dispatcher for the six eligible wide IQ2 parent cases.
+route dispatcher for the two eligible four-token wide IQ2 parent cases.
 """
 import argparse
 import json
@@ -43,7 +43,7 @@ _ORIGINAL_CHECK_ROUTES = FROZEN['check_routes']
 
 def _eligible(key, col):
     kind, _, n, _, layout, _ = key
-    return (kind == 'iq2' and col == 'wide' and 2 <= n <= 4 and layout == 0
+    return (kind == 'iq2' and col == 'wide' and n == 4 and layout == 0
             and FROZEN['exact'](key))
 
 

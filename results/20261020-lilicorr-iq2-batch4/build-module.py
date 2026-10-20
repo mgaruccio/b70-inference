@@ -190,7 +190,9 @@ def check_plan(text, objects, completed=False):
             assert completed and not line.startswith('[') and 'Re-running CMake' not in line, line
     assert [number for number, _ in actions] == list(range(1, 106)), 'must rebuild all 105 objects'
     assert len({name for _, name in actions}) == 105
-    assert [name for _, name in actions] == objects, 'nonmodule, reordered, or missing build action'
+    # Independent compile completions may be reordered by Ninja's parallel scheduler.
+    # The exact linker order and each compile argv are pinned separately above.
+    assert {name for _, name in actions} == set(objects), 'nonmodule or missing build action'
 
 
 def file_map(root, names):

@@ -54,7 +54,7 @@ def _rewrite_routes(log, predicate, update=None, remove=False, duplicate=False):
 def _eligible_keys():
     return {
         key for key in FROZEN['cases']('iq2')
-        if key[2] in (2, 3, 4) and key[4] == 0 and FROZEN['exact'](key)
+        if key[2] == 4 and key[4] == 0 and FROZEN['exact'](key)
     }
 
 
