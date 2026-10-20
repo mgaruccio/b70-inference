@@ -49,3 +49,18 @@ The research/E2E gates were supplied by the lead before this slice. Primary sour
 Only after frozen capture and actual route evidence justify proceeding, the lead may build with frozen SDK `intel/deep-learning-essentials@sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0` (source SDK before nounset, no host installs). Lead correction requires all 105 module objects rebuilt because object lineage is unproven, even though two TUs directly change. Verify exact source patch and six-artifact comparison: only `libggml-sycl` may differ unless header dependencies precisely justify another delta.
 
 Then run the existing native IQ2/Q8 wide-versus-single-column **byte** comparisons, including all negative guards, strides, padding, aliases and canaries, with honest candidate-route qualification; then unchanged 100 public cases and 8 warm/24 measured A1/W3a/W3b/A2 public-SSE trials (short 55, long 8270; temperature 0, seed 42, cache false, max 128, ignore EOS). Exact outputs and W3 short 129/84, long 133/82 remain mandatory. Preserve independent original identity/source/health and sole-GPU restoration, retain failures/raw evidence, time with diagnostics off, and require a net win versus NoDraft before promotion. Native correctness, real negative cases, public E2E, artifact deltas, memory headroom, and speed are **all unresolved here**; no tolerances or waivers were introduced.
+
+## Clean candidate runner
+
+`run-performance.py` reuses the qualified Q8 lifecycle without changing its public payloads, startup/PID checks, or restoration. A1/A2 retain the original r2 source and checker. Only W3 receives the new `/src:ro` and read-only native qualifier; the serving argv and Docker environment remain unchanged. Native qualification may enable diagnostics before the original OFF boundary; serving must remain clean. Current source and six binary hashes must also match the completed build's existing records.
+
+On `inference-host`, only after the SDK build passes:
+
+```sh
+cd /home/mike/b70-evals/20261020-lilicorr-iq2-batch4
+python3 -B run-performance.py --lead-run-timing
+# Separate invocation after capture, including any failed capture:
+python3 -B run-performance.py --lead-after-timing-restore
+```
+
+The real journey is the existing exclusive-GPU A1/W3a/W3b/A2 HTTP/SSE run: native gates first, then 25 public checks per cell, existing warmups, and 24 timed requests using the declared short/long inputs above. Retain `candidate-r1/` raw requests, exchanges, native files, source/process evidence, analysis, and independent restoration. Require exact outputs, exact acceptance counts, no diagnostics during serving, and original identity/source/health/sole ownership afterward. Existing cleanup restores the original service even on failure. The local `test-performance.py` exercises only CPU preparation; it cannot establish a GPU, public-fidelity, or speed pass.
