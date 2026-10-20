@@ -1,0 +1,90 @@
+{
+  "native_only": true,
+  "speed_claim": false,
+  "rows": [
+    {
+      "cell": "VSPF-W3a",
+      "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-timing-r1",
+      "profile": "off",
+      "fusion": 0,
+      "exit_code": 0,
+      "native": {
+        "passed": true,
+        "checks": {
+          "exit_zero": true,
+          "tests_82": true,
+          "floats_82": true,
+          "indices_82": true,
+          "allocator_5": true,
+          "consumer_2": true,
+          "fused_calls": true,
+          "no_skip": true
+        }
+      },
+      "log": "native-router-off-fusion0.log"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-timing-r1",
+      "profile": "off",
+      "fusion": 1,
+      "exit_code": 0,
+      "native": {
+        "passed": true,
+        "checks": {
+          "exit_zero": true,
+          "tests_82": true,
+          "floats_82": true,
+          "indices_82": true,
+          "allocator_5": true,
+          "consumer_2": true,
+          "fused_calls": true,
+          "no_skip": true
+        }
+      },
+      "log": "native-router-off-fusion1.log"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-timing-r1",
+      "profile": "on",
+      "fusion": 0,
+      "exit_code": 1,
+      "native": {
+        "passed": false,
+        "checks": {
+          "exit_zero": false,
+          "tests_82": false,
+          "floats_82": false,
+          "indices_82": false,
+          "allocator_5": true,
+          "consumer_2": true,
+          "fused_calls": true,
+          "no_skip": true
+        }
+      },
+      "log": "native-router-on-fusion0.log"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-device-timing-r1",
+      "profile": "on",
+      "fusion": 1,
+      "exit_code": 1,
+      "native": {
+        "passed": false,
+        "checks": {
+          "exit_zero": false,
+          "tests_82": false,
+          "floats_82": false,
+          "indices_82": false,
+          "allocator_5": true,
+          "consumer_2": true,
+          "fused_calls": true,
+          "no_skip": true
+        }
+      },
+      "log": "native-router-on-fusion1.log"
+    }
+  ]
+}

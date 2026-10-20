@@ -1,0 +1,16 @@
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+lspci -Dnn -s 0000:0b:00.0
+docker inspect bolt-lilicorr-native-router-controls-r1-vspf-a1
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261020-lilicorr-device-timing/native-router-controls.py", line 155, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/b70-evals/20261020-lilicorr-device-timing/native-router-controls.py", line 150, in main
+    control.verify_restored(OUT / 'independent-original-restoration.json')
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-singletons-w3-dev-timing/controller.py", line 346, in verify_restored
+    raise C['InfraFailure']('restoration/qualified proof failed: ' + repr(errors))
+<run_path>.InfraFailure: restoration/qualified proof failed: [{'check': 'stopped_cells', 'error': 'AssertionError()'}]

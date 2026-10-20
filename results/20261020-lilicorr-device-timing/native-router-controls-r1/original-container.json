@@ -1,0 +1,299 @@
+{
+  "Id": "7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e",
+  "Created": "2026-10-17T01:23:44.982559338Z",
+  "Path": "bash",
+  "Args": [
+    "-lc",
+    "set -eo pipefail; source /opt/intel/oneapi/setvars.sh --force; export LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_OPT=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p nvfp4_reorder=1 2>&1 | tee /tmp/legacy-opt1.log; grep -Fx '  56/56 tests passed' /tmp/legacy-opt1.log; if grep -Ei 'not supported|skipping large tensors' /tmp/legacy-opt1.log; then exit 1; fi; grep -F 'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl' /tmp/legacy-opt1.log > /dev/null; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_OPT=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p nvfp4_reorder=1 2>&1 | tee /tmp/legacy-opt0.log; grep -Fx '  56/56 tests passed' /tmp/legacy-opt0.log; if grep -Ei 'not supported|skipping large tensors' /tmp/legacy-opt0.log; then exit 1; fi; if grep -F 'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl' /tmp/legacy-opt0.log; then exit 1; fi; echo MOE_REDUCE_NATIVE_FUSION0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^MOE_REDUCE_9$' -j 1 2>&1 | tee /tmp/moe-reduce-fusion0.log; grep -Fx '  20/20 tests passed' /tmp/moe-reduce-fusion0.log; if grep -Ei 'not supported|skipping large tensors' /tmp/moe-reduce-fusion0.log; then exit 1; fi; count=$(grep -Fc 'MOE_REDUCE_9 full-array: mismatches=0 max_abs=0 ' /tmp/moe-reduce-fusion0.log || true); test \"$count\" -eq 20; count=$(grep -Fc 'call ggml_sycl_op_moe_weighted_reduce:' /tmp/moe-reduce-fusion0.log || true); test \"$count\" -eq 0; echo MOE_REDUCE_NATIVE_FUSION1; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^MOE_REDUCE_9$' -j 1 2>&1 | tee /tmp/moe-reduce-fusion1.log; grep -Fx '  20/20 tests passed' /tmp/moe-reduce-fusion1.log; if grep -Ei 'not supported|skipping large tensors' /tmp/moe-reduce-fusion1.log; then exit 1; fi; count=$(grep -Fc 'MOE_REDUCE_9 full-array: mismatches=0 max_abs=0 ' /tmp/moe-reduce-fusion1.log || true); test \"$count\" -eq 20; count=$(grep -Fc 'call ggml_sycl_op_moe_weighted_reduce:' /tmp/moe-reduce-fusion1.log || true); test \"$count\" -eq 8; echo MOE_REDUCE_NUMERICAL_PASSED; echo BOLT_ROUTER_NATIVE_FUSION0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_ROUTER$' -j 1 2>&1 | tee /tmp/bolt-router-fusion0.log; grep -Fx '  82/82 tests passed' /tmp/bolt-router-fusion0.log; if grep -Ei 'not supported|skipping large tensors' /tmp/bolt-router-fusion0.log; then exit 1; fi; count=$(grep -Fc 'BOLT_ROUTER floats: mismatches=0 ' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER indices: mismatches=0 ' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER allocator: logits=probs exact (2 graphs)' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 5; count=$(grep -Fc 'BOLT_ROUTER consumer bytes: mismatches=0 ' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 2; count=$(grep -Fc 'call ggml_sycl_op_router_fused:' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 0; echo BOLT_ROUTER_NATIVE_FUSION1; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_ROUTER$' -j 1 2>&1 | tee /tmp/bolt-router-fusion1.log; grep -Fx '  82/82 tests passed' /tmp/bolt-router-fusion1.log; if grep -Ei 'not supported|skipping large tensors' /tmp/bolt-router-fusion1.log; then exit 1; fi; count=$(grep -Fc 'BOLT_ROUTER floats: mismatches=0 ' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER indices: mismatches=0 ' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER allocator: logits=probs exact (2 graphs)' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 5; count=$(grep -Fc 'BOLT_ROUTER consumer bytes: mismatches=0 ' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 2; count=$(grep -Fc 'call ggml_sycl_op_router_fused:' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 67; echo BOLT_ROUTER_NUMERICAL_PASSED; echo BOLT_SSM_PREFILL_NATIVE_FUSION0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_VMM=1 GGML_SYCL_ENABLE_FUSION=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_SSM_PREFILL$' -j 1 2>&1 | tee /tmp/ssm-prefill-fusion0.log; grep -Fx '  34/34 tests passed' /tmp/ssm-prefill-fusion0.log; if grep -Ei 'not supported|skipping large tensors|BOLT_SSM_PREFILL_MISMATCH' /tmp/ssm-prefill-fusion0.log; then exit 1; fi; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=under_test ' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 34; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=CPU ' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 34; count=$(grep -Fc 'y_mismatches=0 state_mismatches=0 canary_mismatches=0 ' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 68; count=$(grep -Fc 'call ggml_sycl_ssm_scan_prefill:' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 0; echo BOLT_SSM_PREFILL_NATIVE_FUSION1; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_VMM=1 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_SSM_PREFILL$' -j 1 2>&1 | tee /tmp/ssm-prefill-fusion1.log; grep -Fx '  34/34 tests passed' /tmp/ssm-prefill-fusion1.log; if grep -Ei 'not supported|skipping large tensors|BOLT_SSM_PREFILL_MISMATCH' /tmp/ssm-prefill-fusion1.log; then exit 1; fi; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=under_test ' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 34; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=CPU ' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 34; count=$(grep -Fc 'y_mismatches=0 state_mismatches=0 canary_mismatches=0 ' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 68; count=$(grep -Fc 'call ggml_sycl_ssm_scan_prefill:' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 23; echo BOLT_SSM_PREFILL_NATIVE_VMM0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_VMM=0 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_SSM_PREFILL$' -j 1 -p 'n_seq_tokens=2,n_head=128,n_group=8,n_seqs=1,K=1,' 2>&1 | tee /tmp/ssm-prefill-vmm-off.log; grep -Fx '  1/1 tests passed' /tmp/ssm-prefill-vmm-off.log; if grep -Ei 'not supported|skipping large tensors|BOLT_SSM_PREFILL_MISMATCH|call ggml_sycl_ssm_scan_prefill:' /tmp/ssm-prefill-vmm-off.log; then exit 1; fi; count=$(grep -Fc 'y_mismatches=0 state_mismatches=0 canary_mismatches=0 ' /tmp/ssm-prefill-vmm-off.log || true); test \"$count\" -eq 2; echo BOLT_SSM_PREFILL_NUMERICAL_PASSED; exec /src/build-sycl/bin/llama-server --verbosity 4 --model /models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB.gguf --alias nemotron-bolt -ngl 999 --ctx-size 65536 --parallel 1 --batch-size 1024 --ubatch-size 1024 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --jinja --host 0.0.0.0 --port 18098 --temp 0 --load-mode none"
+  ],
+  "State": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 1048446,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-20T15:49:23.812038202Z",
+    "FinishedAt": "2026-10-20T15:44:11.903118894Z"
+  },
+  "Image": "sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0",
+  "ResolvConfPath": "/var/lib/docker/containers/7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e/resolv.conf",
+  "HostnamePath": "/var/lib/docker/containers/7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e/hostname",
+  "HostsPath": "/var/lib/docker/containers/7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e/hosts",
+  "LogPath": "/var/lib/docker/containers/7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e/7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e-json.log",
+  "Name": "/nemotron-bolt-probe",
+  "RestartCount": 0,
+  "Driver": "overlayfs",
+  "Platform": "linux",
+  "MountLabel": "",
+  "ProcessLabel": "",
+  "AppArmorProfile": "",
+  "ExecIDs": null,
+  "HostConfig": {
+    "Binds": [
+      "/dev/dri:/dev/dri:ro",
+      "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1:/src:ro",
+      "/home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF:/models:ro",
+      "/home/mike/inference/src/oneDNN/install:/opt/onednn:ro"
+    ],
+    "ContainerIDFile": "",
+    "LogConfig": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "NetworkMode": "bridge",
+    "PortBindings": {
+      "18098/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18098"
+        }
+      ]
+    },
+    "RestartPolicy": {
+      "Name": "no",
+      "MaximumRetryCount": 0
+    },
+    "AutoRemove": false,
+    "VolumeDriver": "",
+    "VolumesFrom": null,
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "CapAdd": null,
+    "CapDrop": null,
+    "CgroupnsMode": "private",
+    "Dns": null,
+    "DnsOptions": [],
+    "DnsSearch": [],
+    "ExtraHosts": null,
+    "GroupAdd": [
+      "987"
+    ],
+    "IpcMode": "host",
+    "Cgroup": "",
+    "Links": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyRootfs": false,
+    "SecurityOpt": [
+      "label=disable"
+    ],
+    "UTSMode": "",
+    "UsernsMode": "",
+    "ShmSize": 67108864,
+    "Runtime": "runc",
+    "Isolation": "",
+    "CpuShares": 0,
+    "Memory": 0,
+    "NanoCpus": 0,
+    "CgroupParent": "",
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": [],
+    "BlkioDeviceReadBps": [],
+    "BlkioDeviceWriteBps": [],
+    "BlkioDeviceReadIOps": [],
+    "BlkioDeviceWriteIOps": [],
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "Devices": [
+      {
+        "PathOnHost": "/dev/dri",
+        "PathInContainer": "/dev/dri",
+        "CgroupPermissions": "rwm"
+      }
+    ],
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "OomKillDisable": null,
+    "PidsLimit": null,
+    "Ulimits": [],
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "IOMaximumIOps": 0,
+    "IOMaximumBandwidth": 0,
+    "MaskedPaths": [
+      "/proc/acpi",
+      "/proc/asound",
+      "/proc/interrupts",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/sys/devices/virtual/powercap",
+      "/sys/firmware"
+    ],
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ]
+  },
+  "Storage": {
+    "RootFS": {
+      "Snapshot": {
+        "Name": "overlayfs"
+      }
+    }
+  },
+  "Mounts": [
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF",
+      "Destination": "/models",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/oneDNN/install",
+      "Destination": "/opt/onednn",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/dev/dri",
+      "Destination": "/dev/dri",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Type": "bind",
+      "Source": "/home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-ssm-prefill-r1",
+      "Destination": "/src",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    }
+  ],
+  "Config": {
+    "Hostname": "7239883bad60",
+    "Domainname": "",
+    "User": "",
+    "AttachStdin": false,
+    "AttachStdout": true,
+    "AttachStderr": true,
+    "ExposedPorts": {
+      "18098/tcp": {}
+    },
+    "Tty": false,
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Env": [
+      "GGML_SYCL_ENABLE_GRAPH=0",
+      "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE",
+      "ZE_AFFINITY_MASK=0",
+      "ONEAPI_DEVICE_SELECTOR=level_zero:0",
+      "GGML_SYCL_ENABLE_ESIMD=1",
+      "GGML_SYCL_ENABLE_FUSION=1",
+      "PATH=/opt/intel/oneapi/mpi/2021.18/bin:/opt/intel/oneapi/mkl/2026.0/bin:/opt/intel/oneapi/dev-utilities/2026.0/bin:/opt/intel/oneapi/debugger/2026.0/opt/debugger/bin:/opt/intel/oneapi/compiler/2026.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LANG=C.UTF-8",
+      "CCL_CONFIGURATION=cpu_gpu_dpcpp",
+      "CCL_CONFIGURATION_PATH=",
+      "CCL_ROOT=/opt/intel/oneapi/ccl/2022.0",
+      "CLASSPATH=/opt/intel/oneapi/mpi/2021.18/share/java/mpi.jar",
+      "CMAKE_PREFIX_PATH=/opt/intel/oneapi/tbb/2023.0/env/..:/opt/intel/oneapi/pti/0.17/lib/cmake/pti:/opt/intel/oneapi/mkl/2026.0/lib/cmake:/opt/intel/oneapi/dpl/2022.12/lib/cmake/oneDPL:/opt/intel/oneapi/compiler/2026.0:/opt/intel/oneapi/ccl/2022.0/lib/cmake/oneCCL",
+      "CMPLR_ROOT=/opt/intel/oneapi/compiler/2026.0",
+      "CPATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/dev-utilities/2026.0/include:/opt/intel/oneapi/ccl/2022.0/include",
+      "CPLUS_INCLUDE_PATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/tbb/2023.0/env/../include:/opt/intel/oneapi/pti/0.17/include:/opt/intel/oneapi/mpi/2021.18/include:/opt/intel/oneapi/mkl/2026.0/include:/opt/intel/oneapi/dpl/2022.12/include",
+      "C_INCLUDE_PATH=/opt/intel/oneapi/umf/1.1/include:/opt/intel/oneapi/tbb/2023.0/env/../include:/opt/intel/oneapi/pti/0.17/include:/opt/intel/oneapi/mpi/2021.18/include:/opt/intel/oneapi/mkl/2026.0/include",
+      "DIAGUTIL_PATH=/opt/intel/oneapi/compiler/2026.0/etc/compiler/sys_check/sys_check.sh",
+      "DPLROOT=/opt/intel/oneapi/dpl/2022.12",
+      "DPL_ROOT=/opt/intel/oneapi/dpl/2022.12",
+      "FI_PROVIDER_PATH=/opt/intel/oneapi/mpi/2021.18/opt/mpi/libfabric/lib/prov:/usr/lib/x86_64-linux-gnu/libfabric",
+      "GDB_INFO=/opt/intel/oneapi/debugger/2026.0/share/info/",
+      "INFOPATH=/opt/intel/oneapi/debugger/2026.0/share/info",
+      "INTEL_PYTHONHOME=/opt/intel/oneapi/debugger/2026.0/opt/debugger",
+      "I_MPI_ROOT=/opt/intel/oneapi/mpi/2021.18",
+      "LD_LIBRARY_PATH=/opt/intel/oneapi/tcm/1.5/lib:/opt/intel/oneapi/umf/1.1/lib:/opt/intel/oneapi/tcm/1.5/env/../lib:/opt/intel/oneapi/tbb/2023.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.17/lib:/opt/intel/oneapi/mpi/2021.18/opt/mpi/libfabric/lib:/opt/intel/oneapi/mpi/2021.18/lib:/opt/intel/oneapi/mkl/2026.0/lib:/opt/intel/oneapi/debugger/2026.0/opt/debugger/lib:/opt/intel/oneapi/compiler/2026.0/opt/compiler/lib:/opt/intel/oneapi/compiler/2026.0/lib:/opt/intel/oneapi/ccl/2022.0/lib/",
+      "LIBRARY_PATH=/opt/intel/oneapi/tcm/1.5/lib:/opt/intel/oneapi/umf/1.1/lib:/opt/intel/oneapi/tbb/2023.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/pti/0.17/lib:/opt/intel/oneapi/mpi/2021.18/lib:/opt/intel/oneapi/mkl/2026.0/lib:/opt/intel/oneapi/compiler/2026.0/lib:/opt/intel/oneapi/ccl/2022.0/lib/",
+      "MANPATH=/opt/intel/oneapi/mpi/2021.18/share/man:/opt/intel/oneapi/debugger/2026.0/share/man:/opt/intel/oneapi/compiler/2026.0/share/man:",
+      "MKLROOT=/opt/intel/oneapi/mkl/2026.0",
+      "NLSPATH=/opt/intel/oneapi/compiler/2026.0/lib/compiler/locale/%l_%t/%N",
+      "OCL_ICD_FILENAMES=/opt/intel/oneapi/compiler/2026.0/lib/libintelocl.so",
+      "ONEAPI_ROOT=/opt/intel/oneapi",
+      "PKG_CONFIG_PATH=/opt/intel/oneapi/tbb/2023.0/env/../lib/pkgconfig:/opt/intel/oneapi/mpi/2021.18/lib/pkgconfig:/opt/intel/oneapi/mkl/2026.0/lib/pkgconfig:/opt/intel/oneapi/dpl/2022.12/lib/pkgconfig:/opt/intel/oneapi/compiler/2026.0/lib/pkgconfig:/opt/intel/oneapi/ccl/2022.0/lib/pkgconfig/",
+      "Pti_DIR=/opt/intel/oneapi/pti/0.17/lib/cmake/pti",
+      "SETVARS_COMPLETED=1",
+      "TBBROOT=/opt/intel/oneapi/tbb/2023.0/env/..",
+      "TCMROOT=/opt/intel/oneapi/tcm/1.5/env/..",
+      "TCM_ROOT=/opt/intel/oneapi/tcm/1.5",
+      "UMF_ROOT=/opt/intel/oneapi/umf/1.1"
+    ],
+    "Cmd": [
+      "bash",
+      "-lc",
+      "set -eo pipefail; source /opt/intel/oneapi/setvars.sh --force; export LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_OPT=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p nvfp4_reorder=1 2>&1 | tee /tmp/legacy-opt1.log; grep -Fx '  56/56 tests passed' /tmp/legacy-opt1.log; if grep -Ei 'not supported|skipping large tensors' /tmp/legacy-opt1.log; then exit 1; fi; grep -F 'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl' /tmp/legacy-opt1.log > /dev/null; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_OPT=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p nvfp4_reorder=1 2>&1 | tee /tmp/legacy-opt0.log; grep -Fx '  56/56 tests passed' /tmp/legacy-opt0.log; if grep -Ei 'not supported|skipping large tensors' /tmp/legacy-opt0.log; then exit 1; fi; if grep -F 'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl' /tmp/legacy-opt0.log; then exit 1; fi; echo MOE_REDUCE_NATIVE_FUSION0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^MOE_REDUCE_9$' -j 1 2>&1 | tee /tmp/moe-reduce-fusion0.log; grep -Fx '  20/20 tests passed' /tmp/moe-reduce-fusion0.log; if grep -Ei 'not supported|skipping large tensors' /tmp/moe-reduce-fusion0.log; then exit 1; fi; count=$(grep -Fc 'MOE_REDUCE_9 full-array: mismatches=0 max_abs=0 ' /tmp/moe-reduce-fusion0.log || true); test \"$count\" -eq 20; count=$(grep -Fc 'call ggml_sycl_op_moe_weighted_reduce:' /tmp/moe-reduce-fusion0.log || true); test \"$count\" -eq 0; echo MOE_REDUCE_NATIVE_FUSION1; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^MOE_REDUCE_9$' -j 1 2>&1 | tee /tmp/moe-reduce-fusion1.log; grep -Fx '  20/20 tests passed' /tmp/moe-reduce-fusion1.log; if grep -Ei 'not supported|skipping large tensors' /tmp/moe-reduce-fusion1.log; then exit 1; fi; count=$(grep -Fc 'MOE_REDUCE_9 full-array: mismatches=0 max_abs=0 ' /tmp/moe-reduce-fusion1.log || true); test \"$count\" -eq 20; count=$(grep -Fc 'call ggml_sycl_op_moe_weighted_reduce:' /tmp/moe-reduce-fusion1.log || true); test \"$count\" -eq 8; echo MOE_REDUCE_NUMERICAL_PASSED; echo BOLT_ROUTER_NATIVE_FUSION0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_ROUTER$' -j 1 2>&1 | tee /tmp/bolt-router-fusion0.log; grep -Fx '  82/82 tests passed' /tmp/bolt-router-fusion0.log; if grep -Ei 'not supported|skipping large tensors' /tmp/bolt-router-fusion0.log; then exit 1; fi; count=$(grep -Fc 'BOLT_ROUTER floats: mismatches=0 ' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER indices: mismatches=0 ' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER allocator: logits=probs exact (2 graphs)' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 5; count=$(grep -Fc 'BOLT_ROUTER consumer bytes: mismatches=0 ' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 2; count=$(grep -Fc 'call ggml_sycl_op_router_fused:' /tmp/bolt-router-fusion0.log || true); test \"$count\" -eq 0; echo BOLT_ROUTER_NATIVE_FUSION1; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_ROUTER$' -j 1 2>&1 | tee /tmp/bolt-router-fusion1.log; grep -Fx '  82/82 tests passed' /tmp/bolt-router-fusion1.log; if grep -Ei 'not supported|skipping large tensors' /tmp/bolt-router-fusion1.log; then exit 1; fi; count=$(grep -Fc 'BOLT_ROUTER floats: mismatches=0 ' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER indices: mismatches=0 ' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 82; count=$(grep -Fc 'BOLT_ROUTER allocator: logits=probs exact (2 graphs)' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 5; count=$(grep -Fc 'BOLT_ROUTER consumer bytes: mismatches=0 ' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 2; count=$(grep -Fc 'call ggml_sycl_op_router_fused:' /tmp/bolt-router-fusion1.log || true); test \"$count\" -eq 67; echo BOLT_ROUTER_NUMERICAL_PASSED; echo BOLT_SSM_PREFILL_NATIVE_FUSION0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_VMM=1 GGML_SYCL_ENABLE_FUSION=0 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_SSM_PREFILL$' -j 1 2>&1 | tee /tmp/ssm-prefill-fusion0.log; grep -Fx '  34/34 tests passed' /tmp/ssm-prefill-fusion0.log; if grep -Ei 'not supported|skipping large tensors|BOLT_SSM_PREFILL_MISMATCH' /tmp/ssm-prefill-fusion0.log; then exit 1; fi; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=under_test ' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 34; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=CPU ' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 34; count=$(grep -Fc 'y_mismatches=0 state_mismatches=0 canary_mismatches=0 ' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 68; count=$(grep -Fc 'call ggml_sycl_ssm_scan_prefill:' /tmp/ssm-prefill-fusion0.log || true); test \"$count\" -eq 0; echo BOLT_SSM_PREFILL_NATIVE_FUSION1; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_VMM=1 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_SSM_PREFILL$' -j 1 2>&1 | tee /tmp/ssm-prefill-fusion1.log; grep -Fx '  34/34 tests passed' /tmp/ssm-prefill-fusion1.log; if grep -Ei 'not supported|skipping large tensors|BOLT_SSM_PREFILL_MISMATCH' /tmp/ssm-prefill-fusion1.log; then exit 1; fi; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=under_test ' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 34; count=$(grep -Fc '[BOLT_SSM_PREFILL] backend=CPU ' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 34; count=$(grep -Fc 'y_mismatches=0 state_mismatches=0 canary_mismatches=0 ' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 68; count=$(grep -Fc 'call ggml_sycl_ssm_scan_prefill:' /tmp/ssm-prefill-fusion1.log || true); test \"$count\" -eq 23; echo BOLT_SSM_PREFILL_NATIVE_VMM0; GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_VMM=0 GGML_SYCL_ENABLE_FUSION=1 /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o '^BOLT_SSM_PREFILL$' -j 1 -p 'n_seq_tokens=2,n_head=128,n_group=8,n_seqs=1,K=1,' 2>&1 | tee /tmp/ssm-prefill-vmm-off.log; grep -Fx '  1/1 tests passed' /tmp/ssm-prefill-vmm-off.log; if grep -Ei 'not supported|skipping large tensors|BOLT_SSM_PREFILL_MISMATCH|call ggml_sycl_ssm_scan_prefill:' /tmp/ssm-prefill-vmm-off.log; then exit 1; fi; count=$(grep -Fc 'y_mismatches=0 state_mismatches=0 canary_mismatches=0 ' /tmp/ssm-prefill-vmm-off.log || true); test \"$count\" -eq 2; echo BOLT_SSM_PREFILL_NUMERICAL_PASSED; exec /src/build-sycl/bin/llama-server --verbosity 4 --model /models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB.gguf --alias nemotron-bolt -ngl 999 --ctx-size 65536 --parallel 1 --batch-size 1024 --ubatch-size 1024 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --jinja --host 0.0.0.0 --port 18098 --temp 0 --load-mode none"
+    ],
+    "Image": "intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04",
+    "Volumes": null,
+    "WorkingDir": "",
+    "Entrypoint": null,
+    "Labels": {
+      "b70.experiment": "bolt-fusion",
+      "org.opencontainers.image.version": "24.04"
+    }
+  },
+  "NetworkSettings": {
+    "SandboxID": "2322a6fa6a7d18184794a143666229a696370a85bf7582db7c76dc142621af6c",
+    "SandboxKey": "/var/run/docker/netns/2322a6fa6a7d",
+    "Ports": {
+      "18098/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18098"
+        }
+      ]
+    },
+    "Networks": {
+      "bridge": {
+        "IPAMConfig": null,
+        "Links": null,
+        "Aliases": null,
+        "DriverOpts": null,
+        "GwPriority": 0,
+        "NetworkID": "50dfd4e1162270e8aa4b5d5415ac066a0ae038c381f2c33f8413192ace398018",
+        "EndpointID": "6356c73c222e2e5b424bcb15d78d2b44ef94e12c8988f3f6f205fe5d0ecbbf10",
+        "Gateway": "172.17.0.1",
+        "IPAddress": "172.17.0.2",
+        "MacAddress": "66:9f:42:01:af:50",
+        "IPPrefixLen": 16,
+        "IPv6Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "DNSNames": null
+      }
+    }
+  },
+  "ImageManifestDescriptor": {
+    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+    "digest": "sha256:aeb924ed73a4707576dcc6e9d9afb0f24435390a3f6596cdd88cee967dede0a0",
+    "size": 1377,
+    "platform": {
+      "architecture": "amd64",
+      "os": "linux"
+    }
+  }
+}
