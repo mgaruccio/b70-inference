@@ -1,0 +1,96 @@
+{
+  "accepted_counts": {
+    "long": [
+      [
+        133,
+        82
+      ]
+    ],
+    "short": [
+      [
+        129,
+        84
+      ]
+    ]
+  },
+  "fidelity": "100 public jobs and24 measured outputs exact under existing validators",
+  "native": {
+    "iq2_byte_exact": 16,
+    "iq2_cases": 34,
+    "q8_byte_exact": 54,
+    "q8_cases": 82
+  },
+  "physical_metadata": {
+    "VSPF-W3a": [
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.1.ffn_latent_down.weight dst_name=q8-p0-n4-m1-l0-wide n=4 row_low=0 row_high=1024 rowpairs=512 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.1.ffn_latent_up.weight dst_name=q8-p1-n4-m1-l0-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=4 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_q.weight dst_name=q8-p2-n4-m1-l0-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_k.weight dst_name=q8-p3-n4-m1-l0-wide n=4 row_low=0 row_high=256 rowpairs=128 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_v.weight dst_name=q8-p4-n4-m1-l0-wide n=4 row_low=0 row_high=256 rowpairs=128 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_output.weight dst_name=q8-p5-n4-m1-l0-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_output.weight dst_name=q8-p5-n4-m1-l3-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=8 physical_launches=1"
+    ],
+    "VSPF-W3b": [
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.1.ffn_latent_down.weight dst_name=q8-p0-n4-m1-l0-wide n=4 row_low=0 row_high=1024 rowpairs=512 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.1.ffn_latent_up.weight dst_name=q8-p1-n4-m1-l0-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=4 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_q.weight dst_name=q8-p2-n4-m1-l0-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_k.weight dst_name=q8-p3-n4-m1-l0-wide n=4 row_low=0 row_high=256 rowpairs=128 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_v.weight dst_name=q8-p4-n4-m1-l0-wide n=4 row_low=0 row_high=256 rowpairs=128 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_output.weight dst_name=q8-p5-n4-m1-l0-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=8 physical_launches=1",
+      "BOLT_Q8_VERIFY_BATCH4 weight=blk.7.attn_output.weight dst_name=q8-p5-n4-m1-l3-wide n=4 row_low=0 row_high=4096 rowpairs=2048 wg=8 physical_launches=1"
+    ]
+  },
+  "promotion": false,
+  "restoration": {
+    "gpu_pids": [
+      1124074
+    ],
+    "health": {
+      "status": "ok"
+    },
+    "original_id": "7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e",
+    "passed": true,
+    "sole_live": [
+      "nemotron-bolt-probe"
+    ]
+  },
+  "results": {
+    "long": {
+      "A": {
+        "elapsed_s": 11.52420219546184,
+        "end_to_end_output_tps": 11.107062716385396,
+        "predicted_ms": 2943.0,
+        "predicted_per_second": 43.153245062264446,
+        "prompt_ms": 8576.4145
+      },
+      "W3": {
+        "elapsed_s": 12.57897467451403,
+        "end_to_end_output_tps": 10.175710197564865,
+        "predicted_ms": 3271.746,
+        "predicted_per_second": 38.81719457066441,
+        "prompt_ms": 9299.932499999999
+      },
+      "w3_over_nodraft_decode": 0.8995197120090579,
+      "w3_over_nodraft_end_to_end": 0.9161477212650849
+    },
+    "short": {
+      "A": {
+        "elapsed_s": 3.2982897835318,
+        "end_to_end_output_tps": 38.807992439045634,
+        "predicted_ms": 2833.871,
+        "predicted_per_second": 44.8150836823426,
+        "prompt_ms": 458.5335
+      },
+      "W3": {
+        "elapsed_s": 3.5660748044610955,
+        "end_to_end_output_tps": 35.89380986382518,
+        "predicted_ms": 3082.2445,
+        "predicted_per_second": 41.20374809939266,
+        "prompt_ms": 478.78150000000005
+      },
+      "w3_over_nodraft_decode": 0.91941696218738,
+      "w3_over_nodraft_end_to_end": 0.9249076699909778
+    }
+  },
+  "tier": "development clean serving comparison"
+}
