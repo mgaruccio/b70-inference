@@ -60,3 +60,24 @@ Use the frozen SDK and immutable clean batch4 seed with only the SYCL artifact c
 Then run the real HTTP **A1/W3a/W3b/A2** journey: 25 public checks per cell (**100 total**) plus **24 measured** responses; short55/long8270, temperature0, seed42, ignoreEOS, max128, `cache_prompt=false`, one warmup plus three measured per point/cell. Serving diagnostics OFF; exact output and counters (short129/84, long133/82), preserved drafter semantics. Retain exact commands, raw logs, source/binary evidence. Independently and separately verify original identity/source/health/sole-GPU ownership restoration. Cleanup stops candidates and restores the original; no launcher/service changes or promotion.
 
 CPU results do not replace that public boundary. SDK compatibility/lowering, device bit fidelity, register pressure, actual clean end-to-end speed, and restoration remain **unverified for this candidate**. Even a passing lead run is development-tier, not standard-publishable benchmarking.
+
+
+## Lead binding close gate and run commands
+
+The thin case bindings reuse the unchanged clean IQ2 lifecycle and native qualifier, with original R2, the completed batch4 SDK seed, and this candidate kept separate. The build renderer pins the passed CPU-only host build template and substitutes only case/seed/patch bindings; it keeps the guarded 105-object rebuild, frozen generated graph/compiler/link inputs and no-GPU SDK mounts. Source proof freshly checks the frozen original, the completed seed source/binaries, the one-file seed delta and six-artifact boundary. No profiling opt-in is added.
+
+```sh
+# CPU binding checks; no remote/SDK/GPU access
+python3 -B results/20261020-lilicorr-iq2-packed/test-bindings.py
+
+# Lead only, on inference-host, after staging and validating all case inputs
+cd /home/mike/b70-evals/20261020-lilicorr-iq2-packed
+python3 -B build-candidate.py
+# Only after the build process/EXIT trap has completed:
+python3 -B source-proof.py --built
+python3 -B run-performance.py --lead-run-timing
+# Always a separate invocation, including after failed capture:
+python3 -B run-performance.py --lead-after-timing-restore
+```
+
+The generated build command is retained as `build-candidate.generated.sh`. It is code-hashed with all completed build evidence during the live lifecycle. `native-batch4.py` is an exact copy of the existing checker, not a new qualification relaxation. These commands are a declared process, not evidence that the still-pending SDK/public steps have passed.
