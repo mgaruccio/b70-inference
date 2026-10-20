@@ -1,0 +1,370 @@
+$ python3 -B results/20261020-lilicorr-q8-target-batch4/test-candidate.py
+DEVELOPMENT: CPU/source only; no SYCL compilation, GPU, native byte or serving pass.
+platform: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44
+python: 3.14.7 (main, Aug 13 2026, 07:40:04) [GCC 16.2.1 20260810]
+source: /tmp/lilicorr-verify-r2-source-inspect-20261020
+CXX: c++
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git --version)
+git version 2.56.0
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && patch --version)
+GNU patch 2.8
+Copyright 1989-2025 Free Software Foundation, Inc.
+Copyright 1984-1988 Larry Wall
+
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Larry Wall and Paul Eggert
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && c++ --version)
+c++ (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git rev-parse HEAD)
+2247b17e10302e6963871ed37e62bcdc9bf89a27
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && patch --batch --forward --fuzz=0 --verbose -p1 -d /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/seed -i /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch)
+Hmm...  Looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
+|+++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/ggml-sycl.cpp
+Hunk #1 succeeded at 6233.
+Hunk #2 succeeded at 6294.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/mmvq.cpp
+|+++ b/ggml/src/ggml-sycl/mmvq.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/mmvq.cpp
+Hunk #1 succeeded at 3067.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/mmvq.hpp
+|+++ b/ggml/src/ggml-sycl/mmvq.hpp
+--------------------------
+patching file ggml/src/ggml-sycl/mmvq.hpp
+Hunk #1 succeeded at 45.
+done
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && patch --batch --forward --fuzz=0 --verbose -p1 -d /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/gnu -i /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+Hmm...  Looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
+|+++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/ggml-sycl.cpp
+Hunk #1 succeeded at 4176.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/dmmv.cpp
+|+++ b/ggml/src/ggml-sycl/dmmv.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/dmmv.cpp
+Hunk #1 succeeded at 2.
+Hunk #2 succeeded at 2052.
+Hunk #3 succeeded at 2063.
+Hunk #4 succeeded at 2121.
+Hunk #5 succeeded at 2163.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/dmmv.hpp
+|+++ b/ggml/src/ggml-sycl/dmmv.hpp
+--------------------------
+patching file ggml/src/ggml-sycl/dmmv.hpp
+Hunk #1 succeeded at 24.
+done
+test_01_source_pins_and_only_allowed_files (__main__.CandidateTests.test_01_source_pins_and_only_allowed_files) ... ok
+test_02_git_forward_reverse_reforward_matches_gnu_exactly (__main__.CandidateTests.test_02_git_forward_reverse_reforward_matches_gnu_exactly) ... $ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/git-roundtrip --check /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/git-roundtrip /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/git-roundtrip --reverse --check /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/git-roundtrip --reverse /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/git-roundtrip --check /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/git-roundtrip /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+ok
+test_03_all_original_code_restored_except_two_row_index_edits (__main__.CandidateTests.test_03_all_original_code_restored_except_two_row_index_edits) ... ok
+test_04_native_local_geometry_and_new_launch (__main__.CandidateTests.test_04_native_local_geometry_and_new_launch) ... FAIL
+test_05_non4_fallback_and_truthful_diagnostic (__main__.CandidateTests.test_05_non4_fallback_and_truthful_diagnostic) ... ok
+test_06_row_pair_token_bijection_every_wg (__main__.CandidateTests.test_06_row_pair_token_bijection_every_wg) ... ok
+test_07_column_offsets_and_canaries_vs_original_loop (__main__.CandidateTests.test_07_column_offsets_and_canaries_vs_original_loop) ... ok
+test_08_actual_host_preflight_with_cpu_launch_spy (__main__.CandidateTests.test_08_actual_host_preflight_with_cpu_launch_spy) ... GNU exact forward == Git forward == Git re-forward; reverse == passed seed (all 178 files).
+Row-pair/token bijection, local IDs/SLM slots and odd-row stores: 532 geometries.
+Column/row-low/reordered-weight offsets, native stripe coverage and canaries: 400 cases.
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && c++ -std=c++17 -O1 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all -DGGML_SYCL_DMMV_HAS_ESIMD /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/host-preflight.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/host-preflight-esimd)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/host-preflight-esimd)
+Actual host preflight/selector: 147 cases, plus propagated submission failure.
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && c++ -std=c++17 -O1 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/host-preflight.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/host-preflight-no-esimd)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-krvs3ijx/host-preflight-no-esimd)
+No-ESIMD host stub: 147 cases, zero calls and unchanged launched_wg.
+ok
+
+======================================================================
+FAIL: test_04_native_local_geometry_and_new_launch (__main__.CandidateTests.test_04_native_local_geometry_and_new_launch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/test-candidate.py", line 147, in test_04_native_local_geometry_and_new_launch
+    self.assertNotIn(forbidden, self.launch + self.entry + self.host)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'simd<' unexpectedly found in '// Private n=4 submission: adjacent groups share a weight row pair, not SLM.\n// Group execution order/cache residency is unspecified; every group is independent.\ntemplate <int WG>\nstatic void q8_0_esimd_launch_batch4(const void * vx, const float * y, float * dst, const int ncols,\n                                    const int nrows, const size_t src1_stride, const size_t dst_stride,\n                                    dpct::queue_ptr stream) {\n    const size_t workgroups = ((size_t) nrows + 1) / 2 * 4;\n    stream->submit([&](sycl::handler & h) {\n        sycl::local_accessor<float, 1> lmem(sycl::range<1>(WG * 2), h);\n        h.parallel_for(\n            sycl::nd_range<1>(sycl::range<1>(workgroups * WG), sycl::range<1>(WG)),\n            [=](sycl::nd_item<1> it) [[intel::sycl_explicit_simd]] {\n                const size_t group = it.get_group(0);\n                const size_t token = group % 4;\n                const int row_pair = (int) (group / 4);\n                dequantize_mul_mat_vec_q8_0_reorder_esimd<WG>(\n                    vx, y + token * src1_stride, dst + token * dst_stride,\n                    ncols, nrows, lmem, it, row_pair);\n            });\n    });\n}\n\n// Caller retains the private tensor/layout/scope eligibility and allocation bounds.\n// A false return is possible only before submission; enqueue failures propagate.\nbool ggml_sycl_op_dequantize_mul_mat_vec_q8_0_batch4(\n    const void * vx, const float * y, float * dst, const int64_t ncols,\n    const int64_t row_low, const int64_t row_high,\n    const int64_t src1_stride, const int64_t dst_stride,\n    const dpct::queue_ptr & stream, int & launched_wg) {\n#ifdef GGML_SYCL_DMMV_HAS_ESIMD\n    if (!vx || !y || !dst || !stream ||\n        (uintptr_t) vx % 16 != 0 || (uintptr_t) y % sizeof(float) != 0 ||\n        (uintptr_t) dst % sizeof(float) != 0 ||\n        ncols <= 0 || ncols > INT_MAX || ncols % QK8_0 != 0 ||\n        row_low < 0 || row_high <= row_low || row_high - row_low > INT_MAX - 1 ||\n        src1_stride != ncols || dst_stride < row_high - row_low) return false;\n\n    const size_t nrows = (size_t) (row_high - row_low);\n    const size_t nblk_row = (size_t) ncols / QK8_0;\n    // Bound every byte offset before multiplying, including all four columns.\n    const size_t max_bytes = PTRDIFF_MAX;\n    if ((uint64_t) src1_stride > max_bytes / sizeof(float) / 4 ||\n        (uint64_t) dst_stride > max_bytes / sizeof(float) / 4 ||\n        nrows > max_bytes / sizeof(block_q8_0) / nblk_row ||\n        (nrows + 1) / 2 > SIZE_MAX / 4 / 8) return false;\n    const size_t vx_bytes = nrows * nblk_row * sizeof(block_q8_0);\n    const size_t y_bytes = 4 * (size_t) src1_stride * sizeof(float);\n    const size_t dst_bytes = (3 * (size_t) dst_stride + nrows) * sizeof(float);\n    const uintptr_t vx_base = (uintptr_t) vx;\n    const uintptr_t y_base = (uintptr_t) y;\n    const uintptr_t dst_base = (uintptr_t) dst;\n    if (vx_bytes > UINTPTR_MAX - vx_base || y_bytes > UINTPTR_MAX - y_base ||\n        dst_bytes > UINTPTR_MAX - dst_base) return false;\n    // Concurrent writes must not overlap either input, even across columns.\n    if (!(vx_base + vx_bytes <= dst_base || dst_base + dst_bytes <= vx_base) ||\n        !(y_base + y_bytes <= dst_base || dst_base + dst_bytes <= y_base)) return false;\n\n    // Exactly the native thresholds; each selected kernel retains local WG and SLM.\n    int wg;\n    if (nblk_row >= 64) {\n        q8_0_esimd_launch_batch4<8>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);\n        wg = 8;\n    } else if (nblk_row >= 32) {\n        q8_0_esimd_launch_batch4<4>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);\n        wg = 4;\n    } else if (nblk_row >= 16) {\n        q8_0_esimd_launch_batch4<2>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);\n        wg = 2;\n    } else {\n        q8_0_esimd_launch_batch4<1>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);\n        wg = 1;\n    }\n    launched_wg = wg;\n    return true;\n#else\n    GGML_UNUSED(vx); GGML_UNUSED(y); GGML_UNUSED(dst); GGML_UNUSED(ncols);\n    GGML_UNUSED(row_low); GGML_UNUSED(row_high);\n    GGML_UNUSED(src1_stride); GGML_UNUSED(dst_stride); GGML_UNUSED(stream); GGML_UNUSED(launched_wg);\n    return false;\n#endif\n}\n\n                    bool batch4_launched = false;\n                    int batch4_wg = 0;\n                    if (src1_ncols == 4) {\n                        SYCL_CHECK(CHECK_TRY_ERROR(batch4_launched = ggml_sycl_op_dequantize_mul_mat_vec_q8_0_batch4(\n                            src0_dd_i, src1_ddf_i, dst_dd_i, ne00, dev[i].row_low, dev[i].row_high,\n                            ne10, dst_on_device ? ne0 : row_diff, stream, batch4_wg)));\n                    }\n                    if (batch4_launched) {\n                        if (bolt_route_enabled()) {\n                            fprintf(stderr, "BOLT_Q8_VERIFY_BATCH4 weight=%s dst_name=%s n=4 "\n                                    "row_low=%" PRId64 " row_high=%" PRId64 " rowpairs=%" PRId64 " "\n                                    "wg=%d physical_launches=1\\n",\n                                    bolt_route_name(src0), bolt_route_name(dst), dev[i].row_low, dev[i].row_high,\n                                    (row_diff + 1) / 2, batch4_wg);\n                        }\n                    } else\n'
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.498s
+
+FAILED (failures=1)
+
+TEST FIX: use a word-boundary SIMD-type assertion; the initial substring check incorrectly matched the existing helper name ending in _esimd<WG>. Candidate source unchanged. Initial failure retained above.
+$ python3 -B results/20261020-lilicorr-q8-target-batch4/test-candidate.py
+DEVELOPMENT: CPU/source only; no SYCL compilation, GPU, native byte or serving pass.
+platform: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44
+python: 3.14.7 (main, Aug 13 2026, 07:40:04) [GCC 16.2.1 20260810]
+source: /tmp/lilicorr-verify-r2-source-inspect-20261020
+CXX: c++
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git --version)
+git version 2.56.0
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && patch --version)
+GNU patch 2.8
+Copyright 1989-2025 Free Software Foundation, Inc.
+Copyright 1984-1988 Larry Wall
+
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Written by Larry Wall and Paul Eggert
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && c++ --version)
+c++ (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git rev-parse HEAD)
+2247b17e10302e6963871ed37e62bcdc9bf89a27
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && patch --batch --forward --fuzz=0 --verbose -p1 -d /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/seed -i /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch)
+Hmm...  Looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
+|+++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/ggml-sycl.cpp
+Hunk #1 succeeded at 6233.
+Hunk #2 succeeded at 6294.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/mmvq.cpp
+|+++ b/ggml/src/ggml-sycl/mmvq.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/mmvq.cpp
+Hunk #1 succeeded at 3067.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/mmvq.hpp
+|+++ b/ggml/src/ggml-sycl/mmvq.hpp
+--------------------------
+patching file ggml/src/ggml-sycl/mmvq.hpp
+Hunk #1 succeeded at 45.
+done
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && patch --batch --forward --fuzz=0 --verbose -p1 -d /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/gnu -i /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+Hmm...  Looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
+|+++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/ggml-sycl.cpp
+Hunk #1 succeeded at 4176.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/dmmv.cpp
+|+++ b/ggml/src/ggml-sycl/dmmv.cpp
+--------------------------
+patching file ggml/src/ggml-sycl/dmmv.cpp
+Hunk #1 succeeded at 2.
+Hunk #2 succeeded at 2052.
+Hunk #3 succeeded at 2063.
+Hunk #4 succeeded at 2121.
+Hunk #5 succeeded at 2163.
+Hmm...  The next patch looks like a unified diff to me...
+The text leading up to this was:
+--------------------------
+|--- a/ggml/src/ggml-sycl/dmmv.hpp
+|+++ b/ggml/src/ggml-sycl/dmmv.hpp
+--------------------------
+patching file ggml/src/ggml-sycl/dmmv.hpp
+Hunk #1 succeeded at 24.
+done
+test_01_source_pins_and_only_allowed_files (__main__.CandidateTests.test_01_source_pins_and_only_allowed_files) ... ok
+test_02_git_forward_reverse_reforward_matches_gnu_exactly (__main__.CandidateTests.test_02_git_forward_reverse_reforward_matches_gnu_exactly) ... $ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/git-roundtrip --check /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/git-roundtrip /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/git-roundtrip --reverse --check /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/git-roundtrip --reverse /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/git-roundtrip --check /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && git apply --whitespace=error --directory results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/git-roundtrip /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch)
+
+ok
+test_03_all_original_code_restored_except_two_row_index_edits (__main__.CandidateTests.test_03_all_original_code_restored_except_two_row_index_edits) ... ok
+test_04_native_local_geometry_and_new_launch (__main__.CandidateTests.test_04_native_local_geometry_and_new_launch) ... ok
+test_05_non4_fallback_and_truthful_diagnostic (__main__.CandidateTests.test_05_non4_fallback_and_truthful_diagnostic) ... ok
+test_06_row_pair_token_bijection_every_wg (__main__.CandidateTests.test_06_row_pair_token_bijection_every_wg) ... ok
+test_07_column_offsets_and_canaries_vs_original_loop (__main__.CandidateTests.test_07_column_offsets_and_canaries_vs_original_loop) ... ok
+test_08_actual_host_preflight_with_cpu_launch_spy (__main__.CandidateTests.test_08_actual_host_preflight_with_cpu_launch_spy) ... GNU exact forward == Git forward == Git re-forward; reverse == passed seed (all 178 files).
+Row-pair/token bijection, local IDs/SLM slots and odd-row stores: 532 geometries.
+Column/row-low/reordered-weight offsets, native stripe coverage and canaries: 400 cases.
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && c++ -std=c++17 -O1 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all -DGGML_SYCL_DMMV_HAS_ESIMD /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/host-preflight.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/host-preflight-esimd)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/host-preflight-esimd)
+Actual host preflight/selector: 147 cases, plus propagated submission failure.
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && c++ -std=c++17 -O1 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/host-preflight.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/host-preflight-no-esimd)
+
+$ (cd /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4 && /home/mike/code/.pi-worktrees/b70-inference/lilicorr-q8-target-batch4/results/20261020-lilicorr-q8-target-batch4/.cpu-pi64w4ac/host-preflight-no-esimd)
+No-ESIMD host stub: 147 cases, zero calls and unchanged launched_wg.
+ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.572s
+
+OK
+
+$ tool ast_grep {"command": "run", "kind": "ERROR", "language": "cpp", "paths": ["results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp", "results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp", "results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp", "results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp", "results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.hpp", "results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.hpp"], "maxResults": 50, "includeRaw": true, "json": "compact"}
+ast_grep run found 58 matches.
+Showing 50; 8 omitted by maxResults=50.
+1. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:9:5 (Cpp)
+   code: #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)
+2. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:9:22 (Cpp)
+   code: #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)
+3. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:9:40 (Cpp)
+   code: #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)
+4. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:1881:14 (Cpp)
+   code: ESIMD_INLINE void dequantize_mul_mat_vec_reorder_esimd(
+5. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2017:14 (Cpp)
+   code: ESIMD_INLINE void q8_0_mac_stripe(
+6. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2051:14 (Cpp)
+   code: ESIMD_INLINE void dequantize_mul_mat_vec_q8_0_reorder_esimd(
+7. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2351:19 (Cpp)
+   code: } else
+8. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2367:17 (Cpp)
+   code: else
+9. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2383:17 (Cpp)
+   code: else
+10. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2399:17 (Cpp)
+   code: else
+11. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2415:17 (Cpp)
+   code: else
+12. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp:2431:17 (Cpp)
+   code: else
+13. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:7:5 (Cpp)
+   code: #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)
+14. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:7:22 (Cpp)
+   code: #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)
+15. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:7:40 (Cpp)
+   code: #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)
+16. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:1879:14 (Cpp)
+   code: ESIMD_INLINE void dequantize_mul_mat_vec_reorder_esimd(
+17. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2015:14 (Cpp)
+   code: ESIMD_INLINE void q8_0_mac_stripe(
+18. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2049:14 (Cpp)
+   code: ESIMD_INLINE void dequantize_mul_mat_vec_q8_0_reorder_esimd(
+19. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2267:19 (Cpp)
+   code: } else
+20. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2283:17 (Cpp)
+   code: else
+21. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2299:17 (Cpp)
+   code: else
+22. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2315:17 (Cpp)
+   code: else
+23. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2331:17 (Cpp)
+   code: else
+24. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp:2347:17 (Cpp)
+   code: else
+25. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:232:73 (Cpp)
+   code: "BOLT_ROUTE route=%s weight=%s aux_weight=%s op=%s op_id=%" PRId32 " dst_name=%s "
+26. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:790:10 (Cpp)
+   code: GGML_API void ggml_backend_sycl_get_gpu_list(int *id_list, int max_len) try {
+27. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:2467:24 (Cpp)
+   code: __dpct_inline__ static void
+28. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:3178:5 (Cpp)
+   code: GGML_TENSOR_LOCALS_1(int64_t, ne, src, ne);
+29. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:3179:5 (Cpp)
+   code: GGML_TENSOR_LOCALS(int64_t, nb, src, nb);
+30. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:3333:9 (Cpp)
+   code: else
+31. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:3381:13 (Cpp)
+   code: else
+32. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:3936:5 (Cpp)
+   code: GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne);
+33. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:3938:5 (Cpp)
+   code: GGML_TENSOR_LOCALS(int64_t, ne1, src1, ne);
+34. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:4595:5 (Cpp)
+   code: else
+35. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:6041:24 (Cpp)
+   code: __dpct_inline__ static void k_copy_src1_to_contiguous(
+36. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:6064:24 (Cpp)
+   code: __dpct_inline__ static void k_copy_dst_from_contiguous(
+37. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:6360:21 (Cpp)
+   code: const queue_ptr stream = ctx.stream();
+38. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:7029:10 (Cpp)
+   code: GGML_API void ggml_backend_sycl_get_device_description(int device, char *description,
+39. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:7461:7 (Cpp)
+   code: } else
+40. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:7957:1 (Cpp)
+   code: #ifdef GGML_SYCL_HAS_BF16
+41. results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp:7959:1 (Cpp)
+   code: #endif
+42. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:232:73 (Cpp)
+   code: "BOLT_ROUTE route=%s weight=%s aux_weight=%s op=%s op_id=%" PRId32 " dst_name=%s "
+43. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:790:10 (Cpp)
+   code: GGML_API void ggml_backend_sycl_get_gpu_list(int *id_list, int max_len) try {
+44. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:2467:24 (Cpp)
+   code: __dpct_inline__ static void
+45. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:3178:5 (Cpp)
+   code: GGML_TENSOR_LOCALS_1(int64_t, ne, src, ne);
+46. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:3179:5 (Cpp)
+   code: GGML_TENSOR_LOCALS(int64_t, nb, src, nb);
+47. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:3333:9 (Cpp)
+   code: else
+48. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:3381:13 (Cpp)
+   code: else
+49. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:3936:5 (Cpp)
+   code: GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne);
+50. results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp:3938:5 (Cpp)
+   code: GGML_TENSOR_LOCALS(int64_t, ne1, src1, ne);
+
+Raw ast-grep JSON:
+[{"text":"#if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","range":{"byteOffset":{"start":170,"end":219},"start":{"line":8,"column":4},"end":{"line":8,"column":53}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"    #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","charCount":{"leading":4,"trailing":0},"language":"Cpp"},{"text":"(","range":{"byteOffset":{"start":187,"end":188},"start":{"line":8,"column":21},"end":{"line":8,"column":22}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"    #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","charCount":{"leading":21,"trailing":31},"language":"Cpp"},{"text":"bfloat16.","range":{"byteOffset":{"start":205,"end":214},"start":{"line":8,"column":39},"end":{"line":8,"column":48}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"    #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","charCount":{"leading":39,"trailing":5},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":77158,"end":77162},"start":{"line":1880,"column":13},"end":{"line":1880,"column":17}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"ESIMD_INLINE void dequantize_mul_mat_vec_reorder_esimd(","charCount":{"leading":13,"trailing":38},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":83839,"end":83843},"start":{"line":2016,"column":13},"end":{"line":2016,"column":17}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"ESIMD_INLINE void q8_0_mac_stripe(","charCount":{"leading":13,"trailing":17},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":85220,"end":85224},"start":{"line":2050,"column":13},"end":{"line":2050,"column":17}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"ESIMD_INLINE void dequantize_mul_mat_vec_q8_0_reorder_esimd(","charCount":{"leading":13,"trailing":43},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":99698,"end":99702},"start":{"line":2350,"column":18},"end":{"line":2350,"column":22}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"                } else","charCount":{"leading":18,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":100453,"end":100457},"start":{"line":2366,"column":16},"end":{"line":2366,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":101206,"end":101210},"start":{"line":2382,"column":16},"end":{"line":2382,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":101959,"end":101963},"start":{"line":2398,"column":16},"end":{"line":2398,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":102712,"end":102716},"start":{"line":2414,"column":16},"end":{"line":2414,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":103465,"end":103469},"start":{"line":2430,"column":16},"end":{"line":2430,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"#if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","range":{"byteOffset":{"start":132,"end":181},"start":{"line":6,"column":4},"end":{"line":6,"column":53}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"    #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","charCount":{"leading":4,"trailing":0},"language":"Cpp"},{"text":"(","range":{"byteOffset":{"start":149,"end":150},"start":{"line":6,"column":21},"end":{"line":6,"column":22}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"    #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","charCount":{"leading":21,"trailing":31},"language":"Cpp"},{"text":"bfloat16.","range":{"byteOffset":{"start":167,"end":176},"start":{"line":6,"column":39},"end":{"line":6,"column":48}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"    #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)","charCount":{"leading":39,"trailing":5},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":77120,"end":77124},"start":{"line":1878,"column":13},"end":{"line":1878,"column":17}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"ESIMD_INLINE void dequantize_mul_mat_vec_reorder_esimd(","charCount":{"leading":13,"trailing":38},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":83801,"end":83805},"start":{"line":2014,"column":13},"end":{"line":2014,"column":17}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"ESIMD_INLINE void q8_0_mac_stripe(","charCount":{"leading":13,"trailing":17},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":85182,"end":85186},"start":{"line":2048,"column":13},"end":{"line":2048,"column":17}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"ESIMD_INLINE void dequantize_mul_mat_vec_q8_0_reorder_esimd(","charCount":{"leading":13,"trailing":43},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":95308,"end":95312},"start":{"line":2266,"column":18},"end":{"line":2266,"column":22}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"                } else","charCount":{"leading":18,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":96063,"end":96067},"start":{"line":2282,"column":16},"end":{"line":2282,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":96816,"end":96820},"start":{"line":2298,"column":16},"end":{"line":2298,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":97569,"end":97573},"start":{"line":2314,"column":16},"end":{"line":2314,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":98322,"end":98326},"start":{"line":2330,"column":16},"end":{"line":2330,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":99075,"end":99079},"start":{"line":2346,"column":16},"end":{"line":2346,"column":20}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/dmmv.cpp","lines":"                else","charCount":{"leading":16,"trailing":0},"language":"Cpp"},{"text":"PRId32","range":{"byteOffset":{"start":8238,"end":8244},"start":{"line":231,"column":72},"end":{"line":231,"column":78}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"            \"BOLT_ROUTE route=%s weight=%s aux_weight=%s op=%s op_id=%\" PRId32 \" dst_name=%s \"","charCount":{"leading":72,"trailing":16},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":34145,"end":34149},"start":{"line":789,"column":9},"end":{"line":789,"column":13}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"GGML_API void ggml_backend_sycl_get_gpu_list(int *id_list, int max_len) try {","charCount":{"leading":9,"trailing":64},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":99623,"end":99627},"start":{"line":2466,"column":23},"end":{"line":2466,"column":27}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"__dpct_inline__ static void","charCount":{"leading":23,"trailing":0},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS_1(int64_t, ne, src, ne)","range":{"byteOffset":{"start":128284,"end":128326},"start":{"line":3177,"column":4},"end":{"line":3177,"column":46}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS_1(int64_t, ne, src, ne);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS(int64_t, nb, src, nb)","range":{"byteOffset":{"start":128332,"end":128372},"start":{"line":3178,"column":4},"end":{"line":3178,"column":44}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS(int64_t, nb, src, nb);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":135816,"end":135820},"start":{"line":3332,"column":8},"end":{"line":3332,"column":12}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"        else","charCount":{"leading":8,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":138749,"end":138753},"start":{"line":3380,"column":12},"end":{"line":3380,"column":16}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"            else","charCount":{"leading":12,"trailing":0},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne)","range":{"byteOffset":{"start":162920,"end":162962},"start":{"line":3935,"column":4},"end":{"line":3935,"column":46}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS(int64_t, ne1, src1, ne)","range":{"byteOffset":{"start":162969,"end":163011},"start":{"line":3937,"column":4},"end":{"line":3937,"column":46}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS(int64_t, ne1, src1, ne);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":193918,"end":193922},"start":{"line":4594,"column":4},"end":{"line":4594,"column":8}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    else","charCount":{"leading":4,"trailing":0},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":256182,"end":256186},"start":{"line":6040,"column":23},"end":{"line":6040,"column":27}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"__dpct_inline__ static void k_copy_src1_to_contiguous(","charCount":{"leading":23,"trailing":27},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":257039,"end":257043},"start":{"line":6063,"column":23},"end":{"line":6063,"column":27}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"__dpct_inline__ static void k_copy_dst_from_contiguous(","charCount":{"leading":23,"trailing":28},"language":"Cpp"},{"text":"stream","range":{"byteOffset":{"start":271578,"end":271584},"start":{"line":6359,"column":20},"end":{"line":6359,"column":26}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    const queue_ptr stream = ctx.stream();","charCount":{"leading":20,"trailing":16},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":296699,"end":296703},"start":{"line":7028,"column":9},"end":{"line":7028,"column":13}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"GGML_API void ggml_backend_sycl_get_device_description(int device, char *description,","charCount":{"leading":9,"trailing":72},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":316600,"end":316604},"start":{"line":7460,"column":6},"end":{"line":7460,"column":10}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    } else","charCount":{"leading":6,"trailing":0},"language":"Cpp"},{"text":"#ifdef GGML_SYCL_HAS_BF16","range":{"byteOffset":{"start":337323,"end":337348},"start":{"line":7956,"column":0},"end":{"line":7956,"column":25}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"#ifdef GGML_SYCL_HAS_BF16","charCount":{"leading":0,"trailing":0},"language":"Cpp"},{"text":"#endif","range":{"byteOffset":{"start":337399,"end":337405},"start":{"line":7958,"column":0},"end":{"line":7958,"column":6}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/seed/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"#endif","charCount":{"leading":0,"trailing":0},"language":"Cpp"},{"text":"PRId32","range":{"byteOffset":{"start":8238,"end":8244},"start":{"line":231,"column":72},"end":{"line":231,"column":78}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"            \"BOLT_ROUTE route=%s weight=%s aux_weight=%s op=%s op_id=%\" PRId32 \" dst_name=%s \"","charCount":{"leading":72,"trailing":16},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":34145,"end":34149},"start":{"line":789,"column":9},"end":{"line":789,"column":13}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"GGML_API void ggml_backend_sycl_get_gpu_list(int *id_list, int max_len) try {","charCount":{"leading":9,"trailing":64},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":99623,"end":99627},"start":{"line":2466,"column":23},"end":{"line":2466,"column":27}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"__dpct_inline__ static void","charCount":{"leading":23,"trailing":0},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS_1(int64_t, ne, src, ne)","range":{"byteOffset":{"start":128284,"end":128326},"start":{"line":3177,"column":4},"end":{"line":3177,"column":46}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS_1(int64_t, ne, src, ne);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS(int64_t, nb, src, nb)","range":{"byteOffset":{"start":128332,"end":128372},"start":{"line":3178,"column":4},"end":{"line":3178,"column":44}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS(int64_t, nb, src, nb);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":135816,"end":135820},"start":{"line":3332,"column":8},"end":{"line":3332,"column":12}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"        else","charCount":{"leading":8,"trailing":0},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":138749,"end":138753},"start":{"line":3380,"column":12},"end":{"line":3380,"column":16}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"            else","charCount":{"leading":12,"trailing":0},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne)","range":{"byteOffset":{"start":162920,"end":162962},"start":{"line":3935,"column":4},"end":{"line":3935,"column":46}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS(int64_t, ne0, src0, ne);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"GGML_TENSOR_LOCALS(int64_t, ne1, src1, ne)","range":{"byteOffset":{"start":162969,"end":163011},"start":{"line":3937,"column":4},"end":{"line":3937,"column":46}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    GGML_TENSOR_LOCALS(int64_t, ne1, src1, ne);","charCount":{"leading":4,"trailing":1},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":194977,"end":194981},"start":{"line":4610,"column":4},"end":{"line":4610,"column":8}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    else","charCount":{"leading":4,"trailing":0},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":257241,"end":257245},"start":{"line":6056,"column":23},"end":{"line":6056,"column":27}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"__dpct_inline__ static void k_copy_src1_to_contiguous(","charCount":{"leading":23,"trailing":27},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":258098,"end":258102},"start":{"line":6079,"column":23},"end":{"line":6079,"column":27}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"__dpct_inline__ static void k_copy_dst_from_contiguous(","charCount":{"leading":23,"trailing":28},"language":"Cpp"},{"text":"stream","range":{"byteOffset":{"start":272637,"end":272643},"start":{"line":6375,"column":20},"end":{"line":6375,"column":26}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    const queue_ptr stream = ctx.stream();","charCount":{"leading":20,"trailing":16},"language":"Cpp"},{"text":"void","range":{"byteOffset":{"start":297758,"end":297762},"start":{"line":7044,"column":9},"end":{"line":7044,"column":13}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"GGML_API void ggml_backend_sycl_get_device_description(int device, char *description,","charCount":{"leading":9,"trailing":72},"language":"Cpp"},{"text":"else","range":{"byteOffset":{"start":317659,"end":317663},"start":{"line":7476,"column":6},"end":{"line":7476,"column":10}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"    } else","charCount":{"leading":6,"trailing":0},"language":"Cpp"},{"text":"#ifdef GGML_SYCL_HAS_BF16","range":{"byteOffset":{"start":338382,"end":338407},"start":{"line":7972,"column":0},"end":{"line":7972,"column":25}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"#ifdef GGML_SYCL_HAS_BF16","charCount":{"leading":0,"trailing":0},"language":"Cpp"},{"text":"#endif","range":{"byteOffset":{"start":338458,"end":338464},"start":{"line":7974,"column":0},"end":{"line":7974,"column":6}},"file":"results/20261020-lilicorr-q8-target-batch4/.scratch/candidate/ggml/src/ggml-sycl/ggml-sycl.cpp","lines":"#endif","charCount":{"leading":0,"trailing":0},"language":"Cpp"}]
+Parser comparison dmmv.cpp: seed=12, candidate=12; identical ERROR snippets/multiplicities, no new parser errors.
+Parser comparison ggml-sycl.cpp: seed=17, candidate=17; identical ERROR snippets/multiplicities, no new parser errors.
+Parser comparison dmmv.hpp: seed=0, candidate=0; identical ERROR snippets/multiplicities, no new parser errors.
+These 29 pre-existing macro/preprocessor parser ERROR nodes are not compiler diagnostics; this is NOT a SYCL build check.
+
+Close gate: private .scratch and test .cpu-* trees removed; exactly five requested files remain.
+Raw command outputs below are JSON-escaped to retain patch-context whitespace without introducing trailing whitespace into this log.
+{"command": "git diff --check", "exit": 0, "stdout": ""}
+{"command": "git diff --cached --check", "exit": 2, "stdout": "results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:39: trailing whitespace.\n+ \nresults/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:49: trailing whitespace.\n+ \nresults/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:53: trailing whitespace.\n+ \nresults/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:59: trailing whitespace.\n+ \nresults/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:63: trailing whitespace.\n+ \nresults/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:91: trailing whitespace.\n+ \nresults/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:153: trailing whitespace.\n+ \nresults/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch:161: trailing whitespace.\n+ \n"}
+{"command": "git diff --cached --check -- results/20261020-lilicorr-q8-target-batch4 ':(exclude)results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch'", "exit": 0, "stdout": ""}
+{"command": "git -c core.whitespace=-blank-at-eol diff --cached --check -- results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch", "exit": 0, "stdout": ""}
+{"command": "git apply --stat results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch", "exit": 0, "stdout": " ggml/src/ggml-sycl/ggml-sycl.cpp |   20 ++++++++-\n ggml/src/ggml-sycl/dmmv.cpp      |   88 +++++++++++++++++++++++++++++++++++++-\n ggml/src/ggml-sycl/dmmv.hpp      |   10 ++++\n 3 files changed, 114 insertions(+), 4 deletions(-)\n"}
+{"command": "git status --short --untracked-files=all", "exit": 0, "stdout": "A  results/20261020-lilicorr-q8-target-batch4/README.md\nA  results/20261020-lilicorr-q8-target-batch4/cpu-checks.txt\nA  results/20261020-lilicorr-q8-target-batch4/q8-target-batch4.patch\nA  results/20261020-lilicorr-q8-target-batch4/source-pins.json\nA  results/20261020-lilicorr-q8-target-batch4/test-candidate.py\n"}
+The ordinary staged diff check reports only preserved one-space blank context lines inside the raw patch; no added source-line whitespace. Non-patch files and the patch-aware check both pass. GNU/Git application with --whitespace=error and the eight-test suite are green. No full SYCL compile or device/serving pass is claimed.

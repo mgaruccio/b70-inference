@@ -1,0 +1,172 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -4176,9 +4176,25 @@
+                 // do the computation
+                 if (op == ggml_sycl_op_dequantize_mul_mat_vec && src1_ncols == src1->ne[1] &&
+                     ggml_sycl_latent_dmmv2_eligible(ctx, src0, src1, dst)) {
+-                    // The DMMV callback ignores ncols. Keep its F32 ESIMD arithmetic,
+-                    // row-low offset and queue ordering, but launch once per column.
++                    // Preserve private eligibility and native F32 arithmetic. Only n=4
++                    // may share a submission; the old callback loop remains the fallback.
+                     GGML_ASSERT(src0_extra && src0_extra->optimized_feature.reorder);
++                    bool batch4_launched = false;
++                    int batch4_wg = 0;
++                    if (src1_ncols == 4) {
++                        SYCL_CHECK(CHECK_TRY_ERROR(batch4_launched = ggml_sycl_op_dequantize_mul_mat_vec_q8_0_batch4(
++                            src0_dd_i, src1_ddf_i, dst_dd_i, ne00, dev[i].row_low, dev[i].row_high,
++                            ne10, dst_on_device ? ne0 : row_diff, stream, batch4_wg)));
++                    }
++                    if (batch4_launched) {
++                        if (bolt_route_enabled()) {
++                            fprintf(stderr, "BOLT_Q8_VERIFY_BATCH4 weight=%s dst_name=%s n=4 "
++                                    "row_low=%" PRId64 " row_high=%" PRId64 " rowpairs=%" PRId64 " "
++                                    "wg=%d physical_launches=1\n",
++                                    bolt_route_name(src0), bolt_route_name(dst), dev[i].row_low, dev[i].row_high,
++                                    (row_diff + 1) / 2, batch4_wg);
++                        }
++                    } else
+                     for (int64_t col = 0; col < src1_ncols; ++col) {
+                         SYCL_CHECK(CHECK_TRY_ERROR(op(ctx, src0, src1, dst, src0_dd_i,
+                             src1_ddf_i + col * ne10, src1_ddq_i,
+--- a/ggml/src/ggml-sycl/dmmv.cpp
++++ b/ggml/src/ggml-sycl/dmmv.cpp
+@@ -2,6 +2,8 @@
+ #include "dmmv.hpp"
+ #include "dequantize.hpp"
+ #include "presets.hpp"
++#include <climits>
++#include <cstdint>
+ 
+ #if defined(__INTEL_LLVM_COMPILER)
+     #if __has_include(<sycl/ext/oneapi/bfloat16.hpp>)
+@@ -2050,7 +2052,7 @@
+         const void * vx, const float * y, float * dst,
+         const int ncols, const int nrows,
+         sycl::local_accessor<float, 1> lmem,
+-        const sycl::nd_item<1> & it) {
++        const sycl::nd_item<1> & it, const int row_pair_override = -1) {
+     using namespace sycl::ext::intel::esimd;
+ 
+     constexpr int STRIPE = 8;
+@@ -2061,7 +2063,7 @@
+     const sycl::half * d        = (const sycl::half *) (qs + nb * QK8_0);
+ 
+     const int  tid      = it.get_local_id(0);
+-    const int  row_pair = it.get_group(0);
++    const int  row_pair = row_pair_override < 0 ? it.get_group(0) : row_pair_override;
+     const int  row0     = row_pair * 2;
+     const bool has_row1 = row0 + 1 < nrows;
+ 
+@@ -2119,6 +2121,28 @@
+     });
+ }
+ 
++// Private n=4 submission: adjacent groups share a weight row pair, not SLM.
++// Group execution order/cache residency is unspecified; every group is independent.
++template <int WG>
++static void q8_0_esimd_launch_batch4(const void * vx, const float * y, float * dst, const int ncols,
++                                    const int nrows, const size_t src1_stride, const size_t dst_stride,
++                                    dpct::queue_ptr stream) {
++    const size_t workgroups = ((size_t) nrows + 1) / 2 * 4;
++    stream->submit([&](sycl::handler & h) {
++        sycl::local_accessor<float, 1> lmem(sycl::range<1>(WG * 2), h);
++        h.parallel_for(
++            sycl::nd_range<1>(sycl::range<1>(workgroups * WG), sycl::range<1>(WG)),
++            [=](sycl::nd_item<1> it) [[intel::sycl_explicit_simd]] {
++                const size_t group = it.get_group(0);
++                const size_t token = group % 4;
++                const int row_pair = (int) (group / 4);
++                dequantize_mul_mat_vec_q8_0_reorder_esimd<WG>(
++                    vx, y + token * src1_stride, dst + token * dst_stride,
++                    ncols, nrows, lmem, it, row_pair);
++            });
++    });
++}
++
+ static void dequantize_mul_mat_vec_q8_0_sycl_reorder_esimd(const void *vx, const float *y,
+                                                            float *dst, const int ncols,
+                                                            const int nrows,
+@@ -2139,6 +2163,66 @@
+ }
+ 
+ #endif // GGML_SYCL_DMMV_HAS_ESIMD
++
++// Caller retains the private tensor/layout/scope eligibility and allocation bounds.
++// A false return is possible only before submission; enqueue failures propagate.
++bool ggml_sycl_op_dequantize_mul_mat_vec_q8_0_batch4(
++    const void * vx, const float * y, float * dst, const int64_t ncols,
++    const int64_t row_low, const int64_t row_high,
++    const int64_t src1_stride, const int64_t dst_stride,
++    const dpct::queue_ptr & stream, int & launched_wg) {
++#ifdef GGML_SYCL_DMMV_HAS_ESIMD
++    if (!vx || !y || !dst || !stream ||
++        (uintptr_t) vx % 16 != 0 || (uintptr_t) y % sizeof(float) != 0 ||
++        (uintptr_t) dst % sizeof(float) != 0 ||
++        ncols <= 0 || ncols > INT_MAX || ncols % QK8_0 != 0 ||
++        row_low < 0 || row_high <= row_low || row_high - row_low > INT_MAX - 1 ||
++        src1_stride != ncols || dst_stride < row_high - row_low) return false;
++
++    const size_t nrows = (size_t) (row_high - row_low);
++    const size_t nblk_row = (size_t) ncols / QK8_0;
++    // Bound every byte offset before multiplying, including all four columns.
++    const size_t max_bytes = PTRDIFF_MAX;
++    if ((uint64_t) src1_stride > max_bytes / sizeof(float) / 4 ||
++        (uint64_t) dst_stride > max_bytes / sizeof(float) / 4 ||
++        nrows > max_bytes / sizeof(block_q8_0) / nblk_row ||
++        (nrows + 1) / 2 > SIZE_MAX / 4 / 8) return false;
++    const size_t vx_bytes = nrows * nblk_row * sizeof(block_q8_0);
++    const size_t y_bytes = 4 * (size_t) src1_stride * sizeof(float);
++    const size_t dst_bytes = (3 * (size_t) dst_stride + nrows) * sizeof(float);
++    const uintptr_t vx_base = (uintptr_t) vx;
++    const uintptr_t y_base = (uintptr_t) y;
++    const uintptr_t dst_base = (uintptr_t) dst;
++    if (vx_bytes > UINTPTR_MAX - vx_base || y_bytes > UINTPTR_MAX - y_base ||
++        dst_bytes > UINTPTR_MAX - dst_base) return false;
++    // Concurrent writes must not overlap either input, even across columns.
++    if (!(vx_base + vx_bytes <= dst_base || dst_base + dst_bytes <= vx_base) ||
++        !(y_base + y_bytes <= dst_base || dst_base + dst_bytes <= y_base)) return false;
++
++    // Exactly the native thresholds; each selected kernel retains local WG and SLM.
++    int wg;
++    if (nblk_row >= 64) {
++        q8_0_esimd_launch_batch4<8>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);
++        wg = 8;
++    } else if (nblk_row >= 32) {
++        q8_0_esimd_launch_batch4<4>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);
++        wg = 4;
++    } else if (nblk_row >= 16) {
++        q8_0_esimd_launch_batch4<2>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);
++        wg = 2;
++    } else {
++        q8_0_esimd_launch_batch4<1>(vx, y, dst, (int) ncols, (int) nrows, src1_stride, dst_stride, stream);
++        wg = 1;
++    }
++    launched_wg = wg;
++    return true;
++#else
++    GGML_UNUSED(vx); GGML_UNUSED(y); GGML_UNUSED(dst); GGML_UNUSED(ncols);
++    GGML_UNUSED(row_low); GGML_UNUSED(row_high);
++    GGML_UNUSED(src1_stride); GGML_UNUSED(dst_stride); GGML_UNUSED(stream); GGML_UNUSED(launched_wg);
++    return false;
++#endif
++}
+ 
+ static void dequantize_mul_mat_vec_q4_K_sycl_reorder(const void *vx, const float *y,
+                                                      float *dst, const int ncols,
+--- a/ggml/src/ggml-sycl/dmmv.hpp
++++ b/ggml/src/ggml-sycl/dmmv.hpp
+@@ -24,4 +24,14 @@
+     const int64_t src1_ncols, const int64_t src1_padded_row_size,
+     const dpct::queue_ptr &stream);
+ 
++// Private n=4 target Q8_0/F32 path, only after ggml_sycl_latent_dmmv2_eligible.
++// Pointers already include row-low offsets; strides are float elements, not bytes.
++// Caller owns tensor allocation/layout bounds. False means no enqueue occurred.
++// launched_wg is written only after successful submission; no scratch/conversion.
++bool ggml_sycl_op_dequantize_mul_mat_vec_q8_0_batch4(
++    const void * vx, const float * y, float * dst, const int64_t ncols,
++    const int64_t row_low, const int64_t row_high,
++    const int64_t src1_stride, const int64_t dst_stride,
++    const dpct::queue_ptr & stream, int & launched_wg);
++
+ #endif // GGML_SYCL_DMMV_HPP
