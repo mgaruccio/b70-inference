@@ -1,0 +1,26 @@
+--- a/ggml/src/ggml-sycl/dpct/helper.hpp
++++ b/ggml/src/ggml-sycl/dpct/helper.hpp
+@@ -791,23 +791,8 @@
+       void clear_queues() { _queues.clear(); }
+ 
+       void init_queues() {
+-        // LILICORR_DEVICE_ONLY_BEGIN
+-#ifndef DPCT_PROFILING_ENABLED
+-        const char * profile = std::getenv("LLAMA_LILICORR_PROFILE");
+-        const char * graphs = std::getenv("GGML_SYCL_ENABLE_GRAPH");
+-        if (profile && profile[0] == '1' && profile[1] == '\0' &&
+-            (!graphs || std::atoi(graphs) == 0) && has(sycl::aspect::queue_profiling)) {
+-          _q_in_order = create_queue_impl(true, sycl::property::queue::in_order(),
+-                                          sycl::property::queue::enable_profiling());
+-        } else
+-#endif
+-        {
+-        // LILICORR_DEVICE_ONLY_END
+         _q_in_order =
+             create_queue_impl(true, sycl::property::queue::in_order());
+-        // LILICORR_DEVICE_ONLY_BEGIN
+-        }
+-        // LILICORR_DEVICE_ONLY_END
+         _q_out_of_order = create_queue_impl(true);
+         _saved_queue = default_queue();
+       }

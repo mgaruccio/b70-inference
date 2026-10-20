@@ -1,0 +1,36 @@
+Development host-boundary CPU/source checks; no performance comparison or device/compiler proof.
+Environment: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44 3.14.7 (main, Aug 13 2026, 07:40:04) [GCC 16.2.1 20260810]
+c++ (GCC) 16.2.1 20260810
+test_actual_launches_and_only_existing_drain_queries (__main__.HostBoundaryTests.test_actual_launches_and_only_existing_drain_queries) ... ok
+test_ancestry_pins_exact_composition_reverse_and_wrong_source (__main__.HostBoundaryTests.test_ancestry_pins_exact_composition_reverse_and_wrong_source) ... ok
+test_exact_source_and_arithmetic_geometry_preservation (__main__.HostBoundaryTests.test_exact_source_and_arithmetic_geometry_preservation) ... ok
+test_extracted_cpp_with_mocked_sycl_no_sdk (__main__.HostBoundaryTests.test_extracted_cpp_with_mocked_sycl_no_sdk) ... COMMAND: c++ -std=c++17 -Wall -Wextra -Werror -Wno-attributes -pthread -I/home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/candidate/ggml/src/ggml-sycl /home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/event-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/mock-default
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/mock-default 
+PASS exact queue count/off properties/opt-in/unsupported/graphs
+PASS opt-out/target exact submissions with no clocks/queries/retained events/logs
+PASS actual launch returns/deferred existing sync/context ownership/thread handoff/copied metadata
+PASS nested target suspension/thread TLS/selected reordered Q8 kernel guards
+PASS unsupported/graphs/query failure/invalid timestamps/incomplete events never become zero timings
+PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait
+PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards
+ALL CPU MOCK CHECKS PASSED (not device proof)
+
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/mock-default wait-error; expected exit=1; observed= 1 
+PASS original wait failure: no profiling query
+original-wait-errorException caught at file:/home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/event-driver.cpp, line:152
+
+ok
+test_fc46_route_evidence_and_host_only_markers (__main__.HostBoundaryTests.test_fc46_route_evidence_and_host_only_markers) ... ok
+test_host_patch_exact_increment_and_single_file_rollback (__main__.HostBoundaryTests.test_host_patch_exact_increment_and_single_file_rollback) ... ok
+test_host_queue_has_no_profiling_and_runtime_fields_stay_unavailable (__main__.HostBoundaryTests.test_host_queue_has_no_profiling_and_runtime_fields_stay_unavailable) ... ok
+test_old_host_and_phase_schemas_unchanged (__main__.HostBoundaryTests.test_old_host_and_phase_schemas_unchanged) ... ok
+test_process_components_actual_chunk_host_mocks (__main__.HostBoundaryTests.test_process_components_actual_chunk_host_mocks) ... COMMAND: c++ -std=c++17 -Wall -Wextra -Werror /home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/process-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/mock-process
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-host-boundary/results/20261020-lilicorr-host-boundary/.scratch/tmp_8gyrdu4/mock-process 
+PASS extracted process chunk: widths4/5/46, six real CPU gather loops, ring bytes, existing API order/counts, opt-out/non-LiliCorr guards, rc/missing-projection negatives, getter attribution and separate logging cost
+
+ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.629s
+
+OK
