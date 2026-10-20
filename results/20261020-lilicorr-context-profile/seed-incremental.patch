@@ -1,0 +1,148 @@
+--- a/ggml/src/ggml-sycl/ggml-sycl.cpp
++++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
+@@ -7224,23 +7224,13 @@
+     return value && std::strcmp(value, "1") == 0;
+ }
+ 
+-static bool lilicorr_sycl_profile_marker(const ggml_tensor * tensor) {
+-    return tensor && tensor->name[0] && (std::strcmp(tensor->name, "lilicorr_lattice") == 0 || std::strcmp(tensor->name, "inp_noise_embd") == 0 || std::strncmp(tensor->name, "lilicorr.", 9) == 0);
+-}
+-
+-static const ggml_tensor * lilicorr_sycl_profile_graph_marker(const ggml_cgraph * cgraph) {
+-    for (int i = 0; i < cgraph->n_nodes; ++i) {
+-        const ggml_tensor * node = cgraph->nodes[i];
+-        if (lilicorr_sycl_profile_marker(node)) {
+-            return node;
+-        }
+-        for (int j = 0; j < GGML_MAX_SRC; ++j) {
+-            if (lilicorr_sycl_profile_marker(node->src[j])) {
+-                return node->src[j];
+-            }
+-        }
+-    }
+-    return nullptr;
++// Private development-only procedure; no public backend API or tensor-name gate.
++static thread_local bool lilicorr_sycl_profile_context = false;
++
++static bool set_lilicorr_profile_scope(bool enabled) noexcept {
++    const bool previous = lilicorr_sycl_profile_context;
++    lilicorr_sycl_profile_context = enabled;
++    return previous;
+ }
+ 
+ static const char * lilicorr_sycl_profile_name(const ggml_tensor * tensor) {
+@@ -7332,9 +7322,8 @@
+     ggml_sycl_set_main_device(sycl_ctx->device);
+ 
+     // LILICORR_SYCL_PROFILE_ONLY_BEGIN
+-    const bool profile_requested = lilicorr_sycl_profile_requested();
+-    const ggml_tensor * profile_marker = profile_requested ? lilicorr_sycl_profile_graph_marker(cgraph) : nullptr;
+-    const bool profile_enabled = profile_marker != nullptr;
++    const bool profile_requested = lilicorr_sycl_profile_context && lilicorr_sycl_profile_requested();
++    const bool profile_enabled = profile_requested;
+     static std::atomic<uint64_t> profile_graph_sequence{0};
+     const uint64_t profile_graph_id = profile_enabled ?
+         profile_graph_sequence.fetch_add(1, std::memory_order_relaxed) + 1 : 0;
+@@ -7525,11 +7514,9 @@
+     const int64_t profile_core_end = profile_enabled ? lilicorr_sycl_profile_now_us() : 0;
+     if (profile_requested) {
+         const int64_t profile_log_begin = lilicorr_sycl_profile_now_us();
+-        const char * marker_name = lilicorr_sycl_profile_name(profile_marker);
+-        if (!profile_enabled) {
+-            // No exact LiliCorr marker: emit no gate or summary record.
+-            return;
+-        } else {
++        // v1 marker_name is a context label, never an enabling tensor name.
++        const char * marker_name = "lilicorr.context";
++        {
+             GGML_LOG_INFO("LLAMA_LILICORR_SYCL_PROFILE v=1 stage=gate graph=%" PRIu64 " requested=1 enabled=1 marker=1 graph_nodes=%d marker_name=%s\n",
+                           profile_graph_id, cgraph->n_nodes, marker_name);
+             int64_t event_wall_us = 0;
+@@ -8629,6 +8616,12 @@
+ static void *ggml_backend_sycl_reg_get_proc_address(ggml_backend_reg_t reg, const char *name) {
+     GGML_UNUSED(reg);
+ 
++    // LILICORR_SYCL_PROFILE_ONLY_BEGIN
++    if (strcmp(name, "set_lilicorr_profile_scope") == 0) {
++        return (void *)set_lilicorr_profile_scope;
++    }
++
++    // LILICORR_SYCL_PROFILE_ONLY_END
+     if (strcmp(name, "ggml_backend_split_buffer_type") == 0) {
+         return (void *)ggml_backend_sycl_split_buffer_type;
+     }
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -2751,6 +2751,58 @@
+             lctx->n_reallocs_same, lctx->n_reallocs_diff);
+ }
+ 
++// LILICORR_PROFILE_ONLY_BEGIN
++// Private development hook. Scheduler split submissions call backend graph_compute
++// synchronously on this host thread; GPU completion may remain asynchronous.
++static thread_local unsigned lilicorr_context_profile_depth = 0;
++
++struct lilicorr_context_profile_scope {
++    using setter = bool (*)(bool) noexcept;
++    struct saved_state { setter set; bool previous; };
++    std::vector<saved_state> states;
++    bool active = false;
++
++    lilicorr_context_profile_scope(const std::vector<ggml_backend_ptr> & backends, bool is_lilicorr) {
++        const char * value = is_lilicorr ? std::getenv("LLAMA_LILICORR_PROFILE") : nullptr;
++        const bool enabled = value && std::strcmp(value, "1") == 0;
++        if (!enabled && lilicorr_context_profile_depth == 0) {
++            return; // No lookup, allocation, clock, or state change on the ordinary path.
++        }
++        // A nested non-drafter submission temporarily suspends an outer scope.
++        // Allocate and resolve ALL callbacks before setting ANY backend TLS flags.
++        states.reserve(backends.size());
++        for (const auto & backend : backends) {
++            auto * device = ggml_backend_get_device(backend.get());
++            auto * reg = device ? ggml_backend_dev_backend_reg(device) : nullptr;
++            auto set = reg ? reinterpret_cast<setter>(ggml_backend_reg_get_proc_address(
++                    reg, "set_lilicorr_profile_scope")) : nullptr;
++            if (set) {
++                states.push_back({set, false});
++            }
++        }
++        for (auto & state : states) {
++            state.previous = state.set(enabled); // Private setters are noexcept.
++        }
++        ++lilicorr_context_profile_depth;
++        active = true;
++    }
++
++    void restore() noexcept {
++        if (active) {
++            for (auto it = states.rbegin(); it != states.rend(); ++it) {
++                it->set(it->previous);
++            }
++            --lilicorr_context_profile_depth;
++            active = false;
++        }
++    }
++
++    ~lilicorr_context_profile_scope() { restore(); }
++    lilicorr_context_profile_scope(const lilicorr_context_profile_scope &) = delete;
++    lilicorr_context_profile_scope & operator=(const lilicorr_context_profile_scope &) = delete;
++};
++
++// LILICORR_PROFILE_ONLY_END
+ ggml_status llama_context::graph_compute(
+             ggml_cgraph * gf,
+                    bool   batched) {
+@@ -2772,7 +2824,13 @@
+ 
+     copy_experts.reset();
+ 
++    // LILICORR_PROFILE_ONLY_BEGIN
++    lilicorr_context_profile_scope profile_scope(backends, model.hparams.lilicorr_candidate_topk > 0);
++    // LILICORR_PROFILE_ONLY_END
+     auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);
++    // LILICORR_PROFILE_ONLY_BEGIN
++    profile_scope.restore(); // Also restored by RAII if submission throws.
++    // LILICORR_PROFILE_ONLY_END
+     if (status != GGML_STATUS_SUCCESS) {
+         LLAMA_LOG_ERROR("%s: ggml_backend_sched_graph_compute_async failed with error %d\n", __func__, status);
+     }
