@@ -1,0 +1,66 @@
+Development-tier CPU/source check; baseline=immutable batch4; delta=one private n4 dot only
+Invocation: /usr/bin/python3 -B results/20261020-lilicorr-iq2-packed/test-packed.py
+Environment: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44 3.14.7 cwd=/home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed
++ g++ --version
+g++ (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
+PASS pins; exact forward/reverse composition; only new helper + batch4 callee; all other bytes unchanged
++ g++ -std=c++17 -O2 -Wall -Wextra -Werror -Wno-unknown-pragmas -fno-fast-math -ffp-contract=off -fsanitize=undefined -fno-sanitize-recover=all /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6/extracted.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6/extracted
++ /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/.scratch/cpu-pj4_sgg6/extracted
+PASS tables: 256 grids x128 sign codes x8 = 262144 signed bytes; all 256 sign masks; values={8,25,43}, nonzero
+PASS bound: every 32-product prefix <= 32*43*128 = 176128 < INT32_MAX; signed dp4a inputs; memcpy loads
+PASS grid/sign dots: 262144 integer+F32-bit comparisons
+PASS scales: 63488 finite encodings/operand; 22x22 edges x16 scales x8 iqs x6 Q8 patterns
+PASS dots total: 1684480 integer+F32-bit comparisons; Q8 includes every -128..127 value
+PASS extracted native K/XOR: K=1024,2048; 768 rows x16 lanes, 4 token slices, shared/per-expert Q8
+PASS CPU exactness only; no SDK/device execution, hardware-DP4A, or speed claim
+PASS cleanup: generated source, binary and seed/candidate copies removed
+
+Recheck after trimming patch context only: initial git diff --cached --check flagged the unified diff blank context line as trailing whitespace; no inference code changed.
+Development-tier CPU/source check; baseline=immutable batch4; delta=one private n4 dot only
+Invocation: /usr/bin/python3 -B results/20261020-lilicorr-iq2-packed/test-packed.py
+Environment: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44 3.14.7 cwd=/home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed
++ g++ --version
+g++ (GCC) 16.2.1 20260810
+Copyright (C) 2026 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 -R /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-batch4/iq2-batch4.patch
++ git apply --check --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
++ git apply --directory=results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8 /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/iq2-packed.patch
+PASS pins; exact forward/reverse composition; only new helper + batch4 callee; all other bytes unchanged
++ g++ -std=c++17 -O2 -Wall -Wextra -Werror -Wno-unknown-pragmas -fno-fast-math -ffp-contract=off -fsanitize=undefined -fno-sanitize-recover=all /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8/extracted.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8/extracted
++ /home/mike/code/.pi-worktrees/b70-inference/lilicorr-iq2-packed/results/20261020-lilicorr-iq2-packed/.scratch/cpu-nmtzr1x8/extracted
+PASS tables: 256 grids x128 sign codes x8 = 262144 signed bytes; all 256 sign masks; values={8,25,43}, nonzero
+PASS bound: every 32-product prefix <= 32*43*128 = 176128 < INT32_MAX; signed dp4a inputs; memcpy loads
+PASS grid/sign dots: 262144 integer+F32-bit comparisons
+PASS scales: 63488 finite encodings/operand; 22x22 edges x16 scales x8 iqs x6 Q8 patterns
+PASS dots total: 1684480 integer+F32-bit comparisons; Q8 includes every -128..127 value
+PASS extracted native K/XOR: K=1024,2048; 768 rows x16 lanes, 4 token slices, shared/per-expert Q8
+PASS CPU exactness only; no SDK/device execution, hardware-DP4A, or speed claim
+PASS cleanup: generated source, binary and seed/candidate copies removed
