@@ -1,0 +1,384 @@
+{
+  "passed": true,
+  "request_start_line": 792,
+  "scope_label": "lilicorr.context",
+  "decoder_projection_records": 1,
+  "lattice_operation_records": 11,
+  "first_decoder_line": 949,
+  "host_boundary": {
+    "status": "ok",
+    "gpu_time_claim": false,
+    "gpu_timestamps": "unavailable",
+    "host": {
+      "scope": "per-request",
+      "unit": "us for host durations; byte fields are bytes",
+      "chunk_count": 4,
+      "logging_record_count": 4,
+      "totals_us": {
+        "target_getter": 1492,
+        "feature_cpu_memcpy_loop": 189,
+        "injection_submission": 10463,
+        "projection_getter": 1521,
+        "ring_cpu_loop": 23,
+        "separate_log_cost": 15
+      },
+      "available": {
+        "target_getter": true,
+        "feature_cpu_memcpy_loop": true,
+        "injection_submission": true,
+        "projection_getter": true,
+        "ring_cpu_loop": true,
+        "separate_log_cost": true
+      },
+      "bytes": {
+        "feature_copy": 3047424,
+        "ring_copy": 360448
+      },
+      "calls": {
+        "target_getter": 24,
+        "feature_copy": 186,
+        "ring_copy": 22
+      },
+      "attribution": {
+        "target_getter": "target queue wait/output reorder may be included",
+        "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+        "injection_submission": "host submission and internal waits may be included",
+        "projection_getter": "injection/shared-queue drain may be included",
+        "ring_cpu_loop": "existing projected-ring copy/position loop",
+        "separate_log_cost": "format/log host cost, excluding its own reporting call"
+      },
+      "unavailable_is_not_zero": true
+    },
+    "device": {
+      "coverage": [
+        {
+          "v": 1,
+          "stage": "coverage",
+          "graph": 2,
+          "backend_ctx": 517886192,
+          "device": 0,
+          "graph_nodes": 59,
+          "status": "partial",
+          "coverage": "q8_reordered_2to8_fc46_host_only",
+          "submitted": 2,
+          "retained": 2,
+          "dropped": 0,
+          "submit_errors": 0,
+          "other_device_work": "unmeasured",
+          "line": 46
+        },
+        {
+          "v": 1,
+          "stage": "coverage",
+          "graph": 3,
+          "backend_ctx": 517886192,
+          "device": 0,
+          "graph_nodes": 59,
+          "status": "partial",
+          "coverage": "q8_reordered_2to8_fc46_host_only",
+          "submitted": 0,
+          "retained": 0,
+          "dropped": 0,
+          "submit_errors": 0,
+          "other_device_work": "unmeasured",
+          "line": 93
+        },
+        {
+          "v": 1,
+          "stage": "coverage",
+          "graph": 4,
+          "backend_ctx": 517886192,
+          "device": 0,
+          "graph_nodes": 59,
+          "status": "partial",
+          "coverage": "q8_reordered_2to8_fc46_host_only",
+          "submitted": 2,
+          "retained": 2,
+          "dropped": 0,
+          "submit_errors": 0,
+          "other_device_work": "unmeasured",
+          "line": 137
+        },
+        {
+          "v": 1,
+          "stage": "coverage",
+          "graph": 5,
+          "backend_ctx": 517886192,
+          "device": 0,
+          "graph_nodes": 657,
+          "status": "partial",
+          "coverage": "q8_reordered_2to8_fc46_host_only",
+          "submitted": 32,
+          "retained": 32,
+          "dropped": 0,
+          "submit_errors": 0,
+          "other_device_work": "unmeasured",
+          "line": 446
+        },
+        {
+          "v": 1,
+          "stage": "coverage",
+          "graph": 6,
+          "backend_ctx": 517886192,
+          "device": 0,
+          "graph_nodes": 167,
+          "status": "partial",
+          "coverage": "q8_reordered_2to8_fc46_host_only",
+          "submitted": 2,
+          "retained": 2,
+          "dropped": 0,
+          "submit_errors": 0,
+          "other_device_work": "unmeasured",
+          "line": 595
+        },
+        {
+          "v": 1,
+          "stage": "coverage",
+          "graph": 7,
+          "backend_ctx": 517886192,
+          "device": 0,
+          "graph_nodes": 59,
+          "status": "partial",
+          "coverage": "q8_reordered_2to8_fc46_host_only",
+          "submitted": 2,
+          "retained": 2,
+          "dropped": 0,
+          "submit_errors": 0,
+          "other_device_work": "unmeasured",
+          "line": 637
+        }
+      ]
+    },
+    "launch_metadata": [
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.0.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.0.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.0.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.1.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.1.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.1.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.2.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.2.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.2.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.3.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.3.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.3.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.4.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.4.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "blk.4.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "fc.weight",
+        "width": 4,
+        "count": 2
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "fc.weight",
+        "width": 5,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "lilicorr.pass_hidden_proj.weight",
+        "width": 7,
+        "count": 1
+      },
+      {
+        "route": "MMVQ_REORDERED",
+        "weight": "output.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.0.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.0.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.0.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.1.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.1.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.1.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.2.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.2.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.2.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.3.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.3.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.3.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.4.ffn_down.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.4.ffn_gate.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "blk.4.ffn_up.weight",
+        "width": 8,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "fc.weight",
+        "width": 4,
+        "count": 2
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "fc.weight",
+        "width": 5,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "lilicorr.pass_hidden_proj.weight",
+        "width": 7,
+        "count": 1
+      },
+      {
+        "route": "REORDERED_Q8_QUANTIZER",
+        "weight": "output.weight",
+        "width": 8,
+        "count": 1
+      }
+    ]
+  },
+  "job_stem": "quality/literal"
+}

@@ -1,0 +1,1483 @@
+{
+  "attribution": [
+    "Target getter may include target queue drain/output reorder.",
+    "Injection submission may include internal waits; projection getter may include shared-queue drain.",
+    "CPU loops measure only existing copied bytes and index work.",
+    "Nested context/scheduler intervals are not additive; first-draft host clock separates prefill from decode.",
+    "No GPU timestamp, clean-speed, whole-target-compute or universal speed-ceiling claim."
+  ],
+  "by_point": {
+    "long": {
+      "components_ms": {
+        "decode": {
+          "feature_cpu_memcpy_loop": {
+            "max": 5.392,
+            "mean": 5.229,
+            "min": 5.109
+          },
+          "injection_submission": {
+            "max": 33.859,
+            "mean": 33.105000000000004,
+            "min": 32.334
+          },
+          "projection_getter": {
+            "max": 0.634,
+            "mean": 0.5683333333333334,
+            "min": 0.533
+          },
+          "ring_cpu_loop": {
+            "max": 0.141,
+            "mean": 0.128,
+            "min": 0.115
+          },
+          "separate_log_cost": {
+            "max": 0.097,
+            "mean": 0.08,
+            "min": 0.071
+          },
+          "target_getter": {
+            "max": 0.176,
+            "mean": 0.15966666666666668,
+            "min": 0.148
+          }
+        },
+        "prefill": {
+          "feature_cpu_memcpy_loop": {
+            "max": 236.463,
+            "mean": 236.18516666666667,
+            "min": 235.991
+          },
+          "injection_submission": {
+            "max": 326.136,
+            "mean": 324.00716666666665,
+            "min": 322.121
+          },
+          "projection_getter": {
+            "max": 37.92,
+            "mean": 37.58133333333333,
+            "min": 37.328
+          },
+          "ring_cpu_loop": {
+            "max": 0.14,
+            "mean": 0.12633333333333335,
+            "min": 0.116
+          },
+          "separate_log_cost": {
+            "max": 0.028,
+            "mean": 0.026166666666666668,
+            "min": 0.023
+          },
+          "target_getter": {
+            "max": 65.72,
+            "mean": 65.37316666666666,
+            "min": 64.973
+          }
+        }
+      },
+      "context_decode_ms": {
+        "draft_batch": 344.43016666666665,
+        "draft_select": 0.673,
+        "process_batch": 39.39033333333333
+      },
+      "samples": 6
+    },
+    "short": {
+      "components_ms": {
+        "decode": {
+          "feature_cpu_memcpy_loop": {
+            "max": 5.204,
+            "mean": 5.0921666666666665,
+            "min": 4.946
+          },
+          "injection_submission": {
+            "max": 33.022,
+            "mean": 31.857,
+            "min": 31.382
+          },
+          "projection_getter": {
+            "max": 0.551,
+            "mean": 0.5185,
+            "min": 0.489
+          },
+          "ring_cpu_loop": {
+            "max": 0.147,
+            "mean": 0.128,
+            "min": 0.11
+          },
+          "separate_log_cost": {
+            "max": 0.083,
+            "mean": 0.074,
+            "min": 0.066
+          },
+          "target_getter": {
+            "max": 0.174,
+            "mean": 0.15733333333333333,
+            "min": 0.145
+          }
+        },
+        "prefill": {
+          "feature_cpu_memcpy_loop": {
+            "max": 1.966,
+            "mean": 1.646,
+            "min": 1.569
+          },
+          "injection_submission": {
+            "max": 4.537,
+            "mean": 4.38,
+            "min": 4.272
+          },
+          "projection_getter": {
+            "max": 2.196,
+            "mean": 2.1825,
+            "min": 2.161
+          },
+          "ring_cpu_loop": {
+            "max": 0.02,
+            "mean": 0.018166666666666668,
+            "min": 0.015
+          },
+          "separate_log_cost": {
+            "max": 0.006,
+            "mean": 0.005,
+            "min": 0.004
+          },
+          "target_getter": {
+            "max": 2.416,
+            "mean": 2.3501666666666665,
+            "min": 2.191
+          }
+        }
+      },
+      "context_decode_ms": {
+        "draft_batch": 315.121,
+        "draft_select": 0.6323333333333333,
+        "process_batch": 37.943666666666665
+      },
+      "samples": 6
+    }
+  },
+  "diagnostic_only": true,
+  "gpu_time_claim": false,
+  "gpu_timestamps": "unavailable",
+  "measured_outputs": 24,
+  "measured_w3_requests": 12,
+  "native_rechecks": [
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-A1",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-A1",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 346,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-A1",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "restored"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-A1",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 346,
+      "stage": "restored"
+    },
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-W3a",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-W3a",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 340,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-W3a",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "restored"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-W3a",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 340,
+      "stage": "restored"
+    },
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-W3b",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-W3b",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 340,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-W3b",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "restored"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-W3b",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 340,
+      "stage": "restored"
+    },
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-A2",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-A2",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 346,
+      "stage": "ready"
+    },
+    {
+      "byte_exact_cases": 54,
+      "cases": 82,
+      "cell": "VSPF-A2",
+      "kind": "q8",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 487,
+      "stage": "restored"
+    },
+    {
+      "byte_exact_cases": 16,
+      "cases": 34,
+      "cell": "VSPF-A2",
+      "kind": "iq2",
+      "public_fidelity": "NOT_TESTED",
+      "route_records": 346,
+      "stage": "restored"
+    }
+  ],
+  "phase_records": 16,
+  "promotion_permitted": false,
+  "public_checks": 100,
+  "requests": [
+    {
+      "cell": "VSPF-W3a",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 16908288,
+            "ring_copy": 2818048
+          },
+          "calls": {
+            "feature_copy": 1032,
+            "ring_copy": 172,
+            "target_getter": 258
+          },
+          "chunk_count": 43,
+          "logging_record_count": 43,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 4971,
+            "injection_submission": 31773,
+            "projection_getter": 489,
+            "ring_cpu_loop": 134,
+            "separate_log_cost": 77,
+            "target_getter": 145
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 5406720,
+            "ring_copy": 294912
+          },
+          "calls": {
+            "feature_copy": 330,
+            "ring_copy": 18,
+            "target_getter": 18
+          },
+          "chunk_count": 3,
+          "logging_record_count": 3,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 1580,
+            "injection_submission": 4359,
+            "projection_getter": 2180,
+            "ring_cpu_loop": 20,
+            "separate_log_cost": 4,
+            "target_getter": 2366
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 316140,
+        "draft_select": 631,
+        "process_batch": 37696
+      },
+      "first_draft_begin_us": 693735648639,
+      "first_line": 131578,
+      "last_line": 153234,
+      "ordinal": 0,
+      "phase": "measured",
+      "point": "short"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 16908288,
+            "ring_copy": 2818048
+          },
+          "calls": {
+            "feature_copy": 1032,
+            "ring_copy": 172,
+            "target_getter": 258
+          },
+          "chunk_count": 43,
+          "logging_record_count": 43,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 4946,
+            "injection_submission": 31759,
+            "projection_getter": 490,
+            "ring_cpu_loop": 143,
+            "separate_log_cost": 83,
+            "target_getter": 147
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 5406720,
+            "ring_copy": 294912
+          },
+          "calls": {
+            "feature_copy": 330,
+            "ring_copy": 18,
+            "target_getter": 18
+          },
+          "chunk_count": 3,
+          "logging_record_count": 3,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 1569,
+            "injection_submission": 4294,
+            "projection_getter": 2181,
+            "ring_cpu_loop": 19,
+            "separate_log_cost": 5,
+            "target_getter": 2374
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 316404,
+        "draft_select": 632,
+        "process_batch": 37679
+      },
+      "first_draft_begin_us": 693739300897,
+      "first_line": 153281,
+      "last_line": 174937,
+      "ordinal": 1,
+      "phase": "measured",
+      "point": "short"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 16908288,
+            "ring_copy": 2818048
+          },
+          "calls": {
+            "feature_copy": 1032,
+            "ring_copy": 172,
+            "target_getter": 258
+          },
+          "chunk_count": 43,
+          "logging_record_count": 43,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5155,
+            "injection_submission": 33022,
+            "projection_getter": 508,
+            "ring_cpu_loop": 147,
+            "separate_log_cost": 69,
+            "target_getter": 162
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 5406720,
+            "ring_copy": 294912
+          },
+          "calls": {
+            "feature_copy": 330,
+            "ring_copy": 18,
+            "target_getter": 18
+          },
+          "chunk_count": 3,
+          "logging_record_count": 3,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 1579,
+            "injection_submission": 4272,
+            "projection_getter": 2191,
+            "ring_cpu_loop": 20,
+            "separate_log_cost": 6,
+            "target_getter": 2382
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 316931,
+        "draft_select": 621,
+        "process_batch": 39188
+      },
+      "first_draft_begin_us": 693742955563,
+      "first_line": 174984,
+      "last_line": 196640,
+      "ordinal": 2,
+      "phase": "measured",
+      "point": "short"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 17498112,
+            "ring_copy": 2916352
+          },
+          "calls": {
+            "feature_copy": 1068,
+            "ring_copy": 178,
+            "target_getter": 270
+          },
+          "chunk_count": 45,
+          "logging_record_count": 45,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5160,
+            "injection_submission": 33750,
+            "projection_getter": 542,
+            "ring_cpu_loop": 141,
+            "separate_log_cost": 71,
+            "target_getter": 148
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 812974080,
+            "ring_copy": 1474560
+          },
+          "calls": {
+            "feature_copy": 49620,
+            "ring_copy": 90,
+            "target_getter": 66
+          },
+          "chunk_count": 11,
+          "logging_record_count": 11,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 236237,
+            "injection_submission": 323067,
+            "projection_getter": 37328,
+            "ring_cpu_loop": 140,
+            "separate_log_cost": 27,
+            "target_getter": 64973
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 345727,
+        "draft_select": 682,
+        "process_batch": 39934
+      },
+      "first_draft_begin_us": 693768139524,
+      "first_line": 219704,
+      "last_line": 242709,
+      "ordinal": 0,
+      "phase": "measured",
+      "point": "long"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 17498112,
+            "ring_copy": 2916352
+          },
+          "calls": {
+            "feature_copy": 1068,
+            "ring_copy": 178,
+            "target_getter": 270
+          },
+          "chunk_count": 45,
+          "logging_record_count": 45,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5171,
+            "injection_submission": 33859,
+            "projection_getter": 533,
+            "ring_cpu_loop": 136,
+            "separate_log_cost": 97,
+            "target_getter": 166
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 812974080,
+            "ring_copy": 1474560
+          },
+          "calls": {
+            "feature_copy": 49620,
+            "ring_copy": 90,
+            "target_getter": 66
+          },
+          "chunk_count": 11,
+          "logging_record_count": 11,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 235991,
+            "injection_submission": 326084,
+            "projection_getter": 37601,
+            "ring_cpu_loop": 135,
+            "separate_log_cost": 23,
+            "target_getter": 65108
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 346220,
+        "draft_select": 685,
+        "process_batch": 40079
+      },
+      "first_draft_begin_us": 693780821014,
+      "first_line": 242720,
+      "last_line": 265725,
+      "ordinal": 1,
+      "phase": "measured",
+      "point": "long"
+    },
+    {
+      "cell": "VSPF-W3a",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 17498112,
+            "ring_copy": 2916352
+          },
+          "calls": {
+            "feature_copy": 1068,
+            "ring_copy": 178,
+            "target_getter": 270
+          },
+          "chunk_count": 45,
+          "logging_record_count": 45,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5109,
+            "injection_submission": 33564,
+            "projection_getter": 544,
+            "ring_cpu_loop": 139,
+            "separate_log_cost": 75,
+            "target_getter": 158
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 812974080,
+            "ring_copy": 1474560
+          },
+          "calls": {
+            "feature_copy": 49620,
+            "ring_copy": 90,
+            "target_getter": 66
+          },
+          "chunk_count": 11,
+          "logging_record_count": 11,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 236171,
+            "injection_submission": 322583,
+            "projection_getter": 37515,
+            "ring_cpu_loop": 133,
+            "separate_log_cost": 28,
+            "target_getter": 65313
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 345900,
+        "draft_select": 678,
+        "process_batch": 39718
+      },
+      "first_draft_begin_us": 693793500834,
+      "first_line": 265736,
+      "last_line": 288741,
+      "ordinal": 2,
+      "phase": "measured",
+      "point": "long"
+    },
+    {
+      "cell": "VSPF-W3b",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 16908288,
+            "ring_copy": 2818048
+          },
+          "calls": {
+            "feature_copy": 1032,
+            "ring_copy": 172,
+            "target_getter": 258
+          },
+          "chunk_count": 43,
+          "logging_record_count": 43,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5204,
+            "injection_submission": 31606,
+            "projection_getter": 551,
+            "ring_cpu_loop": 110,
+            "separate_log_cost": 75,
+            "target_getter": 174
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 5406720,
+            "ring_copy": 294912
+          },
+          "calls": {
+            "feature_copy": 330,
+            "ring_copy": 18,
+            "target_getter": 18
+          },
+          "chunk_count": 3,
+          "logging_record_count": 3,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 1966,
+            "injection_submission": 4537,
+            "projection_getter": 2161,
+            "ring_cpu_loop": 18,
+            "separate_log_cost": 6,
+            "target_getter": 2191
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 313772,
+        "draft_select": 627,
+        "process_batch": 37839
+      },
+      "first_draft_begin_us": 694007164808,
+      "first_line": 131578,
+      "last_line": 153234,
+      "ordinal": 0,
+      "phase": "measured",
+      "point": "short"
+    },
+    {
+      "cell": "VSPF-W3b",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 16908288,
+            "ring_copy": 2818048
+          },
+          "calls": {
+            "feature_copy": 1032,
+            "ring_copy": 172,
+            "target_getter": 258
+          },
+          "chunk_count": 43,
+          "logging_record_count": 43,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5136,
+            "injection_submission": 31600,
+            "projection_getter": 535,
+            "ring_cpu_loop": 117,
+            "separate_log_cost": 74,
+            "target_getter": 157
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 5406720,
+            "ring_copy": 294912
+          },
+          "calls": {
+            "feature_copy": 330,
+            "ring_copy": 18,
+            "target_getter": 18
+          },
+          "chunk_count": 3,
+          "logging_record_count": 3,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 1588,
+            "injection_submission": 4376,
+            "projection_getter": 2186,
+            "ring_cpu_loop": 15,
+            "separate_log_cost": 4,
+            "target_getter": 2416
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 313767,
+        "draft_select": 642,
+        "process_batch": 37741
+      },
+      "first_draft_begin_us": 694010816719,
+      "first_line": 153281,
+      "last_line": 174937,
+      "ordinal": 1,
+      "phase": "measured",
+      "point": "short"
+    },
+    {
+      "cell": "VSPF-W3b",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 16908288,
+            "ring_copy": 2818048
+          },
+          "calls": {
+            "feature_copy": 1032,
+            "ring_copy": 172,
+            "target_getter": 258
+          },
+          "chunk_count": 43,
+          "logging_record_count": 43,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5141,
+            "injection_submission": 31382,
+            "projection_getter": 538,
+            "ring_cpu_loop": 117,
+            "separate_log_cost": 66,
+            "target_getter": 159
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 5406720,
+            "ring_copy": 294912
+          },
+          "calls": {
+            "feature_copy": 330,
+            "ring_copy": 18,
+            "target_getter": 18
+          },
+          "chunk_count": 3,
+          "logging_record_count": 3,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 1594,
+            "injection_submission": 4442,
+            "projection_getter": 2196,
+            "ring_cpu_loop": 17,
+            "separate_log_cost": 5,
+            "target_getter": 2372
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 313712,
+        "draft_select": 641,
+        "process_batch": 37519
+      },
+      "first_draft_begin_us": 694014468238,
+      "first_line": 174984,
+      "last_line": 196640,
+      "ordinal": 2,
+      "phase": "measured",
+      "point": "short"
+    },
+    {
+      "cell": "VSPF-W3b",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 17498112,
+            "ring_copy": 2916352
+          },
+          "calls": {
+            "feature_copy": 1068,
+            "ring_copy": 178,
+            "target_getter": 270
+          },
+          "chunk_count": 45,
+          "logging_record_count": 45,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5237,
+            "injection_submission": 32334,
+            "projection_getter": 634,
+            "ring_cpu_loop": 118,
+            "separate_log_cost": 78,
+            "target_getter": 158
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 812974080,
+            "ring_copy": 1474560
+          },
+          "calls": {
+            "feature_copy": 49620,
+            "ring_copy": 90,
+            "target_getter": 66
+          },
+          "chunk_count": 11,
+          "logging_record_count": 11,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 236463,
+            "injection_submission": 324052,
+            "projection_getter": 37701,
+            "ring_cpu_loop": 118,
+            "separate_log_cost": 28,
+            "target_getter": 65454
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 343070,
+        "draft_select": 670,
+        "process_batch": 38678
+      },
+      "first_draft_begin_us": 694039639513,
+      "first_line": 219704,
+      "last_line": 242709,
+      "ordinal": 0,
+      "phase": "measured",
+      "point": "long"
+    },
+    {
+      "cell": "VSPF-W3b",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 17498112,
+            "ring_copy": 2916352
+          },
+          "calls": {
+            "feature_copy": 1068,
+            "ring_copy": 178,
+            "target_getter": 270
+          },
+          "chunk_count": 45,
+          "logging_record_count": 45,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5392,
+            "injection_submission": 32552,
+            "projection_getter": 575,
+            "ring_cpu_loop": 119,
+            "separate_log_cost": 84,
+            "target_getter": 152
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 812974080,
+            "ring_copy": 1474560
+          },
+          "calls": {
+            "feature_copy": 49620,
+            "ring_copy": 90,
+            "target_getter": 66
+          },
+          "chunk_count": 11,
+          "logging_record_count": 11,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 236244,
+            "injection_submission": 326136,
+            "projection_getter": 37423,
+            "ring_cpu_loop": 116,
+            "separate_log_cost": 23,
+            "target_getter": 65671
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 342859,
+        "draft_select": 654,
+        "process_batch": 39001
+      },
+      "first_draft_begin_us": 694052305878,
+      "first_line": 242720,
+      "last_line": 265725,
+      "ordinal": 1,
+      "phase": "measured",
+      "point": "long"
+    },
+    {
+      "cell": "VSPF-W3b",
+      "component_phases": {
+        "decode": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 17498112,
+            "ring_copy": 2916352
+          },
+          "calls": {
+            "feature_copy": 1068,
+            "ring_copy": 178,
+            "target_getter": 270
+          },
+          "chunk_count": 45,
+          "logging_record_count": 45,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 5305,
+            "injection_submission": 32571,
+            "projection_getter": 582,
+            "ring_cpu_loop": 115,
+            "separate_log_cost": 75,
+            "target_getter": 176
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        },
+        "prefill": {
+          "attribution": {
+            "feature_cpu_memcpy_loop": "existing CPU memcpy/index loop",
+            "injection_submission": "host submission and internal waits may be included",
+            "projection_getter": "injection/shared-queue drain may be included",
+            "ring_cpu_loop": "existing projected-ring copy/position loop",
+            "separate_log_cost": "format/log host cost, excluding its own reporting call",
+            "target_getter": "target queue wait/output reorder may be included"
+          },
+          "available": {
+            "feature_cpu_memcpy_loop": true,
+            "injection_submission": true,
+            "projection_getter": true,
+            "ring_cpu_loop": true,
+            "separate_log_cost": true,
+            "target_getter": true
+          },
+          "bytes": {
+            "feature_copy": 812974080,
+            "ring_copy": 1474560
+          },
+          "calls": {
+            "feature_copy": 49620,
+            "ring_copy": 90,
+            "target_getter": 66
+          },
+          "chunk_count": 11,
+          "logging_record_count": 11,
+          "scope": "per-request",
+          "totals_us": {
+            "feature_cpu_memcpy_loop": 236005,
+            "injection_submission": 322121,
+            "projection_getter": 37920,
+            "ring_cpu_loop": 116,
+            "separate_log_cost": 28,
+            "target_getter": 65720
+          },
+          "unavailable_is_not_zero": true,
+          "unit": "us for host durations; byte fields are bytes"
+        }
+      },
+      "context_from_first_draft_us": {
+        "draft_batch": 342805,
+        "draft_select": 669,
+        "process_batch": 38932
+      },
+      "first_draft_begin_us": 694064966753,
+      "first_line": 265736,
+      "last_line": 288741,
+      "ordinal": 2,
+      "phase": "measured",
+      "point": "long"
+    }
+  ],
+  "restoration": {
+    "container_id": "7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e",
+    "errors": [],
+    "health": {
+      "status": "ok"
+    },
+    "independently_live": true,
+    "passed": true,
+    "pid": 1072495,
+    "sole_live": [
+      "nemotron-bolt-probe"
+    ]
+  },
+  "speed_comparison_permitted": false,
+  "status": "analyzed",
+  "tier": "development"
+}
