@@ -85,7 +85,18 @@ class SourceProofTests(unittest.TestCase):
                 (source / 'build-sycl/bin' / name).write_text(value)
         for source, name in ((self.parent, 'parent-binaries.json'), (self.candidate, 'candidate-binaries.json')):
             (attempt / name).write_text(json.dumps(SOURCE['binaries'](source)))
-        self.assertEqual(SOURCE['proof']()['candidate'], sources['candidate'])
+        original = dict(source=sources['parent'], binaries=SOURCE['binaries'](self.parent))
+        qualified = dict(CANDIDATE=self.parent, candidate_proof=lambda: original)
+        public = self.root / '20261019-nemotron35-bolt-lilicorr-verify-singletons/public-gate.py'
+        public.parent.mkdir()
+        public.write_text('import json\nfrom pathlib import Path\nCANDIDATE = Path(' + repr(str(self.parent)) + ')\ndef candidate_proof():\n    return json.loads(' + repr(json.dumps(original)) + ')\n')
+        self.assertEqual(SOURCE['proof']()['source'], sources['candidate'])
+        self.assertEqual(SOURCE['proof'](qualified)['source'], sources['candidate'])
+        with self.assertRaises(AssertionError):
+            SOURCE['proof'](dict(qualified, CANDIDATE=self.candidate))
+        wrong_original = dict(original, source=dict(original['source'], unexpected='drift'))
+        with self.assertRaises(AssertionError):
+            SOURCE['proof'](dict(qualified, candidate_proof=lambda: wrong_original))
         server = self.candidate / 'build-sycl/bin/llama-server'
         server.write_text('unexpected fourth artifact change\n')
         (attempt / 'candidate-binaries.json').write_text(json.dumps(SOURCE['binaries'](self.candidate)))

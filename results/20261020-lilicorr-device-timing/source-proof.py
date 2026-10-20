@@ -58,8 +58,13 @@ def check_sources(parent=PARENT, candidate=None):
     return dict(parent=before, candidate=after, changed_relative_to_parent=changed, patch=patch)
 
 
-def proof():
+def proof(qualified=None):
+    if qualified is None:
+        qualified = runpy.run_path(str(ROOT.parent / '20261019-nemotron35-bolt-lilicorr-verify-singletons/public-gate.py'))
+    assert Path(qualified['CANDIDATE']) == PARENT, 'qualified ancestry must not be rebound'
+    original = qualified['candidate_proof']()  # The frozen public gate is never rebound or memoized.
     sources = check_sources(PARENT, CANDIDATE)
+    assert sources['parent'] == original['source'], 'qualified whole-source drift'
     attempt = ROOT / 'build-attempt-r1'
     assert (attempt / 'exit-code.txt').read_text().strip() == '0'
     assert BUILD_MARKER in (attempt / 'post-build-verification.log').read_text()
@@ -68,10 +73,10 @@ def proof():
     assert before == after == sources, 'source changed during or after build'
     current, parent = binaries(CANDIDATE), binaries(PARENT)
     assert current == json.loads((attempt / 'candidate-binaries.json').read_text())
-    assert parent == json.loads((attempt / 'parent-binaries.json').read_text())
+    assert parent == original['binaries'] == json.loads((attempt / 'parent-binaries.json').read_text())
     assert sorted(name for name in ARTIFACTS if current[name] != parent[name]) == CHANGED_BINARIES
-    return dict(**sources, binaries=current, parent_binaries=parent)
-
+    return dict(path=str(CANDIDATE), source=sources['candidate'], binaries=current,
+                parent_binaries=parent, upstream_commit=load_pins()['upstream_commit'])
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
