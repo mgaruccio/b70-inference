@@ -136,6 +136,50 @@ using ggml_backend_t = backend *;
 // EXTRACTED_QUANTIZER_LAUNCH
 // EXTRACTED_MMVQ_LAUNCH
 
+// Only the original four terminal library call blocks are extracted below; APIs stay mocked.
+static int library_calls = 0;
+namespace sycl { using half = float; }
+namespace oneapi { namespace mkl {
+enum class transpose { trans, nontrans };
+namespace blas { namespace column_major {
+template<class... A> sycl::event gemm(sycl::queue & q, A&&...) { ++library_calls; return q.enqueue(); }
+} }
+} }
+namespace dpct {
+enum class library_data_t { real_half, real_float };
+template<class T> T get_value(const T * p, sycl::queue &) { return *p; }
+template<class... A> sycl::event gemm(sycl::queue & q, A&&...) { ++library_calls; return q.enqueue(); }
+}
+struct DnnlGemmWrapper {
+    template<class T> static int to_dt() { return 0; }
+    template<class... A> static void row_gemm(ggml_backend_sycl_context & ctx, A&&...) { ++library_calls; ctx.q.enqueue(); }
+};
+static void library_branch(ggml_backend_sycl_context & ctx, int branch) {
+    auto * stream = &ctx.q;
+    const int ne10 = 24576, ne00 = 24576, row_diff = 4096, src1_ncols = 46, ldc = 4096;
+    const float alpha = 1.0f, beta = 0.0f;
+    const float * src0_ptr = nullptr, * src1_ptr = nullptr, * src0_ddf_i = nullptr, * src1_ddf1_i = nullptr;
+    float * dst_dd_i = nullptr;
+    switch (branch) {
+        case 0: {
+            // EXTRACTED_LIBRARY_DNNL_F16
+            break;
+        }
+        case 1: {
+            // EXTRACTED_LIBRARY_MKL_F16
+            break;
+        }
+        case 2: {
+            // EXTRACTED_LIBRARY_DNNL_F32
+            break;
+        }
+        case 3: {
+            // EXTRACTED_LIBRARY_MKL_F32
+            break;
+        }
+    }
+}
+
 // Exact changed queue-init body, with CPU queue creation/property recording only.
 struct queue_owner {
     sycl::queue _q_in_order, _q_out_of_order, _saved_queue;
@@ -224,22 +268,22 @@ int main(int argc, char **) {
 
     {
         ggml_tensor x, y, dst; dst.src[0]=&x; dst.src[1]=&y;
-        lilicorr_device_scope outer(true, false, a.lilicorr_device_events, &a.q, 303, 0, 826);
+        lilicorr_device_scope outer(true, false, a.lilicorr_device_events, &a.q, 303, 0xa, 0, 826);
         outer.set_node(1, &dst);
-        { lilicorr_device_scope target(false, false, b.lilicorr_device_events, &b.q, 0, 0, 826); launches(b); }
+        { lilicorr_device_scope target(false, false, b.lilicorr_device_events, &b.q, 0, 0xb, 0, 826); launches(b); }
         assert(!b.lilicorr_device_events && lilicorr_device_active == &outer);
         std::thread other([&] { assert(!lilicorr_device_active); launches(b); set_lilicorr_profile_scope(true); graph(&b, 404); });
         other.join(); assert(lilicorr_device_active == &outer && b.lilicorr_device_events->records[0].graph == 404);
         launches(a); assert(a.lilicorr_device_events->records[0].graph == 303);
-        y.ne[1]=7; outer.set_node(2, &dst); launches(a);
+        y.ne[1]=9; outer.set_node(2, &dst); launches(a);
         assert(a.lilicorr_device_events->records.size() == 2);
         y.ne[1]=8; outer.set_node(3, &dst);
         quantize_row_q8_1_sycl<quantize_q8_1>(nullptr, nullptr, 4096, 8, 4096, &a.q);
-        reorder_mul_mat_vec_q8_0_q8_1_sycl_ncols<7>(nullptr, nullptr, nullptr, 4096, 8192, 4096, 8192, &a.q);
+        reorder_mul_mat_vec_q8_0_q8_1_sycl_ncols<9>(nullptr, nullptr, nullptr, 4096, 8192, 4096, 8192, &a.q);
         assert(a.lilicorr_device_events->records.size() == 2);
     }
     sync(a); sync(b); assert(!lilicorr_device_active);
-    std::cout << "PASS nested target suspension/thread TLS/only selected reordered ncols8 kernels\n";
+    std::cout << "PASS nested target suspension/thread TLS/selected reordered Q8 kernel guards\n";
 
     clear_log(); graph(&a, 505, true); assert(!a.lilicorr_device_events); contains("graphs_enabled_unsupported");
     ggml_backend_sycl_context no_profile; q = queries; graph(&no_profile, 506); clear_log(); sync(no_profile);
@@ -253,7 +297,7 @@ int main(int argc, char **) {
 
     {
         ggml_tensor x, y, dst; dst.src[0]=&x; dst.src[1]=&y;
-        lilicorr_device_scope scope(true, false, a.lilicorr_device_events, &a.q, 606, 0, 826); scope.set_node(0, &dst);
+        lilicorr_device_scope scope(true, false, a.lilicorr_device_events, &a.q, 606, 0xa, 0, 826); scope.set_node(0, &dst);
         launches(b); assert(a.lilicorr_device_events->records.size() == 2);
         q = queries; clear_log(); sync(a); contains("status=foreign_queue"); assert(queries == q);
         a.q.submit_error = true;
@@ -267,5 +311,50 @@ int main(int argc, char **) {
     q = queries; w = waits; clear_log(); a.lilicorr_device_events.reset();
     contains("status=no_existing_synchronize records=2048"); assert(queries == q && waits == w);
     std::cout << "PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait\n";
+    for (int width : {4, 5, 8}) {
+        ggml_backend_sycl_context ctx; ctx.q.profiling = true;
+        ggml_tensor x, y, dst; dst.src[0]=&x; dst.src[1]=&y;
+        std::strcpy(x.name, "fc.weight"); x.ne[0]=24576; x.ne[1]=4096; y.ne[0]=24576; y.ne[1]=width;
+        q = queries; w = waits;
+        {
+            lilicorr_device_scope scope(true, false, ctx.lilicorr_device_events, &ctx.q, 707, 0xabc, 0, 59);
+            scope.set_node(0, &dst);
+            quantize_row_q8_1_sycl<quantize_and_reorder_q8_1_soa>(nullptr, nullptr, 24576, width, 24576, &ctx.q);
+            if (width == 4) { reorder_mul_mat_vec_q8_0_q8_1_sycl_ncols<4>(nullptr, nullptr, nullptr, 24576, 4096, 24576, 4096, &ctx.q); }
+            if (width == 5) { reorder_mul_mat_vec_q8_0_q8_1_sycl_ncols<5>(nullptr, nullptr, nullptr, 24576, 4096, 24576, 4096, &ctx.q); }
+            if (width == 8) { reorder_mul_mat_vec_q8_0_q8_1_sycl_ncols<8>(nullptr, nullptr, nullptr, 24576, 4096, 24576, 4096, &ctx.q); }
+            assert(ctx.q.commands.size() == 2 && ctx.lilicorr_device_events->records.size() == 2);
+            for (auto & r : ctx.lilicorr_device_events->records) {
+                assert(r.ncols == width && r.input_cols == width && r.weight_k == 24576 && r.weight_m == 4096);
+                assert(r.backend_ctx == 0xabc && !r.library_route);
+            }
+        }
+        assert(queries == q && waits == w); clear_log(); sync(ctx);
+        contains("backend_ctx=0xabc"); contains("route=REORDERED_Q8_QUANTIZER"); contains("route=MMVQ_REORDERED");
+        assert(queries == q + 4 && waits == w + 1);
+    }
+    for (int branch = 0; branch < 4; ++branch) {
+        for (bool scoped : {false, true}) {
+            ggml_backend_sycl_context ctx; ctx.q.profiling = true;
+            ggml_tensor x, y, dst; dst.src[0]=&x; dst.src[1]=&y;
+            std::strcpy(x.name, "fc.weight"); x.ne[0]=24576; x.ne[1]=4096; y.ne[1]=46;
+            q = queries; w = waits; int clock_before = clocks, calls_before = library_calls;
+            {
+                lilicorr_device_scope scope(scoped, false, ctx.lilicorr_device_events, &ctx.q, 808, 0xdef, 0, 59);
+                scope.set_node(0, &dst); library_branch(ctx, branch);
+                if (scoped) {
+                    assert(ctx.lilicorr_device_events->records.size() == 1);
+                    const auto & r = ctx.lilicorr_device_events->records[0];
+                    assert(!r.event && r.library_route && r.ncols == 46 && r.backend_ctx == 0xdef);
+                } else { assert(!ctx.lilicorr_device_events && clocks == clock_before); }
+            }
+            assert(library_calls == calls_before + 1 && ctx.q.commands.size() == 1);
+            assert(ctx.q.commands[0].use_count() == 1 && queries == q && waits == w);
+            clear_log(); sync(ctx); assert(queries == q && waits == w+1);
+            if (scoped) { contains("stage=library_submit"); contains("device_unavailable_library"); contains("device_elapsed_ns=unavailable"); }
+            else { assert(logs.empty()); }
+        }
+    }
+    std::cout << "PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards\n";
     assert(premature == 0); std::cout << "ALL CPU MOCK CHECKS PASSED (not device proof)\n";
 }

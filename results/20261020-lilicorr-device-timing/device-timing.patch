@@ -1,3 +1,139 @@
+--- a/common/speculative.cpp
++++ b/common/speculative.cpp
+@@ -40,6 +40,56 @@
+     return value && std::strcmp(value, "1") == 0;
+ }
+ // LILICORR_PROFILE_ONLY_END
++// LILICORR_DEVICE_ONLY_BEGIN
++#include <cstdio>
++// Per-chunk host components only. Getters can wait/reorder; none of these are GPU time.
++struct lilicorr_process_components {
++    bool enabled;
++    uintptr_t target_ctx, draft_ctx;
++    int seq, batch_rows, seq_rows, offset, rows;
++    int64_t batch_begin_us, chunk_begin_us;
++    int64_t getter_us = 0, feature_loop_us = 0, process_begin_us = 0, process_end_us = 0;
++    int64_t projection_begin_us = 0, projection_end_us = 0, ring_loop_us = 0;
++    size_t getter_calls = 0, feature_copies = 0, feature_bytes = 0, ring_copies = 0, ring_bytes = 0;
++    int process_rc = -1;
++    bool process_seen = false, projection_seen = false, projected_present = false, ring_seen = false;
++
++    int64_t now() const { return enabled ? ggml_time_us() : 0; }
++    void getter_done(int64_t begin) {
++        if (enabled) { getter_us += now() - begin; ++getter_calls; }
++    }
++    void feature_done(int64_t begin, size_t count, size_t bytes_per_row) {
++        if (enabled) { feature_loop_us += now() - begin; feature_copies += count; feature_bytes += count * bytes_per_row; }
++    }
++    void process_done(int64_t begin, int64_t end, int rc) {
++        if (enabled) { process_seen = true; process_begin_us = begin; process_end_us = end; process_rc = rc; }
++    }
++    void projection_done(int64_t begin, int64_t end, bool present) {
++        if (enabled) { projection_seen = true; projection_begin_us = begin; projection_end_us = end; projected_present = present; }
++    }
++    void ring_copy(size_t bytes) { if (enabled) { ++ring_copies; ring_bytes += bytes; } }
++    void ring_done(int64_t begin, bool present) {
++        if (enabled && present) { ring_seen = true; ring_loop_us = now() - begin; }
++    }
++    ~lilicorr_process_components() {
++        if (!enabled) { return; }
++        const int64_t log_begin = now();
++        char process[32] = "unavailable", projection[32] = "unavailable", ring[32] = "unavailable";
++        if (process_seen) { std::snprintf(process, sizeof(process), "%" PRId64, process_end_us - process_begin_us); }
++        if (projection_seen) { std::snprintf(projection, sizeof(projection), "%" PRId64, projection_end_us - projection_begin_us); }
++        if (ring_seen) { std::snprintf(ring, sizeof(ring), "%" PRId64, ring_loop_us); }
++        LOG_INF("LLAMA_LILICORR_PROCESS_COMPONENTS v=1 stage=chunk target_ctx=0x%" PRIxPTR " draft_ctx=0x%" PRIxPTR " seq=%d batch_rows=%d seq_rows=%d offset=%d rows=%d batch_begin_us=%" PRId64 " chunk_begin_us=%" PRId64 " status=%s getter_calls=%zu target_getter_host_us=%" PRId64 " getter_attribution=target_wait_and_reorder_possible feature_copy_calls=%zu feature_copy_bytes=%zu feature_copy_loop_host_us=%" PRId64 " process_begin_us=%" PRId64 " process_end_us=%" PRId64 " process_host_us=%s process_rc=%d process_attribution=host_submit_and_internal_waits projection_seen=%d projected_present=%d projection_begin_us=%" PRId64 " projection_end_us=%" PRId64 " projection_getter_host_us=%s projection_attribution=injection_or_shared_queue_drain ring_copy_calls=%zu ring_copy_bytes=%zu ring_copy_loop_host_us=%s device_time=unmeasured\n",
++                target_ctx, draft_ctx, seq, batch_rows, seq_rows, offset, rows, batch_begin_us, chunk_begin_us,
++                process_seen ? (process_rc == 0 ? "ok" : "process_error") : "not_submitted",
++                getter_calls, getter_us, feature_copies, feature_bytes, feature_loop_us,
++                process_begin_us, process_end_us, process, process_rc, projection_seen, projected_present,
++                projection_begin_us, projection_end_us, projection, ring_copies, ring_bytes, ring);
++        const int64_t log_end = now();
++        LOG_INF("LLAMA_LILICORR_PROCESS_COMPONENTS v=1 stage=logging draft_ctx=0x%" PRIxPTR " seq=%d offset=%d batch_begin_us=%" PRId64 " chunk_begin_us=%" PRId64 " log_host_us=%" PRId64 " coverage=chunk_record_format_and_log_only\n",
++                draft_ctx, seq, offset, batch_begin_us, chunk_begin_us, log_end - log_begin);
++    }
++};
++// LILICORR_DEVICE_ONLY_END
+ // Rebuild seq_id's draft sampler at the target's temperature: rejection weighs q against p, so
+ // both have to sample alike. Only temp and seed carry over; the draft keeps its own top_k.
+ static void spec_retune(
+@@ -1241,17 +1291,33 @@
+                 // LILICORR_PROFILE_ONLY_BEGIN
+                 const int64_t profile_t0 = profile ? ggml_time_us() : 0;
+                 // LILICORR_PROFILE_ONLY_END
++                // LILICORR_DEVICE_ONLY_BEGIN
++                lilicorr_process_components components{profile, reinterpret_cast<uintptr_t>(ctx_tgt), reinterpret_cast<uintptr_t>(ctx_dft),
++                                                       seq_id, n_tokens, n_rows, offset, n_chunk, profile_begin, profile_t0};
++                // LILICORR_DEVICE_ONLY_END
+                 features_buf.resize((size_t) n_chunk * n_embd_enc);
+                 for (uint32_t k = 0; k < target_layer_ids_n; ++k) {
++                    // LILICORR_DEVICE_ONLY_BEGIN
++                    const int64_t getter_begin = components.now();
++                    // LILICORR_DEVICE_ONLY_END
+                     const float * layer = llama_get_embeddings_layer_inp(ctx_tgt, (uint32_t) target_layer_ids[k]);
++                    // LILICORR_DEVICE_ONLY_BEGIN
++                    components.getter_done(getter_begin);
++                    // LILICORR_DEVICE_ONLY_END
+                     if (!layer) {
+                         GGML_ABORT("DFlash: target layer %d input not extracted.", target_layer_ids[k]);
+                     }
++                    // LILICORR_DEVICE_ONLY_BEGIN
++                    const int64_t feature_loop_begin = components.now();
++                    // LILICORR_DEVICE_ONLY_END
+                     for (int32_t i = 0; i < n_chunk; ++i) {
+                         float       * dst = features_buf.data() + (size_t) i * n_embd_enc + k * (size_t) n_embd_tgt;
+                         const float * src = layer + (size_t) (i_batch_beg[seq_id] + offset + i) * n_embd_tgt;
+                         std::memcpy(dst, src, (size_t) n_embd_tgt * sizeof(float));
+                     }
++                    // LILICORR_DEVICE_ONLY_BEGIN
++                    components.feature_done(feature_loop_begin, n_chunk, (size_t) n_embd_tgt * sizeof(float));
++                    // LILICORR_DEVICE_ONLY_END
+                 }
+ 
+                 // LILICORR_PROFILE_ONLY_BEGIN
+@@ -1270,6 +1336,9 @@
+                 // LILICORR_PROFILE_ONLY_BEGIN
+                 const int64_t profile_t3 = profile ? ggml_time_us() : 0;
+                 // LILICORR_PROFILE_ONLY_END
++                // LILICORR_DEVICE_ONLY_BEGIN
++                components.process_done(profile_t2, profile_t3, rc);
++                // LILICORR_DEVICE_ONLY_END
+                 if (rc != 0) {
+                     LOG_ERR("%s: llama_process(ctx_dft) failed rc=%d (n_tokens=%d, offset=%d)\n",
+                             __func__, rc, (int) n_chunk, (int) offset);
+@@ -1277,10 +1346,17 @@
+                 }
+                 if (is_lilicorr) {
+                     // Ordinary DFlash can write to the KV cache, but LiliCorr needs to store embeddings across sequences.
++                    // LILICORR_DEVICE_ONLY_BEGIN
++                    const int64_t projection_begin = components.now();
++                    // LILICORR_DEVICE_ONLY_END
+                     const float * projected = llama_get_embeddings_nextn(ctx_dft);
+                     // LILICORR_PROFILE_ONLY_BEGIN
+                     const int64_t profile_t4 = profile ? ggml_time_us() : 0;
+                     // LILICORR_PROFILE_ONLY_END
++                    // LILICORR_DEVICE_ONLY_BEGIN
++                    components.projection_done(projection_begin, profile_t4, projected != nullptr);
++                    const int64_t ring_begin = components.now();
++                    // LILICORR_DEVICE_ONLY_END
+                     if (projected) {
+                         const size_t seq_offset = (size_t) seq_id * lilicorr_rows;
+                         const llama_pos pos_min = std::max(0, batch_inject.tokens.back().pos[0] - block_size);
+@@ -1293,8 +1369,14 @@
+                             std::memcpy(lilicorr_embd.data() + slot * (size_t) n_embd_dec,
+                                     projected + (size_t) i * n_embd_dec, (size_t) n_embd_dec * sizeof(float));
+                             lilicorr_pos[slot] = pos;
++                            // LILICORR_DEVICE_ONLY_BEGIN
++                            components.ring_copy((size_t) n_embd_dec * sizeof(float));
++                            // LILICORR_DEVICE_ONLY_END
+                         }
+                     }
++                    // LILICORR_DEVICE_ONLY_BEGIN
++                    components.ring_done(ring_begin, projected != nullptr);
++                    // LILICORR_DEVICE_ONLY_END
+                     // LILICORR_PROFILE_ONLY_BEGIN
+                     if (profile) {
+                         const int64_t profile_t5 = ggml_time_us();
 --- a/ggml/src/ggml-sycl/common.hpp
 +++ b/ggml/src/ggml-sycl/common.hpp
 @@ -27,6 +27,9 @@
@@ -48,7 +184,76 @@
        }
 --- a/ggml/src/ggml-sycl/ggml-sycl.cpp
 +++ b/ggml/src/ggml-sycl/ggml-sycl.cpp
-@@ -7163,7 +7163,15 @@
+@@ -3326,9 +3326,15 @@
+         if (g_ggml_sycl_enable_dnn && ggml_sycl_dnnl_has_optimized_gemm(ggml_sycl_get_device())) {
+                 bolt_route_record("LIBRARY_DNNL_F16", ctx, src0, src1, dst, id,
+                                   bolt_route_src1_precision(dst), GGML_PREC_F16, nullptr, nullptr, -1, -1);
++                // LILICORR_DEVICE_ONLY_BEGIN
++                lilicorr_device_submit device_submit(src1_ncols == 46, false, stream, ne10, row_diff, src1_ncols, "LIBRARY_DNNL_F16");
++                // LILICORR_DEVICE_ONLY_END
+                 DnnlGemmWrapper::row_gemm(ctx,row_diff, src1_ncols , ne10, src0_ptr,
+                                      DnnlGemmWrapper::to_dt<sycl::half>(), src1_ptr, DnnlGemmWrapper::to_dt<sycl::half>(),
+                                       dst_dd_i, DnnlGemmWrapper::to_dt<float>(), stream);
++                // LILICORR_DEVICE_ONLY_BEGIN
++                device_submit.finish_library();
++                // LILICORR_DEVICE_ONLY_END
+         }
+         else
+ #endif
+@@ -3337,6 +3343,9 @@
+                               bolt_route_src1_precision(dst), GGML_PREC_F16, nullptr, nullptr, -1, -1);
+             const float alpha = 1.0f;
+             const float beta  = 0.0f;
++            // LILICORR_DEVICE_ONLY_BEGIN
++            lilicorr_device_submit device_submit(src1_ncols == 46, false, stream, ne10, row_diff, src1_ncols, "LIBRARY_MKL_F16");
++            // LILICORR_DEVICE_ONLY_END
+             SYCL_CHECK(CHECK_TRY_ERROR(dpct::gemm(
+                 *stream, oneapi::mkl::transpose::trans,
+                 oneapi::mkl::transpose::nontrans, row_diff, src1_ncols, ne10,
+@@ -3344,6 +3353,9 @@
+                 src1_ptr, dpct::library_data_t::real_half, ne10, &beta,
+                 dst_dd_i, dpct::library_data_t::real_float, ldc,
+                 dpct::library_data_t::real_float)));
++            // LILICORR_DEVICE_ONLY_BEGIN
++            device_submit.finish_library();
++            // LILICORR_DEVICE_ONLY_END
+         }
+     } else {
+         ggml_sycl_pool_alloc<float> src0_ddq_as_f32(ctx.pool());
+@@ -3374,9 +3386,15 @@
+             if (g_ggml_sycl_enable_dnn && !use_mkl_direct && ggml_sycl_dnnl_has_optimized_gemm(ggml_sycl_get_device())) {
+                 bolt_route_record("LIBRARY_DNNL_F32", ctx, src0, src1, dst, id,
+                                   bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
++                // LILICORR_DEVICE_ONLY_BEGIN
++                lilicorr_device_submit device_submit(src1_ncols == 46, false, stream, ne10, row_diff, src1_ncols, "LIBRARY_DNNL_F32");
++                // LILICORR_DEVICE_ONLY_END
+                 DnnlGemmWrapper::row_gemm(ctx, row_diff, src1_ncols, ne10, src0_ddf_i,
+                                           DnnlGemmWrapper::to_dt<float>(), src1_ddf1_i, DnnlGemmWrapper::to_dt<float>(),
+                                           dst_dd_i, DnnlGemmWrapper::to_dt<float>(), stream);
++                // LILICORR_DEVICE_ONLY_BEGIN
++                device_submit.finish_library();
++                // LILICORR_DEVICE_ONLY_END
+             }
+             else
+ #endif
+@@ -3385,10 +3403,16 @@
+                                   bolt_route_src1_precision(dst), GGML_PREC_F32, nullptr, nullptr, -1, -1);
+                 const float alpha = 1.0f;
+                 const float beta  = 0.0f;
++                // LILICORR_DEVICE_ONLY_BEGIN
++                lilicorr_device_submit device_submit(src1_ncols == 46, false, stream, ne10, row_diff, src1_ncols, "LIBRARY_MKL_F32");
++                // LILICORR_DEVICE_ONLY_END
+                 SYCL_CHECK(CHECK_TRY_ERROR(oneapi::mkl::blas::column_major::gemm(
+                     *stream, oneapi::mkl::transpose::trans, oneapi::mkl::transpose::nontrans, row_diff,
+                     src1_ncols, ne10, dpct::get_value(&alpha, *stream), src0_ddf_i, ne00, src1_ddf1_i, ne10,
+                     dpct::get_value(&beta, *stream), dst_dd_i, ldc)));
++                // LILICORR_DEVICE_ONLY_BEGIN
++                device_submit.finish_library();
++                // LILICORR_DEVICE_ONLY_END
+             }
+         }
+     }
+@@ -7163,7 +7187,15 @@
      GGML_SYCL_DEBUG("[SYCL] call %s\n", __func__);
      ggml_backend_sycl_context * sycl_ctx = (ggml_backend_sycl_context *)backend->context;
      const queue_ptr stream = sycl_ctx->stream(sycl_ctx->device, 0);
@@ -64,19 +269,19 @@
  
      GGML_UNUSED(backend);
  }
-@@ -7375,6 +7383,11 @@
+@@ -7375,6 +7407,11 @@
      int profile_skipped_nodes = 0;
      const int64_t profile_core_begin = profile_enabled ? lilicorr_sycl_profile_now_us() : 0;
      // LILICORR_SYCL_PROFILE_ONLY_END
 +    // LILICORR_DEVICE_ONLY_BEGIN
 +    lilicorr_device_scope device_scope(profile_enabled, g_ggml_sycl_enable_graph != 0, sycl_ctx->lilicorr_device_events,
-+                                       profile_enabled ? sycl_ctx->stream() : nullptr, profile_graph_id,
++                                       profile_enabled ? sycl_ctx->stream() : nullptr, profile_graph_id, reinterpret_cast<uintptr_t>(sycl_ctx),
 +                                       sycl_ctx->device, cgraph->n_nodes);
 +    // LILICORR_DEVICE_ONLY_END
      for (int i = 0; i < cgraph->n_nodes; i++) {
          ggml_tensor * node = cgraph->nodes[i];
          if (ggml_sycl_is_view_or_noop(node)) {
-@@ -7398,6 +7411,9 @@
+@@ -7398,6 +7435,9 @@
          lilicorr_sycl_profile_scope profile_scope(profile_enabled, i, node, cgraph,
                                                    &profile_records, &profile_covered);
          // LILICORR_SYCL_PROFILE_ONLY_END
@@ -88,12 +293,13 @@
              // LILICORR_SYCL_PROFILE_ONLY_BEGIN
 --- /dev/null
 +++ b/ggml/src/ggml-sycl/lilicorr-device-timing.hpp
-@@ -0,0 +1,155 @@
+@@ -0,0 +1,174 @@
 +// Private, development-only LiliCorr Q8 event diagnostic. Not a general profiler.
 +#pragma once
 +#include <array>
 +#include <cinttypes>
 +#include <cstdio>
++#include <cstring>
 +#include <memory>
 +#include <optional>
 +#include <type_traits>
@@ -101,8 +307,11 @@
 +
 +struct lilicorr_device_record {
 +    uint64_t graph;
-+    int node, ordinal, device, k, rows;
++    uintptr_t backend_ctx;
++    int node, ordinal, device, k, rows, ncols;
++    int64_t weight_k, weight_m, input_cols;
 +    bool quantizer;
++    const char * library_route; // static literals from the executed library branch only
 +    std::array<char, GGML_MAX_NAME> name, weight;
 +    int64_t submit_begin_us, submit_end_us;
 +    const char * status; // literals only; no tensor/stack metadata survives submission
@@ -127,13 +336,15 @@
 +    std::unique_ptr<lilicorr_device_pending> & pending;
 +    sycl::queue * queue; // borrowed only for this synchronous dispatch scope
 +    uint64_t graph;
++    uintptr_t backend_ctx;
 +    int device, nodes, node = -1, submitted = 0, retained = 0, dropped = 0, failed = 0;
-+    bool requested, enabled, selected = false;
++    int64_t weight_k = 0, weight_m = 0, input_cols = 0;
++    bool requested, enabled, selected = false, fc46 = false;
 +    std::array<char, GGML_MAX_NAME> name{}, weight{};
 +
 +    lilicorr_device_scope(bool requested_, bool graphs, std::unique_ptr<lilicorr_device_pending> & pending_,
-+                          sycl::queue * queue_, uint64_t graph_, int device_, int nodes_)
-+        : previous(lilicorr_device_active), pending(pending_), queue(queue_), graph(graph_), device(device_),
++                          sycl::queue * queue_, uint64_t graph_, uintptr_t backend_ctx_, int device_, int nodes_)
++        : previous(lilicorr_device_active), pending(pending_), queue(queue_), graph(graph_), backend_ctx(backend_ctx_), device(device_),
 +          nodes(nodes_), requested(requested_), enabled(requested_ && !graphs) {
 +        // An unscoped/nested target graph must suspend any outer drafter scope.
 +        lilicorr_device_active = enabled ? this : nullptr;
@@ -141,8 +352,8 @@
 +    ~lilicorr_device_scope() {
 +        lilicorr_device_active = previous;
 +        if (requested) {
-+            GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=coverage graph=%" PRIu64 " device=%d graph_nodes=%d status=%s coverage=q8_reordered_ncols8_only submitted=%d retained=%d dropped=%d submit_errors=%d other_device_work=unmeasured\n",
-+                          graph, device, nodes, enabled ? "partial" : "graphs_enabled_unsupported", submitted, retained, dropped, failed);
++            GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=coverage graph=%" PRIu64 " backend_ctx=0x%" PRIxPTR " device=%d graph_nodes=%d status=%s coverage=q8_reordered_2to8_fc46_host_only submitted=%d retained=%d dropped=%d submit_errors=%d other_device_work=unmeasured\n",
++                          graph, backend_ctx, device, nodes, enabled ? "partial" : "graphs_enabled_unsupported", submitted, retained, dropped, failed);
 +        }
 +    }
 +    lilicorr_device_scope(const lilicorr_device_scope &) = delete;
@@ -159,31 +370,39 @@
 +        node = index;
 +        const ggml_tensor * x = tensor->src[0];
 +        const ggml_tensor * y = tensor->src[1];
++        fc46 = tensor->op == GGML_OP_MUL_MAT && x && y && x->type == GGML_TYPE_Q8_0 &&
++               std::strcmp(x->name, "fc.weight") == 0 && y->ne[1] == 46;
 +        selected = tensor->op == GGML_OP_MUL_MAT && x && y && x->type == GGML_TYPE_Q8_0 &&
-+                   y->ne[1] == 8 && y->ne[2] == 1 && y->ne[3] == 1;
++                   ((y->ne[1] >= 2 && y->ne[1] <= 8) || fc46) && y->ne[2] == 1 && y->ne[3] == 1;
 +        if (selected) {
 +            copy_name(name, tensor->name);
 +            copy_name(weight, x->name);
++            weight_k = x->ne[0]; weight_m = x->ne[1]; input_cols = y->ne[1];
 +        }
 +    }
 +};
 +
-+// Two direct call sites only. This never submits commands, waits, or queries an event.
++// Two kernel launch sites and four fc46 library-branch markers only. No commands/waits/queries.
 +struct lilicorr_device_submit {
 +    lilicorr_device_scope * scope;
 +    sycl::queue * queue;
 +    bool quantizer, finished = false;
-+    int k, rows, ordinal;
++    const char * library_route;
++    int k, rows, ncols, ordinal;
 +    int64_t begin_us;
 +
-+    lilicorr_device_submit(bool selected, bool quantizer_, sycl::queue * queue_, int k_, int rows_)
-+        : scope(selected && lilicorr_device_active && lilicorr_device_active->selected ? lilicorr_device_active : nullptr),
-+          queue(queue_), quantizer(quantizer_), k(k_), rows(rows_), ordinal(scope ? ++scope->submitted : 0),
-+          begin_us(scope ? ggml_time_us() : 0) {}
++    lilicorr_device_submit(bool selected, bool quantizer_, sycl::queue * queue_, int k_, int rows_, int ncols_,
++                           const char * library_route_ = nullptr)
++        : scope(selected && lilicorr_device_active && lilicorr_device_active->selected &&
++                (!library_route_ || lilicorr_device_active->fc46) ? lilicorr_device_active : nullptr),
++          queue(queue_), quantizer(quantizer_), library_route(library_route_), k(k_), rows(rows_), ncols(ncols_),
++          ordinal(scope ? ++scope->submitted : 0), begin_us(scope ? ggml_time_us() : 0) {}
 +    ~lilicorr_device_submit() {
 +        if (scope && !finished) { ++scope->failed; } // original submission exception still propagates
 +    }
-+    void finish(const sycl::event & event) noexcept {
++    void finish(const sycl::event & event) noexcept { store(&event); }
++    void finish_library() noexcept { store(nullptr); } // original library API has no event here
++    void store(const sycl::event * event) noexcept {
 +        if (!scope) { return; }
 +        const int64_t end_us = ggml_time_us(); // before metadata/storage overhead
 +        finished = true;
@@ -192,11 +411,13 @@
 +            auto & records = scope->pending->records;
 +            if (records.size() == lilicorr_device_pending::limit) { ++scope->dropped; return; }
 +            const bool same_queue = queue == scope->queue;
-+            const bool profiling = same_queue && queue->has_property<sycl::property::queue::enable_profiling>();
-+            const char * status = !same_queue ? "foreign_queue" : !profiling ? "unsupported_profiling" : "pending";
-+            lilicorr_device_record record{scope->graph, scope->node, ordinal, scope->device, k, rows, quantizer,
++            const bool profiling = event && same_queue && queue->has_property<sycl::property::queue::enable_profiling>();
++            const char * status = !event ? "device_unavailable_library" :
++                !same_queue ? "foreign_queue" : !profiling ? "unsupported_profiling" : "pending";
++            lilicorr_device_record record{scope->graph, scope->backend_ctx, scope->node, ordinal, scope->device, k, rows, ncols,
++                                         scope->weight_k, scope->weight_m, scope->input_cols, quantizer, library_route,
 +                                         scope->name, scope->weight, begin_us, end_us, status, std::nullopt};
-+            if (profiling) { record.event = event; }
++            if (profiling) { record.event = *event; }
 +            records.push_back(std::move(record));
 +            ++scope->retained;
 +        } catch (...) {
@@ -234,9 +455,12 @@
 +                status = "profiling_query_error";
 +            }
 +        }
-+        GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=event graph=%" PRIu64 " node=%d ordinal=%d device=%d kernel=%s name=%s weight=%s k=%d rows=%d ncols=8 coverage=selected_kernel_only status=%s submit_begin_us=%" PRId64 " submit_end_us=%" PRId64 " submit_host_us=%" PRId64 " %s\n",
-+                      record.graph, record.node, record.ordinal, record.device, record.quantizer ? "quantize_reorder_q8_1" : "mmvq_reordered_q8_0",
-+                      record.name.data(), record.weight.data(), record.k, record.rows, status,
++        GGML_LOG_INFO("LLAMA_LILICORR_DEVICE_TIMING v=1 stage=%s graph=%" PRIu64 " node=%d ordinal=%d backend_ctx=0x%" PRIxPTR " device=%d route=%s kernel=%s name=%s weight=%s k=%d rows=%d ncols=%d weight_k=%" PRId64 " weight_m=%" PRId64 " input_cols=%" PRId64 " coverage=%s status=%s submit_begin_us=%" PRId64 " submit_end_us=%" PRId64 " submit_host_us=%" PRId64 " %s\n",
++                      record.library_route ? "library_submit" : "event", record.graph, record.node, record.ordinal, record.backend_ctx, record.device,
++                      record.library_route ? record.library_route : record.quantizer ? "REORDERED_Q8_QUANTIZER" : "MMVQ_REORDERED",
++                      record.library_route ? "unmeasured" : record.quantizer ? "quantize_reorder_q8_1" : "mmvq_reordered_q8_0",
++                      record.name.data(), record.weight.data(), record.k, record.rows, record.ncols, record.weight_k, record.weight_m, record.input_cols,
++                      record.library_route ? "host_only_library_call" : "selected_kernel_only", status,
 +                      record.submit_begin_us, record.submit_end_us, record.submit_end_us - record.submit_begin_us, device_fields);
 +    }
 +    const int64_t query_end_us = ggml_time_us();
@@ -252,7 +476,7 @@
  
 -    stream->submit([&](sycl::handler & cgh) {
 +    // LILICORR_DEVICE_ONLY_BEGIN
-+    lilicorr_device_submit device_submit(ncols_dst == 8, false, stream, ncols, nrows);
++    lilicorr_device_submit device_submit(ncols_dst >= 2 && ncols_dst <= 8, false, stream, ncols, nrows, ncols_dst);
 +    // LILICORR_DEVICE_ONLY_END
 +    /* LILICORR_DEVICE_INLINE_BEGIN */device_submit.finish(/* LILICORR_DEVICE_INLINE_END */stream->submit([&](sycl::handler & cgh) {
          cgh.parallel_for(sycl::nd_range<3>(block_nums * block_dims, block_dims),
@@ -274,8 +498,8 @@
  
 -    stream->parallel_for(sycl::nd_range<1>({ global_range }, { local_range }),
 +    // LILICORR_DEVICE_ONLY_BEGIN
-+    lilicorr_device_submit device_submit(ky == 8 && std::is_same<quantize_f<1>, quantize_and_reorder_q8_1_soa<1>>::value,
-+                                         true, stream, kx, ky);
++    lilicorr_device_submit device_submit(ky >= 2 && ky <= 8 && std::is_same<quantize_f<1>, quantize_and_reorder_q8_1_soa<1>>::value,
++                                         true, stream, kx, ky, ky);
 +    // LILICORR_DEVICE_ONLY_END
 +    /* LILICORR_DEVICE_INLINE_BEGIN */device_submit.finish(/* LILICORR_DEVICE_INLINE_END */stream->parallel_for(sycl::nd_range<1>({ global_range }, { local_range }),
                           [=](sycl::nd_item<1> it) [[sycl::reqd_sub_group_size(WARP_SIZE)]] {

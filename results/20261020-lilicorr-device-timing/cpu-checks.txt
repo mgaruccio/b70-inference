@@ -83,3 +83,153 @@ test_old_host_and_phase_schemas_unchanged (__main__.DeviceTimingTests.test_old_h
 Ran 5 tests in 0.616s
 
 OK
+
+INJECTION EXTENSION CORE CHECK
+COMMAND: python3 -B results/20261020-lilicorr-device-timing/test-device-timing.py
+Development CPU/source checks; no performance comparison or device/compiler proof.
+Environment: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44 3.14.7 (main, Aug 13 2026, 07:40:04) [GCC 16.2.1 20260810]
+c++ (GCC) 16.2.1 20260810
+test_actual_launches_and_only_existing_drain_queries (__main__.DeviceTimingTests.test_actual_launches_and_only_existing_drain_queries) ... ok
+test_ancestry_pins_exact_composition_reverse_and_wrong_source (__main__.DeviceTimingTests.test_ancestry_pins_exact_composition_reverse_and_wrong_source) ... ok
+test_exact_source_and_arithmetic_geometry_preservation (__main__.DeviceTimingTests.test_exact_source_and_arithmetic_geometry_preservation) ... ok
+test_extracted_cpp_with_mocked_sycl_no_sdk (__main__.DeviceTimingTests.test_extracted_cpp_with_mocked_sycl_no_sdk) ... COMMAND: c++ -std=c++17 -Wall -Wextra -Werror -Wno-attributes -pthread -I/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/candidate/ggml/src/ggml-sycl /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/event-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/mock-default
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/mock-default 
+PASS exact queue count/off properties/opt-in/unsupported/graphs
+PASS opt-out/target exact submissions with no clocks/queries/retained events/logs
+PASS actual launch returns/deferred existing sync/context ownership/thread handoff/copied metadata
+PASS nested target suspension/thread TLS/only selected reordered ncols8 kernels
+PASS unsupported/graphs/query failure/invalid timestamps/incomplete events never become zero timings
+PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait
+PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards
+ALL CPU MOCK CHECKS PASSED (not device proof)
+
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/mock-default wait-error; expected exit=1; observed= 1 
+PASS original wait failure: no profiling query
+original-wait-errorException caught at file:/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/event-driver.cpp, line:152
+
+COMMAND: c++ -std=c++17 -Wall -Wextra -Werror -Wno-attributes -pthread -I/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/candidate/ggml/src/ggml-sycl /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/event-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/mock-dpct -DDPCT_PROFILING_ENABLED
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/mock-dpct 
+PASS exact queue count/off properties/opt-in/unsupported/graphs
+PASS opt-out/target exact submissions with no clocks/queries/retained events/logs
+PASS actual launch returns/deferred existing sync/context ownership/thread handoff/copied metadata
+PASS nested target suspension/thread TLS/only selected reordered ncols8 kernels
+PASS unsupported/graphs/query failure/invalid timestamps/incomplete events never become zero timings
+PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait
+PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards
+ALL CPU MOCK CHECKS PASSED (not device proof)
+
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/mock-dpct wait-error; expected exit=1; observed= 1 
+PASS original wait failure: no profiling query
+original-wait-errorException caught at file:/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmp2iy72lte/event-driver.cpp, line:152
+
+ok
+test_old_host_and_phase_schemas_unchanged (__main__.DeviceTimingTests.test_old_host_and_phase_schemas_unchanged) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.676s
+
+OK
+
+PROCESS BOUNDARY EXTENSION CHECK
+COMMAND: python3 -B results/20261020-lilicorr-device-timing/test-device-timing.py
+Development CPU/source checks; no performance comparison or device/compiler proof.
+Environment: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44 3.14.7 (main, Aug 13 2026, 07:40:04) [GCC 16.2.1 20260810]
+c++ (GCC) 16.2.1 20260810
+test_actual_launches_and_only_existing_drain_queries (__main__.DeviceTimingTests.test_actual_launches_and_only_existing_drain_queries) ... ok
+test_ancestry_pins_exact_composition_reverse_and_wrong_source (__main__.DeviceTimingTests.test_ancestry_pins_exact_composition_reverse_and_wrong_source) ... ok
+test_exact_source_and_arithmetic_geometry_preservation (__main__.DeviceTimingTests.test_exact_source_and_arithmetic_geometry_preservation) ... ok
+test_extracted_cpp_with_mocked_sycl_no_sdk (__main__.DeviceTimingTests.test_extracted_cpp_with_mocked_sycl_no_sdk) ... COMMAND: c++ -std=c++17 -Wall -Wextra -Werror -Wno-attributes -pthread -I/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/candidate/ggml/src/ggml-sycl /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/event-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-default
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-default 
+PASS exact queue count/off properties/opt-in/unsupported/graphs
+PASS opt-out/target exact submissions with no clocks/queries/retained events/logs
+PASS actual launch returns/deferred existing sync/context ownership/thread handoff/copied metadata
+PASS nested target suspension/thread TLS/only selected reordered ncols8 kernels
+PASS unsupported/graphs/query failure/invalid timestamps/incomplete events never become zero timings
+PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait
+PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards
+ALL CPU MOCK CHECKS PASSED (not device proof)
+
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-default wait-error; expected exit=1; observed= 1 
+PASS original wait failure: no profiling query
+original-wait-errorException caught at file:/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/event-driver.cpp, line:152
+
+COMMAND: c++ -std=c++17 -Wall -Wextra -Werror -Wno-attributes -pthread -I/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/candidate/ggml/src/ggml-sycl /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/event-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-dpct -DDPCT_PROFILING_ENABLED
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-dpct 
+PASS exact queue count/off properties/opt-in/unsupported/graphs
+PASS opt-out/target exact submissions with no clocks/queries/retained events/logs
+PASS actual launch returns/deferred existing sync/context ownership/thread handoff/copied metadata
+PASS nested target suspension/thread TLS/only selected reordered ncols8 kernels
+PASS unsupported/graphs/query failure/invalid timestamps/incomplete events never become zero timings
+PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait
+PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards
+ALL CPU MOCK CHECKS PASSED (not device proof)
+
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-dpct wait-error; expected exit=1; observed= 1 
+PASS original wait failure: no profiling query
+original-wait-errorException caught at file:/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/event-driver.cpp, line:152
+
+ok
+test_fc46_route_evidence_and_host_only_markers (__main__.DeviceTimingTests.test_fc46_route_evidence_and_host_only_markers) ... ok
+test_old_host_and_phase_schemas_unchanged (__main__.DeviceTimingTests.test_old_host_and_phase_schemas_unchanged) ... ok
+test_process_components_actual_chunk_host_mocks (__main__.DeviceTimingTests.test_process_components_actual_chunk_host_mocks) ... COMMAND: c++ -std=c++17 -Wall -Wextra -Werror /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/process-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-process
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpz3ywo7va/mock-process 
+PASS extracted process chunk: widths4/5/46, six real CPU gather loops, ring bytes, existing API order/counts, opt-out/non-LiliCorr guards, rc/missing-projection negatives, getter attribution and separate logging cost
+
+ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.920s
+
+OK
+
+FOLLOW-UP FINAL CLOSE GATE
+COMMAND: python3 -B results/20261020-lilicorr-device-timing/test-device-timing.py
+Development CPU/source checks; no performance comparison or device/compiler proof.
+Environment: Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44 3.14.7 (main, Aug 13 2026, 07:40:04) [GCC 16.2.1 20260810]
+c++ (GCC) 16.2.1 20260810
+test_actual_launches_and_only_existing_drain_queries (__main__.DeviceTimingTests.test_actual_launches_and_only_existing_drain_queries) ... ok
+test_ancestry_pins_exact_composition_reverse_and_wrong_source (__main__.DeviceTimingTests.test_ancestry_pins_exact_composition_reverse_and_wrong_source) ... ok
+test_exact_source_and_arithmetic_geometry_preservation (__main__.DeviceTimingTests.test_exact_source_and_arithmetic_geometry_preservation) ... ok
+test_extracted_cpp_with_mocked_sycl_no_sdk (__main__.DeviceTimingTests.test_extracted_cpp_with_mocked_sycl_no_sdk) ... COMMAND: c++ -std=c++17 -Wall -Wextra -Werror -Wno-attributes -pthread -I/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/candidate/ggml/src/ggml-sycl /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/event-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-default
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-default 
+PASS exact queue count/off properties/opt-in/unsupported/graphs
+PASS opt-out/target exact submissions with no clocks/queries/retained events/logs
+PASS actual launch returns/deferred existing sync/context ownership/thread handoff/copied metadata
+PASS nested target suspension/thread TLS/selected reordered Q8 kernel guards
+PASS unsupported/graphs/query failure/invalid timestamps/incomplete events never become zero timings
+PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait
+PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards
+ALL CPU MOCK CHECKS PASSED (not device proof)
+
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-default wait-error; expected exit=1; observed= 1 
+PASS original wait failure: no profiling query
+original-wait-errorException caught at file:/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/event-driver.cpp, line:152
+
+COMMAND: c++ -std=c++17 -Wall -Wextra -Werror -Wno-attributes -pthread -I/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/candidate/ggml/src/ggml-sycl /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/event-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-dpct -DDPCT_PROFILING_ENABLED
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-dpct 
+PASS exact queue count/off properties/opt-in/unsupported/graphs
+PASS opt-out/target exact submissions with no clocks/queries/retained events/logs
+PASS actual launch returns/deferred existing sync/context ownership/thread handoff/copied metadata
+PASS nested target suspension/thread TLS/selected reordered Q8 kernel guards
+PASS unsupported/graphs/query failure/invalid timestamps/incomplete events never become zero timings
+PASS foreign queue/submit exception/property and copy errors/bounded overflow/discard without wait
+PASS injection widths4/5/8 actual launch capture and four fc46 actual library call blocks host-only; context/shape/off guards
+ALL CPU MOCK CHECKS PASSED (not device proof)
+
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-dpct wait-error; expected exit=1; observed= 1 
+PASS original wait failure: no profiling query
+original-wait-errorException caught at file:/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/event-driver.cpp, line:152
+
+ok
+test_fc46_route_evidence_and_host_only_markers (__main__.DeviceTimingTests.test_fc46_route_evidence_and_host_only_markers) ... ok
+test_old_host_and_phase_schemas_unchanged (__main__.DeviceTimingTests.test_old_host_and_phase_schemas_unchanged) ... ok
+test_process_components_actual_chunk_host_mocks (__main__.DeviceTimingTests.test_process_components_actual_chunk_host_mocks) ... COMMAND: c++ -std=c++17 -Wall -Wextra -Werror /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/process-driver.cpp -o /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-process
+COMMAND: /home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing/results/20261020-lilicorr-device-timing/.scratch/tmpj5_dse0v/mock-process 
+PASS extracted process chunk: widths4/5/46, six real CPU gather loops, ring bytes, existing API order/counts, opt-out/non-LiliCorr guards, rc/missing-projection negatives, getter attribution and separate logging cost
+
+ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.916s
+
+OK

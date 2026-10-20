@@ -118,10 +118,10 @@ class DeviceTimingTests(unittest.TestCase):
             self.assertEqual(strip_diagnostic(after), before, name)
             if before != after:
                 changed.append(name)
-        self.assertEqual(set(changed), {PREFIX + n for n in ('common.hpp', 'dpct/helper.hpp', 'ggml-sycl.cpp', 'mmvq.cpp', 'quantize.hpp')})
+        self.assertEqual(set(changed), {'common/speculative.cpp'} | {PREFIX + n for n in ('common.hpp', 'dpct/helper.hpp', 'ggml-sycl.cpp', 'mmvq.cpp', 'quantize.hpp')})
         self.assertEqual(set(PINS['diagnostic']) - set(PINS['composed_seed']), {HEADER})
         # This compares the entire composed IQ2/Q8 source, not a model of its K-loop or geometry.
-        for name in ('common/speculative.cpp', 'src/llama-context.cpp', PREFIX + 'mmvq.hpp',
+        for name in ('src/llama-context.cpp', PREFIX + 'mmvq.hpp',
                      PREFIX + 'vecdotq.hpp', PREFIX + 'quants.hpp', PREFIX + 'presets.hpp'):
             self.assertEqual((self.seed / name).read_bytes(), (self.candidate / name).read_bytes())
 
@@ -132,8 +132,8 @@ class DeviceTimingTests(unittest.TestCase):
         mmvq = (self.candidate / (PREFIX + 'mmvq.cpp')).read_text()
         self.assertEqual(quant.count('device_submit.finish('), 1)
         self.assertEqual(mmvq.count('device_submit.finish('), 1)
-        self.assertIn('ncols_dst == 8, false, stream', mmvq)
-        self.assertIn('ky == 8 && std::is_same<quantize_f<1>, quantize_and_reorder_q8_1_soa<1>>::value', quant)
+        self.assertIn('ncols_dst >= 2 && ncols_dst <= 8, false, stream', mmvq)
+        self.assertIn('ky >= 2 && ky <= 8 && std::is_same<quantize_f<1>, quantize_and_reorder_q8_1_soa<1>>::value', quant)
         self.assertEqual(backend.count('lilicorr_device_after_wait('), 1)
         sync = backend[backend.index('static void ggml_backend_sycl_synchronize('):backend.index('static bool ggml_sycl_is_view_or_noop(')]
         self.assertLess(sync.index('SYCL_CHECK(CHECK_TRY_ERROR((stream)->wait()));'), sync.index('lilicorr_device_after_wait('))
@@ -155,6 +155,47 @@ class DeviceTimingTests(unittest.TestCase):
             self.assertEqual(schemas(self.candidate), schemas(self.seed))
         self.assertNotIn('LLAMA_LILICORR_PROFILE v=', (self.candidate / HEADER).read_text())
 
+    def test_process_components_actual_chunk_host_mocks(self):
+        common = (self.candidate / 'common/speculative.cpp').read_text()
+        start = common.index('                // gather target features per extract layer;')
+        end = common.index('            }\n        }\n\n        // LILICORR_PROFILE_ONLY_BEGIN', start)
+        chunk = common[start:end]
+        helper_start = common.index('struct lilicorr_process_components {')
+        helper_end = common.index('// LILICORR_DEVICE_ONLY_END', helper_start)
+        gate_start = common.index('static bool lilicorr_profile_enabled(')
+        gate_end = common.index('// LILICORR_PROFILE_ONLY_END', gate_start)
+        source = (HERE / 'fixtures/process-driver.cpp').read_text()
+        for label, code in [('PROFILE_GATE', common[gate_start:gate_end]), ('COMPONENT_HELPER', common[helper_start:helper_end]), ('PROCESS_CHUNK', chunk)]:
+            self.assertEqual(source.count('// EXTRACTED_' + label), 1)
+            source = source.replace('// EXTRACTED_' + label, code)
+        added = '\n'.join(re.findall(r'// LILICORR_DEVICE_ONLY_BEGIN\n(.*?)// LILICORR_DEVICE_ONLY_END', common, re.S))
+        self.assertNotRegex(added, r'\bllama_\w+\s*\(|\bmemcpy\s*\(|\bwait\s*\(|\bsynchronize\s*\(')
+        self.assertEqual(chunk.count('llama_get_embeddings_layer_inp('), 1)
+        self.assertEqual(chunk.count('llama_get_embeddings_nextn('), 1)
+        self.assertEqual(chunk.count('const int32_t rc = llama_process('), 1)
+        cpp, exe = self.root / 'process-driver.cpp', self.root / 'mock-process'
+        cpp.write_text(source)
+        command = ['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', str(cpp), '-o', str(exe)]
+        print('COMMAND:', ' '.join(command), flush=True)
+        run(command, self.root)
+        result = run([exe], self.root)
+        print('COMMAND:', exe, '\n' + result.stdout, flush=True)
+        self.assertIn('PASS extracted process chunk', result.stdout)
+
+    def test_fc46_route_evidence_and_host_only_markers(self):
+        backend = (self.candidate / (PREFIX + 'ggml-sycl.cpp')).read_text()
+        header = (self.candidate / HEADER).read_text()
+        selected = backend[backend.index('static bool bolt_route_selected_weight('):backend.index('static const char * bolt_route_name(')]
+        self.assertNotIn('fc.weight', selected)  # original fulltrace did NOT record this weight
+        self.assertEqual(backend.count('device_submit.finish_library();'), 4)
+        for route in ('LIBRARY_DNNL_F16', 'LIBRARY_MKL_F16', 'LIBRARY_DNNL_F32', 'LIBRARY_MKL_F32'):
+            self.assertEqual(backend.count('src1_ncols, "' + route + '");'), 1)
+        self.assertIn('(!library_route_ || lilicorr_device_active->fc46)', header)
+        self.assertIn('!event ? "device_unavailable_library"', header)
+        self.assertIn('record.library_route ? "library_submit" : "event"', header)
+        self.assertNotIn('sycl_interop::execute', backend)
+        self.assertIn('"host_only_library_call"', header)
+
     def test_extracted_cpp_with_mocked_sycl_no_sdk(self):
         backend = (self.candidate / (PREFIX + 'ggml-sycl.cpp')).read_text()
         quant = (self.candidate / (PREFIX + 'quantize.hpp')).read_text()
@@ -169,6 +210,10 @@ class DeviceTimingTests(unittest.TestCase):
             'QUEUE_INIT': helper[helper.index('      void init_queues() {'):helper.index('      /// Caller should acquire resource', helper.index('      void init_queues() {'))],
             'GRAPH_SCOPE': re.search(r'    lilicorr_device_scope device_scope\(.*?;\n', backend, re.S).group(),
         }
+        for route in ('LIBRARY_DNNL_F16', 'LIBRARY_MKL_F16', 'LIBRARY_DNNL_F32', 'LIBRARY_MKL_F32'):
+            start = backend.index('lilicorr_device_submit device_submit(src1_ncols == 46', backend.index('bolt_route_record("' + route + '"'))
+            end = backend.index('device_submit.finish_library();', start) + len('device_submit.finish_library();')
+            extracts[route] = backend[start:end]
         source = (HERE / 'fixtures/event-driver.cpp').read_text()
         for label, code in extracts.items():
             self.assertEqual(source.count('// EXTRACTED_' + label), 1)
