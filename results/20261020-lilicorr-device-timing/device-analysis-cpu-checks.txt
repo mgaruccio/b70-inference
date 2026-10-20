@@ -1,0 +1,13 @@
+Development CPU/parser checks only; no SDK, GPU, remote, container, install, build, or public runtime.
+
+WORKTREE=/home/mike/code/.pi-worktrees/b70-inference/lilicorr-device-timing-analysis
+Python=3.14.7
+Compiler=c++ (GCC) 16.2.1 20260810
+Platform=Linux-7.2.9-2-cachyos-x86_64-with-glibc2.44
+
+COMMAND: python3 -B results/20261020-lilicorr-device-timing/test-analyze-device.py
+RESULT: PASS; Ran 9 tests in 0.013s; OK.
+Coverage exercised: positive selected n8 Q8 plus host-only fc46 library, legacy namespace separation, request isolation, malformed/duplicate/unexpected/NaN fields, unsupported status, dropped/submission-error/discard rejection, graph/backend ownership, shape and host-byte checks, process failure, clock-domain separation, old reader framing/phase fixture, and output-only-new-JSON behavior.
+
+COMMAND: python3 -m py_compile results/20261020-lilicorr-device-timing/analyze-device.py results/20261020-lilicorr-device-timing/test-analyze-device.py
+RESULT: PASS.
