@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261020-lilicorr-q8-head-screen/run-native-perf.py", line 272, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/b70-evals/20261020-lilicorr-q8-head-screen/run-native-perf.py", line 263, in main
+    result = capture(control, CELLS, lambda _rt, _cell: None)
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-width-sweep/controller.py", line 612, in capture
+    assert summary['status'] == 'captured' and summary['restored'], summary
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'status': 'failed', 'mode': 'native-q8-head-screen', 'order': ['VSPF-W3a'], 'completed': ['VSPF-W3a'], 'measured_attempts': [], 'restored': False, 'analysis_pending': True, 'timing_permitted': False, 'promotion_permitted': False, 'raw_f32_equality_claimed': False, 'restoration_errors': [{'action': 'independent-live-restoration', 'error': 'InfraFailure("restoration/qualified proof failed: [{\'check\': \'stopped_cells\', \'error\': \'AssertionError()\'}]")'}]}

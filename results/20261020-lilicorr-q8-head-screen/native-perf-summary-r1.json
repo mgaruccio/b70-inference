@@ -1,0 +1,80 @@
+{
+  "actual_n4_n8_kernel_binding": {
+    "4": {
+      "create": "   <--- urKernelCreate(.hProgram = 0x237502b0, .pKernelName = 0x7f51488282ea (_ZTSZZL40reorder_mul_mat_vec_q8_0_q8_1_sycl_ncolsILi4EEvPKvS1_PfiiiiPN4sycl3_V15queueEENKUlRNS4_7handlerEE_clES8_EUlNS4_7nd_itemILi3EEEE_), .phKernel = 0x7ffe0a9ce670 (0x249a3ea0)) -> UR_RESULT_SUCCESS;",
+      "handle": "0x249a3ea0",
+      "successful_diagnostic_launches": 1
+    },
+    "8": {
+      "create": "   <--- urKernelCreate(.hProgram = 0x237502b0, .pKernelName = 0x7f5148828512 (_ZTSZZL40reorder_mul_mat_vec_q8_0_q8_1_sycl_ncolsILi8EEvPKvS1_PfiiiiPN4sycl3_V15queueEENKUlRNS4_7handlerEE_clES8_EUlNS4_7nd_itemILi3EEEE_), .phKernel = 0x7ffe0a9ce670 (0x249a43a0)) -> UR_RESULT_SUCCESS;",
+      "handle": "0x249a43a0",
+      "successful_diagnostic_launches": 1
+    }
+  },
+  "capture_summary_retained_as_failed": true,
+  "decision": "Do not implement Q8 head weight reuse: this cost screen gives no credible dramatic net win; source trait alone does not prove physical redundant loads",
+  "n1_route_caveat": "generic n1 uses q8_0_esimd_launch<8>, unlike served output.weight MMVQ_REORDERED; not a NoDraft comparison",
+  "promotion": false,
+  "restoration": {
+    "comparison_spelling": {
+      "captured_records_unchanged": true,
+      "comparator_sha256": "b7ac6ecd8617113ea8f9869877a2822b38e47563f8f4394273421219c359719a",
+      "container_id": "65dafbf9b58fb9fa885565ad7024ab8f17ae276a7bd5633926d6ece79630226b",
+      "every_other_field_and_check": "unchanged",
+      "field": "HostConfig.OomKillDisable",
+      "original_container_unchanged": true,
+      "scope": "only exact stopped native container Id",
+      "values": [
+        false,
+        null
+      ],
+      "verifier_sha256": "c7d2928954961747c83cef042388dac46847dfeb30621256045c626ef47d6ecd"
+    },
+    "gpu_pids": [
+      1127859
+    ],
+    "health": {
+      "status": "ok"
+    },
+    "original_id": "7239883bad607d3be561d1511a4a24fb78a0ddc96c847f752761a0ad242fc54e",
+    "passed": true,
+    "pid": 1127859,
+    "sole_live": [
+      "nemotron-bolt-probe"
+    ]
+  },
+  "statistics": {
+    "q8-head-n1": {
+      "max_us": 952.19,
+      "median_us": 952.18,
+      "min_us": 952.13,
+      "per_process_mean_us": [
+        952.13,
+        952.19,
+        952.18
+      ]
+    },
+    "q8-head-n4": {
+      "max_us": 1162.92,
+      "median_us": 1162.88,
+      "min_us": 1162.87,
+      "per_process_mean_us": [
+        1162.87,
+        1162.92,
+        1162.88
+      ]
+    },
+    "q8-head-n8": {
+      "max_us": 1261.39,
+      "median_us": 1258.94,
+      "min_us": 1257.11,
+      "per_process_mean_us": [
+        1257.11,
+        1258.94,
+        1261.39
+      ]
+    }
+  },
+  "status": "operator work complete; strict supplemental restoration passed",
+  "timing_scope": "random cache-hot synchronized whole operator graph wall time; not GPU event or serving"
+}
