@@ -59,9 +59,14 @@ stops the original service.  No deletion is performed.
 5. The traced server starts with collection paused.  Every qualification,
    warmup, and measured inference request resumes its cell session immediately
    before the request and pauses it in `finally`.  Each traced job writes a
-   sidecar containing client `realtime_ns` and `monotonic_ns` before resume,
-   after resume, before/after the request, and before/after pause.  These clocks
-   correlate the request with Chrome's unix-us timestamps.
+   sidecar containing REALTIME, MONOTONIC, BOOTTIME, MONOTONIC_RAW and the clock
+   acquisition span before/after resume, request, and pause. The pinned profiler
+   uses `(REALTIME - BOOTTIME at initialization) + MONOTONIC_RAW`, not REALTIME.
+   Raw profiler timestamps must therefore be calibrated before request matching.
+   The source is pinned at
+   <https://github.com/intel/pti-gpu/blob/887bba6e28ce84cc0d3813ef876e24add107c318/tools/unitrace/src/unitimer.h>.
+   No tool clock setting is changed. Clock-offset stability and matching
+   uncertainty are retained with the final analysis.
 6. Gracefully stop each server with the inherited 90-second Docker stop.  The
    server profile must retain nonempty complete device, host, submission, and
    Chrome outputs.  Partial outputs are preserved, not deleted, when any step
@@ -81,7 +86,8 @@ not broaden or normalize that comparator.
 ## Files and outputs
 
 The adapter files are `run-profile.py`, `test-profile.py`, `lead-run.sh`,
-`.gitignore`, and this README.  Capture evidence is written remotely under
+`.gitignore`, and this README; `analyze-trace.py`, its tests and
+`kernel-rules.json` perform bounded streaming analysis.  Capture evidence is written remotely under
 `capture-r1/` (ignored here and retained by the lead): per-cell native/server
 logs, public request artifacts, PID/TID/proc evidence, source proofs, sidecars,
 trace validation, restoration evidence, and `paired-overhead.json`.
@@ -105,14 +111,15 @@ bash -n lead-run.sh
 The lead capture and independent verification are separate CLI modes:
 
 ```bash
+python3 -B run-profile.py --lead-preflight # source/hardware/lifecycle checks, no GPU workload or stop
 python3 -B run-profile.py --lead-capture
 python3 -B run-profile.py --lead-verify-restored
 ```
 
 `lead-run.sh` uses explicit IPv6 `mike@[fd7a:115c:a1e0::c933:4f38]`,
 `HostKeyAlias=inference-host`, strict host-key checking, batch mode, no control
-socket, no TTY, no agent/X11/local forwarding, and syncs only these five
-adapter files before capture.  It always invokes the independent verification
+socket, no TTY, no agent/X11/local forwarding, and syncs only these eight
+adapter/analysis files before capture.  It always invokes the independent verification
 as a separate SSH/Python process, then rsyncs only the bounded `capture-r1/`
 result directory.  It does not start a remote run during local testing.
 

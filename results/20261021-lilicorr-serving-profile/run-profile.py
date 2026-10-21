@@ -41,7 +41,7 @@ TOOL_HASHES = {
     'unitrace': '99ffdad3f3ae86aeee8e52f4b687a9d41e5e67491993952de37c112544a0ff30',
     'libunitrace_tool.so': '4bb8d93a64d9091867babd6e14d3b8ed7647b1f4c649802cc1e8570ad0aa2d04',
 }
-OWN_FILES = ('README.md', 'run-profile.py', 'test-profile.py', 'lead-run.sh', '.gitignore')
+OWN_FILES = ('README.md', 'run-profile.py', 'test-profile.py', 'lead-run.sh', '.gitignore', 'analyze-trace.py', 'test-analyze-trace.py', 'kernel-rules.json')
 
 # This is intentionally the existing qualified adapter, not a copy of its
 # controller.  Its bind() is configured below through the function namespace.
@@ -49,8 +49,18 @@ Q8 = runpy.run_path(str(Q8_PATH))
 
 
 def now():
-    """Return both clocks needed to correlate client spans with Chrome unix-us."""
-    return dict(realtime_ns=time.time_ns(), monotonic_ns=time.monotonic_ns())
+    """Retain the pinned UniTimer's BOOTTIME/RAW calibration, not just wall time."""
+    samples = []
+    for _ in range(8):
+        first = time.time_ns()
+        mono = time.monotonic_ns()
+        boot = time.clock_gettime_ns(time.CLOCK_BOOTTIME)
+        raw = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)
+        last = time.time_ns()
+        samples.append(dict(realtime_ns=(first + last) // 2, monotonic_ns=mono,
+                            boottime_ns=boot, monotonic_raw_ns=raw,
+                            clock_read_span_ns=last - first))
+    return min(samples, key=lambda sample: sample['clock_read_span_ns'])
 
 
 def _save_json(path, value):
@@ -174,10 +184,11 @@ def check_declared_extra_mounts(record, reference, cell):
 
 
 def configure_q8_namespace():
-    """Point the returned runpy function namespace at this adapter's remote root."""
+    """Keep qualified source/build namespaces intact; rebind only the contract later."""
     globals_ = Q8['bind'].__globals__
     assert Q8['main'].__globals__ is globals_
-    globals_.update(HERE=HERE, ROOT=ROOT, OUT=OUT, PREFIX=PREFIX)
+    assert globals_['HERE'] == Q8_PATH.parent
+    assert globals_['ROOT'] == Path('/home/mike/b70-evals/20261020-lilicorr-q8-target-batch4')
 
 
 def _load_sidecar(path):
@@ -261,9 +272,10 @@ def validate_trace_outputs(root, label):
         assert paths, (label, 'missing trace output', filename, str(root))
         assert all(path.stat().st_size > 0 for path in paths), (label, 'empty trace output', filename)
         found[filename] = [str(path.relative_to(root)) for path in paths]
+    trace_reader = runpy.run_path(str(HERE / 'analyze-trace.py'))
     for relative in found['chrome_trace.json']:
-        value = json.loads((root / relative).read_text())
-        assert value not in (None, {}, []), (label, 'empty Chrome trace', relative)
+        count = sum(1 for _ in trace_reader['events'](root / relative))
+        assert count > 0, (label, 'empty Chrome trace', relative)
     return dict(label=label, root=str(root), complete=True, files=found)
 
 
@@ -435,7 +447,7 @@ def bind():
             stem = self.out / cell / point / f'{phase}-{ordinal:02}'
             parent = super()
             method = parent.timed_request
-            globals_ = method.__globals__
+            globals_ = method.__func__.__globals__
             original_stream_chat = globals_['stream_chat']
 
             def traced_stream_chat(*args, **kwargs):
@@ -503,11 +515,21 @@ def main():
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('--lead-capture', action='store_true')
     action.add_argument('--lead-verify-restored', action='store_true')
+    action.add_argument('--lead-preflight', action='store_true')
     args = parser.parse_args()
     assert __debug__ and socket.gethostname() == 'inference-host'
     assert HERE == ROOT, (HERE, ROOT)
-    prior, runtime_map, _analysis, c = bind()
-    _p, h = _dependencies(prior, runtime_map)
+    prior, runtime_map, analysis, c = bind()
+    p, h = _dependencies(prior, runtime_map)
+
+    if args.lead_preflight:
+        preflight_out = ROOT / 'preflight-r1'
+        preflight_out.mkdir(exist_ok=False)
+        tool_proof()
+        rt = runtime_map['Runtime'](h, preflight_out)
+        rt.preflight()  # No begin(), server start/stop, or GPU workload.
+        print('SERVING_PROFILE_PREFLIGHT_PASSED_ORIGINAL_UNTOUCHED', flush=True)
+        return
 
     if args.lead_capture:
         disk_preflight(ROOT)
@@ -530,6 +552,20 @@ def main():
     rt.mode = 'profiling'
     record = rt.verify_restored(OUT / 'independent-restoration-live.json')
     assert record['passed'], record
+    summary = c['load'](OUT / 'summary.json')
+    if summary['status'] == 'captured':
+        fidelity = dict(diagnostic_only=True, timing_permitted=False, native={}, public={}, rows=[])
+        for cell in CELLS:
+            fidelity['native'][cell] = analysis['check_runtime_evidence'](p, h, OUT, cell)
+            fidelity['public'][cell] = analysis['reread_prevalidation'](p, h, OUT, cell)
+            for point in ('short', 'long'):
+                for ordinal in range(3):
+                    row = analysis['reread_measurement'](p, h, OUT, dict(
+                        cell=cell, point=point, phase='measured', ordinal=ordinal))
+                    assert row['passed'] and row['equals_fresh_a']
+                    fidelity['rows'].append(row)
+        assert len(fidelity['rows']) == 24
+        c['save'](OUT / 'qualification-analysis.json', fidelity)
     print('SERVING_PROFILE_INDEPENDENT_RESTORATION_VERIFIED', flush=True)
 
 

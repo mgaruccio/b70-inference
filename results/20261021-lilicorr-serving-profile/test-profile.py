@@ -24,14 +24,17 @@ class ProfileTests(unittest.TestCase):
         self.assertIn("promotion_permitted", source)
         self.assertNotIn('--teardown-on-signal', source)
 
-    def test_runpy_namespace_is_mutated_not_shadowed(self):
+    def test_qualified_namespaces_are_preserved_and_live_contract_is_rebound(self):
         qbind = D['Q8']['bind']
         self.assertIs(qbind.__globals__, D['Q8']['main'].__globals__)
+        original_here = qbind.__globals__['HERE']
         D['configure_q8_namespace']()
-        self.assertIs(qbind.__globals__, D['Q8']['bind'].__globals__)
-        self.assertEqual(qbind.__globals__['ROOT'], D['ROOT'])
-        self.assertEqual(qbind.__globals__['OUT'], D['OUT'])
-        self.assertEqual(qbind.__globals__['PREFIX'], D['PREFIX'])
+        self.assertEqual(qbind.__globals__['HERE'], original_here)
+        prior, runtime, analysis, contract = D['bind']()
+        self.assertEqual(contract['ROOT'], D['ROOT'])
+        self.assertEqual(contract['OUT'], D['OUT'])
+        self.assertEqual(prior['B']['bind'].__globals__['HERE'], D['Q8_PATH'].parent)
+        self.assertEqual(prior['B']['bind'].__globals__['S']['CANDIDATE'], prior['S']['CANDIDATE'])
 
     def test_native_and_server_transforms_preserve_shell_checks(self):
         body = (
@@ -106,6 +109,9 @@ class ProfileTests(unittest.TestCase):
                         'before_pause', 'after_pause'):
                 self.assertIn('realtime_ns', span[key])
                 self.assertIn('monotonic_ns', span[key])
+                self.assertIn('boottime_ns', span[key])
+                self.assertIn('monotonic_raw_ns', span[key])
+                self.assertGreaterEqual(span[key]['clock_read_span_ns'], 0)
             self.assertTrue(span['request_succeeded'])
 
         with tempfile.TemporaryDirectory() as directory:
@@ -124,7 +130,7 @@ class ProfileTests(unittest.TestCase):
             root = Path(directory)
             for name in D['TRACE_FILENAMES']:
                 path = root / name
-                path.write_text('{"traceEvents":[{}]}\n' if name == 'chrome_trace.json' else 'sample\n')
+                path.write_text('{ "traceEvents":[\n{"ph":"M"}\n]\n}\n' if name == 'chrome_trace.json' else 'sample\n')
             result = D['validate_trace_outputs'](root, 'fixture')
             self.assertTrue(result['complete'])
             (root / 'host_timing.txt').write_text('')
@@ -148,6 +154,8 @@ class ProfileTests(unittest.TestCase):
     def test_lead_script_is_bounded_and_always_verifies(self):
         source = (HERE / 'lead-run.sh').read_text()
         self.assertIn("mike@[fd7a:115c:a1e0::c933:4f38]", source)
+        self.assertIn("SSH_HOST='mike@fd7a:115c:a1e0::c933:4f38'", source)
+        self.assertIn('SSH=(ssh "${SSH_OPTIONS[@]}" "${SSH_HOST}")', source)
         self.assertIn('HostKeyAlias', source)
         self.assertIn('BatchMode=yes', source)
         self.assertIn('ControlMaster=no', source)
@@ -157,7 +165,47 @@ class ProfileTests(unittest.TestCase):
         self.assertIn('|| verify_rc=$?', source)
         self.assertNotIn('--delete', source)
         self.assertEqual(D['OWN_FILES'], ('README.md', 'run-profile.py', 'test-profile.py',
-                                          'lead-run.sh', '.gitignore'))
+                                          'lead-run.sh', '.gitignore', 'analyze-trace.py',
+                                          'test-analyze-trace.py', 'kernel-rules.json'))
+
+
+class RuntimePathTests(unittest.TestCase):
+    def test_actual_bound_warmup_path_collects_and_restores_stream_hook(self):
+        _prior, runtime, _analysis, contract = D['bind']()
+        cls = runtime['Runtime']
+        base_method = cls.__mro__[1].timed_request
+        globals_ = base_method.__globals__
+        self.assertIs(globals_, base_method.__func__.__globals__ if hasattr(base_method, '__func__') else globals_)
+        original_stream = globals_['stream_chat']
+        changed = {key: contract[key] for key in ('timing_jobs', 'check_output', 'timing_metrics')}
+        with tempfile.TemporaryDirectory() as directory:
+            rt = cls.__new__(cls)
+            rt.out = Path(directory)
+            rt.active = 'VSPF-W3b'
+            rt.h = {'analysis': {'normalize': lambda value: value}}
+            rt.off = {'OLD': {'URL': 'http://not-used'}, 'reference_prompt': lambda *_: 'fixture'}
+            rt._reference = lambda job: (None, {'text': 'fixture'})
+            commands, streams = [], []
+            rt.command = lambda *args, **kwargs: commands.append(args)
+            expected = {'text': 'fixture', 'timings': {}}
+            def stream(*args, **kwargs):
+                streams.append(args)
+                return expected
+            try:
+                globals_['stream_chat'] = stream
+                contract['timing_jobs'] = lambda h: {'short': {'payload': {'fixture': True}}}
+                contract['check_output'] = lambda result, *_: self.assertEqual(result, expected)
+                contract['timing_metrics'] = lambda result: {'fixture': True}
+                self.assertEqual(rt.timed_request('VSPF-W3b', 'short', 'warmup', 0), expected)
+                self.assertEqual(len(streams), 1)
+                self.assertEqual([args[4] for args in commands], ['--resume', '--pause'])
+                self.assertIs(globals_['stream_chat'], stream)
+                sidecar = json.loads((Path(directory) / 'VSPF-W3b/short/warmup-00.trace-sidecar.json').read_text())
+                self.assertTrue(sidecar['requests'][0]['request_succeeded'])
+                self.assertTrue(sidecar['requests'][0]['pause_succeeded'])
+            finally:
+                globals_['stream_chat'] = original_stream
+                contract.update(changed)
 
 
 if __name__ == '__main__':

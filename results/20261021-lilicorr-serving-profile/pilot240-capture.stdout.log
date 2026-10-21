@@ -1,0 +1,74 @@
+docker inspect nemotron-bolt-probe
+docker ps -a --format '{{.Names}}'
+uname -a
+lscpu
+modinfo xe
+lspci -Dnn -s 0000:0b:00.0
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+docker inspect nemotron-bolt-probe
+docker stop -t 90 nemotron-bolt-probe
+docker inspect nemotron-bolt-probe
+sudo -n id -u
+docker create --name bolt-lilicorr-native-pilot-240-r1-vspf-w3a --label b70.experiment=bolt-fusion --ipc=host -p 127.0.0.1:18098:18098 --device /dev/dri --group-add 987 -v /dev/dri:/dev/dri:ro -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-q8-target-batch4-r1:/src:ro -v /home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF:/models:ro -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro -e ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE -e ZE_AFFINITY_MASK=0 -e ONEAPI_DEVICE_SELECTOR=level_zero:0 -e GGML_SYCL_ENABLE_ESIMD=1 -e GGML_SYCL_ENABLE_FUSION=1 -e GGML_SYCL_ENABLE_GRAPH=0 -e BOLT_TRACE_TENSORS=0 -e ONEDNN_VERBOSE=0 -e GGML_SYCL_ENABLE_DNN=1 -e GGML_SYCL_ENABLE_OPT=1 -e GGML_SYCL_ENABLE_VMM=1 -v /home/mike/b70-evals/20261019-lilicorr-q8-drafter/lilicorr-q8-25.gguf:/draft/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr.gguf:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh:/native-outprod.sh:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py:/iq2-single2-gate/run-trace.py:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py:/iq2-single2-gate/analyze-trace.py:ro -v /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase:/router-verify-phase:ro -v /home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-verify-singletons:/verify-singletons:ro -v /home/mike/b70-evals/20261020-lilicorr-q8-target-batch4:/iq2-batch4:ro -v /home/mike/needle-jax-probe/tools/unitrace-2.4.0:/profiler240:ro -v /home/mike/b70-evals/20261021-lilicorr-serving-profile/native-pilot-240-r1/raw:/profile:rw intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04 bash -lc '
+set -eo pipefail
+source /opt/intel/oneapi/setvars.sh --force
+export LD_LIBRARY_PATH=/src/build-sycl/bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}
+export BOLT_VERIFY_CAPTURE_DIR=/tmp
+export GGML_SYCL_DEBUG=1 GGML_SYCL_ENABLE_OPT=1
+/profiler240/bin/unitrace --version > /profile/version.txt
+ldd /profiler240/lib/libunitrace_tool.so > /profile/dependencies.txt
+! grep -F '"'"'not found'"'"' /profile/dependencies.txt
+printf '"'"'FIRST_NATIVE_GATE_CLEAN_BEGIN\n'"'"'
+/src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p nvfp4_reorder=1 > /profile/clean.log 2>&1
+grep -Fx '"'"'  56/56 tests passed'"'"' /profile/clean.log
+! grep -Ei '"'"'not supported|skipping large tensors'"'"' /profile/clean.log
+grep -F '"'"'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl'"'"' /profile/clean.log > /dev/null
+printf '"'"'FIRST_NATIVE_GATE_TRACED_BEGIN\n'"'"'
+export ZE_ENABLE_TRACING_LAYER=1
+unset UNITRACE_KernelMetrics UNITRACE_ChromeKmdLogging
+/profiler240/bin/unitrace -d -h -s -v --chrome-kernel-logging --result-dir /profile/trace /src/build-sycl/bin/test-backend-ops test -b SYCL0 -o MUL_MAT -p nvfp4_reorder=1 > /profile/traced.log 2>&1
+grep -Fx '"'"'  56/56 tests passed'"'"' /profile/traced.log
+! grep -Ei '"'"'not supported|skipping large tensors'"'"' /profile/traced.log
+grep -F '"'"'Calling reorder_mul_mat_vec_nvfp4_q8_1_sycl'"'"' /profile/traced.log > /dev/null
+printf '"'"'FIRST_NATIVE_GATE_PAIRED_PASSED_NOT_SERVING_QUALIFICATION\n'"'"'
+'
+docker inspect bolt-lilicorr-native-pilot-240-r1-vspf-w3a
+docker inspect bolt-lilicorr-native-pilot-240-r1-vspf-w3a
+docker inspect bolt-lilicorr-native-pilot-240-r1-vspf-w3a
+docker stop -t 90 bolt-lilicorr-native-pilot-240-r1-vspf-w3a
+docker cp bolt-lilicorr-native-pilot-240-r1-vspf-w3a:/tmp/originalrouter-single2-native.log /home/mike/b70-evals/20261021-lilicorr-serving-profile/native-pilot-240-r1/VSPF-W3a/restored-originalrouter-single2-native.log
+docker cp bolt-lilicorr-native-pilot-240-r1-vspf-w3a:/tmp/router-verify-phase-native.log /home/mike/b70-evals/20261021-lilicorr-serving-profile/native-pilot-240-r1/VSPF-W3a/restored-router-verify-phase-native.log
+docker cp bolt-lilicorr-native-pilot-240-r1-vspf-w3a:/tmp/router-prefill-native.log /home/mike/b70-evals/20261021-lilicorr-serving-profile/native-pilot-240-r1/VSPF-W3a/restored-router-prefill-native.log
+docker cp bolt-lilicorr-native-pilot-240-r1-vspf-w3a:/tmp/verify-singletons-q8.log /home/mike/b70-evals/20261021-lilicorr-serving-profile/native-pilot-240-r1/VSPF-W3a/restored-verify-singletons-q8.log
+docker cp bolt-lilicorr-native-pilot-240-r1-vspf-w3a:/tmp/verify-singletons-iq2.log /home/mike/b70-evals/20261021-lilicorr-serving-profile/native-pilot-240-r1/VSPF-W3a/restored-verify-singletons-iq2.log
+docker inspect bolt-lilicorr-native-pilot-240-r1-vspf-w3a
+docker inspect nemotron-bolt-probe
+docker start nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+lspci -Dnn -s 0000:0b:00.0
+docker inspect bolt-lilicorr-native-pilot-240-r1-vspf-w3a

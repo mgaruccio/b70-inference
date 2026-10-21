@@ -16,6 +16,14 @@ Two models share the card. Only one is resident at a time.
 
 Public llama.cpp Muse-on-B70 numbers from others are ~27–29 tok/s. The vLLM stack is a different path (GPTQ W4A16 + graphs + DFlash n=20), measured until stop with visible answers.
 
+## Paused: Nemotron 3.5 Bolt / LiLiCorr
+
+This investigation was archived on **2026-10-21** at the user's request. No
+speculative candidate was promoted, and full-serving GPU attribution remains
+unqualified. The original service was restored and left unchanged.
+
+[Archive: outcomes, profiling failures, retained evidence and restart notes](docs/archives/20261021-nemotron35-bolt-lilicorr.md)
+
 ## Qwen update: ~10% faster long-context decode on one B70
 
 Our experimental **shared-KV MTP4** path improves median decode throughput by

@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/home/mike/b70-evals/20261021-lilicorr-serving-profile/run-profile.py", line 573, in <module>
+    main()
+    ~~~~^^
+  File "/home/mike/b70-evals/20261021-lilicorr-serving-profile/run-profile.py", line 541, in main
+    summary = runtime_map['capture'](rt)
+  File "/home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-singletons-w3-dev-timing/controller.py", line 354, in capture
+    return K['capture'](runtime, C['CELLS'], lambda rt, cell: rt.run_timing_cell(cell))
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-width-sweep/controller.py", line 611, in capture
+    raise failure
+  File "/home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-width-sweep/controller.py", line 585, in capture
+    runtime.begin(cell)
+    ~~~~~~~~~~~~~^^^^^^
+  File "/home/mike/b70-evals/20261021-lilicorr-serving-profile/run-profile.py", line 405, in begin
+    result = super().begin(cell)
+  File "/home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-singletons-w3-dev-timing/controller.py", line 196, in begin
+    C['save'](directory / 'models.json', self.ready(self.h['api'], self._cell_name(cell)))
+                                         ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/mike/b70-evals/20261017-nemotron35-bolt-prefill-grouped/run-grouped-diagnostic.py", line 39, in ready
+    raise TimeoutError('Bolt readiness timeout')
+TimeoutError: Bolt readiness timeout

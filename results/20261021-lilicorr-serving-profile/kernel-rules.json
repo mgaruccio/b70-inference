@@ -1,0 +1,27 @@
+[
+  {
+    "substring": "nvfp4",
+    "category": "nvfp4_weight_kernels",
+    "evidence": "Current W3 server.stderr.log lines127-130: target has80 NVFP4 tensors. Lines301-303: current drafter owns only F32,Q8_0,BF16. This class identifies weight arithmetic, not a target-verification phase or a complete graph. Older pre-Q8 drafter traces cannot use this ownership inference."
+  },
+  {
+    "substring": "iq2_xxs",
+    "category": "iq2_weight_kernels",
+    "evidence": "Current W3 server.stderr.log lines127-130: target has160 IQ2_XXS tensors; lines301-303: no IQ2 in current drafter. Current IQ2batch4 patch preserves MoE up/down arithmetic. This class is not a full model phase."
+  },
+  {
+    "substring": "ssm_",
+    "category": "ssm_state_kernels",
+    "evidence": "Target is Nemotron H-MoE hybrid with SSM; current drafter is DFlash attention/convolution (server.stderr.log lines75-92,251-284 and src/models/dflash.cpp). Only explicit ssm_ kernel names are mapped; generic copy, normalization, GEMM and attention are left unresolved."
+  },
+  {
+    "substring": "zeCommandListAppendMemoryCopy",
+    "category": "explicit_memory_copy",
+    "evidence": "Pinned unitrace Chrome event name identifies explicit Level Zero memory-copy activity and direction/size. Does not include all USM movement or assign a model owner."
+  },
+  {
+    "substring": "zeCommandListAppendMemoryFill",
+    "category": "explicit_memory_fill",
+    "evidence": "Pinned unitrace Chrome event name identifies explicit Level Zero memory-fill activity. Does not assign a model owner."
+  }
+]
