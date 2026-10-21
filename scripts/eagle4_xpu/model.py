@@ -182,6 +182,11 @@ class LlamaForCausalLMEagle4(Eagle3LlamaForCausalLM):
         config = vllm_config.speculative_config.draft_model_config.hf_config
         validate_config(config)
         validate_runtime(vllm_config)
+        # Checkpoints name layer outputs; pinned vLLM captures layer inputs.
+        # Publish the next-layer indices before the runner configures aux capture.
+        config.eagle_aux_hidden_state_layer_ids = tuple(
+            layer + 1 for layer in config.eagle_config["eagle_aux_hidden_state_layer_ids"]
+        )
         super().__init__(vllm_config=vllm_config, prefix=prefix)
         self.num_candidates = config.efficient_lm_head_config["num_candidates"]
         rank = config.efficient_lm_head_config["rank"]

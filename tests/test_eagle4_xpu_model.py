@@ -240,6 +240,19 @@ class ConfigTests(unittest.TestCase):
         model.validate_config(release_config())
         model.validate_runtime(runtime_config())
 
+    def test_checkpoint_output_layers_become_serving_input_layers_before_base_init(self):
+        config = runtime_config()
+        hf = config.speculative_config.draft_model_config.hf_config = release_config()
+        # Stop at the real superclass boundary: no full-sized parameters are needed.
+        class BaseReached(RuntimeError):
+            pass
+        for _ in range(2):
+            with patch.object(model.Eagle3LlamaForCausalLM, "__init__", side_effect=BaseReached):
+                with self.assertRaises(BaseReached):
+                    model.LlamaForCausalLMEagle4(vllm_config=config)
+            self.assertEqual(hf.eagle_aux_hidden_state_layer_ids, (4, 32, 60))
+            self.assertEqual(hf.eagle_config["eagle_aux_hidden_state_layer_ids"], [3, 31, 59])
+
     def test_unsupported_model_math_rejected(self):
         for name, bad in (("fc_norm", False), ("norm_output", False), ("attn_norm", True),
                           ("num_hidden_layers", 2), ("draft_vocab_size", 100),

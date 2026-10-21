@@ -2,7 +2,7 @@
 """Install the opt-in EAGLE4 chain adapter in the pinned XPU vLLM container.
 
 Run before starting vLLM (all engine/registry subprocesses must see the overlay):
-    python /overlay/eagle4_xpu/install.py --root /workspace/vllm/vllm
+    python /overlay/eagle4_xpu/install.py
 Use --check for a read-only compatibility check. Re-running is a no-op. This does
 not launch a server, change a checkpoint, or install the official tree harness.
 
