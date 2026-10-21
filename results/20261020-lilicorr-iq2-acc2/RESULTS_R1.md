@@ -61,3 +61,25 @@ container/ownership/restoration data remain locally and under
 `/home/mike/b70-evals/20261020-lilicorr-iq2-acc2/`. `retention-r1.json` records the
 cross-host SHA matches and lossless large-file sidecars. Raw originals remain
 unchanged; cumulative original-service history may stay outside Git, checksummed.
+
+
+## Remaining attribution blocker
+
+No dramatic gain has been found, and acc2 does not justify another blind packed
+variant. The earlier profiling-enabled queue failed native fidelity and remains
+rejected. Fresh external-tool research found that `unitrace --device-timing` does
+not need the SYCL profiling property, but still injects timestamp/signal events
+and changes Level Zero command-list/event behavior. It is therefore **NO-GO as
+an unchanged-runtime attribution method** under the frozen execution constraints.
+No tracer, adapter/driver workaround or profiling-queue retry was executed here.
+A traced diagnostic would itself need the unchanged native and public fidelity
+gates before any interpretation; diagnostic timing would never become clean speed.
+
+Primary sources affecting that decision:
+- https://github.com/intel/pti-gpu/blob/master/chapters/device_activity_tracing/LevelZero.md
+- https://github.com/intel/pti-gpu/blob/master/tools/unitrace/src/levelzero/ze_collector.h
+- https://intel.github.io/pti-gpu/systemreqs.html
+
+This is an attribution blocker, not proof that no further exact optimization is
+possible. Original service restoration and the negative results above are the
+completed outcomes; the user's performance objective remains explicitly open.
