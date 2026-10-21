@@ -1,0 +1,123 @@
+docker inspect nemotron-bolt-probe
+docker ps -a --format '{{.Names}}'
+uname -a
+lscpu
+modinfo xe
+lspci -Dnn -s 0000:0b:00.0
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+docker inspect nemotron-bolt-probe
+docker stop -t 90 nemotron-bolt-probe
+docker inspect nemotron-bolt-probe
+sudo -n id -u
+docker create --name bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a --label b70.experiment=bolt-fusion --ipc=host -p 127.0.0.1:18098:18098 --device /dev/dri --group-add 987 -v /dev/dri:/dev/dri:ro -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-acc2-r1:/src:ro -v /home/mike/inference/models/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF:/models:ro -v /home/mike/inference/src/oneDNN/install:/opt/onednn:ro -e ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE -e ZE_AFFINITY_MASK=0 -e ONEAPI_DEVICE_SELECTOR=level_zero:0 -e GGML_SYCL_ENABLE_ESIMD=1 -e GGML_SYCL_ENABLE_FUSION=1 -e GGML_SYCL_ENABLE_GRAPH=0 -e BOLT_TRACE_TENSORS=0 -e ONEDNN_VERBOSE=0 -e GGML_SYCL_ENABLE_DNN=1 -e GGML_SYCL_ENABLE_OPT=1 -e GGML_SYCL_ENABLE_VMM=1 -v /home/mike/b70-evals/20261019-lilicorr-q8-drafter/lilicorr-q8-25.gguf:/draft/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr.gguf:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-outprod/native-outprod.sh:/native-outprod.sh:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/run-trace.py:/iq2-single2-gate/run-trace.py:ro -v /home/mike/b70-evals/20261017-nemotron35-bolt-lilicorr-router-widths-single2/analyze-trace.py:/iq2-single2-gate/analyze-trace.py:ro -v /home/mike/b70-evals/20261018-nemotron35-bolt-lilicorr-router-verify-phase:/router-verify-phase:ro -v /home/mike/b70-evals/20261019-nemotron35-bolt-lilicorr-verify-singletons:/verify-singletons:ro -v /home/mike/b70-evals/20261020-lilicorr-iq2-acc2:/iq2-batch4:ro -v /home/mike/inference/src/llama.cpp-bolt-b6334e37-nvfp4-lilicorr-iq2-batch4-r1:/baseline:ro intel/deep-learning-essentials:2026.0.0-devel-ubuntu24.04 bash -lc '
+set -eo pipefail
+source /opt/intel/oneapi/setvars.sh --force
+set -u
+unset LLAMA_LILICORR_PROFILE SYCL_UR_TRACE SYCL_PI_TRACE LD_DEBUG
+export GGML_SYCL_ENABLE_DNN=1 GGML_SYCL_ENABLE_OPT=1 GGML_SYCL_ENABLE_VMM=1
+export GGML_SYCL_ENABLE_ESIMD=1 GGML_SYCL_ENABLE_FUSION=1 GGML_SYCL_ENABLE_GRAPH=0
+export BOLT_TRACE_TENSORS=0 ONEDNN_VERBOSE=0
+root=/tmp/lilicorr-native-perf
+test ! -e "$root"
+mkdir "$root"
+for variant in base acc2; do
+ if test "$variant" = base; then bin=/baseline/build-sycl/bin; else bin=/src/build-sycl/bin; fi
+ directory="$root/$variant"
+ mkdir -p "$directory/capture"
+ for kind in q8 iq2; do
+  log="$directory/verify-singletons-$kind.log"
+  if env LD_LIBRARY_PATH="$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}" GGML_SYCL_DEBUG=1 BOLT_VERIFY_CAPTURE_DIR="$directory/capture" "$bin/test-backend-ops" test -b SYCL0 -p "^verify_singletons=1,case=$kind-" -j 1 >"$log" 2>&1; then rc=0; else rc=$?; fi
+  printf '"'"'%s\n'"'"' "$rc" >"$log.exit-code"
+  test "$rc" = 0
+  python3 -B /iq2-batch4/native-batch4.py --kind "$kind" "$log" >"$log.check.json"
+ done
+ # Host loader/UR call tracing only. No event profiling, queue flags or adapter changes.
+ log="$directory/representative-diagnostic.log"
+ if env LD_LIBRARY_PATH="$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}" GGML_SYCL_DEBUG=1 LD_DEBUG=libs SYCL_UR_TRACE=2 "$bin/test-backend-ops" test -b SYCL0 -o MUL_MAT_ID --test-file /iq2-batch4/native-perf-cases.txt -j 1 >"$log" 2>&1; then rc=0; else rc=$?; fi
+ printf '"'"'%s\n'"'"' "$rc" >"$log.exit-code"
+ test "$rc" = 0
+ python3 -B - "$log" "$bin" <<'"'"'PY'"'"'
+import sys
+from pathlib import Path
+text=Path(sys.argv[1]).read_text()
+loaded=[line for line in text.splitlines() if '"'"'calling init:'"'"' in line and '"'"'libggml-sycl.so'"'"' in line]
+assert loaded and all(sys.argv[2]+'"'"'/'"'"' in line for line in loaded), loaded
+assert '"'"'urEnqueueKernelLaunch'"'"' in text, '"'"'UR launch trace missing'"'"'
+assert '"'"'UR_QUEUE_FLAG_PROFILING_ENABLE'"'"' not in text, '"'"'unexpected profiling queue'"'"'
+assert '"'"'2/2 tests passed'"'"' in text, '"'"'representative CPU comparisons missing'"'"'
+assert not any(word in text.lower() for word in ('"'"'not supported'"'"', '"'"'skipping large tensors'"'"'))
+print('"'"'NATIVE_PERF_DLL_KERNEL_ROUTE_AND_TWO_CPU_COMPARISONS_PASSED'"'"',sys.argv[2])
+PY
+done
+index=0
+for variant in base acc2 acc2 base base acc2 acc2 base base acc2 acc2 base; do
+ if test "$variant" = base; then bin=/baseline/build-sycl/bin; else bin=/src/build-sycl/bin; fi
+ log="$root/perf-$index-$variant.log"
+ if env -u BOLT_VERIFY_CAPTURE_DIR LD_LIBRARY_PATH="$bin:/opt/onednn/lib:${LD_LIBRARY_PATH:-}" GGML_SYCL_DEBUG=0 "$bin/test-backend-ops" perf -b SYCL0 -o MUL_MAT_ID --test-file /iq2-batch4/native-perf-cases.txt >"$log" 2>&1; then rc=0; else rc=$?; fi
+ printf '"'"'%s\n'"'"' "$rc" >"$log.exit-code"
+ test "$rc" = 0
+ python3 -B - "$log" >"$log.checked.json" <<'"'"'PERF'"'"'
+import json,math,re,sys
+from pathlib import Path
+text=Path(sys.argv[1]).read_text()
+lines=[line for line in text.splitlines() if line.lstrip().startswith('"'"'MUL_MAT_ID('"'"')]
+assert len(lines)==2, ('"'"'expected two measured operations'"'"',lines)
+rows=[]
+for name in ('"'"'lilicorr-iq2-up-n4'"'"','"'"'lilicorr-iq2-down-n4'"'"'):
+ matched=[line for line in lines if '"'"'name='"'"'+name+'"'"','"'"' in line]
+ assert len(matched)==1, (name,matched)
+ match=re.search(r'"'"'(\d+) runs\s*-\s*(\S+) us/run\s*-'"'"',matched[0])
+ assert match, ('"'"'missing performance result'"'"',matched[0])
+ runs=int(match[1]);time_us=float(match[2])
+ assert runs>0 and math.isfinite(time_us) and time_us>0,(runs,time_us)
+ rows.append(dict(name=name,runs=runs,operator_graph_wall_us=time_us))
+assert not any(word in text.lower() for word in ('"'"'not supported'"'"','"'"'skipping large tensors'"'"'))
+print(json.dumps(rows,sort_keys=True))
+PERF
+ printf '"'"'NATIVE_PERF_FINISHED index=%s variant=%s log=%s\n'"'"' "$index" "$variant" "$log"
+ index=$((index + 1))
+done
+echo NATIVE_IQ2_OPERATOR_PERF_CAPTURED_NOT_SERVING_SPEEDUP
+'
+docker inspect bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a
+docker inspect bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a
+docker cp bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a:/tmp/lilicorr-native-perf /home/mike/b70-evals/20261020-lilicorr-iq2-acc2/native-perf-r1/VSPF-W3a/raw
+docker inspect bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a
+sudo -n id -u
+docker inspect bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a
+docker cp bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a:/tmp/originalrouter-single2-native.log /home/mike/b70-evals/20261020-lilicorr-iq2-acc2/native-perf-r1/VSPF-W3a/restored-originalrouter-single2-native.log
+docker cp bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a:/tmp/router-verify-phase-native.log /home/mike/b70-evals/20261020-lilicorr-iq2-acc2/native-perf-r1/VSPF-W3a/restored-router-verify-phase-native.log
+docker cp bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a:/tmp/router-prefill-native.log /home/mike/b70-evals/20261020-lilicorr-iq2-acc2/native-perf-r1/VSPF-W3a/restored-router-prefill-native.log
+docker cp bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a:/tmp/verify-singletons-q8.log /home/mike/b70-evals/20261020-lilicorr-iq2-acc2/native-perf-r1/VSPF-W3a/restored-verify-singletons-q8.log
+docker cp bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a:/tmp/verify-singletons-iq2.log /home/mike/b70-evals/20261020-lilicorr-iq2-acc2/native-perf-r1/VSPF-W3a/restored-verify-singletons-iq2.log
+docker inspect bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a
+docker inspect nemotron-bolt-probe
+docker start nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect -f '{{.State.Running}}' nemotron-bolt-probe
+docker inspect nemotron-bolt-probe
+docker ps --format '{{.Names}}'
+sudo -n id -u
+docker inspect nemotron-bolt-probe
+lspci -Dnn -s 0000:0b:00.0
+docker inspect bolt-lilicorr-iq2-acc2-native-perf-r1-vspf-w3a
+NATIVE_IQ2_PERF_CAPTURED_RESTORED_ANALYSIS_PENDING
