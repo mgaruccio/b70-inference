@@ -455,11 +455,16 @@ def build(base: Path, official: Path) -> None:
     p = "_xpu_ops.py"
     edit(p, '    assert isinstance(attn_metadata, GDNAttentionMetadata)\n',
          '    assert isinstance(attn_metadata, GDNAttentionMetadata)\n'
-         '    if (attn_metadata.verify_extension is not None\n'
-         '            and attn_metadata.spec_sequence_masks is not None):\n'
-         '        from vllm.model_executor.layers.mamba.gdn.verify_extension_xpu import forward_xpu_spec_rows\n'
-         '        forward_xpu_spec_rows(self, attn_metadata, projected_states_qkvz,\n'
-         '                              projected_states_ba, core_attn_out, z)\n'
+         '    if attn_metadata.verify_extension is not None:\n'
+         '        from vllm.model_executor.layers.mamba.gdn.verify_extension_xpu import (\n'
+         '            forward_xpu_native_rows, forward_xpu_spec_rows,\n'
+         '        )\n'
+         '        if attn_metadata.spec_sequence_masks is not None:\n'
+         '            forward_xpu_spec_rows(self, attn_metadata, projected_states_qkvz,\n'
+         '                                  projected_states_ba, core_attn_out, z)\n'
+         '        else:\n'
+         '            forward_xpu_native_rows(self, attn_metadata, projected_states_qkvz,\n'
+         '                                   projected_states_ba, core_attn_out, z)\n'
          '        return\n')
     p = "platforms/xpu.py"
     edit(p, '        # TurboQuant KV cache: route directly to TQ backend',

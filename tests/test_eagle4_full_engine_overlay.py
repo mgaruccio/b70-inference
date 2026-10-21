@@ -968,7 +968,12 @@ class InstalledEngineContracts(unittest.TestCase):
                 self.assertTrue(mixed)
                 self.assertEqual(kwargs["num_spec_decodes"], 0)
                 self.assertIsNone(kwargs["spec_state_indices_tensor"])
+                self.assertEqual(kwargs["non_spec_state_indices_tensor"].tolist(), [0])
+                self.assertEqual(kwargs["conv_state"].shape[0], 1)
+                self.assertEqual(kwargs["ssm_state"].shape[0], 1)
                 self.assertEqual(qkvz.tolist(), projected[[1, 4]].tolist())
+                kwargs["conv_state"].fill_(111)
+                kwargs["ssm_state"].fill_(222)
             o.fill_(777)
             zz.copy_(qkvz[:, 3:].reshape_as(zz))
         context = NS(no_compile_layers={"layer": layer}, attn_metadata={"layer": meta})
@@ -996,11 +1001,93 @@ class InstalledEngineContracts(unittest.TestCase):
             self.assertEqual([name for name, _ in calls], ["extension", "native"] if mixed else ["extension"])
             expected = [0., 777., 8., 12., 777., 32.] if mixed else [0., 4., 8., 20.]
             self.assertEqual(out.flatten().tolist(), expected)
+            if mixed:
+                self.assertTrue((layer.kv_cache[0][7] == 111).all())
+                self.assertTrue((layer.kv_cache[1][7] == 222).all())
+                self.assertTrue((layer.kv_cache[0][6] == 0).all())
+                self.assertTrue((layer.kv_cache[1][6] == 0).all())
         else:
             self.assertEqual([name for name, _ in calls], ["native"])
             self.assertEqual(calls[0][1]["num_spec_decodes"], 1)
             self.assertEqual(out.flatten().tolist(), [777.] * count)
 
+
+    def test_extension_native_bridge_compacts_state_and_preserves_padding(self):
+        import vllm._xpu_ops as xpu
+        from vllm.v1.attention.backends.gdn_attn import GDNAttentionMetadata
+
+        t = self.torch
+        projected = t.arange(4, dtype=t.float32).reshape(1, 4)
+        ba = t.ones(1, 2)
+        original_conv = t.arange(8 * 3 * 2, dtype=t.float32).reshape(8, 3, 2)
+        original_ssm = t.arange(8, dtype=t.float32).reshape(8, 1, 1, 1)
+
+        for pad in (0, -1):
+            with self.subTest(pad=pad):
+                layer = NS(
+                    prefix="layer", gqa_interleaved_layout=False, key_dim=1,
+                    value_dim=1, tp_size=1, num_k_heads=1, num_v_heads=1,
+                    head_k_dim=1, head_v_dim=1,
+                    kv_cache=(original_conv.clone(), original_ssm.clone()),
+                    conv1d=NS(weight=t.ones(3, 1, 3), bias=None),
+                    activation="silu", A_log=t.zeros(1), dt_bias=t.zeros(1),
+                )
+                metadata = GDNAttentionMetadata(
+                    num_prefills=1, num_prefill_tokens=1, num_decodes=0,
+                    num_decode_tokens=0, num_spec_decodes=0,
+                    num_spec_decode_tokens=0, num_actual_tokens=1,
+                    verify_extension=object(), spec_sequence_masks=None,
+                    spec_query_start_loc=None, spec_token_indx=None,
+                    non_spec_query_start_loc=t.tensor([0, 1, 1], dtype=t.int32),
+                    non_spec_token_indx=None,
+                    non_spec_state_indices_tensor=t.tensor([7, pad], dtype=t.int32),
+                    has_initial_state=t.tensor([True, False]),
+                    spec_state_indices_tensor=None, num_accepted_tokens=None,
+                )
+                out = t.full((1, 1, 1), -9.0)
+                z = t.full((1, 1, 1), -9.0)
+                calls = []
+
+                def native(o, zz, qkvz, gates, *args, **kwargs):
+                    calls.append(kwargs)
+                    self.assertEqual(kwargs["non_spec_state_indices_tensor"].tolist(), [0, 1])
+                    self.assertEqual(kwargs["conv_state"].shape[0], 2)
+                    self.assertEqual(kwargs["ssm_state"].shape[0], 2)
+                    kwargs["conv_state"].fill_(111)
+                    kwargs["ssm_state"].fill_(222)
+                    o.fill_(777)
+                    zz.fill_(888)
+
+                context = NS(no_compile_layers={"layer": layer}, attn_metadata={"layer": metadata})
+                with mock.patch("vllm.forward_context.get_forward_context", return_value=context), \
+                     mock.patch.object(t.ops._xpu_C, "gdn_attention", side_effect=native, create=True):
+                    xpu._gdn_attention_core_xpu_impl(out, z, projected, ba, "layer")
+
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(out.item(), 777)
+                self.assertEqual(z.item(), 888)
+                self.assertTrue((layer.kv_cache[0][7] == 111).all())
+                self.assertTrue((layer.kv_cache[1][7] == 222).all())
+                self.assertTrue(t.equal(layer.kv_cache[0][0], original_conv[0]))
+                self.assertTrue(t.equal(layer.kv_cache[1][0], original_ssm[0]))
+                self.assertTrue(t.equal(layer.kv_cache[0][6], original_conv[6]))
+                self.assertTrue(t.equal(layer.kv_cache[1][6], original_ssm[6]))
+
+        metadata.non_spec_state_indices_tensor = t.tensor([99], dtype=t.int32)
+        layer = NS(
+            prefix="layer", gqa_interleaved_layout=False, key_dim=1, value_dim=1,
+            tp_size=1, num_k_heads=1, num_v_heads=1, head_k_dim=1, head_v_dim=1,
+            kv_cache=(original_conv.clone(), original_ssm.clone()),
+            conv1d=NS(weight=t.ones(3, 1, 3), bias=None), activation="silu",
+            A_log=t.zeros(1), dt_bias=t.zeros(1),
+        )
+        context = NS(no_compile_layers={"layer": layer}, attn_metadata={"layer": metadata})
+        with mock.patch("vllm.forward_context.get_forward_context", return_value=context), \
+             mock.patch.object(t.ops._xpu_C, "gdn_attention", side_effect=AssertionError("native called"), create=True):
+            with self.assertRaises(IndexError):
+                xpu._gdn_attention_core_xpu_impl(
+                    t.zeros(1, 1, 1), t.zeros(1, 1, 1), projected, ba, "layer"
+                )
 
     def test_mamba_initializer_preserves_unsigned_pointer_bits_in_int64_storage(self):
         from vllm.v1.worker.mamba_utils import MambaSpecDecodeGPUContext

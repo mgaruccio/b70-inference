@@ -146,6 +146,15 @@ metadata dtype, tensor identity and Triton pointer casts remain unchanged.
 Both state-cache and block-table pointers are covered. This fixes the observed
 `Overflow when unpacking long long` without changing state-copy arithmetic.
 
+Native extension-enabled GDN state bridge (2026-10-21):
+The demonstrated frozen XPU GDN overflow occurs when a large global state ID is
+multiplied by its row stride in int32. When the EAGLE extension is active, the
+bridge gathers non-speculative conv/SSM rows into a per-call compact cache, passes
+local int32 IDs to the unchanged native op, then scatters both state tensors back.
+Reserved NULL IDs (`0` and legacy `-1`) remain padding; positive IDs are never
+clamped or filtered. The no-extension native path is unchanged. CPU doubles cover
+mixed dispatch, local IDs, state scatter, untouched rows, and NULL padding; this
+is not native-B70 or full-model qualification.
 Stop the inference process. Apply to a disposable/test runtime first, **not** the
 immutable export or a persistent launcher. All 31 pinned files (17 changed,
 14 unchanged dependencies) are checked before any source write. Every output is
