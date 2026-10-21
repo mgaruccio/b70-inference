@@ -28,6 +28,7 @@ exec docker run --rm --detach --name qwen38-eagle4 --ipc=host --workdir /tmp \
  -v "$COOKBOOK/patches/patch_gdn_mixed_split_v5.py:/patch_v5.py:ro" \
  -v "$COOKBOOK/patches/patch_uniform_decode_prefill.py:/patch_uniform.py:ro" \
  -e VLLM_TARGET_DEVICE=xpu -e ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE -e ZE_AFFINITY_MASK=0 \
- -e VLLM_XPU_ENABLE_XPU_GRAPH=0 -e PYTORCH_ALLOC_CONF=expandable_segments:True \
+ -e VLLM_XPU_ENABLE_XPU_GRAPH=1 -e PYTORCH_ALLOC_CONF=expandable_segments:True \
+ -e 'EAGLE4_SPEC={"method":"eagle3","model":"/draft","num_speculative_tokens":4,"quantization":null,"kv_cache_dtype":"auto","attention_backend":"TRITON_ATTN","enforce_eager":false}' \
  --entrypoint bash "$IMAGE" -lc \
- 'set -e; python /overlay/eagle4_xpu/install.py; python /patch_v5.py; python /patch_uniform.py; exec vllm serve /model --quantization gptq --dtype float16 --kv-cache-dtype auto --enforce-eager --max-model-len 16384 --gpu-memory-utilization 0.88 --max-num-seqs 1 --max-num-batched-tokens 2048 --no-enable-prefix-caching --mamba-cache-mode align --language-model-only --served-model-name qwen38-eagle4 --host 0.0.0.0 --port 8000 --speculative-config "{\"method\":\"eagle3\",\"model\":\"/draft\",\"num_speculative_tokens\":4,\"quantization\":null,\"kv_cache_dtype\":\"auto\",\"attention_backend\":\"TRITON_ATTN\",\"enforce_eager\":true}"'
+ 'set -e; python /overlay/eagle4_xpu/install.py; python /patch_v5.py; python /patch_uniform.py; exec vllm serve /model --quantization gptq --dtype float16 --kv-cache-dtype auto --max-model-len 16384 --gpu-memory-utilization 0.88 --max-num-seqs 1 --max-num-batched-tokens 2048 --no-enable-prefix-caching --mamba-cache-mode align --language-model-only --served-model-name qwen38-eagle4 --host 0.0.0.0 --port 8000 --cudagraph-metrics --speculative-config "$EAGLE4_SPEC"'

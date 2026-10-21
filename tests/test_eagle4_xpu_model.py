@@ -240,6 +240,14 @@ class ConfigTests(unittest.TestCase):
         model.validate_config(release_config())
         model.validate_runtime(runtime_config())
 
+    def test_graph_dispatch_is_owned_by_the_pinned_runner(self):
+        for target_eager, draft_eager in ((False, False), (False, True), (True, False)):
+            config = runtime_config()
+            config.speculative_config.target_model_config.enforce_eager = target_eager
+            config.speculative_config.draft_model_config.enforce_eager = draft_eager
+            with self.subTest(target_eager=target_eager, draft_eager=draft_eager):
+                model.validate_runtime(config)
+
     def test_checkpoint_output_layers_become_serving_input_layers_before_base_init(self):
         config = runtime_config()
         hf = config.speculative_config.draft_model_config.hf_config = release_config()

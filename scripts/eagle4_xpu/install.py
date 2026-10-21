@@ -10,7 +10,8 @@ Image: vllm/vllm-openai-xpu@sha256:
 f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f
 Speculative config: method=eagle3, model=<released checkpoint>,
 num_speculative_tokens=<chain length>, quantization=null, kv_cache_dtype=auto.
-Use --dtype float16 --enforce-eager --max-num-seqs 1, TP1 and unquantized KV.
+Use --dtype float16 --max-num-seqs 1, TP1 and unquantized KV. The pinned runner
+owns XPU graph dispatch; --enforce-eager remains available for debugging.
 The real HTTP/XPU acceptance test belongs to the invoking experiment, not this
 installer's source checks or the CPU unit tests.
 """

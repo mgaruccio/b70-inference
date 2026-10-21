@@ -9,8 +9,9 @@ https://github.com/eagle-hq/EAGLE-4/blob/v0.1.0/docs/architecture.md
 https://github.com/eagle-hq/EAGLE-4/blob/v0.1.0/eagle_harness/vllm/models.py
 https://huggingface.co/EAGLE-Corp/Qwen3.8-27B-EAGLE4/tree/f58a5985223040552ad404fba98f0dd27f5f676a
 
-Only TP1/C1, eager, FP16 compute, dense draft weights and unquantized KV are
-supported here. BF16 checkpoint tensors are converted by vLLM's weight loader.
+Only TP1/C1, FP16 compute, dense draft weights and unquantized KV are supported.
+The pinned vLLM runner owns eager/XPU graph dispatch; BF16 checkpoint tensors are
+converted by vLLM's weight loader. Graph API: https://docs.pytorch.org/docs/stable/generated/torch.xpu.XPUGraph.html
 """
 
 from collections.abc import Iterable
@@ -92,9 +93,8 @@ def validate_runtime(vllm_config) -> None:
     if vllm_config.scheduler_config.max_num_seqs != 1:
         raise ValueError("EAGLE4 supports concurrency 1 only")
     target, draft = spec.target_model_config, spec.draft_model_config
-    if any(config.dtype != torch.float16 or not config.enforce_eager
-           for config in (target, draft)):
-        raise ValueError("EAGLE4 requires eager FP16 target and draft compute")
+    if any(config.dtype != torch.float16 for config in (target, draft)):
+        raise ValueError("EAGLE4 requires FP16 target and draft compute")
     if spec.quantization is not None or draft.quantization is not None:
         raise ValueError("EAGLE4 draft weights must be unquantized")
     if (vllm_config.cache_config.cache_dtype not in ("auto", "float16")
