@@ -1002,5 +1002,52 @@ class InstalledEngineContracts(unittest.TestCase):
             self.assertEqual(out.flatten().tolist(), [777.] * count)
 
 
+    def test_mamba_initializer_preserves_unsigned_pointer_bits_in_int64_storage(self):
+        from vllm.v1.worker.mamba_utils import MambaSpecDecodeGPUContext
+        from vllm.model_executor.layers.mamba.mamba_utils import get_conv_copy_spec, get_temporal_copy_spec
+        t = self.torch
+        mask = (1 << 64) - 1
+
+        class AddressView:
+            def __init__(self, tensor, address):
+                self.tensor, self.address = tensor, address
+            def data_ptr(self):
+                return self.address
+            def __getattr__(self, name):
+                return getattr(self.tensor, name)
+            def __getitem__(self, key):
+                return self.tensor[key]
+
+        for address in (0, (1 << 63) - 8, 1 << 63, (1 << 64) - 8):
+            with self.subTest(address=address):
+                states = (AddressView(t.zeros(4, 3, 8), address),
+                          AddressView(t.zeros(4, 2, 4, 4), (address + 8) & mask))
+                table = AddressView(t.zeros(1, 3, dtype=t.int32), (address + 16) & mask)
+                ctx = MambaSpecDecodeGPUContext(
+                    state_base_addrs=t.zeros(2, dtype=t.int64),
+                    state_block_strides=t.zeros(2, dtype=t.int64),
+                    state_elem_sizes=t.zeros(2, dtype=t.int32),
+                    state_inner_sizes=t.zeros(2, dtype=t.int64),
+                    state_conv_widths=t.zeros(2, dtype=t.int32),
+                    state_group_indices=t.zeros(2, dtype=t.int32),
+                    state_dim_row_count=t.zeros(2, dtype=t.int32),
+                    state_dim_row_stride=t.zeros(2, dtype=t.int64),
+                    block_size=896, num_layers=1, num_state_types=2,
+                    mamba_group_ids=[0], num_groups=1,
+                    num_accepted_tokens_out=t.zeros(1, dtype=t.int32),
+                    block_table_ptrs=t.zeros(1, dtype=t.int64))
+                persistent = ctx.state_base_addrs.data_ptr(), ctx.block_table_ptrs.data_ptr()
+                config = NS(kv_cache_groups=[NS(layer_names=["layer"])])
+                with mock.patch("vllm.v1.worker.mamba_utils.is_conv_state_dim_first", return_value=False):
+                    ctx.initialize_from_forward_context(config, {"layer": NS(kv_cache=states)},
+                                                        (get_conv_copy_spec, get_temporal_copy_spec), [table])
+                self.assertEqual([int(v) & mask for v in ctx.state_base_addrs.tolist()],
+                                 [state.data_ptr() for state in states])
+                self.assertEqual([int(v) & mask for v in ctx.block_table_ptrs.tolist()], [table.data_ptr()])
+                self.assertEqual(ctx.state_base_addrs.dtype, t.int64)
+                self.assertEqual(persistent, (ctx.state_base_addrs.data_ptr(), ctx.block_table_ptrs.data_ptr()))
+                self.assertTrue(ctx.is_initialized)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -138,8 +138,16 @@ a per-call seed request; exact per-call semantics come from the pinned source.
 
 ## Installation and replay
 
+High-bit address correction (modified 2026-10-21 for `b70-inference`):
+`v1/worker/mamba_utils.py` preserves all 64 opaque address bits when populating
+signed int64 metadata tensors. High-bit XPU pointers are represented by the
+corresponding signed two's-complement integer; existing low-bit addresses,
+metadata dtype, tensor identity and Triton pointer casts remain unchanged.
+Both state-cache and block-table pointers are covered. This fixes the observed
+`Overflow when unpacking long long` without changing state-copy arithmetic.
+
 Stop the inference process. Apply to a disposable/test runtime first, **not** the
-immutable export or a persistent launcher. All 30 pinned files (16 changed,
+immutable export or a persistent launcher. All 31 pinned files (17 changed,
 14 unchanged dependencies) are checked before any source write. Every output is
 replayed and syntax-compiled in memory; source drift, conflicting new files,
 symlinks, and wrong output hashes are rejected. All replacement files are staged
@@ -153,14 +161,14 @@ python /overlay/install.py --package-root /opt/venv/lib/python3.12/site-packages
 ```
 
 Observed upgrade from the calibration overlay (`9c99066`): 15 already installed,
-1 pending → 1 written → 0 pending → 0 written. `vllm.__version__` remains unchanged.
+2 pending → 2 written (AR count control and Mamba pointer packing). `vllm.__version__` remains unchanged.
 The image's default `/workspace/vllm` cwd shadows
 the installed package: run checks with `docker exec --workdir /tmp`, and verify
 `vllm.__file__` points at the installed package. Do not mistake source-tree
 imports for testing this overlay.
 
 The preceding calibration revision is accepted unchanged: only the original
-frozen AR parent needs patching. All previous output hashes are unchanged.
+frozen AR parent and Mamba metadata initializer need patching. All previous output hashes are unchanged.
 Older pre-calibration runner revisions still fail the hash guard; use a fresh
 pinned runtime rather than bypassing validation. Never patch a running worker.
 
@@ -239,7 +247,20 @@ Local stdlib-only replay checks:
 python3 tests/test_eagle4_full_engine_overlay.py -v
 ```
 
-Final observed result: **24 tests passed, 0 skipped** (including the current-Harness
+Lead verification after address correction: **25 installed CPU tests passed,
+zero skips**, 24.400 seconds, exit 0, in `full-eagle4-pointer-cpu`. The actual
+initializer is exercised at signed/unsigned pointer boundaries with persistent
+int64 buffers. The reference tree and current port must be distinct mounts:
+`EAGLE4_OFFICIAL_ROOT=/check/official` is the unmodified base;
+`EAGLE4_CURRENT_ROOT=/check/current` is the integrated port.
+Raw log: `inference-host:/home/mike/b70-evals/20261021-full-eagle4/integration/cpu-contracts-pointer-r2.log`.
+An earlier retry's two fixture-path failures are retained in `cpu-contracts-pointer-r1.log`.
+Paired native state verification used the real initializer throughout and passed
+**81 tests, zero skips/XFAILs** (15.72 seconds); see the Eagle state-commit notice
+and `integration/native-state-pointer-r2.log`. These are component/metadata
+checks, not full-model serving or measured-cost qualification.
+
+Proposer-slice observation before the pointer correction: **24 tests passed, 0 skipped** (including the current-Harness
 subprocess test) in the pinned container (`cpu-contracts-03.log`, 15.519 seconds,
 exit 0). The isolated consumer also reports 1 test passed, 0 skipped. Local replay:
 6 passed, 18 installed-engine tests skipped. No device kernel execution occurred.

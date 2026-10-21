@@ -473,6 +473,16 @@ def build(base: Path, official: Path) -> None:
     originals[p] = ""
     changed[p] = (HERE / "verify_extension_xpu.py").read_text()
 
+    # Opaque device addresses may have bit 63 set on XPU. Preserve their
+    # bits through PyTorch's signed-int64 scalar-assignment boundary.
+    p = "v1/worker/mamba_utils.py"
+    edit(p, '                    self.state_base_addrs[idx] = state.data_ptr()',
+         '                    address = state.data_ptr()\n'
+         '                    self.state_base_addrs[idx] = address if address < (1 << 63) else address - (1 << 64)')
+    edit(p, '            self.block_table_ptrs[i] = bt.data_ptr()',
+         '            address = bt.data_ptr()\n'
+         '            self.block_table_ptrs[i] = address if address < (1 << 63) else address - (1 << 64)')
+
     # Guard unchanged dependencies that provide the scheduler/stock-XPU lifecycle.
     for p in ("version.py", "v1/attention/backends/registry.py", "v1/core/sched/scheduler.py",
               "v1/worker/gpu/kv_connector.py", "v1/worker/gpu/warmup.py",

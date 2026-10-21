@@ -1398,3 +1398,25 @@
  class DraftModelSpeculator(BaseSpeculator):
      def __init__(self, vllm_config: VllmConfig, device: torch.device):
          self.vllm_config = vllm_config
+--- a/vllm/v1/worker/mamba_utils.py
++++ b/vllm/v1/worker/mamba_utils.py
+@@ -764,7 +764,8 @@
+ 
+                 for state_type_idx, state in enumerate(kv_caches):
+                     # Base address
+-                    self.state_base_addrs[idx] = state.data_ptr()
++                    address = state.data_ptr()
++                    self.state_base_addrs[idx] = address if address < (1 << 63) else address - (1 << 64)
+ 
+                     # Block stride (bytes between consecutive blocks)
+                     # state shape: [num_blocks, ...], stride(0) = elements per block
+@@ -852,7 +853,8 @@
+         )
+         self.block_table_stride_req = int(next(iter(strides)))
+         for i, bt in enumerate(block_tables):
+-            self.block_table_ptrs[i] = bt.data_ptr()
++            address = bt.data_ptr()
++            self.block_table_ptrs[i] = address if address < (1 << 63) else address - (1 << 64)
+ 
+         self.is_initialized = True
+ 
