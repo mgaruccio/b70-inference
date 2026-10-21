@@ -71,11 +71,39 @@ lead owns integrated native full-algorithm verification.
   adaptive-verification behavior remains intact. This does not claim a dynamic
   per-round verify width: official physical width remains batch-size scheduled.
 
+## Opt-in calibration state control
+
+`_dummy_run(..., valid_dummy_state_slots=True)` now reaches `execute_model`
+and `prepare_dummy_attn`. The default remains `False`; native no-spec/MTP
+warmup and capture keep their existing metadata behavior. No profile-time
+Mamba filtering was added: the frozen runner already builds those groups.
+
+The official first-column assignment alone is insufficient here:
+`set_dummy_context` rewrites it. The installed regression test reproduces
+C2/q16/context64 roots changing from `[1, 2]` to `[0, 5]`, with later verify
+columns still NULL. The correction assigns distinct nonzero Mamba slots
+**after** context setup, covering the base and speculative columns (and the
+position-selected columns in align mode). It rejects insufficient pools rather
+than wrapping/aliasing state slots. Ordinary attention context tables and padded
+rows stay unchanged. The opt-in also supplies the existing per-request draft
+counts so frozen eager q>1 metadata selects GDN verification, not prefill.
+No model-state/builder redesign or invented cost data is involved.
+
+The native caller must snapshot/restore these real state slots, as required by
+the official calibrator; this is not a safe flag for concurrent live requests.
+This follow-up changes only the generated runner implementation and adds four
+unchanged metadata/table dependencies to the existing hash checks.
+Fresh external reference: [vLLM null-block fix discussion](https://github.com/vllm-project/vllm/pull/33937)
+identifies block 0 as reserved/unallocated; that supports requiring non-NULL
+calibration states. Exact frozen source and installed tests govern this port.
+This control is a prerequisite to native calibration, not measured-cost or
+serving qualification.
+
 ## Installation and replay
 
 Stop the inference process. Apply to a disposable/test runtime first, **not** the
-immutable export or a persistent launcher. All 22 pinned files (15 changed,
-7 unchanged dependencies) are checked before any source write. Every output is
+immutable export or a persistent launcher. All 26 pinned files (15 changed,
+11 unchanged dependencies) are checked before any source write. Every output is
 replayed and syntax-compiled in memory; source drift, conflicting new files,
 symlinks, and wrong output hashes are rejected. All replacement files are staged
 before replacement. Known installed files are accepted without rewriting.
@@ -93,6 +121,12 @@ the installed package: run checks with `docker exec --workdir /tmp`, and verify
 `vllm.__file__` points at the installed package. Do not mistake source-tree
 imports for testing this overlay.
 
+The preceding engine-overlay revision is not silently accepted as this revision.
+Use a fresh pinned runtime, or restore the pinned original
+`v1/worker/gpu/model_runner.py` in a stopped disposable runtime before running
+check/apply. Only that generated engine file changed in this follow-up; do not
+modify the immutable export or a running worker to bypass the hash guard.
+
 Reproduce the patch, without changing either reference:
 
 ```sh
@@ -107,9 +141,9 @@ Rebuilding the overlay is not authorization to qualify another runtime.
 
 ## Defined and executed engine test process
 
-Environment: CPU-only throwaway `full-eagle4-engine-check` on `inference-host`,
+Environment: CPU-only throwaway `full-eagle4-calib-hooks` on `inference-host`,
 exact pinned image above; **no `--device`, no `/dev/dri`, network disabled**.
-Own scratch: `/home/mike/b70-evals/20261021-full-eagle4/engine-hooks`.
+Own scratch: `/home/mike/b70-evals/20261021-full-eagle4/engine-calibration-hooks`.
 Overlay/tests/official reference source mounted read-only at `/check`.
 Original pinned files copied inside the container to `/tmp/e4-base/vllm` before
 installation. The parent export and all host Python packages remain unchanged.
@@ -129,7 +163,15 @@ installation. The parent export and all host Python packages remain unchanged.
 5. Verify official `missing_hooks()` returns `[]`, official config gives 56
    lookahead slots, a resolvable registered backend is selected through the
    actual XPU platform, and unknown/unregistered methods/backends fail closed.
-6. Remove only the owned throwaway container; retain own raw logs.
+6. Call the real installed `_dummy_run` → `execute_model` → `prepare_dummy_attn`
+   → hybrid/common/GDN metadata builders with C1/C2, q1/q16, context64. Cover
+   none/all/align modes, eager/profile and FULL graph-metadata paths. Require
+   disjoint in-range non-NULL state indices after context setup, q16 GDN spec
+   rows, unchanged attention context, padded NULL rows, persistent tensor
+   addresses and identical omitted/false flag results. Check native no-spec/MTP
+   defaults and insufficient-pool rejection. UVA/pinned transfers, model forward,
+   graph execution and device operations are doubled; metadata is not.
+7. Remove only the owned throwaway container; retain own raw logs.
 
 Exact test command (remote shell invoked via `ssh inference-host bash -s`):
 
@@ -139,7 +181,7 @@ docker exec --workdir /tmp \
   -e EAGLE4_FROZEN_PACKAGE=/tmp/e4-base/vllm \
   -e EAGLE4_ENGINE_OVERLAY=/check/overlay \
   -e EAGLE4_OFFICIAL_ROOT=/check/official \
-  full-eagle4-engine-check /opt/venv/bin/python \
+  full-eagle4-calib-hooks /opt/venv/bin/python \
   /check/tests/test_eagle4_full_engine_overlay.py -v
 ```
 
@@ -149,17 +191,19 @@ Local stdlib-only replay checks:
 python3 tests/test_eagle4_full_engine_overlay.py -v
 ```
 
-Final observed result: **16 tests passed, 0 skipped** in the pinned container
-(`cpu-contracts-04.log`, 7.326 seconds). Local replay run: 6 passed, 10 installed-
+Final observed result: **20 tests passed, 0 skipped** in the pinned container
+(`cpu-contracts-04.log`, 7.534 seconds, exit 0). Local replay: 6 passed, 14 installed-
 engine tests skipped. No device kernel execution was attempted.
 
 Local execution skips the installed-engine class intentionally. The container
 run executes all tests, with no skips. Raw outputs are retained in own remote
 scratch as `cpu-contracts-*.log`, `installer-replay.log`, and `environment.log`.
-The first CPU run caught an unrelated watermark argument in the newer sampler
-helper; it was removed from this backport and the entire suite rerun. An initial
-import smoke check hit the image's source-tree cwd shadow; the corrected run
-explicitly selects `/tmp` and checks the loaded package path.
+This follow-up's first two CPU runs exposed missing fixture EPLB and CPU-only
+pinned-memory boundaries; those test doubles were corrected, not production
+behavior. The first container launch required an empty nested read-only mountpoint;
+that failure and correction are retained in `container-start.log`. Initial engine
+slice evidence remains in the sibling `engine-hooks` directory. All imports
+explicitly use `/tmp` and assert the installed package path.
 
 ## Integration limits (do not turn hook presence into a completion claim)
 

@@ -254,6 +254,72 @@ def build(base: Path, official: Path) -> None:
          '            num_reqs = min(num_reqs, self.max_num_tokens // self.speculator.num_query_per_req)\n'
          '            num_tokens = min(num_tokens, self.max_num_tokens\n'
          '                             - num_reqs * self.speculator.num_extra_query_per_req)\n')
+    # Release calibration opts into real state work. The frozen runner swallows
+    # this flag in **kwargs; its default warmup/capture paths must stay unchanged.
+    edit(p, '        is_profile: bool = False,\n        **kwargs,',
+         '        is_profile: bool = False,\n'
+         '        valid_dummy_state_slots: bool = False,\n        **kwargs,')
+    edit(p, '                context_len=context_len,\n',
+         '                context_len=context_len,\n'
+         '                valid_dummy_state_slots=valid_dummy_state_slots,\n')
+    edit(p, '        context_len: int = 0,\n    ) -> ModelRunnerOutput | IntermediateTensors | None:',
+         '        context_len: int = 0,\n'
+         '        valid_dummy_state_slots: bool = False,\n'
+         '    ) -> ModelRunnerOutput | IntermediateTensors | None:')
+    edit(p, '                block_tables, slot_mappings = self.prepare_dummy_attn(input_batch)\n'
+         '                if context_len:\n'
+         '                    set_dummy_context(\n'
+         '                        input_batch,\n'
+         '                        self.block_tables,\n'
+         '                        context_len,\n'
+         '                        self.kv_cache_config.num_blocks,\n'
+         '                        self.max_model_len,\n'
+         '                    )',
+         '                block_tables, slot_mappings = self.prepare_dummy_attn(\n'
+         '                    input_batch, valid_dummy_state_slots, context_len=context_len\n'
+         '                )')
+    edit(p, symbol(changed[p], 'GPUModelRunner.prepare_dummy_attn'), '''    def prepare_dummy_attn(
+        self, input_batch: InputBatch, valid_state_slots: bool = False,
+        *, context_len: int = 0,
+    ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
+        block_tables = self.block_tables.get_dummy_block_tables(input_batch.num_reqs)
+        slot_mappings = pcp.maybe_get_pcp_dummy_slot_mappings(
+            self.pcp_manager, self.block_tables, input_batch.num_tokens
+        )
+        if context_len:
+            set_dummy_context(
+                input_batch, self.block_tables, context_len,
+                self.kv_cache_config.num_blocks, self.max_model_len,
+            )
+        if valid_state_slots:
+            # set_dummy_context rewrites the tables, including reserved block 0.
+            # Assign real, disjoint recurrent-state rows AFTER that rewrite. Keep
+            # attention context tables/slot mappings and inactive rows unchanged.
+            for table, group in zip(block_tables, self.kv_cache_config.kv_cache_groups):
+                spec = group.kv_cache_spec
+                if not isinstance(spec, MambaSpec):
+                    continue
+                width = 1 + spec.num_speculative_blocks
+                count = input_batch.num_reqs * width
+                if count >= self.kv_cache_config.num_blocks or width > table.shape[1]:
+                    raise ValueError("Insufficient distinct Mamba state slots for calibration")
+                slots = torch.arange(1, count + 1, dtype=table.dtype, device=table.device)
+                slots = slots.view(input_batch.num_reqs, width)
+                table.zero_()
+                if self.cache_config.mamba_cache_mode == "align":
+                    starts = ((input_batch.seq_lens - 1) // spec.block_size).clamp(min=0)
+                    columns = starts[:, None] + torch.arange(width, device=table.device)
+                    table.scatter_(1, columns.to(torch.int64), slots)
+                else:
+                    table[:, :width].copy_(slots)
+            # Frozen eager metadata otherwise sees q>1 dummy rows as prefill:
+            # make the calibration decode shape reach the real GDN verifier.
+            if self.speculative_config is not None:
+                drafts = input_batch.num_scheduled_tokens - 1
+                if np.all(drafts <= self.speculative_config.num_speculative_tokens):
+                    input_batch.num_draft_tokens_per_req = drafts
+                    input_batch.num_draft_tokens = int(drafts.sum())
+        return block_tables, slot_mappings''')
     edit(p, '            **self.model_state.prepare_inputs(input_batch, self.req_states),\n        }',
          '            **self.model_state.prepare_inputs(input_batch, self.req_states),\n        }\n'
          '        if self.speculator is not None:\n'
@@ -343,7 +409,9 @@ def build(base: Path, official: Path) -> None:
     # Guard unchanged dependencies that provide the scheduler/stock-XPU lifecycle.
     for p in ("version.py", "v1/attention/backends/registry.py", "v1/core/sched/scheduler.py",
               "v1/worker/gpu/kv_connector.py", "v1/worker/gpu/warmup.py",
-              "v1/worker/xpu_model_runner.py", "v1/worker/xpu_worker.py"):
+              "v1/worker/xpu_model_runner.py", "v1/worker/xpu_worker.py",
+              "v1/worker/gpu/block_table.py", "v1/worker/gpu/input_batch.py",
+              "v1/worker/gpu/model_states/mamba_hybrid.py", "v1/attention/backends/utils.py"):
         load(p)
     hunks, files = [], []
     for p in sorted(changed):

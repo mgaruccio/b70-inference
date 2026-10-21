@@ -334,6 +334,190 @@ class InstalledEngineContracts(unittest.TestCase):
             self.assertEqual(len(schedule.num_scheduled_tokens), 4)
             self.assertTrue(flags["dummy_run"])
 
+    def _dummy_state_tables(self, mode="none", width=16, num_blocks=128):
+        import vllm.v1.worker.gpu.buffer_utils as buffers
+        from vllm.v1.worker.gpu.block_table import BlockTables
+        from vllm.v1.kv_cache_interface import MambaSpec, FullAttentionSpec, KVCacheConfig, KVCacheGroupSpec
+        t = self.torch
+        # Only the accelerator-backed UVA allocation is doubled. The actual
+        # BlockTables constructor, persistent storage and dummy methods run.
+        def cpu_uva(size, dtype):
+            cpu = t.zeros(size, dtype=dtype)
+            return NS(cpu=cpu, np=cpu.numpy(), uva=cpu)
+        with mock.patch.object(buffers, "UvaBuffer", side_effect=cpu_uva):
+            tables = BlockTables([16, 16], 4, 64, [32, 32 if mode == "align" else width],
+                                 t.device("cpu"), [16, 16])
+        state_spec = MambaSpec(block_size=16, shapes=((1,), (1,)), dtypes=(t.float32, t.float32),
+                               num_speculative_blocks=width - 1, mamba_cache_mode=mode)
+        attention_spec = FullAttentionSpec(block_size=16, num_kv_heads=1, head_size=8, dtype=t.float32)
+        cache = KVCacheConfig(num_blocks=num_blocks, kv_cache_tensors=[], kv_cache_groups=[
+            KVCacheGroupSpec(layer_names=["attention"], kv_cache_spec=attention_spec),
+            KVCacheGroupSpec(layer_names=["gdn"], kv_cache_spec=state_spec)])
+        return tables, cache
+
+    def test_context_rewrite_invalidates_upstream_first_column_state_slots(self):
+        from vllm.v1.worker.gpu.input_batch import InputBatch, InputBuffers, set_dummy_context
+        t = self.torch
+        tables, cache = self._dummy_state_tables()
+        batch = InputBatch.make_dummy(2, 32, InputBuffers(4, 64, t.device("cpu")), max_query_len=16)
+        views = tables.get_dummy_block_tables(2)
+        for table in views:
+            table[:, 0].copy_(t.tensor([1, 2]))  # exact upstream first-column assignment
+        set_dummy_context(batch, tables, 64, cache.num_blocks, 128)
+        self.assertEqual(views[1][:, 0].tolist(), [0, 5])  # first request now NULL again
+        self.assertEqual(views[1][:, 5:].count_nonzero().item(), 0)  # verify slots also NULL
+        self.assertEqual(batch.seq_lens.tolist(), [80, 80])
+        self.assertEqual(batch.num_computed_tokens_np.tolist(), [64, 64])
+        print("UPSTREAM OVERWRITE: C2 q16 context64 -> roots [0, 5], remaining verify slots include NULL")
+
+    def _calibration_metadata_journey(self, requests, query, flag, mode="none", full=False,
+                                      profile=False, method="engine_contract"):
+        from vllm.v1.worker.gpu.input_batch import InputBuffers
+        from vllm.v1.worker.gpu.model_states.mamba_hybrid import MambaHybridModelState
+        import vllm.v1.attention.backends.gdn_attn as gdn
+        t, mod = self.torch, self.runner
+        width = 16 if method else 1
+        tables, cache = self._dummy_state_tables(mode, width)
+        # Inactive persistent rows must not be overwritten by the opt-in.
+        for table in tables.input_block_tables:
+            table[requests:].fill_(77)
+        pointers = [table.data_ptr() for table in tables.input_block_tables]
+        spec = NS(method=method, num_speculative_tokens=width - 1, parallel_drafting=False) if method else None
+        config = NS(speculative_config=spec, num_speculative_tokens=width - 1,
+            cache_config=NS(mamba_cache_mode=mode),
+            compilation_config=NS(cudagraph_mode=mod.CUDAGraphMode.FULL if full else mod.CUDAGraphMode.NONE,
+                                  max_cudagraph_capture_size=None),
+            scheduler_config=NS(max_num_seqs=4), parallel_config=NS(decode_context_parallel_size=1))
+        extension = object()
+        with mock.patch("vllm.model_executor.layers.mamba.gdn.qwen_gdn_linear_attn._resolve_gdn_prefill_backend",
+                        return_value=("triton", "triton")), \
+             mock.patch("vllm.model_executor.layers.mamba.gdn.verify_extension.resolve_obj_by_qualname",
+                        return_value=lambda _: extension):
+            builder = gdn.GDNAttentionMetadataBuilder(cache.kv_cache_groups[1].kv_cache_spec,
+                                                     ["gdn"], config, t.device("cpu"))
+        group = NS(layer_names=["gdn"], get_metadata_builder=lambda _: builder)
+        model_state = MambaHybridModelState.__new__(MambaHybridModelState)
+        model_state.vllm_config, model_state.max_model_len = config, 128
+        model_state.num_accepted_tokens_gpu = t.ones(4, dtype=t.int32)
+        model_state.prepare_inputs = lambda *a: {}
+        prepare_attn = model_state.prepare_attn
+        observed = {}
+        def metadata(*args, **kwargs):
+            result = prepare_attn(*args, **kwargs)  # actual hybrid -> common -> GDN builders
+            observed.update(batch=args[0], metadata=result["gdn"])
+            return result
+        model_state.prepare_attn = metadata
+        plugin = NS(num_extra_query_per_req=0, num_query_per_req=width,
+                    prepare_verify_inputs=lambda *a, **kw: None, supports_mm_inputs=False,
+                    propose=lambda *a, **kw: None) if method else None
+        runner = NS(device=t.device("cpu"), max_num_reqs=4, max_num_tokens=64, max_model_len=128,
+            decode_query_len=width, speculator=plugin, speculative_config=spec,
+            is_first_pp_rank=True, is_last_pp_rank=True, is_encoder_only=False,
+            is_encoder_decoder=False, supports_mm_inputs=False, use_aux_hidden_state_outputs=False,
+            lora_config=None, pcp_manager=None, pp_handler=None, dp_size=1, dp_rank=0,
+            vllm_config=config, cache_config=config.cache_config, model_config=None,
+            model_state=model_state, block_tables=tables, kv_cache_config=cache,
+            input_buffers=InputBuffers(4, 64, t.device("cpu")), attn_groups=[[], [group]],
+            req_states=NS(last_sampled_tokens=None, next_prefill_tokens=None),
+            sampler=NS(sampling_states=NS(temperature=NS(gpu=None), seeds=NS(gpu=None))),
+            eplb=NS(prepare_forward=lambda *a: None, step=lambda **kw: None),
+            step_timing=NS(record_batch=lambda *a: None, forward_start=lambda: None,
+                           forward_end=lambda: None, drafter_start=lambda: None, drafter_end=lambda: None),
+            kv_connector=NS(set_disabled=lambda _: None, pre_forward=lambda _: None),
+            maybe_dummy_run_with_lora=lambda *a, **kw: nullcontext(),
+            gather_batch_req_state=lambda *a: (None, query))
+        runner.prepare_dummy_attn = lambda *a, **kw: mod.GPUModelRunner.prepare_dummy_attn(runner, *a, **kw)
+        runner.execute_model = lambda *a, **kw: mod.GPUModelRunner.execute_model(runner, *a, **kw)
+        runner.model = lambda **kw: t.zeros(requests * query, 2)
+        desc = NS(num_tokens=requests * query, num_reqs=requests, max_query_len=query,
+                  num_active_loras=0, cg_mode=mod.CUDAGraphMode.FULL if full else mod.CUDAGraphMode.NONE)
+        runner.cudagraph_manager = NS(run_fullgraph=lambda _: runner.model())
+        flags = {} if flag is None else {"valid_dummy_state_slots": flag}
+        with mock.patch.object(mod, "dispatch_cg_and_sync_dp", return_value=(desc, None)), \
+             mock.patch.object(mod, "set_forward_context", return_value=nullcontext()), \
+             mock.patch("vllm.utils.torch_utils.PIN_MEMORY", False), \
+             mock.patch("vllm.v1.attention.backends.utils.PIN_MEMORY", False), \
+             mock.patch.object(gdn, "async_tensor_h2d", side_effect=lambda value, **kw: value):
+            mod.GPUModelRunner._dummy_run(runner, requests * query, uniform_decode=query > 1,
+                                          context_len=64, is_profile=profile, **flags)
+        batch, metadata = observed["batch"], observed["metadata"]
+        self.assertEqual(batch.seq_lens.tolist(), [64 + query] * requests)
+        self.assertEqual(batch.seq_lens_cpu_upper_bound.tolist(), [64 + query] * requests)
+        self.assertEqual(batch.num_computed_tokens_np.tolist(), [64] * requests)
+        self.assertEqual(batch.positions.tolist(), list(range(64, 64 + query)) * requests)
+        self.assertEqual([table.data_ptr() for table in tables.input_block_tables], pointers)
+        for table in tables.input_block_tables:
+            self.assertTrue((table[requests:] == 77).all())
+        self.assertTrue((tables.slot_mappings == -1).all())
+        self.assertTrue((runner.input_buffers.seq_lens[requests:] == 0).all())
+        self.assertTrue((runner.input_buffers.query_start_loc[requests + 1:] == requests * query).all())
+        states = metadata.spec_state_indices_tensor if metadata.num_spec_decodes else metadata.non_spec_state_indices_tensor
+        snapshot = dict(states=states.tolist(), spec_decodes=metadata.num_spec_decodes,
+                        prefills=metadata.num_prefills, decodes=metadata.num_decodes,
+                        attention=tables.input_block_tables[0][:requests].tolist(),
+                        state_table=tables.input_block_tables[1][:requests].tolist(),
+                        drafts=None if batch.num_draft_tokens_per_req is None else batch.num_draft_tokens_per_req.tolist())
+        if flag:
+            self.assertTrue((states > 0).all())
+            self.assertTrue((states < cache.num_blocks).all())
+            self.assertEqual(states.unique().numel(), states.numel())
+            self.assertEqual(metadata.num_spec_decodes, requests if query > 1 else 0)
+            self.assertEqual(metadata.num_prefills, 0)
+            if query > 1:
+                self.assertEqual(tuple(states.shape), (requests, width))
+                self.assertIs(metadata.verify_extension, extension)
+                self.assertEqual(metadata.num_spec_decode_tokens, requests * query)
+            # Exercise actual graph-builder padding with an extra zero-length row.
+            from vllm.v1.attention.backend import CommonAttentionMetadata
+            padded = CommonAttentionMetadata(query_start_loc=t.cat((batch.query_start_loc, batch.query_start_loc[-1:])),
+                query_start_loc_cpu=t.cat((batch.query_start_loc.cpu(), batch.query_start_loc[-1:].cpu())),
+                seq_lens=t.cat((batch.seq_lens, t.zeros(1, dtype=t.int32))), num_reqs=requests + 1,
+                num_actual_tokens=requests * query, max_query_len=query, max_seq_len=64 + query,
+                block_table_tensor=t.cat((tables.input_block_tables[1][:requests], t.zeros_like(tables.input_block_tables[1][:1]))),
+                slot_mapping=tables.slot_mappings[1, :requests * query], causal=True)
+            with mock.patch.object(gdn, "async_tensor_h2d", side_effect=lambda value, **kw: value):
+                # Use persistent padded metadata buffers even in the eager case.
+                builder.use_full_cuda_graph = True
+                padded_meta = builder.build_for_cudagraph_capture(padded)
+            padded_states = padded_meta.spec_state_indices_tensor if query > 1 else padded_meta.non_spec_state_indices_tensor
+            self.assertEqual(padded_states[-1].count_nonzero().item(), 0)
+            self.assertEqual(padded_states[:requests].tolist(), states.tolist())
+        return snapshot
+
+    def test_valid_calibration_state_metadata_c1_c2_q1_q16(self):
+        self.registry.register_speculative_method("engine_contract", self.registry.SpeculativeMethodSpec(
+            "plugin:Spec", linear_attn_verify_extension="plugin:make_extension"))
+        for mode in ("none", "all", "align"):
+            for requests in (1, 2):
+                for query in (1, 16):
+                    for full, profile in ((False, False), (False, True), (True, False)):
+                        with self.subTest(mode=mode, C=requests, q=query, full=full, profile=profile):
+                            default = self._calibration_metadata_journey(requests, query, None, mode, full, profile)
+                            disabled = self._calibration_metadata_journey(requests, query, False, mode, full, profile)
+                            enabled = self._calibration_metadata_journey(requests, query, True, mode, full, profile)
+                            self.assertEqual(default, disabled)
+                            self.assertEqual(enabled["attention"], default["attention"])
+                            print(f"CALIBRATION C{requests} q{query} {mode=} {full=} {profile=}: "
+                                  f"state_slots={enabled['states']} spec_rows={enabled['spec_decodes']} context=64")
+
+    def test_dummy_state_flag_defaults_preserve_native_no_spec_and_mtp(self):
+        for method, query in ((None, 1), ("mtp", 16)):
+            for full in (False, True):
+                with self.subTest(method=method, full=full):
+                    default = self._calibration_metadata_journey(2, query, None, full=full, method=method)
+                    disabled = self._calibration_metadata_journey(2, query, False, full=full, method=method)
+                    self.assertEqual(default, disabled)
+                    self.assertIsNone(default["drafts"])
+
+    def test_valid_dummy_state_slots_refuse_pool_aliasing(self):
+        from vllm.v1.worker.gpu.input_batch import InputBatch, InputBuffers
+        tables, cache = self._dummy_state_tables(num_blocks=32)  # needs 32 non-NULL + NULL
+        batch = InputBatch.make_dummy(2, 32, InputBuffers(4, 64, self.torch.device("cpu")), max_query_len=16)
+        runner = NS(block_tables=tables, kv_cache_config=cache, pcp_manager=None,
+                    max_model_len=128, cache_config=NS(mamba_cache_mode="none"), speculative_config=None)
+        with self.assertRaisesRegex(ValueError, "Insufficient distinct Mamba state slots"):
+            self.runner.GPUModelRunner.prepare_dummy_attn(runner, batch, True, context_len=64)
+
     def test_real_runner_verify_commit_propose_finalize_order(self):
         self._runner_journey(plugin=True)
         self._runner_journey(plugin=False)

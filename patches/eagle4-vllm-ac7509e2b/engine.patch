@@ -934,7 +934,15 @@
          )
          check_attention_cp_compatibility(self.vllm_config)
          if isinstance(self.speculator, DraftModelSpeculator):
-@@ -652,6 +686,10 @@
+@@ -632,6 +666,7 @@
+         context_len: int = 0,
+         skip_eplb: bool = False,
+         is_profile: bool = False,
++        valid_dummy_state_slots: bool = False,
+         **kwargs,
+     ) -> tuple[torch.Tensor | None, torch.Tensor | None]:
+         if self.is_encoder_only:
+@@ -652,6 +687,10 @@
              num_tokens = max(num_tokens, self.decode_query_len)
              num_reqs = num_tokens // self.decode_query_len
              assert num_tokens % self.decode_query_len == 0
@@ -945,7 +953,92 @@
          # Distribute the remainder evenly so no dummy request exceeds
          # ceil(num_tokens / num_reqs) <= max_model_len tokens.
          num_tokens_per_request = [
-@@ -1568,6 +1606,9 @@
+@@ -692,6 +731,7 @@
+                 skip_attn_for_dummy_run=skip_attn,
+                 is_profile=is_profile,
+                 context_len=context_len,
++                valid_dummy_state_slots=valid_dummy_state_slots,
+             )
+         self.kv_connector.set_disabled(False)
+ 
+@@ -1303,14 +1343,47 @@
+         return block_tables, slot_mappings
+ 
+     def prepare_dummy_attn(
+-        self, input_batch: InputBatch
++        self, input_batch: InputBatch, valid_state_slots: bool = False,
++        *, context_len: int = 0,
+     ) -> tuple[tuple[torch.Tensor, ...], torch.Tensor]:
+         block_tables = self.block_tables.get_dummy_block_tables(input_batch.num_reqs)
+         slot_mappings = pcp.maybe_get_pcp_dummy_slot_mappings(
+             self.pcp_manager, self.block_tables, input_batch.num_tokens
+         )
++        if context_len:
++            set_dummy_context(
++                input_batch, self.block_tables, context_len,
++                self.kv_cache_config.num_blocks, self.max_model_len,
++            )
++        if valid_state_slots:
++            # set_dummy_context rewrites the tables, including reserved block 0.
++            # Assign real, disjoint recurrent-state rows AFTER that rewrite. Keep
++            # attention context tables/slot mappings and inactive rows unchanged.
++            for table, group in zip(block_tables, self.kv_cache_config.kv_cache_groups):
++                spec = group.kv_cache_spec
++                if not isinstance(spec, MambaSpec):
++                    continue
++                width = 1 + spec.num_speculative_blocks
++                count = input_batch.num_reqs * width
++                if count >= self.kv_cache_config.num_blocks or width > table.shape[1]:
++                    raise ValueError("Insufficient distinct Mamba state slots for calibration")
++                slots = torch.arange(1, count + 1, dtype=table.dtype, device=table.device)
++                slots = slots.view(input_batch.num_reqs, width)
++                table.zero_()
++                if self.cache_config.mamba_cache_mode == "align":
++                    starts = ((input_batch.seq_lens - 1) // spec.block_size).clamp(min=0)
++                    columns = starts[:, None] + torch.arange(width, device=table.device)
++                    table.scatter_(1, columns.to(torch.int64), slots)
++                else:
++                    table[:, :width].copy_(slots)
++            # Frozen eager metadata otherwise sees q>1 dummy rows as prefill:
++            # make the calibration decode shape reach the real GDN verifier.
++            if self.speculative_config is not None:
++                drafts = input_batch.num_scheduled_tokens - 1
++                if np.all(drafts <= self.speculative_config.num_speculative_tokens):
++                    input_batch.num_draft_tokens_per_req = drafts
++                    input_batch.num_draft_tokens = int(drafts.sum())
+         return block_tables, slot_mappings
+-
+     def sample(
+         self,
+         hidden_states: torch.Tensor,
+@@ -1385,6 +1458,7 @@
+         skip_attn_for_dummy_run: bool = False,
+         is_profile: bool = False,
+         context_len: int = 0,
++        valid_dummy_state_slots: bool = False,
+     ) -> ModelRunnerOutput | IntermediateTensors | None:
+         if not dummy_run:
+             # Update the request states.
+@@ -1477,15 +1551,9 @@
+                 max_query_len=batch_desc.max_query_len,
+             )
+             if not skip_attn_for_dummy_run:
+-                block_tables, slot_mappings = self.prepare_dummy_attn(input_batch)
+-                if context_len:
+-                    set_dummy_context(
+-                        input_batch,
+-                        self.block_tables,
+-                        context_len,
+-                        self.kv_cache_config.num_blocks,
+-                        self.max_model_len,
+-                    )
++                block_tables, slot_mappings = self.prepare_dummy_attn(
++                    input_batch, valid_dummy_state_slots, context_len=context_len
++                )
+             else:
+                 assert batch_desc.cg_mode != CUDAGraphMode.FULL, (
+                     "Attention metadata must be prepared for dummy runs when using "
+@@ -1568,6 +1636,9 @@
              # values above.
              **self.model_state.prepare_inputs(input_batch, self.req_states),
          }
@@ -955,7 +1048,7 @@
          if not self.is_first_pp_rank:
              # Update for non-first PP ranks.
              model_inputs["input_ids"] = None
-@@ -1714,6 +1755,9 @@
+@@ -1714,6 +1785,9 @@
          sampler_output, num_sampled, num_rejected = self.sample(
              hidden_states, input_batch, grammar_output
          )

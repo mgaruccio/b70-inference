@@ -2,7 +2,7 @@
   "base_version": "0.27.2rc1.dev77+gac7509e2b",
   "base_image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
   "hook_reference": "3ba23801e80d2a0d0a9af21ce94484aa2adb8795",
-  "patch_sha256": "8b1af5a531a32da51589294c41d18ac1098312635af1a72ee70a150c55423b19",
+  "patch_sha256": "810b037b3b2edea60c69e215547f0789161fab64ff9bdc0c2a71ad2de9126098",
   "files": [
     {
       "path": "_xpu_ops.py",
@@ -55,6 +55,11 @@
       "after_sha256": "f92cb5e44073f9d4442978ec2861dc6aba08c0a656d3727c7d59d449da6d25b2"
     },
     {
+      "path": "v1/attention/backends/utils.py",
+      "before_sha256": "cb9a34eb45a94847c8c9862952fe9ca5df4e7c7510425a5280afcbb48d941890",
+      "after_sha256": "cb9a34eb45a94847c8c9862952fe9ca5df4e7c7510425a5280afcbb48d941890"
+    },
+    {
       "path": "v1/core/sched/scheduler.py",
       "before_sha256": "4b79ab760c3864af6838d555c01335deea3aac97c9be2be415fa0e5dab32f07e",
       "after_sha256": "4b79ab760c3864af6838d555c01335deea3aac97c9be2be415fa0e5dab32f07e"
@@ -70,6 +75,16 @@
       "after_sha256": "30ea126df573a7e7469ec7a66bdab2be6dbe4125777d1ec65ec01858afde565c"
     },
     {
+      "path": "v1/worker/gpu/block_table.py",
+      "before_sha256": "da4e6011514c883dbb6bf0f59675294e6a6e76cfcd0e4b534bc575cb4d7adfc5",
+      "after_sha256": "da4e6011514c883dbb6bf0f59675294e6a6e76cfcd0e4b534bc575cb4d7adfc5"
+    },
+    {
+      "path": "v1/worker/gpu/input_batch.py",
+      "before_sha256": "3929c92e42ae90e4410bb4537dcbdcd171a662e44afc1189a9a3e19037a84410",
+      "after_sha256": "3929c92e42ae90e4410bb4537dcbdcd171a662e44afc1189a9a3e19037a84410"
+    },
+    {
       "path": "v1/worker/gpu/kv_connector.py",
       "before_sha256": "b698dcbe1815e9dcffef10dd64dad07d30533eb4c04c641bb2fb2f7b6f98902b",
       "after_sha256": "b698dcbe1815e9dcffef10dd64dad07d30533eb4c04c641bb2fb2f7b6f98902b"
@@ -77,7 +92,12 @@
     {
       "path": "v1/worker/gpu/model_runner.py",
       "before_sha256": "df016f46c0c3299d06dccd693c2dd1d53e8848b84ff1d47afc798c16aa96565e",
-      "after_sha256": "4741b2eb7838e1bc5a83862f4e761372d6c76e5b5258de668d8c0283a5dd157a"
+      "after_sha256": "8221271c76d80ad4a8494658789b6f7b77e2ecb0f53c9f3d17ebc45c76a46b83"
+    },
+    {
+      "path": "v1/worker/gpu/model_states/mamba_hybrid.py",
+      "before_sha256": "3d1d3edc157d87f10aa6fb4862fbd25b435ede51499d7c64e68eb713de85e648",
+      "after_sha256": "3d1d3edc157d87f10aa6fb4862fbd25b435ede51499d7c64e68eb713de85e648"
     },
     {
       "path": "v1/worker/gpu/spec_decode/__init__.py",
