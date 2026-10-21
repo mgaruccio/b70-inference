@@ -203,6 +203,73 @@ def build(base: Path, official: Path) -> None:
                         ('make_rejection_sampler', 'prepare_verify_inputs', 'post_accept'))
     edit(p, '\n\nclass DraftModelSpeculator(BaseSpeculator):', '\n\n' + hooks + '\n\n\nclass DraftModelSpeculator(BaseSpeculator):')
 
+    # The released Harness calls the AR parent for one seed/prefill step, then
+    # grows its own tree. Port the per-call control, not the newer AR runtime.
+    reference("v1/worker/gpu/spec_decode/target_dependent_ar/speculator.py")
+    p = "v1/worker/gpu/spec_decode/autoregressive/speculator.py"
+    edit(p, '        is_profile: bool = False,\n    ) -> torch.Tensor:',
+         '        is_profile: bool = False,\n'
+         '        num_speculative_tokens: int | None = None,\n    ) -> torch.Tensor:\n'
+         '        if num_speculative_tokens is None:\n'
+         '            num_speculative_tokens = self.num_speculative_steps\n'
+         '        if (not isinstance(num_speculative_tokens, int)\n'
+         '                or isinstance(num_speculative_tokens, bool)\n'
+         '                or not 0 <= num_speculative_tokens <= self.num_speculative_steps):\n'
+         '            raise ValueError("num_speculative_tokens must be an integer between 0 and the configured maximum")')
+    edit(p, '            max_seq_len + self.num_speculative_steps, self.max_model_len',
+         '            max_seq_len + num_speculative_tokens, self.max_model_len')
+    edit(p, '            assert self.method == "eagle3"',
+         '            registered = self.speculative_config.registered_method()\n'
+         '            assert self.method == "eagle3" or (\n'
+         '                registered is not None and registered.uses_aux_hidden_states\n'
+         '            ), "Auxiliary hidden states require EAGLE3 or a registered auxiliary-state consumer"')
+    edit(p, '        if self.num_speculative_steps == 1:\n'
+         '            # Early exit.\n'
+         '            return self.draft_tokens[:num_reqs, :1]',
+         '        if num_speculative_tokens < self.num_speculative_steps:\n'
+         '            # Do not expose stale proposals from a previous longer call.\n'
+         '            self.draft_tokens[:num_reqs, num_speculative_tokens:].fill_(-1)\n'
+         '        if num_speculative_tokens <= 1:\n'
+         '            # Even a zero-token proposal prefills; one seeds Harness tree growth.\n'
+         '            return self.draft_tokens[:num_reqs]')
+    edit(p, '            uniform_token_count=1,\n'
+         '            dp_size=self.dp_size,\n'
+         '            dp_rank=self.dp_rank,\n'
+         '            need_eager=is_profile,',
+         '            uniform_token_count=1,\n'
+         '            dp_size=self.dp_size,\n'
+         '            dp_rank=self.dp_rank,\n'
+         '            # Frozen decode graphs bake in the configured count (also\n'
+         '            # the final-step input update). Partial calls cannot replay them.\n'
+         '            need_eager=is_profile or num_speculative_tokens != self.num_speculative_steps,')
+    edit(p, '            input_batch.seq_lens_cpu_upper_bound,\n        )',
+         '            input_batch.seq_lens_cpu_upper_bound,\n'
+         '            num_speculative_tokens,\n        )')
+    edit(p, '        seq_lens_cpu_upper_bound: torch.Tensor,\n    ) -> None:',
+         '        seq_lens_cpu_upper_bound: torch.Tensor,\n'
+         '        num_speculative_steps: int | None = None,\n    ) -> None:', count=2)
+    edit(p, '        cudagraph_runtime_mode: CUDAGraphMode = CUDAGraphMode.NONE,\n    ) -> None:',
+         '        cudagraph_runtime_mode: CUDAGraphMode = CUDAGraphMode.NONE,\n'
+         '        num_speculative_steps: int | None = None,\n    ) -> None:', count=2)
+    # Defaults retain the existing capture callback ABI and configured graphs.
+    edit(p, '        num_speculative_steps: int | None = None,\n    ) -> None:\n',
+         '        num_speculative_steps: int | None = None,\n    ) -> None:\n'
+         '        if num_speculative_steps is None:\n'
+         '            num_speculative_steps = self.num_speculative_steps\n', count=4)
+    edit(p, '        for step in range(1, self.num_speculative_steps):',
+         '        for step in range(1, num_speculative_steps):', count=2)
+    edit(p, '                step < self.num_speculative_steps - 1',
+         '                step < num_speculative_steps - 1')
+    edit(p, '                    cudagraph_runtime_mode=batch_desc.cg_mode,\n                )',
+         '                    cudagraph_runtime_mode=batch_desc.cg_mode,\n'
+         '                    num_speculative_steps=num_speculative_steps,\n                )')
+    edit(p, '            batch_desc.cg_mode,\n        )',
+         '            batch_desc.cg_mode,\n            num_speculative_steps,\n        )')
+    edit(p, '                cudagraph_runtime_mode,\n            )',
+         '                cudagraph_runtime_mode,\n                num_speculative_steps,\n            )')
+    edit(p, '            self.max_model_len,\n            self.num_speculative_steps,',
+         '            self.max_model_len,\n            num_speculative_steps,')
+
     p = "v1/attention/backend.py"
     edit(p, '    def _init_reorder_batch_threshold(',
          upstream(p, 'AttentionMetadataBuilder.get_varlen_cudagraph_max_query_len')
@@ -411,7 +478,9 @@ def build(base: Path, official: Path) -> None:
               "v1/worker/gpu/kv_connector.py", "v1/worker/gpu/warmup.py",
               "v1/worker/xpu_model_runner.py", "v1/worker/xpu_worker.py",
               "v1/worker/gpu/block_table.py", "v1/worker/gpu/input_batch.py",
-              "v1/worker/gpu/model_states/mamba_hybrid.py", "v1/attention/backends/utils.py"):
+              "v1/worker/gpu/model_states/mamba_hybrid.py", "v1/attention/backends/utils.py",
+              "v1/worker/gpu/spec_decode/autoregressive/cudagraph_utils.py",
+              "v1/worker/gpu/cudagraph_utils.py", "v1/worker/gpu/dp_utils.py"):
         load(p)
     hunks, files = [], []
     for p in sorted(changed):

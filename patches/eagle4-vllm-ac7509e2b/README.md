@@ -15,6 +15,11 @@ implementation, or legacy-chain substitution is included.
   `75436712e7415d352cf9f17d070019d07410786f` (`v0.1.0`), specifically
   `eagle_harness/vllm/adapter.py`, `config.py`, `speculator.py`,
   `gdn_tree_verify.py`, and `round_commit.py`.
+- Current proposer consumer: read-only `/home/mike/code/EAGLE-4-b70` snapshot at
+  `3bf84f13cfa3d761fb3ed455ee0e468858a508d5` plus the lead's uncommitted keyword-count
+  change. Tested `speculator.py` SHA-256:
+  `a327e217f77b8f3402105186c79db25241283cfa663591df40b3b6b34c65778f`.
+  Its import/virtual ABI test runs in a separate interpreter from release tests.
 
 `engine.patch` preserves the vLLM Apache-2.0 SPDX/copyright headers. Its new
 `registry.py` and `verify_extension.py` are exact copies from the hook reference;
@@ -91,7 +96,7 @@ No model-state/builder redesign or invented cost data is involved.
 
 The native caller must snapshot/restore these real state slots, as required by
 the official calibrator; this is not a safe flag for concurrent live requests.
-This follow-up changes only the generated runner implementation and adds four
+The calibration change touches only the generated runner implementation and adds four
 unchanged metadata/table dependencies to the existing hash checks.
 Fresh external reference: [vLLM null-block fix discussion](https://github.com/vllm-project/vllm/pull/33937)
 identifies block 0 as reserved/unallocated; that supports requiring non-NULL
@@ -99,11 +104,43 @@ calibration states. Exact frozen source and installed tests govern this port.
 This control is a prerequisite to native calibration, not measured-cost or
 serving qualification.
 
+## Per-call autoregressive parent control
+
+Only frozen `v1/worker/gpu/spec_decode/autoregressive/speculator.py` changes in
+this follow-up. The semantic reference is the pinned official
+`target_dependent_ar/speculator.py:propose` and its decode helpers; the newer
+AR implementation, graph specialization and DP protocol are not transplanted.
+
+- `num_speculative_tokens=None` retains the configured maximum. Integer overrides
+  in `[0, maximum]` control `draft_max_seq_len`, both decode loops, and the final
+  input-update boundary without mutating `self.num_speculative_steps`.
+- Zero and one still execute the real parent prefill, then **no decode**. Zero
+  returns invalid proposals; unused columns of partial calls are set to `-1`.
+- Frozen decode graphs bake in the configured count, including the final-step
+  input update. Partial decodes therefore use the existing eager dispatcher.
+  Default/max decode graphs and count-independent prefill graphs remain enabled.
+- Auxiliary concatenation accepts native EAGLE3 or the existing registered
+  `uses_aux_hidden_states` contract. These pinned sources have neither
+  `is_eagle3()` nor `use_eagle3_aux_hidden_state`; no method identity is spoofed.
+- The actual current Harness virtual `_prefill` and inherited `_run_model` are
+  exercised: combine three auxiliary tensors, run prefill, select top-k seed
+  rows, pass them to the drafter, and reach the released tree-growth boundary.
+  Native-chain sampling/decode is a tripwire. Growth itself, native arithmetic,
+  measured costs and serving are not claimed by this CPU boundary test.
+
+The audited `_prefill`/`_run_model` virtual signatures match. Current Harness
+calls the parent with `num_speculative_tokens=steps`. Its optional DP argument
+is named `dp_sync_state`, while the frozen parent uses `num_tokens_across_dp`;
+the tested B70 single-DP path passes `None`. This is not a DPSyncState backport.
+Fresh external reference: [vLLM speculative configuration](https://docs.vllm.ai/en/latest/features/speculative_decoding/)
+documents the configured token budget. Keep that budget unchanged when making
+a per-call seed request; exact per-call semantics come from the pinned source.
+
 ## Installation and replay
 
 Stop the inference process. Apply to a disposable/test runtime first, **not** the
-immutable export or a persistent launcher. All 26 pinned files (15 changed,
-11 unchanged dependencies) are checked before any source write. Every output is
+immutable export or a persistent launcher. All 30 pinned files (16 changed,
+14 unchanged dependencies) are checked before any source write. Every output is
 replayed and syntax-compiled in memory; source drift, conflicting new files,
 symlinks, and wrong output hashes are rejected. All replacement files are staged
 before replacement. Known installed files are accepted without rewriting.
@@ -115,17 +152,17 @@ python /overlay/install.py --package-root /opt/venv/lib/python3.12/site-packages
 python /overlay/install.py --package-root /opt/venv/lib/python3.12/site-packages/vllm --apply
 ```
 
-Observed replay: 15 pending → 15 written → 0 pending → 0 written, with
-`vllm.__version__` unchanged. The image's default `/workspace/vllm` cwd shadows
+Observed upgrade from the calibration overlay (`9c99066`): 15 already installed,
+1 pending → 1 written → 0 pending → 0 written. `vllm.__version__` remains unchanged.
+The image's default `/workspace/vllm` cwd shadows
 the installed package: run checks with `docker exec --workdir /tmp`, and verify
 `vllm.__file__` points at the installed package. Do not mistake source-tree
 imports for testing this overlay.
 
-The preceding engine-overlay revision is not silently accepted as this revision.
-Use a fresh pinned runtime, or restore the pinned original
-`v1/worker/gpu/model_runner.py` in a stopped disposable runtime before running
-check/apply. Only that generated engine file changed in this follow-up; do not
-modify the immutable export or a running worker to bypass the hash guard.
+The preceding calibration revision is accepted unchanged: only the original
+frozen AR parent needs patching. All previous output hashes are unchanged.
+Older pre-calibration runner revisions still fail the hash guard; use a fresh
+pinned runtime rather than bypassing validation. Never patch a running worker.
 
 Reproduce the patch, without changing either reference:
 
@@ -141,9 +178,9 @@ Rebuilding the overlay is not authorization to qualify another runtime.
 
 ## Defined and executed engine test process
 
-Environment: CPU-only throwaway `full-eagle4-calib-hooks` on `inference-host`,
+Environment: CPU-only throwaway `full-eagle4-proposer-hooks` on `inference-host`,
 exact pinned image above; **no `--device`, no `/dev/dri`, network disabled**.
-Own scratch: `/home/mike/b70-evals/20261021-full-eagle4/engine-calibration-hooks`.
+Own scratch: `/home/mike/b70-evals/20261021-full-eagle4/engine-proposer-hooks`.
 Overlay/tests/official reference source mounted read-only at `/check`.
 Original pinned files copied inside the container to `/tmp/e4-base/vllm` before
 installation. The parent export and all host Python packages remain unchanged.
@@ -171,7 +208,17 @@ installation. The parent export and all host Python packages remain unchanged.
    addresses and identical omitted/false flag results. Check native no-spec/MTP
    defaults and insufficient-pool rejection. UVA/pinned transfers, model forward,
    graph execution and device operations are doubled; metadata is not.
-7. Remove only the owned throwaway container; retain own raw logs.
+7. Run the installed AR parent with 0/1/intermediate/max/default counts, fused
+   and unfused loops, and eager/graph dispatch. Check exact prefill/decode counts,
+   final-step input updates, cleared tails, auxiliary values, invalid bounds,
+   immutable configured count/method and native MTP/EAGLE3 defaults. Only Triton
+   launches, model/sampling and graph execution are CPU doubles; preparation
+   wrappers, request copying, parent control, virtual prefill/model plumbing,
+   metadata and graph selection execute their actual implementations.
+8. Import the current Harness from `/check/current` in a fresh interpreter.
+   Check explicit count forwarding, its real virtual prefill, seed tensors and
+   no-chain tripwires. Stop at tree growth, not at a fake parent success.
+9. Remove only the owned throwaway container; retain own raw logs.
 
 Exact test command (remote shell invoked via `ssh inference-host bash -s`):
 
@@ -181,8 +228,9 @@ docker exec --workdir /tmp \
   -e EAGLE4_FROZEN_PACKAGE=/tmp/e4-base/vllm \
   -e EAGLE4_ENGINE_OVERLAY=/check/overlay \
   -e EAGLE4_OFFICIAL_ROOT=/check/official \
-  full-eagle4-calib-hooks /opt/venv/bin/python \
-  /check/tests/test_eagle4_full_engine_overlay.py -v
+  -e EAGLE4_CURRENT_ROOT=/check/current \
+  full-eagle4-proposer-hooks /opt/venv/bin/python \
+  /check/tests/test_eagle4_full_engine_overlay.py -fv
 ```
 
 Local stdlib-only replay checks:
@@ -191,19 +239,19 @@ Local stdlib-only replay checks:
 python3 tests/test_eagle4_full_engine_overlay.py -v
 ```
 
-Final observed result: **20 tests passed, 0 skipped** in the pinned container
-(`cpu-contracts-04.log`, 7.534 seconds, exit 0). Local replay: 6 passed, 14 installed-
-engine tests skipped. No device kernel execution was attempted.
+Final observed result: **24 tests passed, 0 skipped** (including the current-Harness
+subprocess test) in the pinned container (`cpu-contracts-03.log`, 15.519 seconds,
+exit 0). The isolated consumer also reports 1 test passed, 0 skipped. Local replay:
+6 passed, 18 installed-engine tests skipped. No device kernel execution occurred.
 
 Local execution skips the installed-engine class intentionally. The container
 run executes all tests, with no skips. Raw outputs are retained in own remote
-scratch as `cpu-contracts-*.log`, `installer-replay.log`, and `environment.log`.
-This follow-up's first two CPU runs exposed missing fixture EPLB and CPU-only
-pinned-memory boundaries; those test doubles were corrected, not production
-behavior. The first container launch required an empty nested read-only mountpoint;
-that failure and correction are retained in `container-start.log`. Initial engine
-slice evidence remains in the sibling `engine-hooks` directory. All imports
-explicitly use `/tmp` and assert the installed package path.
+scratch as `cpu-contracts-*.log`, `installer-upgrade.log`, `environment.log` and
+`consumer-source.log`. The first two proposer CPU runs caught fixture assumptions
+about configuration construction and missing DP attributes; only fixtures were
+corrected. Earlier engine/calibration evidence remains in sibling `engine-hooks`
+and `engine-calibration-hooks`. Imports explicitly use `/tmp` and assert the
+installed package/AR module paths.
 
 ## Integration limits (do not turn hook presence into a completion claim)
 

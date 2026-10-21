@@ -2,7 +2,7 @@
   "base_version": "0.27.2rc1.dev77+gac7509e2b",
   "base_image": "vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f",
   "hook_reference": "3ba23801e80d2a0d0a9af21ce94484aa2adb8795",
-  "patch_sha256": "810b037b3b2edea60c69e215547f0789161fab64ff9bdc0c2a71ad2de9126098",
+  "patch_sha256": "641ed5019031e4e618d0d335c297f0e5705fa826afa5f4100afe2cc9db5dff72",
   "files": [
     {
       "path": "_xpu_ops.py",
@@ -80,6 +80,16 @@
       "after_sha256": "da4e6011514c883dbb6bf0f59675294e6a6e76cfcd0e4b534bc575cb4d7adfc5"
     },
     {
+      "path": "v1/worker/gpu/cudagraph_utils.py",
+      "before_sha256": "ee1f6eb37bc2f456a3e7e9142d5a53455afed2250a57f52780546cf1aef27e2c",
+      "after_sha256": "ee1f6eb37bc2f456a3e7e9142d5a53455afed2250a57f52780546cf1aef27e2c"
+    },
+    {
+      "path": "v1/worker/gpu/dp_utils.py",
+      "before_sha256": "3c882f85109ba47e473953351d166c4377ceb995205e91cbf128ca5075775a5d",
+      "after_sha256": "3c882f85109ba47e473953351d166c4377ceb995205e91cbf128ca5075775a5d"
+    },
+    {
       "path": "v1/worker/gpu/input_batch.py",
       "before_sha256": "3929c92e42ae90e4410bb4537dcbdcd171a662e44afc1189a9a3e19037a84410",
       "after_sha256": "3929c92e42ae90e4410bb4537dcbdcd171a662e44afc1189a9a3e19037a84410"
@@ -103,6 +113,16 @@
       "path": "v1/worker/gpu/spec_decode/__init__.py",
       "before_sha256": "c1a28be59f59544d365e2c61f78ba2864e9767632173a10f7acd61d32627635d",
       "after_sha256": "d9382fd6bf8a8613349aded7efbaeb042de0f92383d5693afd06ba8c990f48d5"
+    },
+    {
+      "path": "v1/worker/gpu/spec_decode/autoregressive/cudagraph_utils.py",
+      "before_sha256": "13392ef0a9ed59eb9c2b2bad43d7c61beb212a8805849e46b5130c230275d0a5",
+      "after_sha256": "13392ef0a9ed59eb9c2b2bad43d7c61beb212a8805849e46b5130c230275d0a5"
+    },
+    {
+      "path": "v1/worker/gpu/spec_decode/autoregressive/speculator.py",
+      "before_sha256": "575f39930f7b3a89402c385885d598416137b72e51fea83f2320a3212b5b99e1",
+      "after_sha256": "57bad570aa7b61ee93cb62d16c732b8990ae45b06781b5867ba5cf59bfd13e95"
     },
     {
       "path": "v1/worker/gpu/spec_decode/rejection_sampler.py",

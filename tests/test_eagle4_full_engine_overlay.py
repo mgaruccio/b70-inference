@@ -11,13 +11,14 @@ model parity, measured cost decisions, or the complete served EAGLE4 algorithm.
 """
 from __future__ import annotations
 
-from contextlib import nullcontext
+from contextlib import ExitStack, contextmanager, nullcontext
 import importlib.util
 import inspect
 import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace as NS
@@ -517,6 +518,265 @@ class InstalledEngineContracts(unittest.TestCase):
                     max_model_len=128, cache_config=NS(mamba_cache_mode="none"), speculative_config=None)
         with self.assertRaisesRegex(ValueError, "Insufficient distinct Mamba state slots"):
             self.runner.GPUModelRunner.prepare_dummy_attn(runner, batch, True, context_len=64)
+
+    @contextmanager
+    def _ar_proposer_fixture(self, maximum=4, fused=False, full=False, method="engine_contract", cls=None,
+                             consumes_aux=True):
+        import vllm.v1.worker.gpu.spec_decode.autoregressive.speculator as ar
+        from vllm.v1.worker.gpu.block_table import BlockTables
+        from vllm.v1.worker.gpu.cudagraph_utils import BatchExecutionDescriptor, CudaGraphManager
+        from vllm.v1.worker.gpu.input_batch import InputBatch, InputBuffers
+        from vllm.v1.worker.gpu.spec_decode.mtp.speculator import MTPSpeculator
+        from vllm.v1.worker.gpu.spec_decode.eagle.speculator import EagleSpeculator
+        t, cg = self.torch, self.runner.CUDAGraphMode
+        self.assertTrue(Path(ar.__file__).is_relative_to("/opt/venv/lib/python3.12/site-packages/vllm"))
+        events = []
+        if cls is None:
+            cls = MTPSpeculator if method == "mtp" else EagleSpeculator
+        sp = cls.__new__(cls)
+        config = self.SpeculativeConfig.__new__(self.SpeculativeConfig)
+        config.method, config.num_speculative_tokens = method, maximum
+        sp.speculative_config, sp.method = config, method
+        sp.num_speculative_steps, sp.max_num_reqs, sp.max_model_len = maximum, 4, 128
+        sp.device, sp.vllm_config, sp.eplb_state = t.device("cpu"), None, None
+        sp.dp_size, sp.dp_rank = 1, 0
+        sp.use_fused_multi_step_decode, sp.share_mtp_topk_indices = fused, False
+        sp.supports_mm_inputs, sp.inputs_embeds = False, None
+        sp.hidden_states = t.full((8, 2), -77.0)
+        sp.draft_tokens = t.full((4, maximum), -99, dtype=t.int64)
+        sp.draft_logits, sp.draft_max_seq_len = None, 0
+        sp.input_buffers = InputBuffers(4, 8, t.device("cpu"))
+        sp.idx_mapping, sp.last_token_indices = t.zeros(4, dtype=t.int32), t.zeros(4, dtype=t.int64)
+        sp.current_draft_step = t.tensor(0, dtype=t.int64)
+        sp.temperature, sp.seeds, sp.arange = t.zeros(4), t.zeros(4, dtype=t.int64), t.arange(5)
+        # Attention-free CPU model fixture: keep real metadata/slot wrappers.
+        sp.block_tables = BlockTables.__new__(BlockTables)
+        sp.block_tables.num_kv_cache_groups = 0
+        sp.block_tables.input_block_tables = []
+        sp.block_tables.slot_mappings = t.empty((0, 8), dtype=t.int64)
+        sp.attn_groups, sp.kv_cache_config = [], NS(kv_cache_groups=[])
+        batch = InputBatch.make_dummy(2, 4, InputBuffers(4, 8, t.device("cpu")), max_query_len=2)
+        batch.input_ids.copy_(t.tensor([5, 6, 7, 8]))
+        batch.positions.copy_(t.tensor([10, 11, 10, 11]))
+        batch.seq_lens.fill_(12)
+        batch.seq_lens_cpu_upper_bound.fill_(12)
+        batch.idx_mapping.copy_(t.tensor([1, 0]))
+        hidden = t.arange(8, dtype=t.float32).reshape(4, 2)
+        aux = [hidden + offset for offset in (10, 20, 30)]
+        args = dict(input_batch=batch, attn_metadata={}, slot_mappings={}, last_hidden_states=hidden,
+                    aux_hidden_states=aux if method not in ("mtp",) else None,
+                    num_sampled=t.ones(2, dtype=t.int32), num_rejected=t.tensor([0, 1]),
+                    last_sampled=t.tensor([51, 52, 53, 54]), next_prefill_tokens=t.tensor([61, 62, 63, 64]),
+                    temperature=t.ones(4), seeds=t.arange(4))
+        fixture = NS(sp=sp, args=args, events=events, expected_count=maximum, ar=ar, aux=aux)
+        class Model:
+            def combine_hidden_states(_, value):
+                events.append(("combine", value.clone()))
+                return value.reshape(4, 3, 2).sum(dim=1)
+            def __call__(_, **inputs):
+                if sp.num_speculative_steps != maximum or sp.method != method:
+                    raise AssertionError("configured count/method was mutated")
+                events.append(("forward", int(sp.current_draft_step), inputs["input_ids"].clone()))
+                feedback = inputs["hidden_states"] + 1
+                return feedback * 2, feedback
+            def candidate_topk(_, normed, k):
+                events.append(("candidates", normed.clone(), k))
+                logits = normed.sum(dim=-1, keepdim=True) + t.arange(8, dtype=t.float32)
+                return logits.softmax(dim=-1).topk(k, dim=-1)
+        sp.model = Model()
+        def sample(hidden, positions, idx, temperature, seeds, step, logits):
+            events.append(("sample", int(step)))
+            return t.full((hidden.shape[0],), 100 + int(step), dtype=t.int64)
+        sp.sample_draft = sample
+        # Only the three Triton launches are CPU doubles. Their public Python
+        # wrappers, parent propose/prefill/model/decode control and state copies run.
+        class Kernel:
+            def __init__(_, fn): _.fn = fn
+            def __getitem__(_, grid):
+                return lambda *a, **kw: _.fn(*a, programs=grid[0], **kw)
+        def prefill(last_idx, step, ids, pos, q, seq, target_ids, target_pos, idx, last, nxt,
+                    sampled, rejected, target_q, target_seq, max_reqs, programs, **kw):
+            self.assertEqual(sp.num_speculative_steps, maximum)
+            for i in range(programs):
+                start, end = int(target_q[i]), int(target_q[i + 1] - rejected[i])
+                ids[start:end - 1] = target_ids[start + 1:end]
+                ids[end - 1] = (last if sampled[i] > 0 else nxt)[idx[i]]
+                pos[start:end] = target_pos[start:end]
+                last_idx[i], q[i], seq[i] = end - 1, start, target_seq[i]
+            q[programs:] = target_q[programs]
+            seq[programs:], last_idx[programs:] = 0, 0
+            step.fill_(0)
+            events.append(("prefill_inputs", ids[:4].clone(), last_idx[:programs].clone()))
+        def decode(tokens, stride, target_seq, rejected, ids, pos, q, seq, max_len, max_reqs,
+                   programs, ADVANCE_DRAFT_POSITIONS, **kw):
+            self.assertGreater(fixture.expected_count, 1, "seed/prefill entered decode preparation")
+            n = programs - 1
+            ids[:n] = tokens
+            seq[:n] = target_seq[:n] - rejected[:n]
+            if ADVANCE_DRAFT_POSITIONS:
+                pos[:n] = (pos[:n] + 1).clamp(max=max_len - 1)
+                seq[:n] = (seq[:n] + 1).clamp(max=max_len)
+            q.copy_(t.arange(max_reqs + 1).clamp(max=n))
+            seq[n:] = 0
+            events.append(("decode_inputs",))
+        def update(out, out_stride, next_hidden, next_stride, ids, pos, seq, tokens, current,
+                   hidden, hidden_stride, hidden_size, max_len, steps, programs,
+                   ADVANCE_DRAFT_POSITIONS, **kw):
+            step = int(current)
+            self.assertEqual(steps, fixture.expected_count)
+            out[:programs, step] = tokens
+            if step < steps - 1:
+                ids[:programs], next_hidden[:programs] = tokens, hidden[:programs]
+                if ADVANCE_DRAFT_POSITIONS:
+                    pos[:programs] = (pos[:programs] + 1).clamp(max=max_len - 1)
+                    seq[:programs] = (seq[:programs] + 1).clamp(max=max_len)
+            events.append(("update", step, steps))
+        def manager(tokens, label):
+            m = CudaGraphManager.__new__(CudaGraphManager)
+            m._graphs_captured = full
+            m._resolve_effective_loras = lambda n: n
+            desc = BatchExecutionDescriptor(cg_mode=cg.FULL, num_tokens=tokens, num_reqs=2)
+            m._candidates = {(tokens, 0): [desc]}
+            def replay(desc):
+                events.append(("graph_" + label,))
+                if label == "prefill":
+                    sp._prefill(2, 4, {}, {}, None)
+                else:
+                    self.assertEqual(fixture.expected_count, maximum, "partial count replayed max-count graph")
+                    callback = sp._generate_fused_drafts if fused else sp._generate_draft
+                    callback(2, 2, {}, {}, None)  # unmodified capture callback/default ABI
+            m.run_fullgraph = replay
+            return m
+        sp.prefill_cudagraph_manager = manager(4, "prefill")
+        sp.decode_cudagraph_manager = manager(2, "decode")
+        with ExitStack() as stack:
+            if method not in ("eagle3", "mtp"):
+                self.registry.register_speculative_method(method, self.registry.SpeculativeMethodSpec(
+                    "plugin:Spec", uses_aux_hidden_states=consumes_aux))
+                stack.callback(self.registry.unregister_speculative_method, method)
+            stack.enter_context(mock.patch.object(ar, "_prepare_prefill_inputs_kernel", Kernel(prefill)))
+            stack.enter_context(mock.patch.object(ar, "_prepare_decode_inputs_kernel", Kernel(decode)))
+            stack.enter_context(mock.patch.object(ar, "_update_draft_inputs_kernel", Kernel(update)))
+            stack.enter_context(mock.patch.object(ar, "set_forward_context", return_value=nullcontext()))
+            yield fixture
+
+    def test_ar_per_call_count_controls_real_prefill_decode_and_graph_dispatch(self):
+        for fused in (False, True):
+            for full in (False, True):
+                for count in (0, 1, 2, 4, None):
+                    with self.subTest(fused=fused, full=full, count=count), self._ar_proposer_fixture(fused=fused, full=full) as f:
+                        requested = 4 if count is None else count
+                        f.expected_count = requested
+                        kwargs = {} if count is None else {"num_speculative_tokens": count}
+                        result = f.sp.propose(**f.args, **kwargs)
+                        names = [event[0] for event in f.events]
+                        self.assertEqual(names.count("prefill_inputs"), 1)
+                        self.assertEqual(names.count("forward"), max(1, requested))
+                        self.assertEqual(names.count("decode_inputs"), int(requested > 1))
+                        self.assertEqual([e[1] for e in f.events if e[0] == "update"], list(range(1, requested)))
+                        self.assertEqual(result.tolist(), [list(range(100, 100 + requested)) + [-1] * (4 - requested)] * 2)
+                        self.assertEqual(f.sp.draft_tokens[2:].tolist(), [[-99] * 4] * 2)
+                        self.assertEqual(f.sp.draft_max_seq_len, 12 + requested)
+                        self.assertEqual(f.sp.num_speculative_steps, 4)
+                        self.assertEqual(f.sp.method, "engine_contract")
+                        self.assertEqual(f.sp.idx_mapping.tolist(), [1, 0, -1, -1])
+                        self.assertEqual(f.sp.input_buffers.positions[:2].tolist(), [11 + max(0, requested - 1), 10 + max(0, requested - 1)])
+                        self.assertTrue(self.torch.equal(f.events[0][1], self.torch.cat(f.aux, dim=-1)))
+                        prep = next(e for e in f.events if e[0] == "prefill_inputs")
+                        self.assertEqual(prep[1].tolist(), [6, 52, 51, 0])
+                        self.assertEqual(prep[2].tolist(), [1, 2])
+                        expected_graphs = (1 if fused else 3) if full and requested == 4 else 0
+                        self.assertEqual(names.count("graph_decode"), expected_graphs)
+                        self.assertEqual(names.count("graph_prefill"), int(full))
+                        print(f"PROPOSER {count=} {fused=} {full=}: forwards={names.count('forward')} decode_steps={max(0, requested - 1)}")
+
+    def test_ar_invalid_counts_and_unregistered_aux_reject_before_prefill(self):
+        with self._ar_proposer_fixture() as f:
+            for count in (-1, 5, 1.5, "1", True):
+                with self.subTest(count=count), self.assertRaisesRegex(ValueError, "configured maximum"):
+                    f.sp.propose(**f.args, num_speculative_tokens=count)
+            self.assertEqual(f.events, [])
+            self.assertEqual(f.sp.draft_max_seq_len, 0)
+            self.assertTrue((f.sp.hidden_states == -77).all())
+        with self._ar_proposer_fixture(consumes_aux=False) as f:
+            with self.assertRaisesRegex(AssertionError, "auxiliary-state consumer"):
+                f.sp.propose(**f.args, num_speculative_tokens=1)
+            self.assertEqual(f.events, [])
+
+    def test_ar_native_default_and_zero_token_chunked_prefill(self):
+        for method in ("eagle3", "mtp"):
+            for maximum in (1, 4):
+                for fused, full in ((False, False), (False, True), (True, False), (True, True)):
+                    with self.subTest(method=method, maximum=maximum, fused=fused, full=full), \
+                         self._ar_proposer_fixture(maximum, fused, full, method) as f:
+                        result = f.sp.propose(**f.args)
+                        self.assertEqual(result.tolist(), [list(range(100, 100 + maximum))] * 2)
+                        self.assertEqual(len([e for e in f.events if e[0] == "forward"]), maximum)
+                        self.assertEqual(f.sp.num_speculative_steps, maximum)
+        with self._ar_proposer_fixture() as f:
+            f.expected_count = 0
+            f.args["num_sampled"][1] = 0
+            f.args["input_batch"].has_prefill = True
+            result = f.sp.propose(**f.args, num_speculative_tokens=0)
+            prep = next(e for e in f.events if e[0] == "prefill_inputs")
+            self.assertEqual(prep[1].tolist(), [6, 52, 61, 0])
+            self.assertEqual(len([e for e in f.events if e[0] == "forward"]), 1)
+            self.assertTrue((result == -1).all())
+
+    def test_current_harness_uses_one_real_parent_prefill_and_virtual_seed(self):
+        # The release-reference tests above need their original package modules.
+        # Isolate the current adapter snapshot in a fresh interpreter, not a
+        # mixed old/new module cache. No model/device/algorithm code is rewritten.
+        if os.environ.get("EAGLE4_CURRENT_CONSUMER") != "1":
+            env = dict(os.environ, EAGLE4_CURRENT_CONSUMER="1",
+                       EAGLE4_OFFICIAL_ROOT=os.environ["EAGLE4_CURRENT_ROOT"])
+            result = subprocess.run([sys.executable, __file__,
+                "InstalledEngineContracts.test_current_harness_uses_one_real_parent_prefill_and_virtual_seed", "-v"],
+                env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            print(result.stdout)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            return
+        from eagle_harness.vllm.speculator import HarnessSpeculator
+        self.assertTrue(Path(inspect.getfile(HarnessSpeculator)).is_relative_to(OFFICIAL))
+        class TreeGrowthBoundary(Exception): pass
+        for full in (False, True):
+            with self.subTest(full=full), self._ar_proposer_fixture(15, True, full, "eagle_harness", HarnessSpeculator) as f:
+                f.expected_count = 1
+                f.sp.tree_mode, f.sp.recorder, f.sp.sampled_tokens = True, None, None
+                f.sp.method_config = NS(node_top_k=4)
+                seeds, forwarded = [], []
+                f.sp.drafter = NS(seed=lambda *a: seeds.append(a))
+                f.sp.block_tables.input_block_tables = [self.torch.zeros((4, 16), dtype=self.torch.int32)]
+                f.sp._bind = lambda: NS(draft_group=0)
+                def growth(num_reqs, count, committed, table):
+                    self.assertEqual((num_reqs, count), (2, 3))
+                    self.assertEqual(committed.tolist(), [12, 11])
+                    raise TreeGrowthBoundary("released tree growth reached after parent seed")
+                f.sp.drafter.grow_and_select = growth
+                for name in ("_multi_step_decode", "_fused_multi_step_decode", "_generate_draft", "_generate_fused_drafts", "sample_draft"):
+                    setattr(f.sp, name, mock.Mock(side_effect=AssertionError("tree seed entered native chain: " + name)))
+                parent = f.ar.AutoRegressiveSpeculator.propose
+                def call_parent(instance, *args, **kwargs):
+                    self.assertEqual(kwargs["num_speculative_tokens"], 1)
+                    self.assertEqual(len(args), 16)  # control count is explicit keyword, not a dropped argument
+                    forwarded.append(kwargs.copy())
+                    return parent(instance, *args, **kwargs)
+                with mock.patch.object(f.ar.AutoRegressiveSpeculator, "propose", call_parent):
+                    result = f.sp.propose(**f.args, dummy_run=True, num_speculative_tokens=3)
+                    self.assertTrue((result == -1).all())
+                    with self.assertRaises(TreeGrowthBoundary):
+                        f.sp.propose(**f.args, num_speculative_tokens=3)
+                self.assertEqual(len(seeds), 2)
+                self.assertEqual(len(forwarded), 2)
+                self.assertEqual([e[0] for e in f.events].count("forward"), 2)
+                self.assertEqual(f.sp.num_speculative_steps, 15)
+                combined = self.torch.cat(f.aux, dim=-1).reshape(4, 3, 2).sum(dim=1)
+                for num_reqs, probs, tokens, hidden in seeds:
+                    self.assertEqual(num_reqs, 2)
+                    self.assertEqual(tuple(probs.shape), (2, 4))
+                    self.assertEqual(tokens.tolist(), [[7, 6, 5, 4]] * 2)
+                    self.assertTrue(self.torch.equal(hidden, (combined + 1)[[1, 2]]))
+                print(f"CURRENT HARNESS {full=}: two parent calls, two real virtual prefills/seeds, zero native-chain decode; tree-growth boundary reached")
 
     def test_real_runner_verify_commit_propose_finalize_order(self):
         self._runner_journey(plugin=True)

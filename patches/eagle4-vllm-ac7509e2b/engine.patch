@@ -1076,6 +1076,176 @@
      if speculative_config.method == "dflash":
          from vllm.v1.worker.gpu.spec_decode.dflash.speculator import (
              DFlashSpeculator,
+--- a/vllm/v1/worker/gpu/spec_decode/autoregressive/speculator.py
++++ b/vllm/v1/worker/gpu/spec_decode/autoregressive/speculator.py
+@@ -224,14 +224,21 @@
+         skip_attn_for_dummy_run: bool = False,
+         mm_inputs: tuple[list[torch.Tensor], torch.Tensor] | None = None,
+         is_profile: bool = False,
++        num_speculative_tokens: int | None = None,
+     ) -> torch.Tensor:
++        if num_speculative_tokens is None:
++            num_speculative_tokens = self.num_speculative_steps
++        if (not isinstance(num_speculative_tokens, int)
++                or isinstance(num_speculative_tokens, bool)
++                or not 0 <= num_speculative_tokens <= self.num_speculative_steps):
++            raise ValueError("num_speculative_tokens must be an integer between 0 and the configured maximum")
+         num_tokens = input_batch.num_tokens
+         num_tokens_padded = input_batch.num_tokens_after_padding
+         num_reqs = input_batch.num_reqs
+         max_query_len = input_batch.num_scheduled_tokens.max()
+         max_seq_len = input_batch.seq_lens_cpu_upper_bound[:num_reqs].max().item()
+         self.draft_max_seq_len = min(
+-            max_seq_len + self.num_speculative_steps, self.max_model_len
++            max_seq_len + num_speculative_tokens, self.max_model_len
+         )
+ 
+         # NOTE(woosuk): To avoid CPU-GPU synchronization without CPU knowing the
+@@ -241,7 +248,10 @@
+         # we can also reuse the attention metadata (e.g., query_start_loc,
+         # seq_lens) of the target model.
+         if aux_hidden_states:
+-            assert self.method == "eagle3"
++            registered = self.speculative_config.registered_method()
++            assert self.method == "eagle3" or (
++                registered is not None and registered.uses_aux_hidden_states
++            ), "Auxiliary hidden states require EAGLE3 or a registered auxiliary-state consumer"
+             hidden_states = self.model.combine_hidden_states(
+                 torch.cat(aux_hidden_states, dim=-1)
+             )
+@@ -311,9 +321,12 @@
+             )
+         self.on_prefill_end(num_reqs)
+ 
+-        if self.num_speculative_steps == 1:
+-            # Early exit.
+-            return self.draft_tokens[:num_reqs, :1]
++        if num_speculative_tokens < self.num_speculative_steps:
++            # Do not expose stale proposals from a previous longer call.
++            self.draft_tokens[:num_reqs, num_speculative_tokens:].fill_(-1)
++        if num_speculative_tokens <= 1:
++            # Even a zero-token proposal prefills; one seeds Harness tree growth.
++            return self.draft_tokens[:num_reqs]
+ 
+         # Prepare the inputs for the decode steps.
+         prepare_decode_inputs(
+@@ -335,7 +348,9 @@
+             uniform_token_count=1,
+             dp_size=self.dp_size,
+             dp_rank=self.dp_rank,
+-            need_eager=is_profile,
++            # Frozen decode graphs bake in the configured count (also
++            # the final-step input update). Partial calls cannot replay them.
++            need_eager=is_profile or num_speculative_tokens != self.num_speculative_steps,
+         )
+ 
+         self.on_multi_step_decode_begin(num_reqs)
+@@ -351,6 +366,7 @@
+             decode_batch_desc,
+             num_tokens_across_dp,
+             input_batch.seq_lens_cpu_upper_bound,
++            num_speculative_tokens,
+         )
+         self.on_multi_step_decode_end(num_reqs)
+ 
+@@ -462,14 +478,17 @@
+         batch_desc: BatchExecutionDescriptor,
+         num_tokens_across_dp: torch.Tensor | None,
+         seq_lens_cpu_upper_bound: torch.Tensor,
++        num_speculative_steps: int | None = None,
+     ) -> None:
++        if num_speculative_steps is None:
++            num_speculative_steps = self.num_speculative_steps
+         positions = self.input_buffers.positions[:num_reqs]
+         query_start_loc = self.input_buffers.query_start_loc[: num_reqs + 1]
+         idx_mapping = self.idx_mapping[:num_reqs]
+ 
+         attn_metadata = None
+         slot_mappings_by_layer = None
+-        for step in range(1, self.num_speculative_steps):
++        for step in range(1, num_speculative_steps):
+             # Rebuild every step when positions advance, or just once
+             # on the first step when positions are constant (Gemma4 MTP).
+             if not skip_attn and (self.advance_draft_positions or step == 1):
+@@ -503,6 +522,7 @@
+                     slot_mappings_by_layer,
+                     num_tokens_across_dp=num_tokens_across_dp,
+                     cudagraph_runtime_mode=batch_desc.cg_mode,
++                    num_speculative_steps=num_speculative_steps,
+                 )
+ 
+     def _fused_multi_step_decode(
+@@ -512,7 +532,10 @@
+         batch_desc: BatchExecutionDescriptor,
+         num_tokens_across_dp: torch.Tensor | None,
+         seq_lens_cpu_upper_bound: torch.Tensor,
++        num_speculative_steps: int | None = None,
+     ) -> None:
++        if num_speculative_steps is None:
++            num_speculative_steps = self.num_speculative_steps
+         positions = self.input_buffers.positions[:num_reqs]
+         query_start_loc = self.input_buffers.query_start_loc[: num_reqs + 1]
+         idx_mapping = self.idx_mapping[:num_reqs]
+@@ -550,6 +573,7 @@
+             slot_mappings_by_layer,
+             num_tokens_across_dp,
+             batch_desc.cg_mode,
++            num_speculative_steps,
+         )
+ 
+     def _generate_fused_drafts(
+@@ -560,7 +584,10 @@
+         slot_mappings: dict[str, torch.Tensor] | None,
+         num_tokens_across_dp: torch.Tensor | None,
+         cudagraph_runtime_mode: CUDAGraphMode = CUDAGraphMode.NONE,
++        num_speculative_steps: int | None = None,
+     ) -> None:
++        if num_speculative_steps is None:
++            num_speculative_steps = self.num_speculative_steps
+         idx_mapping = self.idx_mapping[:num_reqs]
+         positions = self.input_buffers.positions[:num_reqs]
+         query_start_loc = self.input_buffers.query_start_loc[: num_reqs + 1]
+@@ -570,7 +597,7 @@
+             else []
+         )
+ 
+-        for step in range(1, self.num_speculative_steps):
++        for step in range(1, num_speculative_steps):
+             self.current_draft_step.fill_(step)
+             self._generate_draft(
+                 num_reqs,
+@@ -579,9 +606,10 @@
+                 slot_mappings,
+                 num_tokens_across_dp,
+                 cudagraph_runtime_mode,
++                num_speculative_steps,
+             )
+             if (
+-                step < self.num_speculative_steps - 1
++                step < num_speculative_steps - 1
+                 and attn_metadata is not None
+                 and self.advance_draft_positions
+             ):
+@@ -602,7 +630,10 @@
+         slot_mappings: dict[str, torch.Tensor] | None,
+         num_tokens_across_dp: torch.Tensor | None,
+         cudagraph_runtime_mode: CUDAGraphMode = CUDAGraphMode.NONE,
++        num_speculative_steps: int | None = None,
+     ) -> None:
++        if num_speculative_steps is None:
++            num_speculative_steps = self.num_speculative_steps
+         self._prepare_eplb_forward(num_reqs)
+ 
+         idx_mapping = self.idx_mapping[:num_reqs]
+@@ -644,7 +675,7 @@
+             self.input_buffers,
+             num_reqs,
+             self.max_model_len,
+-            self.num_speculative_steps,
++            num_speculative_steps,
+             advance_draft_positions=self.advance_draft_positions,
+         )
+ 
 --- a/vllm/v1/worker/gpu/spec_decode/rejection_sampler.py
 +++ b/vllm/v1/worker/gpu/spec_decode/rejection_sampler.py
 @@ -142,6 +142,8 @@
