@@ -25,9 +25,9 @@ included. No speed, quality, or DFlash compatibility claim is made.
   documents **symmetric** INT4; the native expert invocation has no zero-point
   input. AWQ's noncentral integer zero points cannot simply be discarded.
 
-Fresh primary-source inspection establishes the blocker. Installed-image
-reproduction of this checked-in script is still pending lead execution; the
-source-derived values below are **not** a claimed observed runtime result.
+Reproduced on `inference-host` (Intel Arc Pro B70) on 2026-10-24 using the
+already cached pinned image. The checked-in diagnostic returned **2 / INCOMPATIBLE**;
+the wrapper accepted that expected reproduction result. This is not model inference.
 
 ## Minimal reproduction (no kernel dispatch)
 
@@ -36,28 +36,34 @@ INT4 tensors: two experts, input 128, intermediate 64, BF16 scales, packed zero
 points 5 and 7. Constant weight nibbles are valid in AWQ's interleaved packing.
 It does not load weights, construct a serving model, or invoke a MoE kernel.
 
-Source-predicted result:
+Observed installed-runtime result (matching the source prediction):
 
 - Input AWQ int32 shapes: `((2, 128, 16), (2, 64, 16))`.
 - Required native uint8 shapes: `((2, 128, 64), (2, 128, 32))`.
 - Actual converter shapes: `((2, 16, 512), (2, 16, 256))`.
 - Both returned zero points: absent; exit **2**, `INCOMPATIBLE`.
 
-Run on the inference host with its **already cached** pinned image and this
-checkout. No install or model download is needed. The retained log is outside Pi;
-the temporary container is removed on exit. The GPU is exposed only to satisfy
-XPU-runtime import/detection; probe tensors and conversion remain on CPU.
+The actual run copied the checked-in script to `/tmp/probe-flint-xpu-awq.py` on
+`inference-host`. Its retained output is
+`/home/mike/b70-evals/flint-xpu-spike/awq-converter.log` (`probe_exit=2`). Python in
+the container was 3.12.3. No install or model download was needed; the disposable
+container was removed on exit. The GPU was exposed only for XPU-runtime detection;
+probe tensors and conversion remained on CPU. Reproduce from a checkout on that
+host with the following Bash commands (the actual mount source was the staged
+`/tmp/probe-flint-xpu-awq.py` instead of `$PWD/scripts/probe-flint-xpu-awq.py`):
 
 ```bash
 # From the repository root, in Bash:
 mkdir -p "$HOME/b70-evals/flint-xpu-spike"
+rc=0
 docker run --rm --pull=never --network=none --device=/dev/dri \
-  --entrypoint=python \
+  --label pi.flint-xpu-spike=awq-probe --entrypoint=python \
+  -e VLLM_TARGET_DEVICE=xpu \
+  -e ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE -e ZE_AFFINITY_MASK=0 \
   -v "$PWD/scripts/probe-flint-xpu-awq.py:/probe-flint-xpu-awq.py:ro" \
   vllm/vllm-openai-xpu@sha256:f01e24f6c7ff01f1e0662234255a1372297d1dbd89d003cf13c8fad3eab1ba4f \
   -u /probe-flint-xpu-awq.py \
-  > "$HOME/b70-evals/flint-xpu-spike/awq-converter.log" 2>&1
-rc=$?
+  > "$HOME/b70-evals/flint-xpu-spike/awq-converter.log" 2>&1 || rc=$?
 printf 'probe_exit=%s\n' "$rc" >> "$HOME/b70-evals/flint-xpu-spike/awq-converter.log"
 test "$rc" -eq 2
 ```
@@ -74,6 +80,10 @@ Local checks (stdlib only, not runtime verification):
 python3 -S scripts/probe-flint-xpu-awq.py --help
 python3 -m unittest discover -s tests -p test_flint_xpu_awq_probe.py -v
 ```
+
+Lead verification: **7 tests passed** on Python 3.14.7; both Python files passed
+syntax checks, dependency-free help exited 0, and missing-runtime execution exited
+3 / `UNVERIFIED`. These are diagnostic checks, not full-model serving tests.
 
 ## Remaining target and DFlash prerequisites
 
