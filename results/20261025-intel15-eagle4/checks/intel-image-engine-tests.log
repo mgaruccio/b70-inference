@@ -1,0 +1,52 @@
+patching file vllm/_xpu_ops.py
+patching file vllm/config/speculative.py
+patching file vllm/config/vllm.py
+patching file vllm/model_executor/layers/mamba/gdn/_xpu_esimd.py
+patching file vllm/model_executor/layers/mamba/gdn/verify_extension.py
+patching file vllm/model_executor/layers/mamba/gdn/verify_extension_xpu.py
+patching file vllm/platforms/xpu.py
+patching file vllm/v1/attention/backends/gdn_attn.py
+patching file vllm/v1/core/sched/scheduler.py
+patching file vllm/v1/spec_decode/registry.py
+patching file vllm/v1/worker/gpu/model_runner.py
+patching file vllm/v1/worker/gpu/spec_decode/__init__.py
+patching file vllm/v1/worker/gpu/spec_decode/autoregressive/speculator.py
+patching file vllm/v1/worker/gpu/spec_decode/rejection_sampler.py
+patching file vllm/v1/worker/gpu/spec_decode/speculator.py
+........................................................................ [ 80%]
+..................                                                       [100%]
+=============================== warnings summary ===============================
+../opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:74
+  /opt/venv/lib/python3.12/site-packages/torch/xpu/__init__.py:74: UserWarning: XPU device count is zero! (Triggered internally at /pytorch/c10/xpu/XPUFunctions.cpp:113.)
+    return torch._C._xpu_getDeviceCount()
+
+tests/config/test_speculative_draft_hf_overrides.py:32
+  /engine/tests/config/test_speculative_draft_hf_overrides.py:32: PytestUnknownMarkWarning: Unknown pytest.mark.cpu_test - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.cpu_test
+
+tests/config/test_speculative_draft_hf_overrides.py:42
+  /engine/tests/config/test_speculative_draft_hf_overrides.py:42: PytestUnknownMarkWarning: Unknown pytest.mark.cpu_test - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.cpu_test
+
+tests/config/test_speculative_draft_hf_overrides.py:48
+  /engine/tests/config/test_speculative_draft_hf_overrides.py:48: PytestUnknownMarkWarning: Unknown pytest.mark.cpu_test - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.cpu_test
+
+tests/config/test_speculative_draft_hf_overrides.py:65
+  /engine/tests/config/test_speculative_draft_hf_overrides.py:65: PytestUnknownMarkWarning: Unknown pytest.mark.cpu_test - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.cpu_test
+
+tests/config/test_speculative_draft_hf_overrides.py:88
+  /engine/tests/config/test_speculative_draft_hf_overrides.py:88: PytestUnknownMarkWarning: Unknown pytest.mark.cpu_test - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.cpu_test
+
+tests/config/test_speculative_draft_hf_overrides.py:121
+  /engine/tests/config/test_speculative_draft_hf_overrides.py:121: PytestUnknownMarkWarning: Unknown pytest.mark.cpu_test - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.cpu_test
+
+../opt/venv/lib/python3.12/site-packages/torch/jit/_script.py:365: 14 warnings
+  /opt/venv/lib/python3.12/site-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+90 passed, 21 warnings in 5.60s
