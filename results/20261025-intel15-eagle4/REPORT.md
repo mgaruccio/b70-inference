@@ -1,6 +1,6 @@
 # Intel 1.5 Qwen3.8-27B / EAGLE-4 engineering comparison
 
-**Bounded engineering measurements complete. Recommendation: retain Intel native MTP for this configuration. The current EAGLE port is much slower on the tested workloads, does not fit the published 0.8 memory fraction, and has not demonstrated exact greedy equivalence. This is not a publication-grade benchmark or a drafter-only comparison.**
+**Regression diagnostic, not completion of the requested comparison. EAGLE previously ran much faster; the Intel FP8 port lost optimized dispatch because of cache-layout and precision-path changes. The measurements below document that regressed port, not the drafter's capability. Restoring and validating the intended fast paths, then rerunning the comparison, remains open. Preserve these observations as failure evidence; do not use them to conclude that EAGLE itself is slower than native MTP.**
 
 ## Question and scope
 
