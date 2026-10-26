@@ -1,6 +1,6 @@
 # Intel 1.5 Qwen3.8-27B / EAGLE-4 engineering comparison
 
-**Regression diagnostic, not completion of the requested comparison. EAGLE previously ran much faster; the Intel FP8 port lost optimized dispatch because of cache-layout and precision-path changes. The measurements below document that regressed port, not the drafter's capability. Restoring and validating the intended fast paths, then rerunning the comparison, remains open. Preserve these observations as failure evidence; do not use them to conclude that EAGLE itself is slower than native MTP.**
+**Historical regression diagnostic — superseded by the [restored-path comparison](RESTORATION.md).** The measurements below document the broken Intel FP8 port, not the drafter's capability. Optimized draft and target attention have since been restored and validated, with 99 native checks passing and a new ten-request CLI comparison. Preserve the original measurements as failure evidence; do not treat this historical table as the current result or use it to conclude that EAGLE itself is inherently slower than native MTP.
 
 ## Question and scope
 
