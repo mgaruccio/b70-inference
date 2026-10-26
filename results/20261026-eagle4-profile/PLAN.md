@@ -1,0 +1,54 @@
+# Profile-first EAGLE-4 development experiment
+
+User request: “ok, one last shot at this tonight, see what you can do with the eagle-4 drafter, hopefully getting past the current intel provided recipe. make sure to profile first to identify promising bottleneck candidates”.
+
+## Boundaries
+
+Development-tier engineering, not a standard-compliant or quality-certified benchmark. Only Intel's public llm-scaler-vllm 1.5 Qwen3.8-27B MTP4 recipe is the performance comparator (published memory fraction 0.8, approved matched-memory control 0.9). Restored EAGLE source `24f1c632ad9c641cd3dcd0391c9ed8112e79763f` is the unchanged optimization control, not a substitute baseline. Its production-code delta from the delivered `ebc1d2c` is test-only.
+
+Preserve target revision, sym_int4/FP16 compute, FP8 target KV, FP16 SSM, maxlen 40000, batching 8192/64, eager execution, disabled prefix caching, and gain 0.0. EAGLE uses approved memory fraction 0.9, FP16 draft KV/window4096, V2/CUSTOM. No relaxed acceptance, persistent launcher changes, deployment promotion, or EAGLE upstream push. Serialize all GPU work, use temporary containers/loopback18110, keep at least 16 GiB disk free. Never overwrite existing evidence or running source.
+
+## Research completed before implementation
+
+Fresh external research on 2026-10-26:
+- https://docs.vllm.ai/en/v0.26.0/contributing/profiling/ and https://docs.vllm.ai/en/v0.26.0/configuration/engine_args/ — use torch profiler configuration and public POST /start_profile, /stop_profile. Disable shapes/stacks/memory collection to reduce overhead. Profiled latency is diagnostic, not benchmark evidence.
+- https://intel.github.io/intel-extension-for-pytorch/xpu/2.3.110+xpu/tutorials/features/profiler_kineto.html — CPU/XPU Kineto traces; verify actual XPU events. Installed PyTorch implementation is authoritative, not obsolete IPEX assumptions.
+- https://github.com/eagle-hq/EAGLE-4/blob/main/docs/configuration.md — verify width includes the root; depth/top-k/gain are distinct controls. gain0 stops only when no deeper candidate can enter the verify set; do not substitute a derived/relaxed policy.
+- https://github.com/eagle-hq/EAGLE-4/blob/main/docs/install.md — Intel is a port, not an upstream-qualified performance promise.
+- https://docs.vllm.ai/en/latest/features/speculative_decoding/acceptance_metrics/ — acceptance fraction excludes the bonus token; acceptance length includes it. Tree acceptance fraction is not directly comparable to chain fraction.
+- https://github.com/intel/llm-scaler/releases/tag/vllm-1.5 — public baseline release and pinned image retained from prior comparison.
+
+## Defined end-to-end process
+
+Environment/preconditions: inference-host B70 PCI0xe223; pinned image sha256:52218ad85513ab6686d4c090c83c2bd8c5b02423c63aa4dabd41837fe641fe3b; target revision1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0; engine6cae86c only for EAGLE. Check docker ps, port18110, GPU consumers and disk before launches. Use unique source/output directories under `/home/mike/b70-evals/20261026-eagle4-profile`, mirrored coordinator `/tmp/20261026-eagle4-profile`.
+
+1. Stage immutable restored source and exact prior launch/engine patch. Start the temporary server; require GET /health and expected configuration/capacity in log.
+2. Public boundary: existing `tests/intel15_http_probe.py run --repeats 6 --fixture <previous public-comparison fixture> --baseurl http://127.0.0.1:18110 --model Qwen3.8-27B --timeout 600`. It performs excluded warmup/canaries and six measured requests each at8192/32768 input, 512 output, temperature/seed0, ignoreEOS; verifies token usage, retained token IDs and stream framing. Prefix caching remains off. Record TTFT/decode/full latency and accepted/proposed/round counters. Retain failures, not only successes.
+3. Capture a bounded warmed decode CPU+XPU torch trace via public profiling endpoints (start after first output token; bounded worker iterations), with optional temporary `record_function` stage labels only, no computational changes. Keep timing results separate from profiler results; retain raw trace and compact kernel/host/stage summary. Select an optimization only after inspecting this evidence.
+4. Exercise the selected candidate through the same health, saved-token HTTP journey, semantic arithmetic/code/JSON canaries, and matched unprofiled CLI command: `vllm bench serve --model Qwen3.8-27B --tokenizer /llm/models/Qwen3.8-27B --served-model-name Qwen3.8-27B --host 127.0.0.1 --port 8000 --backend vllm --request-rate inf --max-concurrency 1 --ignore-eos --trust-remote-code --dataset-name random --num-prompts 10 --num-warmups 1 --random-input-len 32768 --random-output-len 512 --random-range-ratio 0 --temperature 0 --seed 0 --save-result --save-detailed --metric-percentiles 50,90,99`. Rerun Intel public MTP matched-memory control with that exact workload before claiming a win; retain original published0.8 evidence.
+5. Correctness: unchanged acceptance policy required; any kernel/code change gets relevant CPU and real-XPU tests, exact token comparisons against the unchanged path, and existing native parity suite as applicable. Existing output variability means token mismatch cannot be waved away as correctness proof. A config-only shape experiment still retains outputs, semantic canaries, errors and capacity. No broad greedy-equivalence/quality claim from these checks.
+6. Cleanup: stop every owned server/container even on failure, verify no owned GPU consumer or listener18110 remains, and preserve >=16 GiB free. Retain commands, server logs, HTTP/CLI JSON, raw streams, metrics, profile trace/summary and test outputs. Commit/push only scoped results to mgaruccio/b70-inference; keep EAGLE implementation commits local.
+
+Success means a reproducible unprofiled improvement without hiding target/context/quality tradeoffs; beating Intel is an experimental goal, not an assumed outcome. No BetterBench/full sweep or production-readiness claim is planned for this bounded attempt.
+
+## Profile-backed selection
+
+Both restored-control traces completed successfully before optimization: 12 decode rounds each at 8K/32K. The 32K trace has 8.92 draft steps/round, 55.434 ms inclusive host draft growth versus 25.203 ms XPU kernels correlated to launches inside that stage; 8K is similar (9.08 steps, 56.370/25.668 ms). Profiled round wall is ~376 ms and is heavily inflated; never compare it with unprofiled TPOT. At 32K target prefix materialization and native attention consume a further ~10.39 and ~14.94 ms of XPU work/round, so eliminating drafter overhead alone may not beat Intel.
+
+Selected bounded implementation: independently opt into existing XPU per-step draft graph replay, without changing target eager execution, tree shape, gain, precision, or context. Integrated source commit `f38a68c2b2495f25dc21823c9d9e066c8a8c1a68`; worker commit `dca5c74d16c9618c912fa13081fc83b291d6b932`. New environment flag `EAGLE4_XPU_DRAFT_GRAPHS=1`; defaults remain off. Existing gain0 host stop and live block-table/address guards remain intact. Exact graph execution must be confirmed through the real server and post-measurement trace, not just the CPU wiring tests. Width8 tuning is excluded because the qualified native FP8 40K path currently requires width16.
+
+Coordinator reran CPU dispatch tests: `PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES='' TRITON_INTERPRET=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /home/mike/.cache/needle-pytorch-port-20261004/venv-cuda/bin/python -m pytest -q -p no:cacheprovider tests/test_xpu_vllm_dispatch.py --junitxml=/tmp/20261026-eagle4-profile/cpu-dispatch.xml` — 20 passed in0.91s. LSP could not inspect the source because it is outside the active local-dev-model workspace; syntax checks and executable tests are used instead.
+
+Independent selective source review of `f38a68c2` passed. The reviewer confirmed dummy/profile runs return before growth, live cache binding precedes the first real growth, K15/gain0 takes the existing per-step path, and later NONE initialization preserves the draft opt-in without enabling target graphs. Required remaining evidence: real-model graph replay through HTTP with eager target, not just the toy `_step` graph test. The candidate run therefore profiles a real warmed decode **after** all unprofiled HTTP/CLI measurements, to inspect actual command-buffer replay events and loss of eager draft-model host launches.
+
+## Failed replay qualification and final bounded fallback
+
+Replay qualification failed at the real public boundary despite **100 native tests passing with zero failures/errors/skips in241.324s**. Four excluded 512-output protocol/warmup requests and one measured8K request completed; the second measured8K request stopped delivering tokens after7 and hit the600s socket timeout. No Python exception appeared in the server log. The server was stopped by the cleanup trap; fresh `docker ps`, port18110 and process checks show no remaining GPU consumer/listener. No CLI or post-measurement candidate trace ran. Do not report successful replay qualification or a speedup. The opt-in was reverted in `2308f3a`; current production files exactly match `24f1c63`. Failure artifacts remain in `draft-graphs/`.
+
+One final, existing-configuration-only fallback is authorized by the same measured bottleneck: cap draft `tree_depth` at4 (at most3 growth steps instead of~9), retain width16/K15/topk4/gain0, eager target **and draft**, and all precision/context/memory settings. This may trade accepted length for lower draft cost; strict target acceptance is unchanged, and both acceptance and outputs must be retained. Immutable source remains24f1c63. Run the same six HTTP repeats per context, semantic canaries and ten-request unprofiled CLI. No further optimization candidates are planned after this fallback. Rerun public MTP matched-memory CLI before claiming superiority; otherwise clearly distinguish previous Intel evidence from fresh measurements.
+
+## Completed outcome
+
+See [REPORT.md](REPORT.md), [summary.json](summary.json), and retained raw artifacts. Depth4 completed all six measured HTTP repeats per context plus semantic canaries and 10/10 CLI requests; fresh public MTP0.9 completed the same process. EAGLE output throughput12.403237 tok/s versus MTP17.453032 tok/s (28.93% lower), median TPOT26.07598 versus15.48004ms (1.684×). The original target precision/context remain unchanged. The historical EAGLE CLI comparison improved, but no fresh depth14 CLI was run; current same-input HTTP changes are mixed and outputs are not equivalent. No Intel-beating or quality-certified result is claimed.
+
+All GPU jobs and owned containers are stopped. Fresh final checks find no listener18110 or GPU-serving process, and73.9GiB remains free. No further optimization, persistent deployment change, or EAGLE upstream push is planned. The graph opt-in remains reverted; only scoped experiment configuration/results are delivered.

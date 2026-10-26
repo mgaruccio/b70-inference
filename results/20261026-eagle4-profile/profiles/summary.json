@@ -1,0 +1,596 @@
+{
+  "caveats": [
+    "Profiler overhead is substantial; these are attribution diagnostics, not unprofiled latency.",
+    "Nested CPU stages and CPU operations are inclusive and cannot be summed.",
+    "XPU durations are correlated to host launch timestamps within stage scopes; sums are not busy-time unions.",
+    "Profiling started after the first HTTP output token; requested max_iterations=12."
+  ],
+  "profiles": [
+    {
+      "trace": "rank0.1792983811163405073.pt.trace.json.gz",
+      "decode_rounds": 12,
+      "event_count": 1010745,
+      "profiled_round_mean_ms_not_benchmark": 376.06728826349433,
+      "xpu_duration_sum_ms_per_round_not_union": 79.04846266666668,
+      "correlated_kernel_fraction": 1.0,
+      "stages_inclusive_do_not_sum": {
+        "eagle.prepare_verify": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 0.5039276529947917,
+          "correlated_xpu_ms_per_round": 0.030232916666666658
+        },
+        "eagle.accept": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 3.479612508138021,
+          "correlated_xpu_ms_per_round": 0.08512566666666664
+        },
+        "eagle.compact_commit": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 0.5109177652994792,
+          "correlated_xpu_ms_per_round": 1.40607525
+        },
+        "eagle.propose": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 82.31319980875652,
+          "correlated_xpu_ms_per_round": 28.551641333333134
+        },
+        "eagle.draft_prefill": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 4.953925191243489,
+          "correlated_xpu_ms_per_round": 2.43221158333333
+        },
+        "eagle.draft_growth": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 56.36974251302084,
+          "correlated_xpu_ms_per_round": 25.668493833333116
+        },
+        "eagle.draft_step": {
+          "calls": 109,
+          "calls_per_round": 9.083333333333334,
+          "host_ms_per_round": 52.77635929361979,
+          "correlated_xpu_ms_per_round": 25.60570624999973
+        },
+        "eagle.depth_decision": {
+          "calls": 107,
+          "calls_per_round": 8.916666666666666,
+          "host_ms_per_round": 1.7821282145182293,
+          "correlated_xpu_ms_per_round": 0.03658366666666662
+        },
+        "eagle.tree_select": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 0.23708249918619792,
+          "correlated_xpu_ms_per_round": 0.004591583333333333
+        }
+      },
+      "top_kernel_groups": [
+        {
+          "name": "gemm_kernel",
+          "calls": 4014,
+          "xpu_ms": 562.5208749999989
+        },
+        {
+          "name": "_rows_attention_kernel",
+          "calls": 109,
+          "xpu_ms": 96.24193300000003
+        },
+        {
+          "name": "_walk_kernel",
+          "calls": 576,
+          "xpu_ms": 61.04935199999981
+        },
+        {
+          "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_Z30paged_decode_graph_safe_kernelIN7cutlass4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeIL",
+          "calls": 192,
+          "xpu_ms": 48.15596599999996
+        },
+        {
+          "name": "GEMM_int4_pgrp_kernel",
+          "calls": 384,
+          "xpu_ms": 32.83056000000001
+        },
+        {
+          "name": "_materialize_tree",
+          "calls": 192,
+          "xpu_ms": 27.933875000000015
+        },
+        {
+          "name": "_move_state_kernel",
+          "calls": 12,
+          "xpu_ms": 16.639476000000002
+        },
+        {
+          "name": "FusedAddRmsNorm_batched_kernel",
+          "calls": 1536,
+          "xpu_ms": 16.10871399999985
+        },
+        {
+          "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_Z30paged_decode_graph_safe_kernelIN7cutlass4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_2",
+          "calls": 192,
+          "xpu_ms": 9.833043
+        },
+        {
+          "name": "eagle4_candidate_tail_kernel",
+          "calls": 121,
+          "xpu_ms": 9.668902999999997
+        },
+        {
+          "name": "at::native::xpu::VectorizedElementwiseKernel",
+          "calls": 7118,
+          "xpu_ms": 8.941008000000272
+        },
+        {
+          "name": "eagle4_shard_topk_chunk_kernel",
+          "calls": 121,
+          "xpu_ms": 7.9467199999999965
+        },
+        {
+          "name": "at::native::xpu::UnrolledElementwiseKernel",
+          "calls": 2927,
+          "xpu_ms": 7.2521599999999875
+        },
+        {
+          "name": "kernel_unified_attention",
+          "calls": 12,
+          "xpu_ms": 6.782910999999999
+        },
+        {
+          "name": "eagle4_shard_topk_merge_kernel",
+          "calls": 121,
+          "xpu_ms": 4.347044999999996
+        },
+        {
+          "name": "_conv_gather_kernel",
+          "calls": 576,
+          "xpu_ms": 3.766950000000001
+        },
+        {
+          "name": "at::native::xpu::IndexKernelFunctor",
+          "calls": 1452,
+          "xpu_ms": 3.4628500000000115
+        },
+        {
+          "name": "vllm::act_and_mul_vec_kernel",
+          "calls": 889,
+          "xpu_ms": 3.016156999999976
+        },
+        {
+          "name": "at::native::xpu::CatArrayBatchedCopy",
+          "calls": 384,
+          "xpu_ms": 2.5931319999999998
+        },
+        {
+          "name": "at::native::xpu::ReduceKernel",
+          "calls": 375,
+          "xpu_ms": 2.2741210000000036
+        },
+        {
+          "name": "at::native::xpu::ElementwiseGlobalRangeKernel",
+          "calls": 1648,
+          "xpu_ms": 2.1462280000000105
+        },
+        {
+          "name": "_tree_step_kernel",
+          "calls": 109,
+          "xpu_ms": 1.7196650000000022
+        },
+        {
+          "name": "Memcpy M2D ",
+          "calls": 1152,
+          "xpu_ms": 1.5174249999999878
+        },
+        {
+          "name": "at::native::xpu::CatArrayBatchedCopy_contig",
+          "calls": 420,
+          "xpu_ms": 1.471891
+        },
+        {
+          "name": "_gather_dot_kernel",
+          "calls": 121,
+          "xpu_ms": 1.3353649999999995
+        }
+      ],
+      "top_cpu_ops_inclusive_do_not_sum": [
+        {
+          "name": "_xpu_C::int4_gemm_w4a16",
+          "calls": 3264,
+          "inclusive_host_ms": 466.0967709999999
+        },
+        {
+          "name": "aten::index",
+          "calls": 2640,
+          "inclusive_host_ms": 457.54393499999975
+        },
+        {
+          "name": "vllm::gdn_attention_core_xpu",
+          "calls": 576,
+          "inclusive_host_ms": 417.05415300000004
+        },
+        {
+          "name": "aten::copy_",
+          "calls": 12353,
+          "inclusive_host_ms": 406.0664680000024
+        },
+        {
+          "name": "aten::cat",
+          "calls": 804,
+          "inclusive_host_ms": 400.0595280000002
+        },
+        {
+          "name": "aten::to",
+          "calls": 10948,
+          "inclusive_host_ms": 275.65550799999875
+        },
+        {
+          "name": "aten::_to_copy",
+          "calls": 9292,
+          "inclusive_host_ms": 269.54656999999963
+        },
+        {
+          "name": "aten::mul",
+          "calls": 2454,
+          "inclusive_host_ms": 159.34931500000008
+        },
+        {
+          "name": "aten::index_put_",
+          "calls": 24,
+          "inclusive_host_ms": 158.192952
+        },
+        {
+          "name": "aten::_index_put_impl_",
+          "calls": 24,
+          "inclusive_host_ms": 158.10818800000004
+        },
+        {
+          "name": "aten::sub",
+          "calls": 2724,
+          "inclusive_host_ms": 147.71751099999986
+        },
+        {
+          "name": "aten::matmul",
+          "calls": 750,
+          "inclusive_host_ms": 121.17948699999997
+        },
+        {
+          "name": "aten::mm",
+          "calls": 750,
+          "inclusive_host_ms": 119.61713700000003
+        },
+        {
+          "name": "custom_esimd_kernels_vllm::esimd_fused_add_rms_norm_batched",
+          "calls": 1536,
+          "inclusive_host_ms": 102.32400800000018
+        },
+        {
+          "name": "aten::add",
+          "calls": 1409,
+          "inclusive_host_ms": 97.46008600000009
+        },
+        {
+          "name": "vllm::unified_attention_with_output",
+          "calls": 204,
+          "inclusive_host_ms": 93.76393100000004
+        },
+        {
+          "name": "aten::linear",
+          "calls": 508,
+          "inclusive_host_ms": 87.93745699999994
+        },
+        {
+          "name": "aten::arange",
+          "calls": 1152,
+          "inclusive_host_ms": 85.01160399999995
+        },
+        {
+          "name": "_C::silu_and_mul",
+          "calls": 889,
+          "inclusive_host_ms": 62.90145800000005
+        },
+        {
+          "name": "aten::clone",
+          "calls": 768,
+          "inclusive_host_ms": 58.77831499999998
+        }
+      ]
+    },
+    {
+      "trace": "rank0.1792983890815431700.pt.trace.json.gz",
+      "decode_rounds": 12,
+      "event_count": 1007357,
+      "profiled_round_mean_ms_not_benchmark": 376.02126247336645,
+      "xpu_duration_sum_ms_per_round_not_union": 95.59056158333334,
+      "correlated_kernel_fraction": 1.0,
+      "stages_inclusive_do_not_sum": {
+        "eagle.prepare_verify": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 0.5098161010742187,
+          "correlated_xpu_ms_per_round": 0.030397833333333325
+        },
+        "eagle.accept": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 2.732303426106771,
+          "correlated_xpu_ms_per_round": 0.08483874999999998
+        },
+        "eagle.compact_commit": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 0.5212079060872397,
+          "correlated_xpu_ms_per_round": 0.350754
+        },
+        "eagle.propose": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 81.39584450276692,
+          "correlated_xpu_ms_per_round": 28.077572916666387
+        },
+        "eagle.draft_prefill": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 4.954195475260417,
+          "correlated_xpu_ms_per_round": 2.4382356666666682
+        },
+        "eagle.draft_growth": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 55.434411987304685,
+          "correlated_xpu_ms_per_round": 25.203497416666455
+        },
+        "eagle.draft_step": {
+          "calls": 107,
+          "calls_per_round": 8.916666666666666,
+          "host_ms_per_round": 51.8941792195638,
+          "correlated_xpu_ms_per_round": 25.142294083333088
+        },
+        "eagle.depth_decision": {
+          "calls": 103,
+          "calls_per_round": 8.583333333333334,
+          "host_ms_per_round": 1.7567018229166667,
+          "correlated_xpu_ms_per_round": 0.03560224999999999
+        },
+        "eagle.tree_select": {
+          "calls": 12,
+          "calls_per_round": 1.0,
+          "host_ms_per_round": 0.2388568115234375,
+          "correlated_xpu_ms_per_round": 0.004539583333333334
+        }
+      },
+      "top_kernel_groups": [
+        {
+          "name": "gemm_kernel",
+          "calls": 4002,
+          "xpu_ms": 558.5168490000007
+        },
+        {
+          "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_Z30paged_decode_graph_safe_kernelIN7cutlass4fmha6kernel22XeFMHAFwdSplitKVKernelINS6_18DecodeProblemShapeIL",
+          "calls": 192,
+          "xpu_ms": 166.35773299999997
+        },
+        {
+          "name": "_materialize_tree",
+          "calls": 192,
+          "xpu_ms": 124.68720900000005
+        },
+        {
+          "name": "_rows_attention_kernel",
+          "calls": 107,
+          "xpu_ms": 94.404225
+        },
+        {
+          "name": "_walk_kernel",
+          "calls": 576,
+          "xpu_ms": 60.82308999999982
+        },
+        {
+          "name": "GEMM_int4_pgrp_kernel",
+          "calls": 384,
+          "xpu_ms": 32.55953799999997
+        },
+        {
+          "name": "FusedAddRmsNorm_batched_kernel",
+          "calls": 1536,
+          "xpu_ms": 16.121186999999882
+        },
+        {
+          "name": "_ZTSN6compat12experimental6detail13KernelFunctorIXadL_Z30paged_decode_graph_safe_kernelIN7cutlass4fmha6kernel12ReduceSplitKINS6_18DecodeProblemShapeILb1EEENS6_2",
+          "calls": 192,
+          "xpu_ms": 12.968249
+        },
+        {
+          "name": "eagle4_candidate_tail_kernel",
+          "calls": 119,
+          "xpu_ms": 9.520159000000003
+        },
+        {
+          "name": "at::native::xpu::VectorizedElementwiseKernel",
+          "calls": 7090,
+          "xpu_ms": 8.953649000000299
+        },
+        {
+          "name": "eagle4_shard_topk_chunk_kernel",
+          "calls": 119,
+          "xpu_ms": 7.801719999999995
+        },
+        {
+          "name": "at::native::xpu::UnrolledElementwiseKernel",
+          "calls": 2905,
+          "xpu_ms": 7.177293999999996
+        },
+        {
+          "name": "kernel_unified_attention",
+          "calls": 12,
+          "xpu_ms": 6.813954000000001
+        },
+        {
+          "name": "eagle4_shard_topk_merge_kernel",
+          "calls": 119,
+          "xpu_ms": 4.277457999999997
+        },
+        {
+          "name": "_move_state_kernel",
+          "calls": 12,
+          "xpu_ms": 4.099682
+        },
+        {
+          "name": "_conv_gather_kernel",
+          "calls": 576,
+          "xpu_ms": 3.7527960000000036
+        },
+        {
+          "name": "at::native::xpu::IndexKernelFunctor",
+          "calls": 1452,
+          "xpu_ms": 3.5082530000000087
+        },
+        {
+          "name": "vllm::act_and_mul_vec_kernel",
+          "calls": 887,
+          "xpu_ms": 3.0065799999999783
+        },
+        {
+          "name": "at::native::xpu::CatArrayBatchedCopy",
+          "calls": 384,
+          "xpu_ms": 2.5877180000000006
+        },
+        {
+          "name": "at::native::xpu::ReduceKernel",
+          "calls": 369,
+          "xpu_ms": 2.2428620000000037
+        },
+        {
+          "name": "at::native::xpu::ElementwiseGlobalRangeKernel",
+          "calls": 1640,
+          "xpu_ms": 2.1413140000000053
+        },
+        {
+          "name": "_tree_step_kernel",
+          "calls": 107,
+          "xpu_ms": 1.6895550000000024
+        },
+        {
+          "name": "Memcpy M2D ",
+          "calls": 1152,
+          "xpu_ms": 1.5172879999999869
+        },
+        {
+          "name": "at::native::xpu::CatArrayBatchedCopy_contig",
+          "calls": 420,
+          "xpu_ms": 1.4515839999999993
+        },
+        {
+          "name": "_gather_dot_kernel",
+          "calls": 119,
+          "xpu_ms": 1.3100489999999996
+        }
+      ],
+      "top_cpu_ops_inclusive_do_not_sum": [
+        {
+          "name": "aten::index",
+          "calls": 2640,
+          "inclusive_host_ms": 482.5665530000004
+        },
+        {
+          "name": "_xpu_C::int4_gemm_w4a16",
+          "calls": 3264,
+          "inclusive_host_ms": 465.518480999999
+        },
+        {
+          "name": "vllm::gdn_attention_core_xpu",
+          "calls": 576,
+          "inclusive_host_ms": 445.2022809999999
+        },
+        {
+          "name": "aten::copy_",
+          "calls": 12327,
+          "inclusive_host_ms": 403.3132860000013
+        },
+        {
+          "name": "aten::cat",
+          "calls": 804,
+          "inclusive_host_ms": 394.34303799999986
+        },
+        {
+          "name": "aten::to",
+          "calls": 10908,
+          "inclusive_host_ms": 271.34101100000026
+        },
+        {
+          "name": "aten::_to_copy",
+          "calls": 9268,
+          "inclusive_host_ms": 265.2644220000006
+        },
+        {
+          "name": "aten::mul",
+          "calls": 2442,
+          "inclusive_host_ms": 163.1103989999998
+        },
+        {
+          "name": "aten::index_put_",
+          "calls": 24,
+          "inclusive_host_ms": 150.117838
+        },
+        {
+          "name": "aten::_index_put_impl_",
+          "calls": 24,
+          "inclusive_host_ms": 150.04116600000003
+        },
+        {
+          "name": "aten::sub",
+          "calls": 2724,
+          "inclusive_host_ms": 147.48258499999994
+        },
+        {
+          "name": "aten::matmul",
+          "calls": 738,
+          "inclusive_host_ms": 119.00186799999992
+        },
+        {
+          "name": "aten::mm",
+          "calls": 738,
+          "inclusive_host_ms": 117.4701459999999
+        },
+        {
+          "name": "custom_esimd_kernels_vllm::esimd_fused_add_rms_norm_batched",
+          "calls": 1536,
+          "inclusive_host_ms": 103.968646
+        },
+        {
+          "name": "vllm::unified_attention_with_output",
+          "calls": 204,
+          "inclusive_host_ms": 95.85898700000001
+        },
+        {
+          "name": "aten::add",
+          "calls": 1399,
+          "inclusive_host_ms": 94.09918299999993
+        },
+        {
+          "name": "aten::arange",
+          "calls": 1152,
+          "inclusive_host_ms": 86.48422500000005
+        },
+        {
+          "name": "aten::linear",
+          "calls": 500,
+          "inclusive_host_ms": 85.68431600000002
+        },
+        {
+          "name": "_C::silu_and_mul",
+          "calls": 887,
+          "inclusive_host_ms": 62.80993500000007
+        },
+        {
+          "name": "vllm::unified_kv_cache_update",
+          "calls": 204,
+          "inclusive_host_ms": 57.49348100000002
+        }
+      ]
+    }
+  ]
+}

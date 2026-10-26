@@ -1,0 +1,46 @@
+patching file vllm/_xpu_ops.py
+patching file vllm/config/speculative.py
+patching file vllm/config/vllm.py
+patching file vllm/model_executor/layers/mamba/gdn/_xpu_esimd.py
+patching file vllm/model_executor/layers/mamba/gdn/verify_extension.py
+patching file vllm/model_executor/layers/mamba/gdn/verify_extension_xpu.py
+patching file vllm/platforms/xpu.py
+patching file vllm/v1/attention/backends/gdn_attn.py
+patching file vllm/v1/core/sched/scheduler.py
+patching file vllm/v1/spec_decode/registry.py
+patching file vllm/v1/worker/gpu/model_runner.py
+patching file vllm/v1/worker/gpu/spec_decode/__init__.py
+patching file vllm/v1/worker/gpu/spec_decode/autoregressive/speculator.py
+patching file vllm/v1/worker/gpu/spec_decode/rejection_sampler.py
+patching file vllm/v1/worker/gpu/spec_decode/speculator.py
+2.12.0+xpu 3.7.1
+Intel(R) Graphics [0xe223]
+......................native_fp8_tree context=1023 active=11/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=0.000150814652 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=1023 active=11/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=7.40885735e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+.native_fp8_tree context=1025 active=11/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=0.000152885914 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=1025 active=11/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=7.45430589e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+.native_fp8_tree context=8192 active=11/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=9.10162926e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=8192 active=11/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=4.07621264e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+.native_fp8_tree context=1023 active=16/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=0.000151053071 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=1023 active=16/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=7.25537539e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+.native_fp8_tree context=1025 active=16/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=0.000152021646 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=1025 active=16/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=7.51763582e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+.native_fp8_tree context=8192 active=16/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=9.15229321e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=8192 active=16/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=4.12613153e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+.native_fp8_tree context=32768 active=16/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=9.63807106e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=32768 active=16/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=4.36306e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+.native_fp8_tree context=39984 active=16/16 qsl_first=3 scales=(0.125,0.25) packed_exact=True maxabs=9.11206007e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+native_fp8_tree context=39984 active=16/16 qsl_first=3 scales=(0.25,0.125) packed_exact=True maxabs=4.06503677e-05 torch=2.12.0+xpu device=Intel(R) Graphics [0xe223]
+..........................................................INFO 10-26 03:26:49 [cache.py:285] Using fp8_e4m3 data type to store kv cache. It reduces the GPU memory footprint and boosts the performance. Meanwhile, it may cause accuracy drop without a proper scaling factor
+WARNING 10-26 03:26:49 [utils.py:109] Config.cache_config has no default or default factory.
+WARNING 10-26 03:26:49 [utils.py:109] Config.speculative_config has no default or default factory.
+WARNING 10-26 03:26:49 [utils.py:109] Config.scheduler_config has no default or default factory.
+.............
+=============================== warnings summary ===============================
+tests/test_native_intel_fp8_flash_attention.py: 14 warnings
+  /opt/venv/lib/python3.12/site-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+--------------------- generated xml file: /out/native.xml ----------------------
+100 passed, 14 warnings in 241.32s (0:04:01)
