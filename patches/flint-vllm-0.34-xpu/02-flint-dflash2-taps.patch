@@ -1,0 +1,68 @@
+--- a/vllm/models/flint/model.py
++++ b/vllm/models/flint/model.py
+@@ -40,7 +40,7 @@
+     VocabParallelEmbedding,
+ )
+ from vllm.model_executor.model_loader.weight_utils import make_attention_sink
+-from vllm.model_executor.models.interfaces import SupportsPP
++from vllm.model_executor.models.interfaces import EagleModelMixin, SupportsEagle3, SupportsPP
+ from vllm.model_executor.models.utils import (
+     AutoWeightsLoader,
+     WeightsMapper,
+@@ -569,7 +569,7 @@
+         return hidden_states, residual
+ 
+ 
+-class FlintModel(nn.Module):
++class FlintModel(nn.Module, EagleModelMixin):
+     def __init__(
+         self,
+         vllm_config: VllmConfig,
+@@ -606,7 +606,7 @@
+         positions: torch.Tensor,
+         intermediate_tensors: IntermediateTensors | None = None,
+         inputs_embeds: torch.Tensor | None = None,
+-    ) -> torch.Tensor | IntermediateTensors:
++    ) -> torch.Tensor | IntermediateTensors | tuple[torch.Tensor, list[torch.Tensor]]:
+         if intermediate_tensors is not None:
+             hidden_states = intermediate_tensors["hidden_states"]
+             residual = intermediate_tensors["residual"]
+@@ -617,17 +617,27 @@
+                 else self.embed_input_ids(input_ids)
+             )
+             residual = None
+-        for layer in self.layers[self.start_layer : self.end_layer]:
++        aux_hidden_states = self._maybe_add_hidden_state(
++            [], self.start_layer, hidden_states, residual
++        )
++        for layer_idx, layer in enumerate(
++            self.layers[self.start_layer : self.end_layer], start=self.start_layer
++        ):
+             hidden_states, residual = layer(positions, hidden_states, residual)
++            self._maybe_add_hidden_state(
++                aux_hidden_states, layer_idx + 1, hidden_states, residual
++            )
+         if self.end_layer != len(self.layers):
+             return IntermediateTensors(
+                 {"hidden_states": hidden_states, "residual": residual}
+             )
+         hidden_states, _ = self.norm(hidden_states, residual)
++        if aux_hidden_states:
++            return hidden_states, aux_hidden_states
+         return hidden_states
+ 
+ 
+-class FlintForCausalLM(nn.Module, SupportsPP):
++class FlintForCausalLM(nn.Module, SupportsPP, SupportsEagle3):
+     hf_to_vllm_mapper = WeightsMapper(
+         orig_to_new_stacked={
+             ".q_proj": (".qkv_proj", "q"),
+@@ -697,7 +707,7 @@
+         positions: torch.Tensor,
+         intermediate_tensors: IntermediateTensors | None = None,
+         inputs_embeds: torch.Tensor | None = None,
+-    ) -> torch.Tensor | IntermediateTensors:
++    ) -> torch.Tensor | IntermediateTensors | tuple[torch.Tensor, list[torch.Tensor]]:
+         return self.model(input_ids, positions, intermediate_tensors, inputs_embeds)
+ 
+     def compute_logits(self, hidden_states: torch.Tensor) -> torch.Tensor | None:
