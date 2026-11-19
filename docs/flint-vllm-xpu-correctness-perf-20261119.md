@@ -16,6 +16,21 @@ single-stream workload, n=6 prompts, no long-context or concurrency sweep, no ta
 - Baseline: live llama.cpp b12499 Vulkan, `Flint-Q4_K_M.gguf`, 46.74 decode tok/s (same prompts,
   96 tokens, concurrency 1).
 
+## Status of the correctness questions from the previous session
+
+| Question | Verdict | Evidence |
+|---|---|---|
+| Greedy mismatch DFlash 2 vs no-spec (1/6 exact) | **Fixed** | 8/8 prompts × 128 tokens token-identical on the same MoE path; spec-graph bitwise == spec-eager |
+| Verifier / rejection logic wrong? | **Not a bug** | emitted token == target argmax under verify-shaped scoring |
+| Target logits shape-dependent | **Fixed (real defect)** | BF16 router → fp32 deterministic router; batched MoE error 1.6e-2–3.1e-2 → 6.0e-3 (= decode) |
+| Long-context (sliding window, chunked prefill) defect? | **Not a bug** (accuracy); chunked-prefill attention 1-ulp nondeterminism **open/avoided** | attention vs fp32 flat 1.4–2.3e-3 over 643 positions; unchunked prefill deterministic |
+| Large teacher-forced disagreements on natural text (e.g. −9.7 on a repeated passage) | **Not a port bug: checkpoint/model sensitivity** | vLLM↔fp32 (same weights) median 0.017 vs vLLM↔llama.cpp 0.111 and fp32↔llama.cpp 0.124 over 728 positions; unquantized tensors bit-identical to the GGUF; no outlier expert (all 0.12 rel) |
+| GPTQ-int4 vs GGUF Q4_K_M quality | **Open** | needs an unbiased perplexity/task eval before cutover |
+
+Invalid top-k ids (all −1) seen by the M=1 MoE path occurred only in startup warmup/profile dummy
+forwards (all 47 events logged before `init engine ... took`; 0 during requests); they are padding
+rows, not masked real-token faults.
+
 ## Correctness
 
 | # | Finding | Fix |
@@ -46,11 +61,15 @@ Evidence (FP32 CPU ground truth = HF `modeling_flint` layers with fp32-dequantiz
   the two paths use different (both fp32-accumulating) MoE kernels and diverge at near-ties again;
   set `FLINT_XPU_MOE_DECODE=0` when exact spec/no-spec equivalence matters.
 
-## Decode performance (no speculation, 6 prompts × 96 tokens, greedy, median)
+## Decode performance (no speculation unless noted, 6 measured prompts × 96 tokens after 1 warm-up, greedy, concurrency 1, median)
+
+Same 7 coding prompts for both engines. Not an engine-only A/B: quantization differs (GGUF Q4_K_M vs
+GPTQ int4 g64) and timing differs (llama.cpp server `predicted_per_second`; vLLM client-side
+streaming `95 / (last − first token)`). Raw rows: `results/20261119-flint-vllm-xpu/`.
 
 | Build | decode tok/s | TTFT ms | GPU kernel ms/token |
 |---|---|---|---|
-| llama.cpp Q4_K_M (Vulkan) | 46.74 | — | — |
+| llama.cpp Q4_K_M (Vulkan), rerun 2026-11-19 same prompts | 46.82 (earlier 46.74) | — | — |
 | vLLM eager (start of session) | 20.82 | 105 | 13.7 (≈3,900 launches) |
 | + XPU graph replay (`FULL_DECODE_ONLY`) | 68.84 | 58 | 13.7 |
 | + Triton RMSNorm / QK-norm+RoPE / SiLU·mul (replaces eager fp32 bring-up ops) | 105.26 | 40 | 9.0 (≈1,200 launches) |
