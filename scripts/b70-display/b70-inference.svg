@@ -1,9 +1,10 @@
 {# canvas: 480x640 #}
 {# vars:
 llm_state: text = "WAITING" "Inference server health"
-llm_prompt: text = "--" "Last request prompt tokens per second"
-llm_decode: text = "--" "Last request generation tokens per second"
-llm_last: text = "No recent completion" "Last request time and output tokens"
+llm_title: text = "LAST COMPLETED REQUEST" "Whether speeds are live or from the last request"
+llm_prompt: text = "--" "Prompt processing tokens per second"
+llm_decode: text = "--" "Generation tokens per second"
+llm_last: text = "No recent completion" "Request activity and output token count"
 #}
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="640" viewBox="0 0 480 640">
   <g font-family="DejaVu Sans Mono, monospace">
@@ -13,7 +14,7 @@ llm_last: text = "No recent completion" "Last request time and output tokens"
     <text x="335" y="90" fill="#e5effe" font-size="16">{{ llm_state }}</text>
     <path d="M24 115 H456" stroke="#5c75aa" stroke-opacity=".52"/>
 
-    <text x="24" y="147" fill="#b2c2dc" font-size="17" letter-spacing="1">LAST COMPLETED REQUEST</text>
+    <text x="24" y="147" fill="#b2c2dc" font-size="17" letter-spacing="1">{{ llm_title }}</text>
     <rect x="24" y="166" width="432" height="127" rx="16" fill="#080f23" fill-opacity=".69" stroke="#9476d5" stroke-opacity=".43"/>
     <text x="46" y="203" fill="#d9b9ff" font-size="18" letter-spacing="1">PROMPT PROCESSING</text>
     <text x="45" y="266" fill="#e0c6ff" font-size="52" font-weight="bold">{{ llm_prompt }}</text>

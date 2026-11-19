@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Read only llama.cpp service health and completed-request timings inside b70-dev."""
+"""Return only llama.cpp health, token counters, and completed timings from b70-dev."""
+from http.client import HTTPConnection, HTTPException
+from pathlib import Path
 import json
 import os
 import re
 import subprocess
-import urllib.error
-import urllib.request
+import time
 
 UNIT = 'flint-inference.service'
 TIMING = re.compile(
@@ -35,27 +36,87 @@ def latest_request(lines):
     return latest
 
 
-def health():
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+def get_json(path, key=None):
+    # No proxies or redirects: the existing bearer key never leaves guest loopback.
+    with_connection = HTTPConnection('127.0.0.1', 8080, timeout=1.2)
     try:
-        with opener.open('http://127.0.0.1:8080/health', timeout=1) as response:
-            return 'READY' if json.loads(response.read(4096)).get('status') == 'ok' else 'UNAVAILABLE'
-    except urllib.error.HTTPError as error:
-        return 'LOADING' if error.code == 503 else 'UNAVAILABLE'
-    except (OSError, ValueError):
-        return 'UNAVAILABLE'
+        headers = {'Authorization': f'Bearer {key}'} if key else {}
+        with_connection.request('GET', path, headers=headers)
+        response = with_connection.getresponse()
+        return response.status, json.loads(response.read(262145)) if response.status == 200 else None
+    finally:
+        with_connection.close()
+
+
+def health():
+    try:
+        status, data = get_json('/health')
+        if status == 503:
+            return 'LOADING'
+        if status == 200 and isinstance(data, dict) and data.get('status') == 'ok':
+            return 'READY'
+    except (OSError, ValueError, HTTPException):
+        pass
+    return 'UNAVAILABLE'
+
+
+def server_key(pid):
+    proc = Path('/proc') / str(pid)
+    argv = (proc / 'cmdline').read_bytes().decode().split('\0')
+    path = Path(argv[argv.index('--api-key-file') + 1])
+    if not path.is_absolute():
+        path = (proc / 'cwd') / path
+    with path.open() as handle:
+        return handle.readline(4096).strip()
+
+
+def active_slots(data):
+    if not isinstance(data, list):
+        raise ValueError('Invalid slots response')
+    slots = []
+    for slot in data:
+        if slot['is_processing'] is not True:
+            continue
+        token = slot.get('next_token')
+        if isinstance(token, list):
+            token = token[0] if token else None
+        counts = (slot.get('id'), slot.get('id_task'),
+                  slot.get('n_prompt_tokens_processed'),
+                  token.get('n_decoded') if isinstance(token, dict) else None)
+        if any(type(n) is not int or n < 0 for n in counts):
+            raise ValueError('Missing slot counters')
+        slots.append(dict(zip(('slot', 'task', 'prompt', 'decode'), counts)))
+    return slots
+
+
+def read_slots(pid):
+    try:
+        key = server_key(pid)
+        # Fail closed if the VM's expected key file is no longer in use.
+        if key:
+            status, data = get_json('/slots', key)
+            if status == 200:
+                return active_slots(data)
+    except (OSError, ValueError, IndexError, KeyError, TypeError, HTTPException):
+        pass
+    return None
 
 
 def main():
     if os.environ.get('SSH_ORIGINAL_COMMAND') != 'snapshot':
         raise SystemExit('Only the snapshot command is permitted')
-    state = health()
-    invocation = subprocess.check_output(
-        ['/usr/bin/systemctl', 'show', UNIT, '-p', 'InvocationID', '--value'],
-        text=True, timeout=2,
-    ).strip()
+    unit = subprocess.check_output([
+        '/usr/bin/systemctl', 'show', UNIT, '-p', 'InvocationID', '-p', 'MainPID',
+    ], text=True, timeout=2)
+    props = dict(line.split('=', 1) for line in unit.splitlines())
+    invocation = props['InvocationID']
+    pid = int(props['MainPID'])
+    slots = read_slots(pid) if pid > 0 else None
+    sampled = time.monotonic()
+    state = 'READY' if slots is not None else health()
     stats = None
-    if re.fullmatch(r'[0-9a-f]{32}', invocation) and invocation != '0' * 32:
+    # No journal read during active requests; fetch last timings as soon as idle.
+    if not slots and re.fullmatch(r'[0-9a-f]{32}', invocation) and invocation != '0' * 32:
         result = subprocess.run([
             '/usr/bin/journalctl', '--boot', '--unit', UNIT, '--reverse',
             '--since', '24 hours ago', '--lines', '64', '--no-pager',
@@ -66,7 +127,8 @@ def main():
         if result.returncode and not (result.returncode == 1 and not result.stdout and not result.stderr):
             result.check_returncode()
         stats = latest_request(result.stdout.splitlines())
-    print(json.dumps({'state': state, 'latest': stats}, allow_nan=False))
+    print(json.dumps({'state': state, 'latest': stats, 'slots': slots,
+                      'sampled': sampled, 'invocation': invocation}, allow_nan=False))
 
 
 if __name__ == '__main__':
