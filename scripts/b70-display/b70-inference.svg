@@ -1,0 +1,33 @@
+{# canvas: 480x640 #}
+{# vars:
+llm_state: text = "WAITING" "Inference server health"
+llm_prompt: text = "--" "Last request prompt tokens per second"
+llm_decode: text = "--" "Last request generation tokens per second"
+llm_last: text = "No recent completion" "Last request time and output tokens"
+#}
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="640" viewBox="0 0 480 640">
+  <g font-family="DejaVu Sans Mono, monospace">
+    <text x="24" y="46" fill="#9bb5d1" font-size="17" letter-spacing="2">ARC PRO / B70</text>
+    <text x="24" y="91" fill="#f1f5ff" font-size="38" font-weight="bold">Inference</text>
+    <circle cx="321" cy="84" r="5" fill="{% if llm_state == 'READY' %}#66ecd0{% else %}#ffaf7a{% endif %}"/>
+    <text x="335" y="90" fill="#e5effe" font-size="16">{{ llm_state }}</text>
+    <path d="M24 115 H456" stroke="#5c75aa" stroke-opacity=".52"/>
+
+    <text x="24" y="147" fill="#b2c2dc" font-size="17" letter-spacing="1">LAST COMPLETED REQUEST</text>
+    <rect x="24" y="166" width="432" height="127" rx="16" fill="#080f23" fill-opacity=".69" stroke="#9476d5" stroke-opacity=".43"/>
+    <text x="46" y="203" fill="#d9b9ff" font-size="18" letter-spacing="1">PROMPT PROCESSING</text>
+    <text x="45" y="266" fill="#e0c6ff" font-size="52" font-weight="bold">{{ llm_prompt }}</text>
+    <text x="431" y="263" fill="#9fb1cf" font-size="19" text-anchor="end">tok/s</text>
+
+    <rect x="24" y="306" width="432" height="127" rx="16" fill="#080f23" fill-opacity=".69" stroke="#52beba" stroke-opacity=".44"/>
+    <text x="46" y="344" fill="#8beddd" font-size="18" letter-spacing="1">GENERATION</text>
+    <text x="45" y="406" fill="#92f5e2" font-size="52" font-weight="bold">{{ llm_decode }}</text>
+    <text x="431" y="403" fill="#9fb1cf" font-size="19" text-anchor="end">tok/s</text>
+    <text x="24" y="467" fill="#aabbd7" font-size="17">{{ llm_last }}</text>
+
+    <path d="M24 489 H456" stroke="#5c75aa" stroke-opacity=".52"/>
+    <text x="24" y="522" fill="#aabbd7" font-size="17" letter-spacing="1">B70-HOST</text>
+    <text x="24" y="559" fill="#e5effe" font-size="21">CPU {{ cpu_temp | default(value="--") }}°C / {{ cpu_util | default(value="--") }}%</text>
+    <text x="24" y="593" fill="#e5effe" font-size="21">RAM {{ ram_used | default(value="--") }} / {{ ram_total | default(value="--") }} GB</text>
+  </g>
+</svg>

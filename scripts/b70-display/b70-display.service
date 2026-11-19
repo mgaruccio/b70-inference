@@ -1,0 +1,13 @@
+[Unit]
+Description=Update the B70 ThermalWriter layout from llama.cpp timing logs
+Wants=thermalwriter.service
+After=thermalwriter.service
+
+[Service]
+ExecStart=/usr/bin/python3 -I %h/.config/thermalwriter/b70-display/collector.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target
