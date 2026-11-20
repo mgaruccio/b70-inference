@@ -3,6 +3,9 @@ Description=Flint inference rollback: llama.cpp b12499 Vulkan (Q4_K_M) on :8080
 After=network-online.target
 Wants=network-online.target
 Conflicts=flint-inference.service
+# Ordering makes systemd finish stopping the conflicting unit (and free VRAM and :8080)
+# before starting this one, in either switch direction (systemd.unit(5), After=).
+After=flint-inference.service
 
 [Service]
 Type=exec

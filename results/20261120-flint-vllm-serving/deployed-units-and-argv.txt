@@ -1,0 +1,58 @@
+# /etc/systemd/system/flint-inference.service
+[Unit]
+Description=Flint inference: vLLM XPU + DFlash 2 (GPTQ W4A16) on :8080
+Documentation=file:///home/mike/flint-vllm-spike/serve/README
+After=network-online.target
+Wants=network-online.target
+Conflicts=flint-llamacpp.service
+
+[Service]
+Type=exec
+User=mike
+WorkingDirectory=/home/mike/flint-vllm-spike
+LoadCredential=api-key:/etc/b70-flint/api-key
+ExecStart=/home/mike/flint-vllm-spike/serve/serve-flint.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=900
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+
+# /etc/systemd/system/flint-llamacpp.service
+[Unit]
+Description=Flint inference rollback: llama.cpp b12499 Vulkan (Q4_K_M) on :8080
+After=network-online.target
+Wants=network-online.target
+Conflicts=flint-inference.service
+# Ordering makes systemd finish stopping the conflicting unit (and free VRAM and :8080)
+# before starting this one, in either switch direction (systemd.unit(5), After=).
+After=flint-inference.service
+
+[Service]
+Type=exec
+User=mike
+LoadCredential=api-key:/etc/b70-flint/api-key
+Environment=LD_LIBRARY_PATH=/home/mike/.local/share/b70-smoke/llama-b12499
+ExecStart=/home/mike/.local/share/b70-smoke/llama-b12499/llama-server --model /home/mike/models/flint/Flint-Q4_K_M.gguf --alias flint --device Vulkan0 --gpu-layers all --fit off --ctx-size 16384 --parallel 1 --port 8080 --jinja --temp 1 --top-p 0.95 --top-k 20 --host 0.0.0.0 --api-key-file %d/api-key
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+
+/home/mike/flint-vllm-spike/.venv/bin/python /home/mike/flint-vllm-spike/.venv/bin/vllm serve /home/mike/flint-vllm-spike/gptq --host 0.0.0.0 --port 8080 --served-model-name flint --middleware flint_auth.FlintAuth --dtype bfloat16 --kv-cache-dtype auto --attention-backend TRITON_ATTN --gpu-memory-utilization 0.90 --max-model-len 16384 --max-num-seqs 1 --max-num-batched-tokens 8192 --enable-prefix-caching --enable-auto-tool-choice --tool-call-parser glm47 --reasoning-parser glm47 -cc.mode=none --speculative-config {"method":"dflash","model":"/home/mike/flint-vllm-spike/dflash2","num_speculative_tokens":4} 
+c4f1b8d0d5524bafaaa3d1d9af31dc2b  .venv/lib/python3.12/site-packages/vllm/models/flint/model.py
+50fc83949be4af9813f289d3028e172e  .venv/lib/python3.12/site-packages/vllm/models/flint/ops/xpu_decode.py
+919384abcea3723706e60785d7e277a1  .venv/lib/python3.12/site-packages/vllm/models/flint/ops/xpu_draft_head.py
+ba25fcce05226efd6d1674e3a3a5c4ab  .venv/lib/python3.12/site-packages/vllm/model_executor/models/qwen3_dflash2.py
+c4f1b8d0d5524bafaaa3d1d9af31dc2b  build-spec5/model.py
+c07518a080aed81a0abca76ae028eb1c  build-spec5/norm.py
+ba25fcce05226efd6d1674e3a3a5c4ab  build-spec5/qwen3_dflash2.py
+50fc83949be4af9813f289d3028e172e  build-spec5/xpu_decode.py
+919384abcea3723706e60785d7e277a1  build-spec5/xpu_draft_head.py
+1f5a5c93db6dbe9733d14696df8ac9a4  build-spec5/xpu_fused.py
+c2d838002940375a3a51cc1213e1501a  build-spec5/xpu_moe_decode.py
+079fa8b49f0edfcd608a8d9b373afc32  build-spec5/xpu_router.py
