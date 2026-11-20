@@ -1,0 +1,20 @@
+[Unit]
+Description=Flint inference: vLLM XPU + DFlash 2 (GPTQ W4A16) on :8080
+Documentation=file:///home/mike/flint-vllm-spike/serve/README
+After=network-online.target
+Wants=network-online.target
+Conflicts=flint-llamacpp.service
+
+[Service]
+Type=exec
+User=mike
+WorkingDirectory=/home/mike/flint-vllm-spike
+LoadCredential=api-key:/etc/b70-flint/api-key
+ExecStart=/home/mike/flint-vllm-spike/serve/serve-flint.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=900
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

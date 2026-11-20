@@ -1,0 +1,15 @@
+Flint serving on the B70 guest (installed from b70-inference/scripts/flint-vllm-xpu/serve/).
+
+  flint-inference.service  vLLM XPU + DFlash 2 (k=4), :8080, enabled at boot
+  flint-llamacpp.service   llama.cpp rollback, :8080, disabled; Conflicts= with the above
+
+API key: /etc/b70-flint/api-key (root 0600) -> systemd credential -> VLLM_API_KEY env.
+flint_auth.FlintAuth requires `Authorization: Bearer <key>` on all routes except /health
+(and /metrics from loopback).
+
+Rollback:   sudo systemctl disable --now flint-inference && sudo systemctl enable --now flint-llamacpp
+Roll fwd:   sudo systemctl disable --now flint-llamacpp && sudo systemctl enable --now flint-inference
+Status:     systemctl status flint-inference; journalctl -u flint-inference -f
+Tuning env (systemctl edit flint-inference): FLINT_NUM_SPEC, FLINT_MAX_MODEL_LEN,
+FLINT_MAX_BATCHED, FLINT_PREFIX_CACHING (default --enable-prefix-caching).
+Experiments: ~/flint-vllm-spike/maintenance.sh stops the active live unit and restarts it on exit.

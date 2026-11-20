@@ -5,21 +5,17 @@ umask 077
 cd "$HOME/flint-vllm-spike"
 exec 9>maintenance.lock
 flock -n 9
-live=flint-inference.service
 candidate_pattern='flint-vllm-smoke-*.service'
-live_bin="$HOME/.local/share/b70-smoke/llama-b12499/llama-server"
-cred_source=/run/b70-flint/api-key
-live_args=("$live_bin" --model "$HOME/models/flint/Flint-Q4_K_M.gguf" --alias flint
-           --device Vulkan0 --gpu-layers all --fit off --ctx-size 16384 --parallel 1
-           --port 8080 --jinja --temp 1 --top-p 0.95 --top-k 20 --host 0.0.0.0
-           --api-key-file /run/credentials/flint-inference.service/api-key)
-
-sudo -n test -s "$cred_source"
-# NO_RESTORE=1: llama.cpp is not restored on exit and may already be stopped
-# (vLLM is the intended full-time server).
+# Live Flint server: flint-inference.service (vLLM) or its rollback flint-llamacpp.service.
+# Whichever is active is stopped for the experiment and restarted on exit.
+# NO_RESTORE=1: allow none to be active and leave it stopped on exit.
 no_restore=${NO_RESTORE:-0}
-live_up=1
-systemctl is-active --quiet "$live" || live_up=0
+live=
+for u in flint-inference.service flint-llamacpp.service; do
+    systemctl is-active --quiet "$u" && live=$u
+done
+live_up=0
+[[ -n $live ]] && live_up=1
 (( live_up || no_restore ))
 active_candidates=$(systemctl list-units --no-legend --plain --state=active,activating,deactivating 'flint-vllm-smoke.service' "$candidate_pattern")
 if [[ -n $active_candidates ]]; then
@@ -31,16 +27,8 @@ if grep -Eq '(^|[[:space:]])[^[:space:]]*:18080[[:space:]]' <<< "$listeners"; th
     echo 'Candidate port already in use' >&2
     exit 1
 fi
-if (( live_up )); then
-pid=$(systemctl show "$live" -p MainPID --value)
-mapfile -d '' -t running_argv < "/proc/$pid/cmdline"
-[[ $(declare -p running_argv | cut -d= -f2-) == "$(declare -p live_args | cut -d= -f2-)" ]]
-[[ $(systemctl show "$live" -p Environment --value) == "LD_LIBRARY_PATH=${live_bin%/*}" ]]
-[[ $(systemctl show "$live" -p User --value) == "$USER" ]]
-[[ $(systemctl show "$live" -p FragmentPath --value) == /run/systemd/transient/flint-inference.service ]]
-fi
 if [[ ${1:-} == --check-rollback ]]; then
-    printf 'Live transient unit, credential source, launch arguments and environment match rollback.\n'
+    systemctl show flint-inference.service flint-llamacpp.service -p Id -p ActiveState -p UnitFileState
     exit 0
 fi
 mode=${1:-}
@@ -56,52 +44,49 @@ run=$(mktemp -d "$PWD/http-run.XXXXXX")
 candidate="flint-vllm-smoke-${run##*.}.service"
 printf 'Test artifacts: %s\n' "$run"
 
-(( live_up )) && python3 -I - "$pid" <<'PY'
-import http.client
-import json
-import pathlib
-import sys
-
-args = pathlib.Path(f'/proc/{sys.argv[1]}/cmdline').read_bytes().decode().split('\0')
-with pathlib.Path(args[args.index('--api-key-file') + 1]).open() as f:
-    key = f.readline(4096).strip()
-assert key
-conn = http.client.HTTPConnection('127.0.0.1', 8080, timeout=3)
-conn.request('GET', '/slots', headers={'Authorization': 'Bearer ' + key})
-resp = conn.getresponse()
-assert resp.status == 200
-slots = json.load(resp)
-assert slots and all(s.get('is_processing') is False for s in slots), 'live slot busy; aborting maintenance'
-conn.close()
-PY
+if (( live_up )); then
+sudo -n cat /etc/b70-flint/api-key | python3 -I -c '
+import http.client, json, re, sys
+key = sys.stdin.readline().strip()
+def get(path, auth):
+    c = http.client.HTTPConnection("127.0.0.1", 8080, timeout=3)
+    c.request("GET", path, headers={"Authorization": "Bearer " + key} if auth else {})
+    r = c.getresponse(); body = r.read(); c.close()
+    return r.status, body
+st, body = get("/metrics", False)
+if st == 200 and b"vllm:num_requests_running" in body:
+    busy = sum(float(v) for v in re.findall(rb"^vllm:num_requests_(?:running|waiting)\{[^}]*\} ([0-9.e+]+)$", body, re.M))
+    assert busy == 0, "live vLLM busy; aborting maintenance"
+else:
+    st, body = get("/slots", True)
+    assert st == 200
+    slots = json.loads(body)
+    assert slots and all(s.get("is_processing") is False for s in slots), "live slot busy; aborting maintenance"
+'
+fi
 
 restore() {
     local rc=$?
     trap - EXIT HUP INT TERM
     set +e
     sudo -n timeout 28s systemctl stop "$candidate" >/dev/null 2>&1
-    if (( no_restore )); then
-        echo 'NO_RESTORE=1: llama.cpp left stopped.'
+    if (( no_restore )) || [[ -z $live ]]; then
+        echo 'NO_RESTORE=1: live Flint server left stopped.'
         exit "$rc"
     fi
-    if ! systemctl is-active --quiet "$live"; then
-        sudo -n systemd-run --quiet --collect --unit="$live" --uid="$USER" \
-            --property=Type=exec --property="LoadCredential=api-key:$cred_source" \
-            --setenv="LD_LIBRARY_PATH=${live_bin%/*}" -- "${live_args[@]}"
-        if [[ $? -ne 0 ]]; then
-            printf 'ROLLBACK FAILED to start %s\n' "$live" >&2
-            exit 91
-        fi
+    if ! sudo -n systemctl start "$live"; then
+        printf 'RESTORE FAILED to start %s\n' "$live" >&2
+        exit 91
     fi
-    for (( n=0; n<50; n++ )); do
+    for (( n=0; n<900; n++ )); do
         if curl -fsS --max-time 1 http://127.0.0.1:8080/health > "$run/restored-health.json" 2>/dev/null; then
             systemctl show "$live" -p MainPID -p InvocationID -p ActiveState
-            echo 'Existing llama.cpp serving again on :8080.'
+            echo "Live $live serving again on :8080."
             exit "$rc"
         fi
         sleep 1
     done
-    printf 'ROLLBACK FAILED: %s not ready\n' "$live" >&2
+    printf 'RESTORE FAILED: %s not ready\n' "$live" >&2
     exit 92
 }
 trap restore EXIT

@@ -1,0 +1,18 @@
+[Unit]
+Description=Flint inference rollback: llama.cpp b12499 Vulkan (Q4_K_M) on :8080
+After=network-online.target
+Wants=network-online.target
+Conflicts=flint-inference.service
+
+[Service]
+Type=exec
+User=mike
+LoadCredential=api-key:/etc/b70-flint/api-key
+Environment=LD_LIBRARY_PATH=/home/mike/.local/share/b70-smoke/llama-b12499
+ExecStart=/home/mike/.local/share/b70-smoke/llama-b12499/llama-server --model /home/mike/models/flint/Flint-Q4_K_M.gguf --alias flint --device Vulkan0 --gpu-layers all --fit off --ctx-size 16384 --parallel 1 --port 8080 --jinja --temp 1 --top-p 0.95 --top-k 20 --host 0.0.0.0 --api-key-file %d/api-key
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
