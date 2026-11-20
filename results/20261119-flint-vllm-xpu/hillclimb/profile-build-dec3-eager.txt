@@ -1,0 +1,26 @@
+decode steps 31; kernel busy 5.185 ms/step; 722 kernels/step
+  2.854 ms    191x   14.97 us  gemm_kernel
+  0.838 ms     45x   18.43 us  _moe_gate_up
+  0.464 ms     45x   10.19 us  _moe_down
+  0.295 ms     47x    6.22 us  kernel_unified_attention
+  0.184 ms     45x    4.04 us  _router_partial
+  0.131 ms     96x    1.37 us  _rms_norm_kernel
+  0.115 ms     47x    2.43 us  reduce_segments
+  0.098 ms     45x    2.16 us  _router_topk
+  0.065 ms     47x    1.38 us  _qk_norm_rope_kernel
+  0.054 ms     47x    1.14 us  _silu_and_mul_kernel
+  0.048 ms     47x    1.01 us  reshape_and_cache_kernel_flash
+  0.010 ms      3x    3.41 us  at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xp
+  0.004 ms      1x    4.17 us  _compute_slot_mappings_kernel
+  0.004 ms      1x    3.96 us  _gumbel_sample_kernel
+  0.003 ms      1x    3.46 us  _gather_block_tables_kernel
+  0.003 ms      1x    3.12 us  at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>,
+  0.003 ms      1x    2.66 us  at::native::xpu::IndexSelectSmallIndexFunctor<c10::BFloat16, long, unsigned int,
+  0.002 ms      1x    2.42 us  _post_update_kernel
+  0.002 ms      1x    1.97 us  _get_num_sampled_and_rejected_kernel
+  0.002 ms      1x    1.64 us  _combine_sampled_and_draft_tokens_kernel
+  0.002 ms      1x    1.56 us  _gumbel_combine_kernel
+  0.001 ms      1x    1.45 us  at::native::xpu::VectorizedElementwiseKernel<16, at::native::xpu::FillFunctor<bo
+  0.001 ms      2x    0.66 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int
+  0.001 ms      1x    1.10 us  _prepare_pos_seq_lens_kernel
+  0.001 ms      1x    0.96 us  sycl::_V1::ext::oneapi::experimental::detail::NdRangeFreeFunctionKernelWrapper<&

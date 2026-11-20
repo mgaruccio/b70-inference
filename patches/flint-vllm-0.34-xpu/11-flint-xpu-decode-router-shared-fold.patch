@@ -1,0 +1,104 @@
+diff -ru a/model.py b/model.py
+--- a/model.py
++++ b/model.py
+@@ -146,13 +146,21 @@
+ 
+ _XPU_MOE_DECODE = os.environ.get("FLINT_XPU_MOE_DECODE", "1") != "0"
+ _XPU_MOE_DEBUG = os.environ.get("FLINT_XPU_MOE_DEBUG", "0") == "1"
++_XPU_DECODE_V3 = os.environ.get("FLINT_XPU_DECODE_V3", "1") != "0"
++_XPU_SHARED_FOLD = os.environ.get("FLINT_XPU_SHARED_FOLD", "1") != "0"
+ 
+ 
+ class FlintXpuGateLinear(GateLinear):
+     """Flint router on XPU: fp32 logits like the reference, computed by a
+     deterministic, batch-invariant kernel (bf16 weight, fp32 accumulation)."""
+ 
++    flint_top_k: int = 6
++
+     def forward(self, x: torch.Tensor):
++        if _XPU_DECODE_V3:
++            from .ops.xpu_decode import router
++
++            return self._return(router(x, self.weight, self.flint_top_k)[0])
+         from .ops.xpu_router import flint_router_logits
+ 
+         return self._return(flint_router_logits(x, self.weight))
+@@ -174,6 +182,8 @@
+             quant_config=None,
+             prefix=f"{prefix}.gate",
+         )
++        if isinstance(self.gate, FlintXpuGateLinear):
++            self.gate.flint_top_k = self.top_k
+         self.shared_expert = FlintMLP(
+             hidden_size=config.hidden_size,
+             intermediate_size=config.shared_expert_intermediate_size,
+@@ -254,6 +264,20 @@
+         w13 = getattr(ex, "w13_qweight", None)
+         if w13 is None or w13.dtype != torch.int8 or w13.dim() != 3:
+             return None
++        if _XPU_DECODE_V3:
++            # Router + top-k (always-valid ids), then the routed experts plus the
++            # shared expert (as packed pseudo-experts when available; otherwise the
++            # oneDNN shared output added in fp32 before rounding).
++            from .ops.xpu_decode import moe_decode, moe_decode_sh, router
++
++            _, ids, wts = router(hidden_states, self.gate.weight, self.top_k)
++            sh = self._xpu_shared_pack_get() if _XPU_SHARED_FOLD else None
++            if sh is not None:
++                return moe_decode_sh(hidden_states, ids, wts, w13, ex.w13_scales,
++                                     ex.w2_qweight, ex.w2_scales, sh)
++            shared = self.shared_expert(hidden_states)
++            return moe_decode(hidden_states, ids, wts, w13, ex.w13_scales,
++                              ex.w2_qweight, ex.w2_scales, shared=shared)
+         from vllm.model_executor.layers.fused_moe.router.fused_topk_router import (
+             fused_topk,
+         )
+@@ -286,6 +310,34 @@
+         )
+         return shared + routed
+ 
++    def _xpu_shared_pack_get(self):
++        """Shared expert repacked as pseudo-experts for the decode kernels, built
++        eagerly on the first forward (the memory-profiling run, before graph
++        capture). Returns None if unavailable."""
++        sh = getattr(self, "_xpu_shared_pack", None)
++        if sh is None:
++            if torch.xpu.is_current_stream_capturing():
++                return None
++            sh = None  # _xpu_shared_pack_v2: retry until the expert layout is final
++            ex = getattr(self.experts, "routed_experts", None)
++            w13 = getattr(ex, "w13_qweight", None)
++            gu, dn = self.shared_expert.gate_up_proj, self.shared_expert.down_proj
++            if w13 is not None and w13.dtype == torch.int8 and w13.dim() == 3 and all(
++                getattr(m, "qweight", None) is not None
++                and m.qweight.dtype == torch.int32
++                and m.qweight.t().is_contiguous()
++                and getattr(m, "scales", None) is not None
++                and getattr(m, "qzeros", None) is not None
++                and m.qzeros.numel() == 1 and int(m.qzeros.item()) == 8
++                for m in (gu, dn)
++            ):
++                from .ops.xpu_decode import pack_shared_expert
++
++                sh = pack_shared_expert(gu.qweight.t(), gu.scales, dn.qweight.t(),
++                                        dn.scales, w13.shape[1] // 2)
++            self._xpu_shared_pack = sh
++        return sh
++
+     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+         if self.use_flint_kernel:
+             return self.experts(hidden_states, self.gate.weight, self.shared_expert)
+@@ -307,7 +359,12 @@
+                 self.experts.routed_experts,
+                 self.shared_expert,
+             )
+-        return self.experts(hidden_states=hidden_states, router_logits=hidden_states)
++        out = self.experts(hidden_states=hidden_states, router_logits=hidden_states)
++        if current_platform.is_xpu() and _XPU_DECODE_V3 and _XPU_SHARED_FOLD:
++            # Pack eagerly (first call: the memory-profiling run, before capture),
++            # after the expert weights have their final layout.
++            self._xpu_shared_pack_get()
++        return out
+ 
+ 
+ class FlintAttention(nn.Module):

@@ -1,0 +1,26 @@
+decode steps 31; kernel busy 6.873 ms/step; 1086 kernels/step
+  2.877 ms    191x   15.09 us  gemm_kernel
+  0.936 ms     45x   20.58 us  _moe_down_sum_v2
+  0.901 ms     45x   19.81 us  _moe_gate_up_act_v2
+  0.708 ms     45x   15.56 us  _router_kernel
+  0.295 ms     47x    6.22 us  kernel_unified_attention
+  0.287 ms     45x    6.31 us  vllm::moe::TopKGating<8, 256, 4, 16, 32, float, int, (vllm::moe::ScoringFunc)1>
+  0.137 ms     96x    1.43 us  _rms_norm_kernel
+  0.128 ms     47x    2.70 us  reduce_segments
+  0.098 ms     45x    2.16 us  at::native::xpu::VectorizedElementwiseKernel<16, at::native::xpu::BinaryFunctor<
+  0.078 ms     45x    1.71 us  at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::BinaryFunctor<c
+  0.076 ms     91x    0.84 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::CompareScalarFu
+  0.065 ms     47x    1.37 us  _qk_norm_rope_kernel
+  0.052 ms     47x    1.11 us  _silu_and_mul_kernel
+  0.048 ms     47x    1.01 us  reshape_and_cache_kernel_flash
+  0.046 ms     45x    1.00 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::WhereFunctor<in
+  0.045 ms     45x    0.99 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::WhereFunctor<fl
+  0.030 ms     47x    0.64 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int
+  0.028 ms     45x    0.62 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<flo
+  0.010 ms      3x    3.34 us  at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xp
+  0.004 ms      1x    4.12 us  _compute_slot_mappings_kernel
+  0.004 ms      1x    3.73 us  _gumbel_sample_kernel
+  0.003 ms      1x    3.49 us  _gather_block_tables_kernel
+  0.003 ms      1x    3.10 us  at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>,
+  0.003 ms      1x    2.59 us  at::native::xpu::IndexSelectSmallIndexFunctor<c10::BFloat16, long, unsigned int,
+  0.002 ms      1x    2.47 us  _post_update_kernel
