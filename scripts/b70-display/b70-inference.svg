@@ -2,6 +2,7 @@
 {# vars:
 llm_state: text = "WAITING" "Inference server health"
 llm_title: text = "LAST COMPLETED REQUEST" "Whether speeds are live or from the last request"
+llm_prompt_label: text = "PROMPT PROCESSING" "Prefill measurement source"
 llm_prompt: text = "--" "Prompt processing tokens per second"
 llm_decode: text = "--" "Generation tokens per second"
 llm_last: text = "No recent completion" "Request activity and output token count"
@@ -16,7 +17,7 @@ llm_last: text = "No recent completion" "Request activity and output token count
 
     <text x="24" y="147" fill="#b2c2dc" font-size="17" letter-spacing="1">{{ llm_title }}</text>
     <rect x="24" y="166" width="432" height="127" rx="16" fill="#080f23" fill-opacity=".69" stroke="#9476d5" stroke-opacity=".43"/>
-    <text x="46" y="203" fill="#d9b9ff" font-size="18" letter-spacing="1">PROMPT PROCESSING</text>
+    <text x="46" y="203" fill="#d9b9ff" font-size="18" letter-spacing="1">{{ llm_prompt_label }}</text>
     <text x="45" y="266" fill="#e0c6ff" font-size="52" font-weight="bold">{{ llm_prompt }}</text>
     <text x="431" y="263" fill="#9fb1cf" font-size="19" text-anchor="end">tok/s</text>
 

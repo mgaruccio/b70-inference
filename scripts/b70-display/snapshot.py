@@ -23,6 +23,12 @@ VLLM_METRICS = {
     'vllm:num_requests_running': 'running',
     'vllm:num_requests_waiting': 'waiting',
 }
+VLLM_PREFILL_METRICS = {
+    'vllm:request_prefill_kv_computed_tokens_sum': 'tokens',
+    'vllm:request_prefill_kv_computed_tokens_count': 'token_count',
+    'vllm:request_prefill_time_seconds_sum': 'seconds',
+    'vllm:request_prefill_time_seconds_count': 'time_count',
+}
 METRIC_SAMPLE = re.compile(r'([^\s{]+)(\{(?:"(?:\\.|[^"\\])*"|[^"}])*\})?\s+(\S+)(?:\s+\S+)?')
 
 
@@ -114,6 +120,8 @@ def read_slots(pid):
 
 def parse_vllm_metrics(text):
     series = {field: {} for field in VLLM_METRICS.values()}
+    prefill = {field: {} for field in VLLM_PREFILL_METRICS.values()}
+    prefill_valid = True
     started = None
     for line in text.splitlines():
         if not line.startswith(('vllm:', 'process_start_time_seconds ')):
@@ -122,26 +130,34 @@ def parse_vllm_metrics(text):
         if not match:
             continue
         name, labels, raw = match.groups()
-        if name not in VLLM_METRICS and name != 'process_start_time_seconds':
+        optional = name in VLLM_PREFILL_METRICS
+        if not optional and name not in VLLM_METRICS and name != 'process_start_time_seconds':
             continue
-        number = float(raw)
-        if not math.isfinite(number) or number < 0:
-            raise ValueError('Invalid metric value')
-        if name == 'process_start_time_seconds':
+        try:
+            number = float(raw)
+            field = (VLLM_PREFILL_METRICS if optional else VLLM_METRICS).get(name)
+            if (not math.isfinite(number) or number < 0
+                    or (field not in ('seconds', None) and not number.is_integer())):
+                raise ValueError('Invalid metric value')
+        except ValueError:
+            if not optional:
+                raise
+            prefill_valid = False
+            continue
+        if field is None:
             started = number
         else:
-            if not number.is_integer():
-                raise ValueError('Non-integer token or request metric')
-            series[VLLM_METRICS[name]][sha256((labels or '').encode()).hexdigest()] = int(number)
+            key = sha256((labels or '').encode()).hexdigest()
+            (prefill if optional else series)[field][key] = number if field == 'seconds' else int(number)
     if not all(series.values()):
         return None
     return {
         'counters': {field: series[field] for field in ('prompt', 'decode')},
+        'prefill': prefill if prefill_valid and all(prefill.values()) else None,
         'running': sum(series['running'].values()),
         'waiting': sum(series['waiting'].values()),
         'started': started,
     }
-
 
 def vllm_snapshot():
     for port in VLLM_PORTS:

@@ -49,42 +49,80 @@ def live_rate(current, prior, field):
     return delta / seconds if delta else None
 
 
-def vllm_rates(current, prior):
-    if not prior or prior.get('backend') != 'vllm' or current['port'] != prior['port']:
-        return {}
-    now, before = current['metrics'], prior['metrics']
+def vllm_elapsed(current, prior):
+    if (current.get('backend') != 'vllm' or not prior or prior.get('backend') != 'vllm'
+            or current['port'] != prior['port']):
+        return None
     elapsed = current['sampled'] - prior['sampled']
-    if now['started'] != before['started'] or not 0.25 <= elapsed <= MAX_RATE_WINDOW:
+    if current['metrics']['started'] == prior['metrics']['started'] and 0.25 <= elapsed <= MAX_RATE_WINDOW:
+        return elapsed
+    return None
+
+
+def counter_delta(new, old):
+    if new.keys() != old.keys() or any(new[key] < old[key] for key in new):
+        return None
+    return {key: new[key] - old[key] for key in new}
+
+
+def vllm_rates(current, prior):
+    elapsed = vllm_elapsed(current, prior)
+    if elapsed is None:
         return {}
-    deltas = {}
+    now, before = current['metrics']['counters'], prior['metrics']['counters']
+    rates = {}
     for field in ('prompt', 'decode'):
-        new, old = now['counters'][field], before['counters'][field]
-        if new.keys() != old.keys() or any(new[key] < old[key] for key in new):
+        delta = counter_delta(now[field], before[field])
+        if delta is None:
             return {}
-        deltas[field] = sum(new[key] - old[key] for key in new) / elapsed
-    return deltas
+        rates[field] = sum(delta.values()) / elapsed
+    return rates
 
 
-def vllm_display(data, prior):
+def vllm_prefill(current, prior, held):
+    if vllm_elapsed(current, prior) is None:
+        return None
+    now, before = current['metrics'].get('prefill'), prior['metrics'].get('prefill')
+    if not now or not before or any(values.keys() != now['tokens'].keys() for values in now.values()):
+        return None
+    deltas = {field: counter_delta(values, before[field]) for field, values in now.items()}
+    if any(delta is None for delta in deltas.values()):
+        return None
+    # Histograms are observed on completion, not in-flight. A scrape can race
+    # their updates, so divide only when both observed the same requests' count.
+    counts = deltas['time_count']
+    if (counts != deltas['token_count'] or now['time_count'] != now['token_count']
+            or not any(counts.values())):
+        return held
+    tokens = sum(deltas['tokens'].values())
+    seconds = sum(deltas['seconds'].values())
+    estimate = tokens / seconds if tokens and seconds else None
+    return estimate if rate(estimate) != '--' else held
+
+
+def vllm_display(data, prior, prefill):
     metrics = data['metrics']
     rates = vllm_rates(data, prior)
     running, waiting = metrics['running'], metrics['waiting']
     live = running or waiting or any(rates.values())
+    timed = bool(metrics.get('prefill'))
     return dict(llm_state=data['state'],
-                llm_title='VLLM / LIVE THROUGHPUT' if live else 'VLLM / IDLE',
-                llm_prompt=rate(rates.get('prompt')) if live else '--',
+                llm_title='VLLM / ACTIVE' if live else 'VLLM / IDLE',
+                llm_prompt_label='PREFILL / LAST COMPLETIONS' if timed else 'PROMPT / LIVE AVERAGE',
+                llm_prompt=rate(prefill if timed else rates.get('prompt') or None),
                 llm_decode=rate(rates.get('decode')) if live else '--',
                 llm_last=f'{running:,d} running / {waiting:,d} queued')
 
 
-def display_values(data, prior=None):
+def display_values(data, prior=None, prefill=None):
     state = data['state']
     if state not in STATES | {'OFFLINE'}:
         raise ValueError('Invalid inference state')
     if data.get('backend') == 'vllm':
-        return vllm_display(data, prior)
+        return vllm_display(data, prior, prefill)
     values = dict(llm_state=state, llm_title='LAST COMPLETED REQUEST', llm_prompt='--',
-                  llm_decode='--', llm_last='No recent completion')
+                  llm_prompt_label='PROMPT PROCESSING', llm_decode='--',
+                  llm_last='No recent completion')
     slots = data.get('slots')
     if slots:
         tokens = sum(s['decode'] for s in slots)
@@ -121,26 +159,27 @@ def push(values):
 
 
 def main():
-    previous = prior = None
+    previous = prior = prefill = None
     while True:
         started = time.monotonic()
         try:
             if not layout_is_active():
-                previous = prior = None
+                previous = prior = prefill = None
             else:
                 try:
                     data = snapshot()
-                    values = display_values(data, prior)
+                    prefill = vllm_prefill(data, prior, prefill)
+                    values = display_values(data, prior, prefill)
                     prior = data
                 except (OSError, ValueError, KeyError, TypeError, OverflowError, subprocess.SubprocessError):
-                    prior = None
+                    prior = prefill = None
                     values = display_values({'state': 'OFFLINE'})
                 if values != previous:
                     push(values)
                     previous = values
                     print('Display updated: ' + str(values), flush=True)
         except (OSError, subprocess.SubprocessError):
-            prior = None
+            prior = prefill = None
             print('ThermalWriter unavailable; will retry', flush=True)
         time.sleep(max(0.5, POLL_SECONDS - (time.monotonic() - started)))
 
