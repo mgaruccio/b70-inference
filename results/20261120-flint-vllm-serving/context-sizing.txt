@@ -4,7 +4,9 @@ util  batched  KV GiB  max_model_len  device free
 0.90  8192     2.53    36,096         -
 0.95  8192     4.04    89,088         -
 0.95  4096     4.22    119,936        3.54 GiB
-0.97  4096     4.83    141,056        2.37 GiB   <- deployed
+0.97  4096     4.83    141,056        2.37 GiB   (deployed first)
 0.98  4096     5.13    151,680        2.06 GiB
 (0.90/8192 with fixed 16384 was the previous config; 0.90/16384 batched failed: 1.72 GiB < 1.88 GiB needed for 16k.)
 Model documented limit: 262,144 tokens (RecursiveSI/flint model card); does not fit with bf16 KV on 32 GB.
+0.97  2048     5.14    164,608        -          <- deployed (2026-11-20 later; no measured prefill cost)
+0.99  4096     -       start refused: "Free memory on device xpu:0 (29.92/30.3 GiB) on startup is less than desired (0.99, 29.99 GiB)"

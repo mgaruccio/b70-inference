@@ -20,7 +20,7 @@ exec "$PWD/.venv/bin/vllm" serve "$PWD/gptq" \
     --middleware flint_auth.FlintAuth \
     --dtype bfloat16 --kv-cache-dtype auto --attention-backend TRITON_ATTN \
     --gpu-memory-utilization "${FLINT_GPU_UTIL:-0.97}" --max-model-len "${FLINT_MAX_MODEL_LEN:-auto}" \
-    --max-num-seqs 1 --max-num-batched-tokens "${FLINT_MAX_BATCHED:-4096}" \
+    --max-num-seqs 1 --max-num-batched-tokens "${FLINT_MAX_BATCHED:-2048}" \
     ${FLINT_PREFIX_CACHING:---enable-prefix-caching} \
     --enable-auto-tool-choice --tool-call-parser glm47 --reasoning-parser glm47 \
     -cc.mode=none \
