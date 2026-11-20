@@ -97,6 +97,9 @@ pos 35). Exceedance counts are within ±1–4 of the baseline.
   Triton): same speed as plain loads for qkv, o and MoE gate_up.
 - Permuted-input down kernel: no gain (9.7 vs 9.4 µs).
 - int8 lm_head: not pursued (user decision: keep the exact bf16 lm_head).
+- 2D-only unified attention for decode (env-gated `seq_threshold_3D = 0` in `triton_attn.py`,
+  reverted): 186.7 tok/s vs 204.5 — 4 KV heads give the 2D kernel too few programs at batch 1.
+  `results/.../vllm-graph-dec5-attn2d-bench.jsonl`.
 
 ## Remaining budget and next steps (non-speculative)
 
