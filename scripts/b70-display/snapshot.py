@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Return only llama.cpp health, token counters, and completed timings from b70-dev."""
+"""Return only inference health, token counters, and llama.cpp completed timings from b70-dev."""
+from hashlib import sha256
 from http.client import HTTPConnection, HTTPException
-from pathlib import Path
 import json
+import math
 import os
+from pathlib import Path
 import re
 import subprocess
 import time
@@ -14,6 +16,14 @@ TIMING = re.compile(
     r'(prompt eval|eval) time\s*=\s*\d+\.\d+ ms /\s*(\d+) tokens '
     r'\(\s*\d+\.\d+ ms per token,\s*(\d+\.\d+) tokens per second\)$'
 )
+VLLM_PORTS = (18080, 8080, 8000)
+VLLM_METRICS = {
+    'vllm:prompt_tokens_total': 'prompt',
+    'vllm:generation_tokens_total': 'decode',
+    'vllm:num_requests_running': 'running',
+    'vllm:num_requests_waiting': 'waiting',
+}
+METRIC_SAMPLE = re.compile(r'([^\s{]+)(\{(?:"(?:\\.|[^"\\])*"|[^"}])*\})?\s+(\S+)(?:\s+\S+)?')
 
 
 def latest_request(lines):
@@ -102,9 +112,66 @@ def read_slots(pid):
     return None
 
 
+def parse_vllm_metrics(text):
+    series = {field: {} for field in VLLM_METRICS.values()}
+    started = None
+    for line in text.splitlines():
+        if not line.startswith(('vllm:', 'process_start_time_seconds ')):
+            continue
+        match = METRIC_SAMPLE.fullmatch(line)
+        if not match:
+            continue
+        name, labels, raw = match.groups()
+        if name not in VLLM_METRICS and name != 'process_start_time_seconds':
+            continue
+        number = float(raw)
+        if not math.isfinite(number) or number < 0:
+            raise ValueError('Invalid metric value')
+        if name == 'process_start_time_seconds':
+            started = number
+        else:
+            if not number.is_integer():
+                raise ValueError('Non-integer token or request metric')
+            series[VLLM_METRICS[name]][sha256((labels or '').encode()).hexdigest()] = int(number)
+    if not all(series.values()):
+        return None
+    return {
+        'counters': {field: series[field] for field in ('prompt', 'decode')},
+        'running': sum(series['running'].values()),
+        'waiting': sum(series['waiting'].values()),
+        'started': started,
+    }
+
+
+def vllm_snapshot():
+    for port in VLLM_PORTS:
+        conn = HTTPConnection('127.0.0.1', port, timeout=0.6)
+        try:
+            conn.request('GET', '/metrics', headers={'Accept': 'text/plain; version=0.0.4'})
+            response = conn.getresponse()
+            if response.status != 200:
+                continue
+            body = response.read(1048577)
+            if len(body) > 1048576:
+                continue
+            sampled = time.monotonic()
+            metrics = parse_vllm_metrics(body.decode())
+            if metrics is not None:
+                return {'backend': 'vllm', 'state': 'READY', 'sampled': sampled,
+                        'port': port, 'metrics': metrics}
+        except (OSError, ValueError, HTTPException):
+            pass
+        finally:
+            conn.close()
+    return None
+
+
 def main():
     if os.environ.get('SSH_ORIGINAL_COMMAND') != 'snapshot':
         raise SystemExit('Only the snapshot command is permitted')
+    if data := vllm_snapshot():
+        print(json.dumps(data, allow_nan=False))
+        return
     unit = subprocess.check_output([
         '/usr/bin/systemctl', 'show', UNIT, '-p', 'InvocationID', '-p', 'MainPID',
     ], text=True, timeout=2)

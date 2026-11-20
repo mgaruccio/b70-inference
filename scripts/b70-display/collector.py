@@ -49,10 +49,40 @@ def live_rate(current, prior, field):
     return delta / seconds if delta else None
 
 
+def vllm_rates(current, prior):
+    if not prior or prior.get('backend') != 'vllm' or current['port'] != prior['port']:
+        return {}
+    now, before = current['metrics'], prior['metrics']
+    elapsed = current['sampled'] - prior['sampled']
+    if now['started'] != before['started'] or not 0.25 <= elapsed <= MAX_RATE_WINDOW:
+        return {}
+    deltas = {}
+    for field in ('prompt', 'decode'):
+        new, old = now['counters'][field], before['counters'][field]
+        if new.keys() != old.keys() or any(new[key] < old[key] for key in new):
+            return {}
+        deltas[field] = sum(new[key] - old[key] for key in new) / elapsed
+    return deltas
+
+
+def vllm_display(data, prior):
+    metrics = data['metrics']
+    rates = vllm_rates(data, prior)
+    running, waiting = metrics['running'], metrics['waiting']
+    live = running or waiting or any(rates.values())
+    return dict(llm_state=data['state'],
+                llm_title='VLLM / LIVE THROUGHPUT' if live else 'VLLM / IDLE',
+                llm_prompt=rate(rates.get('prompt')) if live else '--',
+                llm_decode=rate(rates.get('decode')) if live else '--',
+                llm_last=f'{running:,d} running / {waiting:,d} queued')
+
+
 def display_values(data, prior=None):
     state = data['state']
     if state not in STATES | {'OFFLINE'}:
         raise ValueError('Invalid inference state')
+    if data.get('backend') == 'vllm':
+        return vllm_display(data, prior)
     values = dict(llm_state=state, llm_title='LAST COMPLETED REQUEST', llm_prompt='--',
                   llm_decode='--', llm_last='No recent completion')
     slots = data.get('slots')
