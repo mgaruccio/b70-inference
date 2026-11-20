@@ -191,3 +191,44 @@ NO_RESTORE=1 NUM_SPEC=3 EAGER=0 READY_WAIT=900 SERVE_MAXSEC=1800 \
 PROBE_SCRIPT=ktest3/chat-bench.py <same env> bash maintenance.sh --bench-dflash2   # chat bench
 OFFLINE_SCRIPT=ktest3/spec1test.py bash maintenance.sh --offline                   # kernel gate
 ```
+
+### spec3–spec5: drafter-side int8 (user-approved; target lm_head stays bf16)
+
+- **Int8 draft lm_head** (`ops/xpu_draft_head.py`, patch 14 on `qwen3_dflash2.py`). DFlash 2
+  chooses its top-16 candidates with a full pass over the target's bf16 lm_head (1.04 ms). spec3
+  keeps a per-row symmetric int8 copy (+307 MB, built in the profiling run before graph capture
+  and KV sizing) and computes those logits with a `tl.dot` kernel.
+  - Measured against bf16 in µs: 561 vs 1036, which is 548 GB/s. The error is at the level of
+    bf16 rounding, top-1 agreement is 100% and top-16 overlap is about 98% on the real weights
+    (`spec/drafthead_test.json`).
+  - Verification and the target logits are unchanged, so output stays lossless. Kill switch:
+    `FLINT_XPU_DRAFT_HEAD_INT8=0`.
+- **Int8 drafter linears** (spec4, 32 layers, M ≤ 64). No clear gain: chat k = 3 was 256.0 vs
+  253.5 greedy and 227.9 vs 233.2 under sampling. They are now opt-in via
+  `FLINT_XPU_DRAFT_LINEAR_INT8=1`.
+
+| chat bench (median tok/s), greedy / service sampling | k=3 | k=4 | k=5 |
+|---|---|---|---|
+| spec2 (bf16 drafter) | 242.6 / 223.4 | 238.8 / 222.5 | 228.3 / 227.0 |
+| spec3 (int8 draft head) | **253.5** / 233.2 | 246.0 / **238.3** | 236.0 / 221.2 |
+| spec5 (= spec3, final install) | — | 245.6 / 237.6 | — |
+| non-spec | 199.8 / 188.5 | | |
+
+The raw-completion bench with spec3 at k = 3 runs at 210.0 tok/s (non-spec 204.3). With spec5 at
+k = 4 it runs at 202.4. Parity in every spec3–spec5 run: tokens identical to non-spec on 8/8
+prompts. The remaining logprob difference is the attention segmentation case above.
+
+**Recommendation.** Use k = 4 for the live service's sampling (+26% over non-spec: 237.6 vs 188.5).
+Use k = 3 for greedy (+27%: 253.5 vs 199.8). The guest venv is `build-spec5`
+(`model.py`, `ops/xpu_decode.py`, `ops/xpu_draft_head.py`, `qwen3_dflash2.py`; the original is kept
+as `~/flint-vllm-spike/qwen3_dflash2.py.orig`). Note that `swap-build.sh` does not yet handle
+`xpu_draft_head.py` or `qwen3_dflash2.py`.
+
+**Before a vLLM cutover** (next session):
+- quality eval of GPTQ vs the GGUF baseline;
+- long-context runs (tokens > 4096 need `--max-model-len` and `--max-num-batched-tokens` changes,
+  and every 256-token attention boundary is a spec/non-spec divergence point);
+- concurrency (all results here use `--max-num-seqs 1`; at concurrency > 2 with k = 4, verify
+  M > 8 leaves the batch-invariant path);
+- a persistent unit with the API key handled like llama.cpp's `--api-key-file`;
+- a rollback path to `flint-inference.service`.

@@ -1,0 +1,16 @@
+diff -ru a/model_executor/models/qwen3_dflash2.py b/model_executor/models/qwen3_dflash2.py
+--- a/model_executor/models/qwen3_dflash2.py
++++ b/model_executor/models/qwen3_dflash2.py
+@@ -562,8 +562,11 @@
+     def compute_candidates(
+         self, hidden_states: torch.Tensor
+     ) -> tuple[torch.Tensor, torch.Tensor]:
++        from vllm.models.flint.ops.xpu_draft_head import get_draft_head
++
+         return self.candidate_logits_processor.get_top_k_tokens(
+-            self.lm_head, hidden_states, self.model.candidate_selector.top_k
++            get_draft_head(self, self.lm_head), hidden_states,
++            self.model.candidate_selector.top_k,
+         )
+ 
+ 
