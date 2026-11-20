@@ -110,3 +110,84 @@ attention + `reduce_segments` + cache + QK-norm 0.56 ms, router 0.29 ms, norms +
 dec5 moves qkv to Triton and drops the permute. Remaining accuracy-neutral candidates are each
 ≈1–3%: Triton dense-layer MLPs (layers 0–1), fusing top-k into the router GEMV, 2D
 (non-segmented) attention for short contexts, and fusing QK-norm/RoPE with the KV-cache write.
+
+## Speculative decoding (DFlash 2) on the dec5 kernels — spec1/spec2
+
+Development-tier results (not standard-compliant). The setup matches the rest of this document: single B70, graph replay
+(`FULL_DECODE_ONLY`, `-cc.mode=none`, `--max-num-batched-tokens 4096`), concurrency 1, and drafter
+`incoai/Flint-DFlash2@39b0a7f7`. Raw results are in `results/20261119-flint-vllm-xpu/spec/`.
+
+**Problem on dec5.** Verify (M = k+1) still ran CUTLASS MoE plus oneDNN int4 GEMMs, so spec was
+slower than non-spec at every k: 123–159 tok/s at k = 1–7, against 204 for non-spec. The cycle cost
+was mostly fixed: 13.6 ms at k = 1, 17.8 ms at k = 7. In the eager profile at k = 7
+(`spec/profile-dec5-k7-eager.txt`), a verify forward spends 12.4 ms in kernels, 7.5 ms of it in
+CUTLASS MoE (≈159 µs/layer). Target lm_head plus drafter take 4.0 ms: 5 bf16 layers 1.08 ms, the
+drafter's full-vocab bf16 lm_head pass 1.04 ms, and the target lm_head 1.04 ms. None of the 8
+parity prompts stayed token-identical to non-spec.
+
+**spec1 (patch 13 + `xpu_decode` TOKF).** Rows with M ≤ `FLINT_XPU_DECODE_MAXM` (default 8) take the
+same permuted-norm → Triton qkv → router → MoE-GEMV path as M = 1. For M > 1 the GEMVs launch with
+the token axis fastest in the grid. Rows routed to the same expert then read its tiles from cache,
+and the per-row arithmetic is unchanged. Gate: `spec1test.py` checks M = 2/3/4/5/8 with random and
+overlapping routing. Each row is bitwise equal to the M = 1 call and to the dec5 kernels, and runs
+are deterministic. `FLINT_XPU_DECODE_MAXM=1` restores dec5.
+
+**spec2.** For M > 1 there is now an expert-grouped gate/up (`_moe_gate_up_shg`: the leader pair
+dequantizes the tile once for every row routed to its expert) and a row-shared qkv GEMV
+(`_gptq_gemv_permg`). Both have the same per-row arithmetic and pass the same bitwise gate. The
+gains are small: per-row cross-lane reductions dominate, not dequantization. Measured in µs per
+layer, cold, in graph:
+
+| M | MoE, overlapping routing (`half`) | qkv, row-shared vs per-row |
+|---|---|---|
+| 2 | 43 | 14.9 vs 20.5 |
+| 4 | 73 | 24.5 vs 26.8 |
+| 8 | 138 | 43 vs 43 |
+
+A grouped down kernel was slower (serial per n-block) and is off (`MULTI_GROUPED_DOWN`).
+
+| Workload (median tok/s) | non-spec | k=2 | k=3 | k=4 | k=5 | k=7 |
+|---|---|---|---|---|---|---|
+| raw-completion bench (`--bench*`, 96 tok, greedy), dec5 | 204.3 | 149.0 | 155.6 | 159.4 | 158.8 | 156.0 |
+| raw-completion bench, spec2 | 204.3 | — | 200.9 | — | — | 160.4 (spec1) |
+| chat bench (`chat-bench.py`, 256 tok), greedy, spec2 | 199.8 | 219.8 | **242.6** / 242.8 | 238.8 | 228.3 | 211.8 |
+| chat bench, service sampling (T=1, top-p 0.95, top-k 20) | 188.5 | 207.3 | 223.4 / 223.7 | 222.5 | 227.0 | 191.8 |
+| mean acceptance length, chat greedy / service | — | 2.23 / 2.16 | 2.65 / 2.49 | 2.93 / 2.76 | 3.11 / 2.97 | 3.27 / 2.99 |
+
+Acceptance depends on the workload. With the chat template, k = 3 is +21% (greedy) and +18.5%
+(sampling) over non-spec. The raw-completion prompts give lower acceptance (2.40 at k = 3) and spec
+only breaks even there. k = 3–5 are within noise under sampling; k = 3 is best greedy. The drafter
+taps are correct: vLLM reports aux layers (6, 16, 27, 37, 47), which is `target_layer_ids + 1`, the
+DFlash `hidden_states[i+1]` convention.
+
+**Correctness.**
+- Non-spec spec2 parity is bitwise identical to dec5 (8/8: tokens, logprobs, top-5), because the
+  M = 1 kernels are unchanged.
+- Spec vs non-spec tokens are identical on 8/8 prompts at k = 3 and k = 7. Logprobs are bitwise
+  identical on 8/8 at k = 7 and 7/8 at k = 3.
+- The remaining difference is attention. The Triton unified-attention 3D path sizes its softmax
+  segments from the step's `seq_len` (`cdiv(seq_len, 16 × 16)`). Near every 256-token boundary,
+  verify rows therefore get a different key partition than M = 1 decode: a 1-ulp reduction-order
+  difference, amplified through MoE routing. It was confirmed with `parity2.py` at `max_tokens` =
+  128/131/140: the difference starts at absolute position 768 of the long prompt and persists, and
+  short prompts never cross a boundary.
+- Fixing this requires per-query segmentation in the vendored kernel. Not done.
+
+**Verify-cycle budget at k = 3** (spec1 eager profile, `spec/profile-spec1-k3-eager.txt`): verify
+forward 7.2 ms (MoE gate_up 2.2, down 1.56, qkv 1.3, o_proj + dense oneDNN 0.67, router 0.43,
+attention 0.54, norms 0.34); target lm_head + drafter 4.0 ms. The next levers do not affect output
+correctness, since spec decoding stays lossless, but they need a user decision because they quantize
+drafter-side weights:
+- an int8 copy of the lm_head used only for drafting candidates (≈ −0.45 ms/cycle, ≈ +4%);
+- int8 drafter layers (≈ −0.5 ms/cycle).
+A W4A16 XMX (`tl.dot`, 8-row tile) MoE kernel shared by M = 1 and verify would remove the per-row
+cost scaling, but it changes M = 1 numerics and needs the full accuracy gate.
+
+Commands (guest, `~/flint-vllm-spike`; `NO_RESTORE=1` leaves llama.cpp stopped):
+
+```
+NO_RESTORE=1 NUM_SPEC=3 EAGER=0 READY_WAIT=900 SERVE_MAXSEC=1800 \
+  EXTRA_ARGS="--max-num-batched-tokens 4096 -cc.mode=none" bash maintenance.sh --bench-dflash2
+PROBE_SCRIPT=ktest3/chat-bench.py <same env> bash maintenance.sh --bench-dflash2   # chat bench
+OFFLINE_SCRIPT=ktest3/spec1test.py bash maintenance.sh --offline                   # kernel gate
+```
