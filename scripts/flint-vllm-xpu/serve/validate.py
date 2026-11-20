@@ -2,7 +2,7 @@
 
 Usage (guest): sudo cat /etc/b70-flint/api-key | python3 -I validate.py OUT_DIR [checks...]
 checks: auth parity tools long multiturn (default: all). Writes OUT_DIR/<check>.json."""
-import http.client, json, pathlib, random, sys, time
+import http.client, json, os, pathlib, random, sys, time
 
 HOST, PORT, MODEL = '127.0.0.1', 8080, 'flint'
 KEY = sys.stdin.readline().strip()
@@ -176,11 +176,11 @@ if 'tools' in checks:
     save('tools', r)
 
 if 'long' in checks:
-    src = sorted((SPIKE / '.venv/lib/python3.12/site-packages/vllm/v1/core').rglob('*.py'))
+    src = sorted((SPIKE / '.venv/lib/python3.12/site-packages/vllm/v1').rglob('*.py'))
     filler = '\n\n'.join(p.read_text() for p in src)
     rng = random.Random(7)
     res = []
-    for target in (2000, 8000, 15000, 21500):
+    for target in [int(t) for t in os.environ.get("FLINT_LONG_TARGETS", "2000,8000,15000,21500").split(",")]:
         word = ''.join(rng.choice('abcdefghjkmnpqrstuvwxyz') for _ in range(8))
         # ~3.6 chars/token for Python source with this tokenizer (checked by usage below)
         text = filler[: int(target * 3.4)]

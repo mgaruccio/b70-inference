@@ -1,0 +1,18 @@
+auth {"health_nokey": 200, "models_nokey": 401, "invocations_nokey": 401, "tokenize_nokey": 401, "docs_nokey": 401, "models_wrongkey": 401, "models_key": 200, "model_ids": ["flint"], "metrics_loopback": 200, "PASS": true}
+parity captured 8
+tools {"single_stream": {"finish": "tool_calls", "tool_calls": [{"name": "get_weather", "arguments": "{\"city\": \"Paris\"}"}], "content": "I'll check the current weather in Paris for you."}, "single_nonstream": {"status": 200, "finish": "tool_calls", "tool_calls": [["get_weather", "{\"city\": \"Paris\"}"]], "has_reasoning": true}, "parallel_stream": {"finish": "tool_calls", "tool_calls": [{"name": "get_weather", "arguments": "{\"city\": \"Tokyo\"}"}, {"name": "get_time", "arguments": "{\"city\": \"Tokyo\"}"}]}, "tool_result_turn": {"finish": "stop", "content": "The current weather in Paris is **17\u00b0C** with **light rain**. \u2614\ufe0f", "mentions_17": true}, "PASS": true}
+{'target': 2000, 'prompt_tokens': 1574, 'completion_tokens': 95, 'ttft_ms': 239, 'decode_tps': 293.7, 'acceptance_length': 3.65, 'found': True, 'answer': 'mepxbcud', 'finish': 'stop'}
+{'target': 21500, 'prompt_tokens': 16109, 'completion_tokens': 489, 'ttft_ms': 3060, 'decode_tps': 195.4, 'acceptance_length': 3.02, 'found': True, 'answer': 'nvbtgbcq', 'finish': 'stop'}
+{'target': 43000, 'prompt_tokens': 32168, 'completion_tokens': 183, 'ttft_ms': 8429, 'decode_tps': 142.4, 'acceptance_length': 2.39, 'found': True, 'answer': 'qchcuqbv', 'finish': 'stop'}
+{'target': 86000, 'prompt_tokens': 65797, 'completion_tokens': 96, 'ttft_ms': 27305, 'decode_tps': 145.4, 'acceptance_length': 2.82, 'found': True, 'answer': 'dhxxvbvv', 'finish': 'stop'}
+{'target': 143000, 'prompt_tokens': 108315, 'completion_tokens': 155, 'ttft_ms': 72243, 'decode_tps': 114.2, 'acceptance_length': 2.8, 'found': True, 'answer': 'pbhbuekq', 'finish': 'stop'}
+Traceback (most recent call last):
+  File "/home/mike/flint-vllm-spike/serve/validate.py", line 192, in <module>
+    s = stream_chat(m, 2048)
+  File "/home/mike/flint-vllm-spike/serve/validate.py", line 51, in stream_chat
+    assert r.status == 200, (r.status, r.read(500))
+           ^^^^^^^^^^^^^^^
+AssertionError: (400, b'{"error":{"message":"This model\'s maximum context length is 141056 tokens. However, your prompt contains at least 141057 input tokens, which exceeds this limit even without any output tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=141057)","type":"BadRequestError","param":"input_tokens","code":400}}')
+
+ActiveState=active
+NRestarts=0

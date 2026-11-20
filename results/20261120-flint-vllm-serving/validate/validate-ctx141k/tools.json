@@ -1,0 +1,42 @@
+{
+ "single_stream": {
+  "finish": "tool_calls",
+  "tool_calls": [
+   {
+    "name": "get_weather",
+    "arguments": "{\"city\": \"Paris\"}"
+   }
+  ],
+  "content": "I'll check the current weather in Paris for you."
+ },
+ "single_nonstream": {
+  "status": 200,
+  "finish": "tool_calls",
+  "tool_calls": [
+   [
+    "get_weather",
+    "{\"city\": \"Paris\"}"
+   ]
+  ],
+  "has_reasoning": true
+ },
+ "parallel_stream": {
+  "finish": "tool_calls",
+  "tool_calls": [
+   {
+    "name": "get_weather",
+    "arguments": "{\"city\": \"Tokyo\"}"
+   },
+   {
+    "name": "get_time",
+    "arguments": "{\"city\": \"Tokyo\"}"
+   }
+  ]
+ },
+ "tool_result_turn": {
+  "finish": "stop",
+  "content": "The current weather in Paris is **17\u00b0C** with **light rain**. \u2614\ufe0f",
+  "mentions_17": true
+ },
+ "PASS": true
+}

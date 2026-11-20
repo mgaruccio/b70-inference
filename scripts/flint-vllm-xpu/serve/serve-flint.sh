@@ -19,8 +19,8 @@ exec "$PWD/.venv/bin/vllm" serve "$PWD/gptq" \
     --host 0.0.0.0 --port 8080 --served-model-name flint \
     --middleware flint_auth.FlintAuth \
     --dtype bfloat16 --kv-cache-dtype auto --attention-backend TRITON_ATTN \
-    --gpu-memory-utilization 0.90 --max-model-len "${FLINT_MAX_MODEL_LEN:-16384}" \
-    --max-num-seqs 1 --max-num-batched-tokens "${FLINT_MAX_BATCHED:-8192}" \
+    --gpu-memory-utilization "${FLINT_GPU_UTIL:-0.97}" --max-model-len "${FLINT_MAX_MODEL_LEN:-auto}" \
+    --max-num-seqs 1 --max-num-batched-tokens "${FLINT_MAX_BATCHED:-4096}" \
     ${FLINT_PREFIX_CACHING:---enable-prefix-caching} \
     --enable-auto-tool-choice --tool-call-parser glm47 --reasoning-parser glm47 \
     -cc.mode=none \

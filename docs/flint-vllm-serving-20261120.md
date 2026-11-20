@@ -20,12 +20,12 @@ Results are development-tier and single-stream (see "Limits"). Raw artifacts are
 | Item | Setting |
 |---|---|
 | Unit | `/etc/systemd/system/flint-inference.service`, enabled, `Restart=on-failure`, `Conflicts=flint-llamacpp.service` |
-| Launcher | `~/flint-vllm-spike/serve/serve-flint.sh`: `--host 0.0.0.0 --port 8080 --served-model-name flint --max-model-len 16384 --max-num-seqs 1 --max-num-batched-tokens 8192 --enable-prefix-caching -cc.mode=none`, `glm47` tool/reasoning parsers, DFlash 2 `num_speculative_tokens: 4`, process-local Intel runtime environment as in `maintenance.sh` |
-| Sampling defaults | from the checkpoint's `generation_config.json`: T = 1.0, top-p 0.95, top-k 20 (the same as the old llama.cpp flags) |
+| Launcher | `~/flint-vllm-spike/serve/serve-flint.sh`: `--host 0.0.0.0 --port 8080 --served-model-name flint --gpu-memory-utilization 0.97 --max-model-len auto --max-num-seqs 1 --max-num-batched-tokens 4096 --enable-prefix-caching -cc.mode=none`, `glm47` tool/reasoning parsers, DFlash 2 `num_speculative_tokens: 4`, process-local Intel runtime environment as in `maintenance.sh` |
+| Sampling defaults | from the checkpoint's `generation_config.json`: T = 1.0, top-p 0.95, top-k 20. These equal RecursiveSI's recommended settings (model card, `sglang/README.md`, upstream `generation_config.json`) and the old llama.cpp flags. Clients should use `max_tokens` ≥ 32768 for hard problems (RSI); Pi `b70/flint` is set to 32768. |
 | API key | `/etc/b70-flint/api-key` (root 0600, the same key as before) → `LoadCredential=` → `VLLM_API_KEY` in the launcher. Never on argv. |
 | Auth | `flint_auth.FlintAuth` (`--middleware`) requires `Authorization: Bearer` on every route except `/health`, and allows loopback `/metrics` for the LCD collector. vLLM's own `--api-key` covers only `/v1`, `/v2`, `/inference` and `/cohere`; `/invocations` and the other routes would otherwise run inference without a key ([vLLM security docs](https://docs.vllm.ai/en/latest/usage/security.html)). |
 | Rollback | `flint-llamacpp.service` runs the exact previous llama.cpp b12499 argv with `--api-key-file %d/api-key`. It is disabled and `Conflicts=`/`After=` flint-inference. |
-| Capacity | 21,944 KV tokens (2.53 GiB) at `--gpu-memory-utilization 0.90`. `--max-num-batched-tokens 16384` left only 1.72 GiB for KV, below the 1.88 GiB needed for one 16k request. |
+| Capacity | `--max-model-len auto` selects **141,056 tokens** (4.83 GiB KV) at memory fraction 0.97 with 4096-token prefill chunks. 2.37 GiB of 31.89 GiB stays free on the device while serving. The model's documented limit, 262,144, doesn't fit with bf16 KV; see `results/20261120-flint-vllm-serving/context-sizing.txt` for the sweep. Pi `b70/flint` `contextWindow` is 141056. |
 
 Operations (`serve/README` on the guest):
 
@@ -104,14 +104,47 @@ Excluding items that either backend truncated, GSM8K is 87 vs 88 of 90 and IFEva
 88. The IFEval gap is the token limit, not instruction following. Conclusion: no measurable
 quality regression from the GGUF → GPTQ switch at this sample size.
 
+## Context raised to the memory limit, and RSI settings check (2026-11-20, later)
+
+On the deployed 141k config, long-context hidden-phrase retrieval at greedy found the phrase every time
+(`results/20261120-flint-vllm-serving/validate/validate-ctx141k*`). There were no restarts or
+memory errors, and short-prompt parity stayed bitwise identical to the 16k config.
+
+| prompt tokens | TTFT | decode tok/s | acceptance length |
+|---|---|---|---|
+| 1,574 | 0.24 s | 294 | 3.65 |
+| 16,109 | 3.1 s | 195 | 3.02 |
+| 32,168 | 8.4 s | 142 | 2.39 |
+| 65,797 | 27 s | 145 | 2.82 |
+| 108,315 | 72 s | 114 | 2.80 |
+| 137,209 | 115 s | 104 | 2.89 |
+
+A 141,057-token prompt is rejected cleanly with HTTP 400. Warm multi-turn TTFT is still about
+80 ms with prefix caching.
+
+Comparison with RecursiveSI's recommendations
+([model card](https://huggingface.co/RecursiveSI/flint), `sglang/README.md`,
+`sglang/serve_h200.sh`, upstream `generation_config.json`):
+
+| RSI | here |
+|---|---|
+| T 1.0, top-p 0.95, top-k 20 as server defaults | same (`generation_config.json`) ✓ |
+| `max_tokens` ≥ 32768 for hard problems | Pi `maxTokens` 32768 ✓ (was 4096) |
+| context 262,144 | 141,056 (the memory limit with bf16 KV) |
+| keep `reasoning_content` on replayed assistant turns | Pi replays the reasoning field; vLLM maps `reasoning`/`reasoning_content` to the template's `reasoning_content` → `<think>` ✓ |
+| `--chunked-prefill-size 4096` | `--max-num-batched-tokens 4096` ✓ |
+| `--tool-call-parser flint --reasoning-parser flint` | `glm47` (vLLM has no `flint` parser; tool and reasoning tests pass) |
+| `--enable-fp32-lm-head` | **not matched**: logits come from the bf16 lm_head |
+| greedy "not validated" | our evals use greedy for comparability; serving defaults are RSI's |
+
 ## Limits and follow-ups
 
 - **One sequence at a time** (`--max-num-seqs 1`, as llama.cpp `--parallel 1`). Concurrent
   clients queue. Raising it means verify batches with M > 8 leave the batch-invariant path; it
   needs its own benchmark.
-- **Maximum context is 16,384 tokens**, matching Pi's `contextWindow`. KV capacity allows about
-  21.9k tokens. Larger contexts need a lower `--max-num-batched-tokens` or a higher memory
-  utilization.
+- **Maximum context is 141,056 tokens**, not the model's documented 262,144, because bf16 KV
+  doesn't fit more on 32 GB. Reaching 262k would need an fp8 KV cache, which is lossy and not
+  enabled.
 - **Spec vs non-spec logprobs** differ after 256-token attention-segment boundaries (numerical
   only; see the hill-climb doc).
 - **Not tested here:** a guest reboot (the unit is enabled; earlier sessions avoided reboots
