@@ -1,0 +1,51 @@
+cycles 13 (execute_context_0(0)_generation_1(4))
+V: 7.205 ms/cycle, 600 kernels
+    2.200 ms   47.0x    46.81 us  _moe_gate_up_sh
+    1.560 ms   47.0x    33.19 us  _moe_down_sh
+    1.295 ms   49.0x    26.42 us  _gptq_gemv_perm
+    0.669 ms   53.0x    12.63 us  gemm_kernel
+    0.339 ms   96.0x     3.53 us  _rms_norm_perm_kernel
+    0.325 ms   47.0x     6.92 us  _router_partial
+    0.304 ms   49.0x     6.20 us  kernel_unified_attention
+    0.232 ms   49.0x     4.73 us  reduce_segments
+    0.104 ms   47.0x     2.21 us  _router_topk
+    0.076 ms   49.0x     1.55 us  _qk_norm_rope_kernel
+    0.063 ms   49.0x     1.29 us  reshape_and_cache_kernel_flash
+    0.008 ms    5.0x     1.58 us  at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::BinaryFunctor<c10::BFloat
+    0.006 ms    1.0x     5.94 us  at::native::xpu::IndexSelectSmallIndexFunctor<c10::BFloat16, long, unsigned int, 2, 2, -2>
+    0.004 ms    1.0x     4.45 us  _compute_slot_mappings_kernel
+    0.004 ms    3.0x     1.47 us  _rms_norm_kernel
+    0.004 ms    1.0x     3.50 us  _gather_block_tables_kernel
+    0.003 ms    1.0x     2.73 us  at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detai
+    0.003 ms    2.0x     1.36 us  _silu_and_mul_kernel
+    0.002 ms    1.0x     2.03 us  _combine_sampled_and_draft_tokens_kernel
+    0.002 ms    1.0x     1.95 us  at::native::xpu::VectorizedElementwiseKernel<16, at::native::xpu::FillFunctor<bool>, at::d
+    0.001 ms    1.0x     1.48 us  _prepare_pos_seq_lens_kernel
+    0.001 ms    1.0x     1.10 us  _expand_idx_mapping_kernel
+    0.000 ms    0.1x     2.60 us  _apply_write_kernel
+O: 3.988 ms/cycle, 310 kernels
+    3.368 ms   36.0x    93.56 us  gemm_kernel
+    0.116 ms    1.0x   115.88 us  at::native::xpu::SbtopkGatherFunctor<c10::BFloat16, 8, 32, 32, int>
+    0.081 ms   22.0x     3.67 us  at::native::xpu::ElementwiseGroupRangeKernel<4, at::native::xpu::LegacyKernelWithCastScala
+    0.078 ms   61.0x     1.28 us  at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::BinaryFunctor<c10::BFloat
+    0.059 ms   10.0x     5.91 us  _ZTSN6compat12experimental6detail13KernelFunctorIXadL_ZN7cutlass13device_kernelINS3_4fmha6
+    0.038 ms   20.0x     1.89 us  at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<c
+    0.028 ms   10.0x     2.77 us  vllm::rms_norm_multi_row_kernel<sycl::_V1::ext::oneapi::bfloat16, 3, 8, 16, true>
+    0.027 ms   10.0x     2.70 us  vllm::fused_add_rms_norm_kernel<sycl::_V1::ext::oneapi::bfloat16, 8, true>
+    0.022 ms    6.0x     3.59 us  vllm::rotary_embedding_kernel<sycl::_V1::ext::oneapi::bfloat16, true>
+    0.015 ms   20.0x     0.75 us  at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::CompareScalarFunctor<long
+    0.014 ms   10.0x     1.41 us  vllm::reshape_and_cache_flash_strided_kernel<c10::BFloat16, c10::BFloat16, (vllm::Fp8KVCac
+    0.014 ms    5.0x     2.79 us  vllm::act_and_mul_vec_kernel<sycl::_V1::ext::oneapi::bfloat16, &(sycl::_V1::ext::oneapi::b
+    0.014 ms   20.0x     0.69 us  sycl::_V1::ext::oneapi::experimental::detail::NdRangeFreeFunctionKernelWrapper<&(void at::
+    0.014 ms   20.0x     0.68 us  at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::AUnaryFunctor<long, long,
+    0.011 ms   20.0x     0.56 us  at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::FillFunctor<c10::BFloat16
+    0.006 ms    1.0x     6.07 us  at::native::xpu::SegmentedGroupRadixSortPairsFunctor<at::native::xpu::GroupRadixSort<c10::
+    0.006 ms    4.0x     1.50 us  at::native::xpu::VectorizedGatherKernel<16, long>
+    0.006 ms    1.0x     5.92 us  _compute_local_logits_stats_kernel
+    0.006 ms    5.0x     1.13 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::CompareScalarFunctor<int,
+    0.005 ms    5.0x     1.01 us  at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::BinaryFunctor<int, int, int, a
+    0.005 ms    1.0x     4.90 us  at::native::xpu::IndexSelectSmallIndexFunctor<c10::BFloat16, long, unsigned int, 2, 2, -2>
+    0.005 ms    2.0x     2.26 us  vllm::rms_norm_kernel<sycl::_V1::ext::oneapi::bfloat16, 2, 8, true>
+    0.004 ms    1.0x     4.45 us  _rejection_kernel
+    0.004 ms    1.0x     4.28 us  _prepare_dflash_inputs_kernel
+    0.004 ms    1.0x     4.12 us  _gather_draft_sampled_kernel

@@ -15,7 +15,12 @@ live_args=("$live_bin" --model "$HOME/models/flint/Flint-Q4_K_M.gguf" --alias fl
            --api-key-file /run/credentials/flint-inference.service/api-key)
 
 sudo -n test -s "$cred_source"
-systemctl is-active --quiet "$live"
+# NO_RESTORE=1: llama.cpp is not restored on exit and may already be stopped
+# (vLLM is the intended full-time server).
+no_restore=${NO_RESTORE:-0}
+live_up=1
+systemctl is-active --quiet "$live" || live_up=0
+(( live_up || no_restore ))
 active_candidates=$(systemctl list-units --no-legend --plain --state=active,activating,deactivating 'flint-vllm-smoke.service' "$candidate_pattern")
 if [[ -n $active_candidates ]]; then
     echo 'A candidate service is already running' >&2
@@ -26,12 +31,14 @@ if grep -Eq '(^|[[:space:]])[^[:space:]]*:18080[[:space:]]' <<< "$listeners"; th
     echo 'Candidate port already in use' >&2
     exit 1
 fi
+if (( live_up )); then
 pid=$(systemctl show "$live" -p MainPID --value)
 mapfile -d '' -t running_argv < "/proc/$pid/cmdline"
 [[ $(declare -p running_argv | cut -d= -f2-) == "$(declare -p live_args | cut -d= -f2-)" ]]
 [[ $(systemctl show "$live" -p Environment --value) == "LD_LIBRARY_PATH=${live_bin%/*}" ]]
 [[ $(systemctl show "$live" -p User --value) == "$USER" ]]
 [[ $(systemctl show "$live" -p FragmentPath --value) == /run/systemd/transient/flint-inference.service ]]
+fi
 if [[ ${1:-} == --check-rollback ]]; then
     printf 'Live transient unit, credential source, launch arguments and environment match rollback.\n'
     exit 0
@@ -49,7 +56,7 @@ run=$(mktemp -d "$PWD/http-run.XXXXXX")
 candidate="flint-vllm-smoke-${run##*.}.service"
 printf 'Test artifacts: %s\n' "$run"
 
-python3 -I - "$pid" <<'PY'
+(( live_up )) && python3 -I - "$pid" <<'PY'
 import http.client
 import json
 import pathlib
@@ -73,6 +80,10 @@ restore() {
     trap - EXIT HUP INT TERM
     set +e
     sudo -n timeout 28s systemctl stop "$candidate" >/dev/null 2>&1
+    if (( no_restore )); then
+        echo 'NO_RESTORE=1: llama.cpp left stopped.'
+        exit "$rc"
+    fi
     if ! systemctl is-active --quiet "$live"; then
         sudo -n systemd-run --quiet --collect --unit="$live" --uid="$USER" \
             --property=Type=exec --property="LoadCredential=api-key:$cred_source" \
@@ -95,7 +106,7 @@ restore() {
 }
 trap restore EXIT
 trap 'exit 130' HUP INT TERM
-sudo -n timeout 100s systemctl stop "$live"
+(( live_up )) && sudo -n timeout 100s systemctl stop "$live"
 # No speculative arguments. No remote code. Candidate is not reachable off VM.
 cmd=("$PWD/.venv/bin/vllm" serve "$PWD/gptq"
      --host 127.0.0.1 --port 18080 --served-model-name flint-xpu-test
@@ -107,7 +118,7 @@ cmd=("$PWD/.venv/bin/vllm" serve "$PWD/gptq"
 # shellcheck disable=SC2206
 [[ -n ${EXTRA_ARGS:-} ]] && cmd+=($EXTRA_ARGS)
 if [[ $mode == *dflash2 ]]; then
-    cmd+=(--speculative-config "{\"method\":\"dflash\",\"model\":\"$PWD/dflash2\",\"num_speculative_tokens\":7}")
+    cmd+=(--speculative-config "{\"method\":\"dflash\",\"model\":\"$PWD/dflash2\",\"num_speculative_tokens\":${NUM_SPEC:-7}}")
 fi
 if [[ $mode == --profile* ]]; then
     mkdir -p "$run/trace"

@@ -1,0 +1,29 @@
+diff -ru a/model.py b/model.py
+--- a/model.py
++++ b/model.py
+@@ -149,6 +149,7 @@
+ _XPU_DECODE_V3 = os.environ.get("FLINT_XPU_DECODE_V3", "1") != "0"
+ _XPU_SHARED_FOLD = os.environ.get("FLINT_XPU_SHARED_FOLD", "1") != "0"
+ _XPU_PERM = os.environ.get("FLINT_XPU_PERM", "1") != "0"
++_XPU_DECODE_MAXM = int(os.environ.get("FLINT_XPU_DECODE_MAXM", "8"))
+ 
+ 
+ class FlintXpuGateLinear(GateLinear):
+@@ -706,7 +707,7 @@
+                 return self._post_attention(*ll)
+         if (
+             current_platform.is_xpu()
+-            and hidden_states.shape[0] == 1
++            and 1 <= hidden_states.shape[0] <= _XPU_DECODE_MAXM
+             and self.self_attn._xpu_qkv_perm_ok()
+         ):
+             from .ops.xpu_decode import rms_norm_perm
+@@ -737,7 +738,7 @@
+         if (
+             isinstance(self.mlp, FlintSparseMoeBlock)
+             and current_platform.is_xpu()
+-            and hidden_states.shape[0] == 1
++            and 1 <= hidden_states.shape[0] <= _XPU_DECODE_MAXM
+             and self.mlp._xpu_perm_ready()
+         ):
+             from .ops.xpu_decode import rms_norm_perm

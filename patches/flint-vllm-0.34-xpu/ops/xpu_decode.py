@@ -244,9 +244,17 @@ def _permute_x(x_ptr, xp_ptr, K: tl.constexpr):
 @triton.jit
 def _moe_gate_up_sh(xp_ptr, ids_ptr, w13_ptr, s13_ptr, w13s_ptr, s13s_ptr, act_ptr,
                     H: tl.constexpr, I: tl.constexpr, TOPK: tl.constexpr,
-                    NSH: tl.constexpr, BN: tl.constexpr, NW: tl.constexpr):
-    nb = tl.program_id(0)
-    pid = tl.program_id(1)            # token * (TOPK + NSH) + slot
+                    NSH: tl.constexpr, BN: tl.constexpr, NW: tl.constexpr,
+                    TOKF: tl.constexpr = False):
+    # TOKF (M > 1): the (token, slot) axis is grid axis 0 so programs sharing an
+    # n-block run together and tokens routed to the same expert hit its rows in
+    # cache. The per-row arithmetic is unchanged (batch-invariant with M = 1).
+    if TOKF:
+        pid = tl.program_id(0)
+        nb = tl.program_id(1)
+    else:
+        nb = tl.program_id(0)
+        pid = tl.program_id(1)            # token * (TOPK + NSH) + slot
     TA: tl.constexpr = TOPK + NSH
     tok = pid // TA
     slot = pid % TA
@@ -286,6 +294,108 @@ def _moe_gate_up_sh(xp_ptr, ids_ptr, w13_ptr, s13_ptr, w13s_ptr, s13s_ptr, act_p
 
 
 @triton.jit
+def _nib8(pk):
+    return (_nib(pk, 0), _nib(pk, 1), _nib(pk, 2), _nib(pk, 3),
+            _nib(pk, 4), _nib(pk, 5), _nib(pk, 6), _nib(pk, 7))
+
+
+@triton.jit
+def _gu_row(acc_g, acc_u, xb, g, u, sg, su, w0, rsel, wo, RW: tl.constexpr,
+            BN: tl.constexpr, GI: tl.constexpr):
+    """One row of _moe_gate_up_sh's inner step, from pre-dequantized nibbles."""
+    x0 = tl.load(xb + w0 + wo).to(tl.float32)
+    tg = g[0] * x0[None, :]
+    tu = u[0] * x0[None, :]
+    x1 = tl.load(xb + RW + w0 + wo).to(tl.float32)
+    tg += g[1] * x1[None, :]
+    tu += u[1] * x1[None, :]
+    x2 = tl.load(xb + 2 * RW + w0 + wo).to(tl.float32)
+    tg += g[2] * x2[None, :]
+    tu += u[2] * x2[None, :]
+    x3 = tl.load(xb + 3 * RW + w0 + wo).to(tl.float32)
+    tg += g[3] * x3[None, :]
+    tu += u[3] * x3[None, :]
+    x4 = tl.load(xb + 4 * RW + w0 + wo).to(tl.float32)
+    tg += g[4] * x4[None, :]
+    tu += u[4] * x4[None, :]
+    x5 = tl.load(xb + 5 * RW + w0 + wo).to(tl.float32)
+    tg += g[5] * x5[None, :]
+    tu += u[5] * x5[None, :]
+    x6 = tl.load(xb + 6 * RW + w0 + wo).to(tl.float32)
+    tg += g[6] * x6[None, :]
+    tu += u[6] * x6[None, :]
+    x7 = tl.load(xb + 7 * RW + w0 + wo).to(tl.float32)
+    tg += g[7] * x7[None, :]
+    tu += u[7] * x7[None, :]
+    dg = tl.sum(tl.sum(tl.reshape(tg, (BN, GI, 8)), axis=2) * sg, axis=1)
+    du = tl.sum(tl.sum(tl.reshape(tu, (BN, GI, 8)), axis=2) * su, axis=1)
+    acc_g = tl.where(rsel[:, None], acc_g + dg[None, :], acc_g)
+    acc_u = tl.where(rsel[:, None], acc_u + du[None, :], acc_u)
+    return acc_g, acc_u
+
+
+@triton.jit
+def _moe_gate_up_shg(xp_ptr, ids_ptr, w13_ptr, s13_ptr, w13s_ptr, s13s_ptr, act_ptr,
+                     M: tl.constexpr, H: tl.constexpr, I: tl.constexpr, TOPK: tl.constexpr,
+                     NSH: tl.constexpr, BN: tl.constexpr, NW: tl.constexpr,
+                     MP2: tl.constexpr, MTP2: tl.constexpr, TP2: tl.constexpr):
+    """Expert-grouped gate/up for M > 1: one program per (pair, n-block); the first pair
+    routed to an expert (its leader) loads and dequantizes the expert tile once and applies
+    it to every row routed to that expert; other pairs exit. Program TOPK*M + p handles
+    shared pseudo-expert p for all rows. Per-row arithmetic = _moe_gate_up_sh."""
+    p = tl.program_id(0)
+    nb = tl.program_id(1)
+    TA: tl.constexpr = TOPK + NSH
+    RW: tl.constexpr = H // 8
+    G: tl.constexpr = H // 64
+    GI: tl.constexpr = NW // 8
+    rows = tl.arange(0, MP2)
+    if p < M * TOPK:
+        e = tl.load(ids_ptr + p)
+        q = tl.arange(0, MTP2)
+        prev = tl.load(ids_ptr + q, mask=q < p, other=-1)
+        lead = tl.sum((prev == e).to(tl.int32), axis=0) == 0
+        ss = tl.arange(0, TP2)
+        idm = tl.load(ids_ptr + rows[:, None] * TOPK + ss[None, :],
+                      mask=(rows[:, None] < M) & (ss[None, :] < TOPK), other=-1)
+        hit = idm == e
+        member = (tl.sum(hit.to(tl.int32), axis=1) > 0) & lead
+        slot = tl.sum(tl.where(hit, ss[None, :], 0), axis=1)
+        e64 = e.to(tl.int64)
+        wbase = w13_ptr + e64 * (2 * I * RW)
+        sbase = s13_ptr + e64 * (2 * I * G)
+    else:
+        sp = p - M * TOPK
+        member = rows < M
+        slot = tl.zeros((MP2,), dtype=tl.int32) + (TOPK + sp)
+        sp64 = sp.to(tl.int64)
+        wbase = w13s_ptr + sp64 * (2 * I * RW)
+        sbase = s13s_ptr + sp64 * (2 * I * G)
+    nmem = tl.sum(member.to(tl.int32), axis=0)
+    if nmem > 0:
+        n = nb * BN + tl.arange(0, BN)
+        wo = tl.arange(0, NW)
+        gi = tl.arange(0, GI)
+        acc_g = tl.zeros((MP2, BN), dtype=tl.float32)
+        acc_u = tl.zeros((MP2, BN), dtype=tl.float32)
+        for w0 in range(0, RW, NW):
+            pg = tl.load(wbase + n[:, None] * RW + w0 + wo[None, :])
+            pu = tl.load(wbase + (n + I)[:, None] * RW + w0 + wo[None, :])
+            sg = tl.load(sbase + n[:, None] * G + w0 // 8 + gi[None, :]).to(tl.float32)
+            su = tl.load(sbase + (n + I)[:, None] * G + w0 // 8 + gi[None, :]).to(tl.float32)
+            g = _nib8(pg)
+            u = _nib8(pu)
+            for r in tl.static_range(MP2):
+                rsel = (rows == r) & member
+                if tl.sum(rsel.to(tl.int32), axis=0) > 0:
+                    acc_g, acc_u = _gu_row(acc_g, acc_u, xp_ptr + r * H, g, u, sg, su, w0,
+                                           rsel, wo, RW, BN, GI)
+        act = acc_g / (1.0 + tl.exp(-acc_g)) * acc_u
+        tl.store(act_ptr + (rows[:, None] * TA + slot[:, None]) * I + n[None, :], act,
+                 mask=member[:, None])
+
+
+@triton.jit
 def _down_one(acc, act_ptr, wbase, sbase, w, n, I: tl.constexpr, BN: tl.constexpr):
     RW: tl.constexpr = I // 8
     G: tl.constexpr = I // 64
@@ -302,11 +412,15 @@ def _down_one(acc, act_ptr, wbase, sbase, w, n, I: tl.constexpr, BN: tl.constexp
 @triton.jit
 def _moe_down_sh(act_ptr, ids_ptr, wts_ptr, w2_ptr, s2_ptr, w2s_ptr, s2s_ptr, out_ptr,
                  H: tl.constexpr, I: tl.constexpr, TOPK: tl.constexpr,
-                 NSH: tl.constexpr, BN: tl.constexpr):
+                 NSH: tl.constexpr, BN: tl.constexpr, TOKF: tl.constexpr = False):
     """Routed experts in slot order (fp32 routing weights), then the NSH shared
     pseudo-experts (weight 1), all in fp32; one bf16 rounding at the end."""
-    nb = tl.program_id(0)
-    tok = tl.program_id(1)
+    if TOKF:
+        tok = tl.program_id(0)
+        nb = tl.program_id(1)
+    else:
+        nb = tl.program_id(0)
+        tok = tl.program_id(1)
     TA: tl.constexpr = TOPK + NSH
     RW: tl.constexpr = I // 8
     G: tl.constexpr = I // 64
@@ -323,8 +437,79 @@ def _moe_down_sh(act_ptr, ids_ptr, wts_ptr, w2_ptr, s2_ptr, w2s_ptr, s2s_ptr, ou
     tl.store(out_ptr + tok * H + n, acc.to(tl.bfloat16))
 
 
+@triton.jit
+def _down_dot(act_ptr, d, sc, wo, BN: tl.constexpr, G: tl.constexpr):
+    """_down_one's dot from pre-dequantized nibbles (no routing weight)."""
+    part = d[0] * tl.load(act_ptr + wo * 8)
+    part += d[1] * tl.load(act_ptr + wo * 8 + 1)
+    part += d[2] * tl.load(act_ptr + wo * 8 + 2)
+    part += d[3] * tl.load(act_ptr + wo * 8 + 3)
+    part += d[4] * tl.load(act_ptr + wo * 8 + 4)
+    part += d[5] * tl.load(act_ptr + wo * 8 + 5)
+    part += d[6] * tl.load(act_ptr + wo * 8 + 6)
+    part += d[7] * tl.load(act_ptr + wo * 8 + 7)
+    return tl.sum(tl.sum(tl.reshape(part, (BN, G, 8)), axis=2) * sc, axis=1)
+
+
+@triton.jit
+def _moe_down_shg(act_ptr, ids_ptr, wts_ptr, w2_ptr, s2_ptr, w2s_ptr, s2s_ptr, out_ptr,
+                  M: tl.constexpr, H: tl.constexpr, I: tl.constexpr, TOPK: tl.constexpr,
+                  NSH: tl.constexpr, MP2: tl.constexpr, MTP2: tl.constexpr, TP2: tl.constexpr,
+                  TAP2: tl.constexpr):
+    """Expert-grouped down for M > 1 (BN = 1): each expert row is loaded and dequantized
+    once and dotted with every routed row's activation; per row the dots are then combined
+    exactly as _moe_down_sh (slot order, fp32 routing weights, shared last)."""
+    nb = tl.program_id(0)
+    BN: tl.constexpr = 1
+    TA: tl.constexpr = TOPK + NSH
+    RW: tl.constexpr = I // 8
+    G: tl.constexpr = I // 64
+    n = nb * BN + tl.arange(0, BN)
+    wo = tl.arange(0, RW)
+    gi = tl.arange(0, G)
+    rows = tl.arange(0, MP2)
+    cols = tl.arange(0, TAP2)
+    ss = tl.arange(0, TP2)
+    q = tl.arange(0, MTP2)
+    S = tl.zeros((MP2, TAP2), dtype=tl.float32)
+    for p in range(0, M * TOPK):
+        e = tl.load(ids_ptr + p)
+        prev = tl.load(ids_ptr + q, mask=q < p, other=-1)
+        if tl.sum((prev == e).to(tl.int32), axis=0) == 0:
+            e64 = e.to(tl.int64)
+            pk = tl.load(w2_ptr + e64 * (H * RW) + n[:, None] * RW + wo[None, :])
+            sc = tl.load(s2_ptr + e64 * (H * G) + n[:, None] * G + gi[None, :]).to(tl.float32)
+            d = _nib8(pk)
+            for r in tl.static_range(M):
+                idr = tl.load(ids_ptr + r * TOPK + ss, mask=ss < TOPK, other=-1)
+                hit = idr == e
+                if tl.sum(hit.to(tl.int32), axis=0) > 0:
+                    slot = tl.sum(tl.where(hit, ss, 0), axis=0)
+                    s = tl.sum(_down_dot(act_ptr + (r * TA + slot) * I, d, sc, wo, BN, G), axis=0)
+                    S = tl.where((rows[:, None] == r) & (cols[None, :] == slot), s, S)
+    for sp in tl.static_range(NSH):
+        pk = tl.load(w2s_ptr + sp * (H * RW) + n[:, None] * RW + wo[None, :])
+        sc = tl.load(s2s_ptr + sp * (H * G) + n[:, None] * G + gi[None, :]).to(tl.float32)
+        d = _nib8(pk)
+        for r in tl.static_range(M):
+            s = tl.sum(_down_dot(act_ptr + (r * TA + TOPK + sp) * I, d, sc, wo, BN, G), axis=0)
+            S = tl.where((rows[:, None] == r) & (cols[None, :] == TOPK + sp), s, S)
+    acc = tl.zeros((MP2,), dtype=tl.float32)
+    for jj in tl.static_range(TOPK):
+        w = tl.load(wts_ptr + rows * TOPK + jj, mask=rows < M, other=0.0)
+        acc = acc + w * tl.sum(tl.where(cols[None, :] == jj, S, 0.0), axis=1)
+    for sp in tl.static_range(NSH):
+        acc = acc + 1.0 * tl.sum(tl.where(cols[None, :] == TOPK + sp, S, 0.0), axis=1)
+    tl.store(out_ptr + rows * H + nb, acc.to(tl.bfloat16), mask=rows < M)
+
+
 SH_GATE_BN, SH_GATE_NW, SH_GATE_W, SH_GATE_WS = 1, 64, 1, 16
 SH_DOWN_BN, SH_DOWN_W = 1, 1
+# M > 1 (spec-decode verify): token axis fastest in the grid (see TOKF).
+MULTI_TOKF = True
+# M > 1: expert-grouped gate/up (weights dequantized once per expert per n-block).
+MULTI_GROUPED = True
+MULTI_GROUPED_DOWN = False  # serial per n-block: slower than TOKF (spec2 test)
 
 
 def moe_decode_sh(x, ids, wts, w13, s13, w2, s2, sh, xp=None):
@@ -354,12 +539,29 @@ def moe_decode_sh(x, ids, wts, w13, s13, w2, s2, sh, xp=None):
     if M:
         if perm:
             _permute_x[(M,)](x, xp, K=H, num_warps=4)
-        _moe_gate_up_sh[(I // SH_GATE_BN, M * (TOPK + NSH))](
-            xp, ids, w13.view(torch.int32), s13, w13s, s13s, act, H=H, I=I, TOPK=TOPK,
-            NSH=NSH, BN=SH_GATE_BN, NW=SH_GATE_NW, num_warps=SH_GATE_W, warp_size=SH_GATE_WS)
-        _moe_down_sh[(H // SH_DOWN_BN, M)](
-            act, ids, wts, w2.view(torch.int32), s2, w2s, s2s, out, H=H, I=I, TOPK=TOPK,
-            NSH=NSH, BN=SH_DOWN_BN, num_warps=SH_DOWN_W)
+        TA = TOPK + NSH
+        tokf = M > 1 and MULTI_TOKF
+        if M > 1 and MULTI_GROUPED:
+            p2 = triton.next_power_of_2
+            _moe_gate_up_shg[(M * TOPK + NSH, I // SH_GATE_BN)](
+                xp, ids, w13.view(torch.int32), s13, w13s, s13s, act, M=M, H=H, I=I,
+                TOPK=TOPK, NSH=NSH, BN=SH_GATE_BN, NW=SH_GATE_NW, MP2=p2(M),
+                MTP2=p2(M * TOPK), TP2=p2(TOPK), num_warps=SH_GATE_W, warp_size=SH_GATE_WS)
+        else:
+            _moe_gate_up_sh[(M * TA, I // SH_GATE_BN) if tokf else (I // SH_GATE_BN, M * TA)](
+                xp, ids, w13.view(torch.int32), s13, w13s, s13s, act, H=H, I=I, TOPK=TOPK,
+                NSH=NSH, BN=SH_GATE_BN, NW=SH_GATE_NW, TOKF=tokf, num_warps=SH_GATE_W,
+                warp_size=SH_GATE_WS)
+        if M > 1 and MULTI_GROUPED_DOWN:
+            p2 = triton.next_power_of_2
+            _moe_down_shg[(H,)](
+                act, ids, wts, w2.view(torch.int32), s2, w2s, s2s, out, M=M, H=H, I=I,
+                TOPK=TOPK, NSH=NSH, MP2=p2(M), MTP2=p2(M * TOPK), TP2=p2(TOPK), TAP2=p2(TA),
+                num_warps=SH_DOWN_W)
+        else:
+            _moe_down_sh[(M, H // SH_DOWN_BN) if tokf else (H // SH_DOWN_BN, M)](
+                act, ids, wts, w2.view(torch.int32), s2, w2s, s2s, out, H=H, I=I, TOPK=TOPK,
+                NSH=NSH, BN=SH_DOWN_BN, TOKF=tokf, num_warps=SH_DOWN_W)
     return out
 
 
@@ -409,11 +611,15 @@ def rms_norm_perm(x, residual, weight, eps, write_normal):
 
 @triton.jit
 def _gptq_gemv_perm(xp_ptr, w_ptr, s_ptr, o_ptr, N: tl.constexpr, K: tl.constexpr,
-                    BN: tl.constexpr, NW: tl.constexpr):
+                    BN: tl.constexpr, NW: tl.constexpr, TOKF: tl.constexpr = False):
     """y = x @ W^T for GPTQ uint4b8 W [N, K/8] int32 (nibble i of word j is k = 8j + i),
     scales [K/64, N]; x given nibble-major permuted; fp32 accumulation."""
-    nb = tl.program_id(0)
-    tok = tl.program_id(1)
+    if TOKF:
+        tok = tl.program_id(0)
+        nb = tl.program_id(1)
+    else:
+        nb = tl.program_id(0)
+        tok = tl.program_id(1)
     RW: tl.constexpr = K // 8
     GI: tl.constexpr = NW // 8
     n = nb * BN + tl.arange(0, BN)
@@ -431,6 +637,39 @@ def _gptq_gemv_perm(xp_ptr, w_ptr, s_ptr, o_ptr, N: tl.constexpr, K: tl.constexp
     tl.store(o_ptr + tok * N + n, acc.to(tl.bfloat16))
 
 
+@triton.jit
+def _gptq_gemv_permg(xp_ptr, w_ptr, s_ptr, o_ptr, M: tl.constexpr, MP2: tl.constexpr,
+                     N: tl.constexpr, K: tl.constexpr, BN: tl.constexpr, NW: tl.constexpr):
+    """_gptq_gemv_perm for M > 1 rows sharing each dequantized weight tile; per-row
+    arithmetic identical to the single-row kernel."""
+    nb = tl.program_id(0)
+    RW: tl.constexpr = K // 8
+    GI: tl.constexpr = NW // 8
+    n = nb * BN + tl.arange(0, BN)
+    wo = tl.arange(0, NW)
+    gi = tl.arange(0, GI)
+    rows = tl.arange(0, MP2)
+    acc = tl.zeros((MP2, BN), dtype=tl.float32)
+    for w0 in range(0, RW, NW):
+        pk = tl.load(w_ptr + n[:, None] * RW + w0 + wo[None, :]) ^ -2004318072
+        sc = tl.load(s_ptr + (w0 // 8 + gi)[None, :] * N + n[:, None]).to(tl.float32)
+        d = _nib8(pk)
+        for r in tl.static_range(M):
+            xb = xp_ptr + r * K
+            t = d[0] * tl.load(xb + w0 + wo).to(tl.float32)[None, :]
+            t += d[1] * tl.load(xb + RW + w0 + wo).to(tl.float32)[None, :]
+            t += d[2] * tl.load(xb + 2 * RW + w0 + wo).to(tl.float32)[None, :]
+            t += d[3] * tl.load(xb + 3 * RW + w0 + wo).to(tl.float32)[None, :]
+            t += d[4] * tl.load(xb + 4 * RW + w0 + wo).to(tl.float32)[None, :]
+            t += d[5] * tl.load(xb + 5 * RW + w0 + wo).to(tl.float32)[None, :]
+            t += d[6] * tl.load(xb + 6 * RW + w0 + wo).to(tl.float32)[None, :]
+            t += d[7] * tl.load(xb + 7 * RW + w0 + wo).to(tl.float32)[None, :]
+            dr = tl.sum(tl.sum(tl.reshape(t, (BN, GI, 8)), axis=2) * sc, axis=1)
+            acc = tl.where(rows[:, None] == r, acc + dr[None, :], acc)
+    tl.store(o_ptr + rows[:, None] * N + n[None, :], acc.to(tl.bfloat16), mask=rows[:, None] < M)
+
+
+GPTQ_GROUPED = True
 GPTQ_BN, GPTQ_NW, GPTQ_W, GPTQ_WS = 4, 64, 1, 16
 
 
@@ -457,6 +696,13 @@ def gptq_linear_perm(xp, layer):
     assert q.shape[1] * 8 == K and xp.is_contiguous()
     out = torch.empty((M, N), dtype=torch.bfloat16, device=xp.device)
     if M:
-        _gptq_gemv_perm[(N // GPTQ_BN, M)](xp, q, layer.scales, out, N=N, K=K, BN=GPTQ_BN,
-                                           NW=GPTQ_NW, num_warps=GPTQ_W, warp_size=GPTQ_WS)
+        tokf = M > 1 and MULTI_TOKF
+        if M > 1 and GPTQ_GROUPED:
+            _gptq_gemv_permg[(N // GPTQ_BN,)](
+                xp, q, layer.scales, out, M=M, MP2=triton.next_power_of_2(M), N=N, K=K,
+                BN=GPTQ_BN, NW=GPTQ_NW, num_warps=GPTQ_W, warp_size=GPTQ_WS)
+        else:
+            _gptq_gemv_perm[(M, N // GPTQ_BN) if tokf else (N // GPTQ_BN, M)](
+                xp, q, layer.scales, out, N=N, K=K, BN=GPTQ_BN, NW=GPTQ_NW, TOKF=tokf,
+                num_warps=GPTQ_W, warp_size=GPTQ_WS)
     return out
