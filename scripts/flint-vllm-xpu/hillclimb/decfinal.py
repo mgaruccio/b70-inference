@@ -67,8 +67,33 @@ for t in range(3):
 R['moe_sh_relerr'] = errs2
 R['moe_sh_inv'] = all(torch.equal(xd.moe_decode_sh(xs[t:t + 1], i3[t:t + 1], w3[t:t + 1], w13, s13, w2, s2, pk), osh[t:t + 1]) for t in range(3))
 R['moe_sh_det'] = torch.equal(xd.moe_decode_sh(xs, i3, w3, w13, s13, w2, s2, pk), osh)
+# round 3: permuted norm (bitwise vs xpu_fused) and GPTQ permuted GEMV
+import types
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+import xpu_fused as xf
+xr = torch.randn(5, H, device=dev).to(torch.bfloat16); rr = torch.randn(5, H, device=dev).to(torch.bfloat16)
+nw = (torch.rand(H, device=dev) + 0.5).to(torch.bfloat16)
+o_ref, r_ref = xf.fused_add_rms_norm(xr, rr, nw, 1e-6)
+o1, op1, r1 = xd.rms_norm_perm(xr, rr, nw, 1e-6, True)
+_, op2, _ = xd.rms_norm_perm(xr, rr, nw, 1e-6, False)
+o3 = xf.rms_norm(xr, nw, 1e-6); _, op3, _ = xd.rms_norm_perm(xr, None, nw, 1e-6, False)
+permref = lambda t: t.view(t.shape[0], H // 8, 8).transpose(1, 2).reshape(t.shape[0], H)
+R['norm_perm_bitwise'] = (torch.equal(o1, o_ref) and torch.equal(r1, r_ref) and torch.equal(op1, permref(o_ref))
+                          and torch.equal(op2, op1) and torch.equal(op3, permref(o3)))
+N2 = 5120
+qw = torch.randint(-2**31, 2**31 - 1, (N2, H // 8), dtype=torch.int32, device=dev)
+qs = (torch.rand(H // 64, N2, device=dev) * 0.01).to(torch.bfloat16)
+lay = types.SimpleNamespace(qweight=qw.t(), scales=qs, qzeros=torch.tensor([8], dtype=torch.int8, device=dev))
+R['gptq_ok'] = xd.gptq_ok(lay)
+xg = (torch.randn(3, H, device=dev) * 0.5).to(torch.bfloat16)
+yg = xd.gptq_linear_perm(permref(xg).contiguous(), lay)
+Wg = gdeq(qw, qs)
+refg = xg.double().cpu() @ Wg.t()
+R['gptq_relerr'] = ((yg.double().cpu() - refg).abs().max() / refg.abs().max()).item()
+R['gptq_inv'] = all(torch.equal(xd.gptq_linear_perm(permref(xg[t:t + 1]).contiguous(), lay), yg[t:t + 1]) for t in range(3))
+R['gptq_det'] = torch.equal(xd.gptq_linear_perm(permref(xg).contiguous(), lay), yg)
 ok = R['router_err'] < 2e-6 and R['router_inv'] and R['ids_inv'] and R['router_det'] and R['topk_order_match'] >= 98 \
-    and R['wts_err'] < 1e-6 and max(errs) < 5e-3 and R['moe_inv'] and R['moe_det'] and max(errs2) < 5e-3 and R['moe_sh_inv'] and R['moe_sh_det']
+    and R['wts_err'] < 1e-6 and max(errs) < 5e-3 and R['moe_inv'] and R['moe_det'] and max(errs2) < 5e-3 and R['moe_sh_inv'] and R['moe_sh_det'] and R['norm_perm_bitwise'] and R['gptq_ok'] and R['gptq_relerr'] < 5e-3 and R['gptq_inv'] and R['gptq_det']
 R['PASS'] = ok
 print(json.dumps(R), flush=True)
 (root / 'decfinal.json').write_text(json.dumps(R, indent=1))

@@ -327,8 +327,9 @@ SH_GATE_BN, SH_GATE_NW, SH_GATE_W, SH_GATE_WS = 1, 64, 1, 16
 SH_DOWN_BN, SH_DOWN_W = 1, 1
 
 
-def moe_decode_sh(x, ids, wts, w13, s13, w2, s2, sh):
-    """Routed + shared expert output, bf16 [M, H]. ``sh`` = pack_shared_expert(...)."""
+def moe_decode_sh(x, ids, wts, w13, s13, w2, s2, sh, xp=None):
+    """Routed + shared expert output, bf16 [M, H]. ``sh`` = pack_shared_expert(...);
+    ``xp`` optionally the nibble-major permuted ``x`` (else computed here)."""
     M, H = x.shape
     E, two_i, hb = w13.shape
     I = two_i // 2
@@ -343,15 +344,119 @@ def moe_decode_sh(x, ids, wts, w13, s13, w2, s2, sh):
     assert s13s.shape == (NSH, 2 * I, H // 64) and s2s.shape == (NSH, H, I // 64)
     assert ids.dtype == torch.int32 and wts.dtype == torch.float32
     x = x.contiguous()
-    xp = torch.empty_like(x)
+    perm = xp is None
+    if perm:
+        xp = torch.empty_like(x)
+    else:
+        assert xp.shape == x.shape and xp.dtype == x.dtype and xp.is_contiguous()
     act = torch.empty((M * (TOPK + NSH), I), dtype=torch.float32, device=x.device)
     out = torch.empty((M, H), dtype=torch.bfloat16, device=x.device)
     if M:
-        _permute_x[(M,)](x, xp, K=H, num_warps=4)
+        if perm:
+            _permute_x[(M,)](x, xp, K=H, num_warps=4)
         _moe_gate_up_sh[(I // SH_GATE_BN, M * (TOPK + NSH))](
             xp, ids, w13.view(torch.int32), s13, w13s, s13s, act, H=H, I=I, TOPK=TOPK,
             NSH=NSH, BN=SH_GATE_BN, NW=SH_GATE_NW, num_warps=SH_GATE_W, warp_size=SH_GATE_WS)
         _moe_down_sh[(H // SH_DOWN_BN, M)](
             act, ids, wts, w2.view(torch.int32), s2, w2s, s2s, out, H=H, I=I, TOPK=TOPK,
             NSH=NSH, BN=SH_DOWN_BN, num_warps=SH_DOWN_W)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Round 3: RMSNorm that also (or only) writes the nibble-major permuted output,
+# and a GPTQ (uint4b8, group 64) GEMV reading the permuted input (used for qkv).
+
+
+@triton.jit
+def _rms_norm_perm_kernel(x_ptr, res_ptr, w_ptr, out_ptr, outp_ptr, res_out_ptr, x_stride, eps,
+                          H: tl.constexpr, HAS_RESIDUAL: tl.constexpr,
+                          WRITE_NORMAL: tl.constexpr):
+    """Same arithmetic, in the same order, as ``xpu_fused._rms_norm_kernel``; the
+    permuted copy stores the identical values at xp[(k % 8) * H / 8 + k / 8]."""
+    row = tl.program_id(0).to(tl.int64)
+    offs = tl.arange(0, H)
+    w = tl.load(w_ptr + offs).to(tl.float32)
+    s = tl.load(x_ptr + row * x_stride + offs).to(tl.float32)
+    if HAS_RESIDUAL:
+        s += tl.load(res_ptr + row * H + offs).to(tl.float32)
+        tl.store(res_out_ptr + row * H + offs, s.to(tl.bfloat16))
+    rs = 1.0 / tl.sqrt(tl.sum(s * s, axis=0) / H + eps)
+    y = (s * rs * w).to(tl.bfloat16)
+    if WRITE_NORMAL:
+        tl.store(out_ptr + row * H + offs, y)
+    RW: tl.constexpr = H // 8
+    tl.store(outp_ptr + row * H + (offs % 8) * RW + offs // 8, y)
+
+
+def rms_norm_perm(x, residual, weight, eps, write_normal):
+    """Returns (normal output or None, permuted output, bf16(x + residual) or None)."""
+    m, h = x.shape
+    assert x.dtype == torch.bfloat16 and x.stride(-1) == 1 and h & (h - 1) == 0 and h % 64 == 0
+    if residual is not None:
+        assert residual.is_contiguous() and residual.shape == x.shape
+        assert residual.dtype == torch.bfloat16
+    outp = torch.empty((m, h), dtype=x.dtype, device=x.device)
+    out = torch.empty((m, h), dtype=x.dtype, device=x.device) if write_normal else None
+    res_out = torch.empty((m, h), dtype=x.dtype, device=x.device) if residual is not None else None
+    if m:
+        _rms_norm_perm_kernel[(m,)](
+            x, x if residual is None else residual, weight, outp if out is None else out, outp,
+            outp if res_out is None else res_out, x.stride(0), eps, H=h,
+            HAS_RESIDUAL=residual is not None, WRITE_NORMAL=write_normal, num_warps=4)
+    return out, outp, res_out
+
+
+@triton.jit
+def _gptq_gemv_perm(xp_ptr, w_ptr, s_ptr, o_ptr, N: tl.constexpr, K: tl.constexpr,
+                    BN: tl.constexpr, NW: tl.constexpr):
+    """y = x @ W^T for GPTQ uint4b8 W [N, K/8] int32 (nibble i of word j is k = 8j + i),
+    scales [K/64, N]; x given nibble-major permuted; fp32 accumulation."""
+    nb = tl.program_id(0)
+    tok = tl.program_id(1)
+    RW: tl.constexpr = K // 8
+    GI: tl.constexpr = NW // 8
+    n = nb * BN + tl.arange(0, BN)
+    wo = tl.arange(0, NW)
+    gi = tl.arange(0, GI)
+    xb = xp_ptr + tok * K
+    acc = tl.zeros((BN,), dtype=tl.float32)
+    for w0 in range(0, RW, NW):
+        pk = tl.load(w_ptr + n[:, None] * RW + w0 + wo[None, :]) ^ -2004318072
+        sc = tl.load(s_ptr + (w0 // 8 + gi)[None, :] * N + n[:, None]).to(tl.float32)
+        t = _nib(pk, 0) * tl.load(xb + w0 + wo).to(tl.float32)[None, :]
+        for i in tl.static_range(1, 8):
+            t += _nib(pk, i) * tl.load(xb + i * RW + w0 + wo).to(tl.float32)[None, :]
+        acc += tl.sum(tl.sum(tl.reshape(t, (BN, GI, 8)), axis=2) * sc, axis=1)
+    tl.store(o_ptr + tok * N + n, acc.to(tl.bfloat16))
+
+
+GPTQ_BN, GPTQ_NW, GPTQ_W, GPTQ_WS = 4, 64, 1, 16
+
+
+def gptq_ok(layer) -> bool:
+    """True if ``layer`` holds sym GPTQ int4 (zero point 8, group 64) in the layout
+    the XPU W4A16 kernel leaves: qweight [K/8, N] int32 view of a contiguous
+    [N, K/8], scales [K/64, N]. Uses .item(): call outside graph capture."""
+    q = getattr(layer, "qweight", None)
+    sc = getattr(layer, "scales", None)
+    zp = getattr(layer, "qzeros", None)
+    if q is None or sc is None or zp is None or q.dtype != torch.int32 or q.dim() != 2:
+        return False
+    k8, n = q.shape
+    return (q.t().is_contiguous() and sc.is_contiguous() and tuple(sc.shape) == (k8 // 8, n)
+            and zp.numel() == 1 and int(zp.item()) == 8 and n % GPTQ_BN == 0
+            and k8 % GPTQ_NW == 0)
+
+
+def gptq_linear_perm(xp, layer):
+    """bf16 [M, N] = x @ W^T with ``xp`` the permuted bf16 [M, K] input."""
+    q = layer.qweight.t()
+    M, K = xp.shape
+    N = q.shape[0]
+    assert q.shape[1] * 8 == K and xp.is_contiguous()
+    out = torch.empty((M, N), dtype=torch.bfloat16, device=xp.device)
+    if M:
+        _gptq_gemv_perm[(N // GPTQ_BN, M)](xp, q, layer.scales, out, N=N, K=K, BN=GPTQ_BN,
+                                           NW=GPTQ_NW, num_warps=GPTQ_W, warp_size=GPTQ_WS)
     return out

@@ -1,0 +1,27 @@
+# NOTE: decode steps were <2 ms apart, so the gap splitter merged 24 decode steps into one; divide totals by 24 for per-token values.
+decode steps 1; kernel busy 118.089 ms/step; 15650 kernels/step
+ 57.658 ms   2472x   23.32 us  gemm_kernel
+ 21.169 ms   1128x   18.77 us  _moe_gate_up_sh
+ 13.602 ms   1128x   12.06 us  _moe_down_sh
+  7.438 ms   1176x    6.32 us  kernel_unified_attention
+  4.515 ms   1128x    4.00 us  _router_partial
+  3.279 ms   2376x    1.38 us  _rms_norm_kernel
+  2.959 ms   1176x    2.52 us  reduce_segments
+  2.331 ms   1128x    2.07 us  _router_topk
+  1.711 ms   1176x    1.45 us  _qk_norm_rope_kernel
+  1.382 ms   1176x    1.18 us  reshape_and_cache_kernel_flash
+  1.017 ms   1128x    0.90 us  _permute_x
+  0.241 ms     72x    3.35 us  at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xp
+  0.099 ms     24x    4.14 us  _compute_slot_mappings_kernel
+  0.095 ms     24x    3.98 us  _gumbel_sample_kernel
+  0.082 ms     24x    3.43 us  _gather_block_tables_kernel
+  0.075 ms     24x    3.12 us  at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>,
+  0.068 ms     24x    2.84 us  at::native::xpu::IndexSelectSmallIndexFunctor<c10::BFloat16, long, unsigned int,
+  0.063 ms     48x    1.31 us  _silu_and_mul_kernel
+  0.060 ms     25x    2.40 us  _post_update_kernel
+  0.046 ms     24x    1.90 us  _get_num_sampled_and_rejected_kernel
+  0.039 ms     24x    1.61 us  _combine_sampled_and_draft_tokens_kernel
+  0.037 ms     24x    1.56 us  _gumbel_combine_kernel
+  0.035 ms     48x    0.72 us  at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int
+  0.034 ms     24x    1.43 us  at::native::xpu::VectorizedElementwiseKernel<16, at::native::xpu::FillFunctor<bo
+  0.026 ms     24x    1.08 us  _prepare_pos_seq_lens_kernel
