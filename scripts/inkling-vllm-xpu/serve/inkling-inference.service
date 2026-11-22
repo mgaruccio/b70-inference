@@ -1,0 +1,18 @@
+[Unit]
+Description=Inkling 2 Mini inference on the B70 (vLLM XPU, 256k)
+Wants=network-online.target
+After=network-online.target flint-inference.service flint-llamacpp.service
+Conflicts=flint-inference.service flint-llamacpp.service
+
+[Service]
+Type=exec
+User=mike
+WorkingDirectory=/home/mike/inkling-vllm-xpu
+LoadCredential=api-key:/etc/b70-flint/api-key
+ExecStart=/bin/bash /home/mike/inkling-vllm-xpu/serve/serve-inkling.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target
