@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euxo pipefail
+W=$HOME/f3-inkling2; cd "$W"; B=$W/vllm/b70; export FLOOR_GIB=0 MAX_JOBS=4
+KIT=$W/kit ENV_TAG=vllm-xpu-b70env:0.1.16.2 bash $B/image/build.sh env vllm-src.tar
+KIT=$W/kit bash $B/image/build.sh env-update vllm-src.tar
+KIT=$W/kit OUT=$W/inkling2-out bash $B/inkling2-kernels/build.sh
+KIT=$W/kit TAG=vllm-xpu:b70-inkling2-engine bash $B/image/build.sh vllm vllm-src.tar
+docker build -f $B/inkling2-kernels/Dockerfile.layer --build-arg ENGINE=vllm-xpu:b70-inkling2-engine -t vllm-xpu:b70-inkling2 inkling2-out
+echo BUILD_ALL_DONE
+----
+--- /home/mike/cmp/f3-pr69186/logits_processor.orig.py	2026-11-22 23:57:48.044083312 +0000
++++ /home/mike/cmp/f3-pr69186/logits_processor.py	2026-11-22 23:57:48.163340067 +0000
+@@ -157,8 +157,13 @@
+             )
+         if (
+             self.head_dtype == torch.float32
+-            and (current_platform.is_cuda() or current_platform.is_rocm())
+-            and hidden_states.is_cuda
++            and (
++                (
++                    (current_platform.is_cuda() or current_platform.is_rocm())
++                    and hidden_states.is_cuda
++                )
++                or (current_platform.is_xpu() and hidden_states.device.type == "xpu")
++            )
+         ):
+             # Accumulate the projection directly into fp32. This avoids
+             # materializing an fp32 copy of the lm_head weight on every step,

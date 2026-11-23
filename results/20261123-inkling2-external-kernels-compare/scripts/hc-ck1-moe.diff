@@ -1,0 +1,51 @@
+--- hc-s1/vllm/models/inkling2/nvidia/moe.py	2026-11-21 17:50:05.015354012 +0000
++++ hc-ck1/vllm/models/inkling2/nvidia/moe.py	2026-11-22 22:08:48.337660775 +0000
+@@ -1,3 +1,4 @@
++import os
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ """Inkling2 mixture-of-experts layer (routed experts only, NVFP4 or MXFP8).
+@@ -228,6 +229,23 @@
+ 
+     def process_weights_after_loading(self) -> None:
+         if self.xpu:
++            self._use_cutlass = os.getenv("INK2_CUTLASS_MOE", "0") == "1"
++            if self._use_cutlass:
++                if self.nvfp4:
++                    self._w13_esc = (self.w13_weight_amax / self.w13_weight_outer_scale_denominator).to(torch.float32).contiguous()
++                    self._w2_esc = (self.w2_weight_amax / self.w2_weight_outer_scale_denominator).to(torch.float32).contiguous()
++                    self._w13_w = self.w13_weight.contiguous()
++                    self._w2_w = self.w2_weight.contiguous()
++                else:
++                    self._w13_esc = None
++                    self._w2_esc = None
++                    self.w13_weight.data = self.w13_weight.data.transpose(-1, -2).contiguous()
++                    self.w2_weight.data = self.w2_weight.data.transpose(-1, -2).contiguous()
++                    self._w13_w = self.w13_weight
++                    self._w2_w = self.w2_weight
++                self._w13_s = self.w13_weight_scale.contiguous()
++                self._w2_s = self.w2_weight_scale.contiguous()
++                return
+             from .ops import moe_xpu
+ 
+             if self.nvfp4 and moe_xpu.MOE_V3:
+@@ -316,9 +334,18 @@
+         if self.xpu:
+             if not reduce or push is not None:
+                 raise NotImplementedError("Inkling2 XPU MoE requires reduced forward")
++            ids, weights, is_padding = routing
++            if getattr(self, "_use_cutlass", False):
++                from .ops.moe_cutlass import cutlass_experts
++
++                return cutlass_experts(
++                    x, ids, weights, is_padding,
++                    self._w13_w, self._w13_s, self._w13_esc,
++                    self._w2_w, self._w2_s, self._w2_esc,
++                    self.nvfp4, self.num_experts, self.gate_cap, self.up_cap,
++                )
+             from .ops.moe_xpu import packed_experts
+ 
+-            ids, weights, is_padding = routing
+             return packed_experts(
+                 x,
+                 ids,

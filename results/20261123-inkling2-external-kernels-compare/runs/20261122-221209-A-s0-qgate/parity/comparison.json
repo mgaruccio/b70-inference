@@ -1,0 +1,536 @@
+{
+  "description": "Corrected CPU reference compares four short prompts in full and the first 2048 tokens of two long prompts (raw-long-00 and chat-long-00).",
+  "per_case": {
+    "raw-short-00": {
+      "positions": 11,
+      "xpu_vs_fp32_top1_agreement": 1.0,
+      "bf16_vs_fp32_top1_agreement": 1.0,
+      "xpu_vs_fp32_abs_logprob_delta": {
+        "n": 11,
+        "median": 0.013702392578125,
+        "p95": 0.13867413997650146,
+        "max": 0.23103046417236328
+      },
+      "bf16_vs_fp32_abs_logprob_delta": {
+        "n": 11,
+        "median": 0.010950922966003418,
+        "p95": 0.1207132339477539,
+        "max": 0.14786720275878906
+      },
+      "positions_xpu_delta_exceeds_same_position_bf16_noise": 6,
+      "largest_noise_floor_excess_positions": [
+        {
+          "position": 7,
+          "xpu_delta": 0.23103046417236328,
+          "bf16_delta": 0.14786720275878906,
+          "excess": 0.08316326141357422
+        },
+        {
+          "position": 6,
+          "xpu_delta": 0.04487776756286621,
+          "bf16_delta": 0.02439117431640625,
+          "excess": 0.02048659324645996
+        },
+        {
+          "position": 11,
+          "xpu_delta": 0.013891249895095825,
+          "bf16_delta": 0.007979035377502441,
+          "excess": 0.005912214517593384
+        },
+        {
+          "position": 3,
+          "xpu_delta": 0.013702392578125,
+          "bf16_delta": 0.00846099853515625,
+          "excess": 0.00524139404296875
+        },
+        {
+          "position": 9,
+          "xpu_delta": 0.0019028671085834503,
+          "bf16_delta": 0.0010121036320924759,
+          "excess": 0.0008907634764909744
+        }
+      ]
+    },
+    "chat-short-00": {
+      "positions": 26,
+      "xpu_vs_fp32_top1_agreement": 0.9230769230769231,
+      "bf16_vs_fp32_top1_agreement": 0.9230769230769231,
+      "xpu_vs_fp32_abs_logprob_delta": {
+        "n": 26,
+        "median": 0.03481483459472656,
+        "p95": 0.28920435905456543,
+        "max": 0.33446788787841797
+      },
+      "bf16_vs_fp32_abs_logprob_delta": {
+        "n": 26,
+        "median": 0.08251333236694336,
+        "p95": 0.707398533821106,
+        "max": 2.0662894248962402
+      },
+      "positions_xpu_delta_exceeds_same_position_bf16_noise": 10,
+      "largest_noise_floor_excess_positions": [
+        {
+          "position": 21,
+          "xpu_delta": 0.29872798919677734,
+          "bf16_delta": 0.004992961883544922,
+          "excess": 0.2937350273132324
+        },
+        {
+          "position": 22,
+          "xpu_delta": 0.33446788787841797,
+          "bf16_delta": 0.17484092712402344,
+          "excess": 0.15962696075439453
+        },
+        {
+          "position": 18,
+          "xpu_delta": 0.0660710334777832,
+          "bf16_delta": 0.04238414764404297,
+          "excess": 0.023686885833740234
+        },
+        {
+          "position": 2,
+          "xpu_delta": 0.026172637939453125,
+          "bf16_delta": 0.008141517639160156,
+          "excess": 0.01803112030029297
+        },
+        {
+          "position": 7,
+          "xpu_delta": 0.1425790786743164,
+          "bf16_delta": 0.12763595581054688,
+          "excess": 0.014943122863769531
+        }
+      ]
+    },
+    "raw-short-01": {
+      "positions": 14,
+      "xpu_vs_fp32_top1_agreement": 1.0,
+      "bf16_vs_fp32_top1_agreement": 1.0,
+      "xpu_vs_fp32_abs_logprob_delta": {
+        "n": 14,
+        "median": 0.01633608341217041,
+        "p95": 0.11281692981719968,
+        "max": 0.1571063995361328
+      },
+      "bf16_vs_fp32_abs_logprob_delta": {
+        "n": 14,
+        "median": 0.020167410373687744,
+        "p95": 0.12847107648849485,
+        "max": 0.20006585121154785
+      },
+      "positions_xpu_delta_exceeds_same_position_bf16_noise": 7,
+      "largest_noise_floor_excess_positions": [
+        {
+          "position": 5,
+          "xpu_delta": 0.08896875381469727,
+          "bf16_delta": 0.028436660766601562,
+          "excess": 0.0605320930480957
+        },
+        {
+          "position": 12,
+          "xpu_delta": 0.03438878059387207,
+          "bf16_delta": 0.008064508438110352,
+          "excess": 0.02632427215576172
+        },
+        {
+          "position": 7,
+          "xpu_delta": 0.023356914520263672,
+          "bf16_delta": 0.007891178131103516,
+          "excess": 0.015465736389160156
+        },
+        {
+          "position": 2,
+          "xpu_delta": 0.014978885650634766,
+          "bf16_delta": 0.011635303497314453,
+          "excess": 0.0033435821533203125
+        },
+        {
+          "position": 9,
+          "xpu_delta": 0.0023087002336978912,
+          "bf16_delta": 0.00019100308418273926,
+          "excess": 0.002117697149515152
+        }
+      ]
+    },
+    "chat-short-01": {
+      "positions": 29,
+      "xpu_vs_fp32_top1_agreement": 0.9310344827586207,
+      "bf16_vs_fp32_top1_agreement": 0.9655172413793104,
+      "xpu_vs_fp32_abs_logprob_delta": {
+        "n": 29,
+        "median": 0.056034088134765625,
+        "p95": 0.6511850357055662,
+        "max": 0.8609323501586914
+      },
+      "bf16_vs_fp32_abs_logprob_delta": {
+        "n": 29,
+        "median": 0.06799030303955078,
+        "p95": 0.6306715011596674,
+        "max": 0.7404975891113281
+      },
+      "positions_xpu_delta_exceeds_same_position_bf16_noise": 10,
+      "largest_noise_floor_excess_positions": [
+        {
+          "position": 13,
+          "xpu_delta": 0.5840754508972168,
+          "bf16_delta": 0.06215620040893555,
+          "excess": 0.5219192504882812
+        },
+        {
+          "position": 19,
+          "xpu_delta": 0.8609323501586914,
+          "bf16_delta": 0.37520599365234375,
+          "excess": 0.48572635650634766
+        },
+        {
+          "position": 7,
+          "xpu_delta": 0.43164539337158203,
+          "bf16_delta": 0.11716938018798828,
+          "excess": 0.31447601318359375
+        },
+        {
+          "position": 17,
+          "xpu_delta": 0.31058263778686523,
+          "bf16_delta": 0.004777431488037109,
+          "excess": 0.3058052062988281
+        },
+        {
+          "position": 18,
+          "xpu_delta": 0.3914909362792969,
+          "bf16_delta": 0.1325368881225586,
+          "excess": 0.2589540481567383
+        }
+      ]
+    },
+    "raw-long-00": {
+      "positions": 2047,
+      "xpu_vs_fp32_top1_agreement": 0.9970688812896922,
+      "bf16_vs_fp32_top1_agreement": 0.9975574010747436,
+      "xpu_vs_fp32_abs_logprob_delta": {
+        "n": 2047,
+        "median": 0.0003779877442866564,
+        "p95": 0.009784331917762748,
+        "max": 0.19829124212265015
+      },
+      "bf16_vs_fp32_abs_logprob_delta": {
+        "n": 2047,
+        "median": 0.00037257641088217497,
+        "p95": 0.009446666482835967,
+        "max": 0.36214494705200195
+      },
+      "positions_xpu_delta_exceeds_same_position_bf16_noise": 1072,
+      "largest_noise_floor_excess_positions": [
+        {
+          "position": 1248,
+          "xpu_delta": 0.13560771942138672,
+          "bf16_delta": 0.025469303131103516,
+          "excess": 0.1101384162902832
+        },
+        {
+          "position": 960,
+          "xpu_delta": 0.12249875068664551,
+          "bf16_delta": 0.030304014682769775,
+          "excess": 0.09219473600387573
+        },
+        {
+          "position": 192,
+          "xpu_delta": 0.19829124212265015,
+          "bf16_delta": 0.10886949300765991,
+          "excess": 0.08942174911499023
+        },
+        {
+          "position": 4,
+          "xpu_delta": 0.1015615463256836,
+          "bf16_delta": 0.014270782470703125,
+          "excess": 0.08729076385498047
+        },
+        {
+          "position": 384,
+          "xpu_delta": 0.0884246826171875,
+          "bf16_delta": 0.008868753910064697,
+          "excess": 0.0795559287071228
+        }
+      ]
+    },
+    "chat-long-00": {
+      "positions": 2047,
+      "xpu_vs_fp32_top1_agreement": 0.9912066438690766,
+      "bf16_vs_fp32_top1_agreement": 0.9912066438690766,
+      "xpu_vs_fp32_abs_logprob_delta": {
+        "n": 2047,
+        "median": 3.1348034099210054e-05,
+        "p95": 0.03223730325698814,
+        "max": 5.689228892326355
+      },
+      "bf16_vs_fp32_abs_logprob_delta": {
+        "n": 2047,
+        "median": 3.2303545594913885e-05,
+        "p95": 0.03728427407331761,
+        "max": 5.6305141299963
+      },
+      "positions_xpu_delta_exceeds_same_position_bf16_noise": 981,
+      "largest_noise_floor_excess_positions": [
+        {
+          "position": 241,
+          "xpu_delta": 4.325497508049011,
+          "bf16_delta": 0.5516150370240211,
+          "excess": 3.77388247102499
+        },
+        {
+          "position": 221,
+          "xpu_delta": 5.689228892326355,
+          "bf16_delta": 3.285937786102295,
+          "excess": 2.40329110622406
+        },
+        {
+          "position": 365,
+          "xpu_delta": 1.3543275853153318,
+          "bf16_delta": 0.00014692428521811962,
+          "excess": 1.3541806610301137
+        },
+        {
+          "position": 138,
+          "xpu_delta": 1.1888713836669922,
+          "bf16_delta": 0.3518902063369751,
+          "excess": 0.8369811773300171
+        },
+        {
+          "position": 173,
+          "xpu_delta": 3.230001449584961,
+          "bf16_delta": 2.6173877716064453,
+          "excess": 0.6126136779785156
+        }
+      ]
+    }
+  },
+  "overall": {
+    "positions": 4174,
+    "xpu_vs_fp32_top1_agreement": 0.9932918064206996,
+    "bf16_vs_fp32_top1_agreement": 0.9937709631049353,
+    "xpu_vs_fp32_abs_logprob_delta": {
+      "n": 4174,
+      "median": 0.00016786028936621733,
+      "p95": 0.023534655570983838,
+      "max": 5.689228892326355
+    },
+    "bf16_vs_fp32_abs_logprob_delta": {
+      "n": 4174,
+      "median": 0.00016629527090117335,
+      "p95": 0.028507924079895,
+      "max": 5.6305141299963
+    },
+    "positions_xpu_delta_exceeds_same_position_bf16_noise": 2086,
+    "noise_floor_excess_examples_top5_per_prompt": [
+      {
+        "case": "raw-short-00",
+        "position": 7,
+        "xpu_delta": 0.23103046417236328,
+        "bf16_delta": 0.14786720275878906,
+        "excess": 0.08316326141357422
+      },
+      {
+        "case": "raw-short-00",
+        "position": 6,
+        "xpu_delta": 0.04487776756286621,
+        "bf16_delta": 0.02439117431640625,
+        "excess": 0.02048659324645996
+      },
+      {
+        "case": "raw-short-00",
+        "position": 11,
+        "xpu_delta": 0.013891249895095825,
+        "bf16_delta": 0.007979035377502441,
+        "excess": 0.005912214517593384
+      },
+      {
+        "case": "raw-short-00",
+        "position": 3,
+        "xpu_delta": 0.013702392578125,
+        "bf16_delta": 0.00846099853515625,
+        "excess": 0.00524139404296875
+      },
+      {
+        "case": "raw-short-00",
+        "position": 9,
+        "xpu_delta": 0.0019028671085834503,
+        "bf16_delta": 0.0010121036320924759,
+        "excess": 0.0008907634764909744
+      },
+      {
+        "case": "chat-short-00",
+        "position": 21,
+        "xpu_delta": 0.29872798919677734,
+        "bf16_delta": 0.004992961883544922,
+        "excess": 0.2937350273132324
+      },
+      {
+        "case": "chat-short-00",
+        "position": 22,
+        "xpu_delta": 0.33446788787841797,
+        "bf16_delta": 0.17484092712402344,
+        "excess": 0.15962696075439453
+      },
+      {
+        "case": "chat-short-00",
+        "position": 18,
+        "xpu_delta": 0.0660710334777832,
+        "bf16_delta": 0.04238414764404297,
+        "excess": 0.023686885833740234
+      },
+      {
+        "case": "chat-short-00",
+        "position": 2,
+        "xpu_delta": 0.026172637939453125,
+        "bf16_delta": 0.008141517639160156,
+        "excess": 0.01803112030029297
+      },
+      {
+        "case": "chat-short-00",
+        "position": 7,
+        "xpu_delta": 0.1425790786743164,
+        "bf16_delta": 0.12763595581054688,
+        "excess": 0.014943122863769531
+      },
+      {
+        "case": "raw-short-01",
+        "position": 5,
+        "xpu_delta": 0.08896875381469727,
+        "bf16_delta": 0.028436660766601562,
+        "excess": 0.0605320930480957
+      },
+      {
+        "case": "raw-short-01",
+        "position": 12,
+        "xpu_delta": 0.03438878059387207,
+        "bf16_delta": 0.008064508438110352,
+        "excess": 0.02632427215576172
+      },
+      {
+        "case": "raw-short-01",
+        "position": 7,
+        "xpu_delta": 0.023356914520263672,
+        "bf16_delta": 0.007891178131103516,
+        "excess": 0.015465736389160156
+      },
+      {
+        "case": "raw-short-01",
+        "position": 2,
+        "xpu_delta": 0.014978885650634766,
+        "bf16_delta": 0.011635303497314453,
+        "excess": 0.0033435821533203125
+      },
+      {
+        "case": "raw-short-01",
+        "position": 9,
+        "xpu_delta": 0.0023087002336978912,
+        "bf16_delta": 0.00019100308418273926,
+        "excess": 0.002117697149515152
+      },
+      {
+        "case": "chat-short-01",
+        "position": 13,
+        "xpu_delta": 0.5840754508972168,
+        "bf16_delta": 0.06215620040893555,
+        "excess": 0.5219192504882812
+      },
+      {
+        "case": "chat-short-01",
+        "position": 19,
+        "xpu_delta": 0.8609323501586914,
+        "bf16_delta": 0.37520599365234375,
+        "excess": 0.48572635650634766
+      },
+      {
+        "case": "chat-short-01",
+        "position": 7,
+        "xpu_delta": 0.43164539337158203,
+        "bf16_delta": 0.11716938018798828,
+        "excess": 0.31447601318359375
+      },
+      {
+        "case": "chat-short-01",
+        "position": 17,
+        "xpu_delta": 0.31058263778686523,
+        "bf16_delta": 0.004777431488037109,
+        "excess": 0.3058052062988281
+      },
+      {
+        "case": "chat-short-01",
+        "position": 18,
+        "xpu_delta": 0.3914909362792969,
+        "bf16_delta": 0.1325368881225586,
+        "excess": 0.2589540481567383
+      },
+      {
+        "case": "raw-long-00",
+        "position": 1248,
+        "xpu_delta": 0.13560771942138672,
+        "bf16_delta": 0.025469303131103516,
+        "excess": 0.1101384162902832
+      },
+      {
+        "case": "raw-long-00",
+        "position": 960,
+        "xpu_delta": 0.12249875068664551,
+        "bf16_delta": 0.030304014682769775,
+        "excess": 0.09219473600387573
+      },
+      {
+        "case": "raw-long-00",
+        "position": 192,
+        "xpu_delta": 0.19829124212265015,
+        "bf16_delta": 0.10886949300765991,
+        "excess": 0.08942174911499023
+      },
+      {
+        "case": "raw-long-00",
+        "position": 4,
+        "xpu_delta": 0.1015615463256836,
+        "bf16_delta": 0.014270782470703125,
+        "excess": 0.08729076385498047
+      },
+      {
+        "case": "raw-long-00",
+        "position": 384,
+        "xpu_delta": 0.0884246826171875,
+        "bf16_delta": 0.008868753910064697,
+        "excess": 0.0795559287071228
+      },
+      {
+        "case": "chat-long-00",
+        "position": 241,
+        "xpu_delta": 4.325497508049011,
+        "bf16_delta": 0.5516150370240211,
+        "excess": 3.77388247102499
+      },
+      {
+        "case": "chat-long-00",
+        "position": 221,
+        "xpu_delta": 5.689228892326355,
+        "bf16_delta": 3.285937786102295,
+        "excess": 2.40329110622406
+      },
+      {
+        "case": "chat-long-00",
+        "position": 365,
+        "xpu_delta": 1.3543275853153318,
+        "bf16_delta": 0.00014692428521811962,
+        "excess": 1.3541806610301137
+      },
+      {
+        "case": "chat-long-00",
+        "position": 138,
+        "xpu_delta": 1.1888713836669922,
+        "bf16_delta": 0.3518902063369751,
+        "excess": 0.8369811773300171
+      },
+      {
+        "case": "chat-long-00",
+        "position": 173,
+        "xpu_delta": 3.230001449584961,
+        "bf16_delta": 2.6173877716064453,
+        "excess": 0.6126136779785156
+      }
+    ]
+  },
+  "greedy_decode": {}
+}
