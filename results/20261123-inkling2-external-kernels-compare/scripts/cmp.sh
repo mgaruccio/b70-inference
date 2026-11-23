@@ -40,14 +40,18 @@ trap cleanup EXIT
 trap 'exit 143' TERM HUP INT
 { date -Is; uname -sr; cat /sys/class/drm/card*/device/hwmon/hwmon*/power1_cap 2>/dev/null | sed 's/^/power1_cap_uW=/'; } > "$art/environment.txt"
 case $cfg in
-A|B|H1|H2)
+A|B|H1|H2|P|PC)
     # H1: CUTLASS for >4-token batches, our decode GEMV (checkpoint NVFP4 layout) for <=4 tokens on
     #     NVFP4 layers; MXFP8 layers stay on CUTLASS. H2: as H1, MXFP8 layers fully on our kernels.
+    # P: published plugin path = vLLM main 3146a9df41 + PR #69186 + vllm-inkling2-xpu (entry point from
+    #    plugin-site). PC: P + INK2_CUTLASS_MOE=1.
     tree=hc-s1; [[ $cfg == B ]] && tree=hc-ck1; [[ $cfg == H* ]] && tree=hc-hy1
+    [[ $cfg == P* ]] && tree=vllm-main-3146a9df41
     export LD_LIBRARY_PATH=$D/usr/lib/x86_64-linux-gnu:$D/usr/lib:$D/usr/local/lib LIBRARY_PATH=$D/usr/lib/x86_64-linux-gnu:$D/usr/lib CPATH=$D/usr/include OCL_ICD_VENDORS=$HOME/flint-vllm-spike/opencl-vendors
     export PYTHONPATH=$p/src/$tree:$p/src/transformers-mini/src HF_HUB_OFFLINE=1 VLLM_NO_USAGE_STATS=1 TRITON_CACHE_DIR=$p/.triton
+    [[ $cfg == P* ]] && export PYTHONPATH=$p/plugin-site:$p/src/$tree
     export NEOReadDebugKeys=1 ForcePreemptionMode=3
-    [[ $cfg != A ]] && export INK2_CUTLASS_MOE=1
+    [[ $cfg != A && $cfg != P ]] && export INK2_CUTLASS_MOE=1
     [[ $cfg == H* ]] && export INK2_HYBRID_DEC_MAX=4
     [[ $cfg == H2 ]] && export INK2_CUTLASS_MXFP8=0
     args=(serve "$weights" "${common[@]}" --language-model-only --dtype bfloat16 --max-num-batched-tokens "${CHUNK:-2048}"

@@ -155,6 +155,33 @@ A reshape/split variant (`scripts/apply_hy2.py`) was slower still: 214 µs.
 
 **Revisit when** the CUTLASS kernel can read split-half NVFP4, which would let one weight copy serve both kernels.
 
+## Plugin path: B integrated into `vllm-inkling2-xpu` (`8e32652`)
+
+The winning option, B, was integrated into the public plugin as opt-in `INK2_CUTLASS_MOE=1`:
+
+- the kernel and dispatcher are vendored from the cookbook (MIT)
+- a fixed build script ships as `scripts/build-cutlass-xe2.sh`
+- a new FP64-reference test, `test_xpu_cutlass_experts`, covers NVFP4 and MXFP8 at 1–300 tokens
+
+**Validation setup.** The plugin was validated on the guest through its own `vllm.general_plugins` entry point:
+
+- vLLM main `3146a9df41` source tree, plus #69186 (`gh pr diff`)
+- the plugin installed to a target dir on `PYTHONPATH`
+- configs **P** (default kernels) and **PC** (`INK2_CUTLASS_MOE=1`)
+
+**Unit tests.** `tests/test_moe_xpu.py`: 29 passed. The 1 deselected test is pre-existing and needs vLLM's `tests.conftest` (`tblib`), which isn't installed.
+
+The first run had all GPU tests failing, because the shell had sourced oneAPI `setvars.sh`. Its SYCL runtime (2026.1.1) shadowed torch's bundled 2026.1.2. The plugin README now warns about this.
+
+| | P | PC |
+|---|---:|---:|
+| top-1 vs FP32 / p95 \|Δlogprob\| | 0.9938 / 0.0227 | 0.9938 / 0.0230 |
+| decode, no spec: short / +6K / +30K | **57.6 / 54.9 / 51.3** | 56.0 / 53.4 / 50.0 |
+| DSpark k=7: short / +6K / +30K | 83.0 / 82.2 / 76.4 | **99.0 / 103.7 / 100.7** |
+| 8K prefill | 3,616 | 4,085 |
+
+P reproduces A and PC reproduces B (two rounds each, P PC P PC). So the published plugin on vLLM main matches our development tree. The HF post's 75.9 tok/s DSpark figure came from an earlier environment.
+
 ## Reproduction
 
 All scripts are in `scripts/`; run on the guest.
