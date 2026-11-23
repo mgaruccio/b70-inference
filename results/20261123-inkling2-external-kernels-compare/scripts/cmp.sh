@@ -40,12 +40,16 @@ trap cleanup EXIT
 trap 'exit 143' TERM HUP INT
 { date -Is; uname -sr; cat /sys/class/drm/card*/device/hwmon/hwmon*/power1_cap 2>/dev/null | sed 's/^/power1_cap_uW=/'; } > "$art/environment.txt"
 case $cfg in
-A|B)
-    tree=hc-s1; [[ $cfg == B ]] && tree=hc-ck1
+A|B|H1|H2)
+    # H1: CUTLASS for >4-token batches, our decode GEMV (checkpoint NVFP4 layout) for <=4 tokens on
+    #     NVFP4 layers; MXFP8 layers stay on CUTLASS. H2: as H1, MXFP8 layers fully on our kernels.
+    tree=hc-s1; [[ $cfg == B ]] && tree=hc-ck1; [[ $cfg == H* ]] && tree=hc-hy1
     export LD_LIBRARY_PATH=$D/usr/lib/x86_64-linux-gnu:$D/usr/lib:$D/usr/local/lib LIBRARY_PATH=$D/usr/lib/x86_64-linux-gnu:$D/usr/lib CPATH=$D/usr/include OCL_ICD_VENDORS=$HOME/flint-vllm-spike/opencl-vendors
     export PYTHONPATH=$p/src/$tree:$p/src/transformers-mini/src HF_HUB_OFFLINE=1 VLLM_NO_USAGE_STATS=1 TRITON_CACHE_DIR=$p/.triton
     export NEOReadDebugKeys=1 ForcePreemptionMode=3
-    [[ $cfg == B ]] && export INK2_CUTLASS_MOE=1
+    [[ $cfg != A ]] && export INK2_CUTLASS_MOE=1
+    [[ $cfg == H* ]] && export INK2_HYBRID_DEC_MAX=4
+    [[ $cfg == H2 ]] && export INK2_CUTLASS_MXFP8=0
     args=(serve "$weights" "${common[@]}" --language-model-only --dtype bfloat16 --max-num-batched-tokens "${CHUNK:-2048}"
           -cc.mode=none -cc.cudagraph_mode=FULL_DECODE_ONLY)
     [[ $spec == 1 ]] && args+=(--speculative-config "$specj")

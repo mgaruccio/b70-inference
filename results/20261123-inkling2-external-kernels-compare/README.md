@@ -107,7 +107,7 @@ Acceptance length depends on the greedy trajectory, which differs between stacks
 1. **B is worth incorporating.**
    - It has no measurable quality cost (top-1 vs FP32 at the noise floor, slightly better than A).
    - It gives +19% to +32% DSpark decode (−11% to −23% per step) and +13% prefill.
-   - It costs −3% non-spec decode, so a hybrid that keeps our ≤4-token decode GEMV and uses CUTLASS for the verify and prefill shapes is the obvious follow-up.
+   - It costs −3% non-spec decode. A hybrid with our ≤4-token GEMV was tried and closed (see "Follow-up" below): B as-is is the best lossless finisher.
    - The cookbook build script did not work as published. Four fixes are in `scripts/build_ck1.sh`:
      - add the `vllm-xpu-kernels` root include
      - add the `sycl-tla/tools/util/include` include
@@ -122,6 +122,38 @@ Acceptance length depends on the greedy trajectory, which differs between stacks
      - **prefill path:** +30% vs A and +15% vs B at matched chunk 2048. B and C both use grouped-GEMM experts, so the remaining gap points at their SYCL chunk-prefill attention.
      - **KV/workspace memory layout:** more KV tokens at the same utilization, and it fits chunk 4096 where ours cannot.
 3. **C's decode attention advantage did not show up end to end** in its lossless configuration. C's 30K decode is slower than A, but C also streams 3.8 GiB more expert weights in layers 20–23, so this is not a clean attention-only comparison.
+
+## Follow-up: CUTLASS for verify/prefill + our decode GEMV for ≤4 tokens (closed)
+
+**Change.** `scripts/apply_hy1.py` builds tree `hc-hy1` on top of B:
+
+- NVFP4 layers with ≤4 tokens (`INK2_HYBRID_DEC_MAX=4`) use our decode GEMV; larger batches use CUTLASS.
+- The GEMV gained a checkpoint-nibble-layout mode (`split_half=False`), because CUTLASS needs the checkpoint layout and a second weight copy would cost ~9 GB.
+- Kernel check (`scripts/test_dec_layout.py`): bit-identical to the split-half GEMV at 1/2/4 tokens.
+
+**Variants.**
+
+- **H1:** MXFP8 layers stay on CUTLASS.
+- **H2:** MXFP8 layers fully on our kernels (`INK2_CUTLASS_MXFP8=0`).
+
+The same session reran A and B, ordered A B H1 H2 × 2. A and B reproduced their earlier values exactly.
+
+| | A | B | H1 | H2 |
+|---|---:|---:|---:|---:|
+| top-1 vs FP32 / p95 \|Δlogprob\| | 0.9933 / 0.0235 | 0.9935 / 0.0219 | 0.9940 / 0.0198 | 0.9935 / 0.0229 |
+| decode, no spec: short / +6K / +30K | **57.7 / 54.9 / 51.3** | 56.0 / 53.4 / 50.0 | 52.4 / 50.1 / 47.1 | 52.8 / 50.4 / 47.4 |
+| DSpark k=7: short / +6K / +30K | 83.0 / 82.2 / 76.4 | **98.9 / 103.6 / 100.5** | 99.0 / 103.6 / 100.5 | 97.9 / 102.4 / 99.6 |
+| 8K prefill | 3,613 | 4,080 | 4,080 | 4,030 |
+
+**Result.** The hybrid made non-spec decode slower than both A and B.
+
+**Cause.** Microbench (`scripts/bench_dec_layout.py`, 128 experts, top-8, 1 token): the checkpoint-layout GEMV takes 143 µs per call versus 110 µs on split-half weights.
+
+In the checkpoint layout, a byte's two nibbles are adjacent k values. A 16-byte chunk therefore spans two scale groups (bytes 0–7 and 8–15), and the kernel has to split every chunk's products by byte half before scaling. In the split-half layout, all low nibbles belong to one scale group and all high nibbles to the other, so each nibble plane reduces directly under a single scale.
+
+A reshape/split variant (`scripts/apply_hy2.py`) was slower still: 214 µs.
+
+**Revisit when** the CUTLASS kernel can read split-half NVFP4, which would let one weight copy serve both kernels.
 
 ## Reproduction
 
