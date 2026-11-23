@@ -182,6 +182,25 @@ The first run had all GPU tests failing, because the shell had sourced oneAPI `s
 
 P reproduces A and PC reproduces B (two rounds each, P PC P PC). So the published plugin on vLLM main matches our development tree. The HF post's 75.9 tok/s DSpark figure came from an earlier environment.
 
+## Live switch (2026-11-23 03:06 UTC)
+
+`scripts/inkling-vllm-xpu/serve/serve-inkling.sh` now serves tree `hc-ck1` with `INK2_CUTLASS_MOE=1`; the previous launcher is kept on the guest as `serve-inkling.sh.pre-cutlass`. Otherwise the live configuration is unchanged:
+
+- 262,144 context, `--max-num-batched-tokens 256`, utilization 0.98
+- prefix caching on
+- DSpark k=7 with probabilistic draft sampling
+
+**Before/after check.** Same live service on `:8080` with its API key, using `live/live_check.sh` (`live_bench.py` is `decode_bench.py` plus the auth header). Smoke (`95`) and tool call (`echo_value`) pass both times.
+
+| live :8080 | before (hc-s1) | after (hc-ck1 + CUTLASS) |
+|---|---:|---:|
+| KV cache tokens | 270,133 | 272,796 |
+| DSpark decode, short (6 prompts) | 83.3 (AL 2.99) | **99.0 (AL 3.16), +19%** |
+| DSpark decode, +30K (3 prompts) | 97.8 (AL 3.57) | **100.1 (AL 3.39), +2%** |
+| approx. ms per DSpark step at +30K | 36.5 | 33.9 (−7%) |
+
+At +30K, both runs hit the live prefix cache: TTFT was 0.12–0.13 s. Acceptance length differs because the greedy trajectories differ, so the per-step cost is the cleaner comparison.
+
 ## Reproduction
 
 All scripts are in `scripts/`; run on the guest.

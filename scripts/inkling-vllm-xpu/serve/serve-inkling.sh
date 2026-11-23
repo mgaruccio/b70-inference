@@ -10,7 +10,10 @@ export VLLM_API_KEY
 export LD_LIBRARY_PATH=$driver/usr/lib/x86_64-linux-gnu:$driver/usr/lib:$driver/usr/local/lib
 export LIBRARY_PATH=$driver/usr/lib/x86_64-linux-gnu:$driver/usr/lib CPATH=$driver/usr/include
 export OCL_ICD_VENDORS=$runtime/opencl-vendors
-export PYTHONPATH=$p/src/hc-s1:$p/src/transformers-mini/src:$runtime/serve
+# hc-ck1 = hc-s1 + SergiioB's CUTLASS Xe2 expert kernel (INK2_CUTLASS_MOE=1): lossless, +19-32% DSpark
+# decode (results/20261123-inkling2-external-kernels-compare). Rollback: hc-s1 and drop INK2_CUTLASS_MOE.
+export PYTHONPATH=$p/src/hc-ck1:$p/src/transformers-mini/src:$runtime/serve
+export INK2_CUTLASS_MOE=1
 export TRITON_CACHE_DIR=$p/.triton HF_HUB_OFFLINE=1 VLLM_NO_USAGE_STATS=1
 export NEOReadDebugKeys=1 ForcePreemptionMode=3 VLLM_LOGGING_LEVEL=INFO
 
