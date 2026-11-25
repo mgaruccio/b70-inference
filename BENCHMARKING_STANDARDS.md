@@ -222,6 +222,8 @@ The benchmark SHOULD record separately where possible:
 
 A configuration that improves short-context speed but materially lowers usable context capacity MUST state that tradeoff prominently.
 
+Speed and capacity at long context do not prove the context works. Before promoting a configuration, run a retrieval gate: three random codes placed at about 15%, 50% and 85% depth of a document at about 50% and about 100% of the configured context, answered exactly through the chat API.
+
 ## 8. Speculative decoding
 
 When speculative decoding is enabled, tokens/sec alone is insufficient.
@@ -245,6 +247,8 @@ The exact speculative configuration MUST be captured, including:
 - adaptive-depth settings if used.
 
 When testing adaptive draft depth, report the observed depth distribution in addition to aggregate throughput.
+
+The best draft length usually differs by concurrency: longer drafts win when decode is bandwidth-bound and lose once verification competes for compute. Sweep the verified draft length at several concurrencies rather than fixing it from a C1 result. When the drafter has a fixed block size, a per-batch-size verification schedule can trim the verified length.
 
 ## 9. Lossy or relaxed acceptance
 
@@ -314,6 +318,14 @@ Before collecting measurements:
 - record failures, retries, and OOMs rather than silently dropping them.
 
 Outliers SHOULD remain in raw data. If an outlier is excluded from a summary statistic, the exclusion rule and reason MUST be stated.
+
+### 10.1 Hill-climb discipline
+
+Adopted from [sybil-solutions/inference-optimisation-skill](https://github.com/sybil-solutions/inference-optimisation-skill) for iterative optimization work:
+
+- **Ceiling first.** Before hill-climbing a metric, estimate its practical ceiling from checkpoint tensor sizes and measured bandwidth/compute. For decode, count dense + routed-expert union + LM head + KV bytes per step, including the drafter. Report results as a fraction of that ceiling, and say early when a target exceeds it.
+- **Interleave and accept conservatively.** Run control, candidate, control (or ABAB) on the same day and the same build. Accept a candidate only if it beats both neighbouring controls on its target metric and regresses no other tracked metric by more than about 3%. Repeat any single surprising win.
+- **One lever per arm.** Derive each candidate from the current best. Record rejected levers and why in the result README so they are not retried without a new reason.
 
 ## 11. Memory and capacity reporting
 
