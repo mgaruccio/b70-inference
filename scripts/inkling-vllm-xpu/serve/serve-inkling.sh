@@ -27,4 +27,5 @@ exec "$stage/.venv/bin/python" -B -m vllm.entrypoints.cli.main serve "$weights" 
     --generation-config auto --chat-template "$weights/chat_template.jinja" \
     --enable-auto-tool-choice --tool-call-parser inkling --reasoning-parser inkling \
     -cc.mode=none -cc.cudagraph_mode=FULL_DECODE_ONLY \
-    --speculative-config '{"method":"dspark","num_speculative_tokens":7,"draft_sample_method":"probabilistic"}'
+    --speculative-config '{"method":"dspark","num_speculative_tokens":7,"draft_sample_method":"probabilistic","num_speculative_tokens_per_batch_size":[[1,2,7],[3,32,3]]}'
+# Verify 7 drafts at 1-2 running requests, 3 at 3-32: results/20261125-inkling2-draft-length-schedule

@@ -102,9 +102,29 @@ Other results from the confirmation:
 
 Local copies omit the per-request `--save-detailed` bench JSON and server logs. Full raw evidence stays on the guest under `~/inkling-vllm-xpu/adaptive-verif/run-*/`. Production was restored and passed smoke after every run.
 
+## Production
+
+Promoted on 2026-11-25 with [`promote.sh`](promote.sh), which is the sparse-conv promotion script with its artifact labels renamed. On `b70-dev`:
+
+```bash
+cd ~/inkling-vllm-xpu/adaptive-verif && timeout 1200 bash promote.sh serve-inkling-dspark-schedule.sh
+```
+
+The script checks that the service is idle, backs up the launcher, installs the [new launcher](../../scripts/inkling-vllm-xpu/serve/serve-inkling.sh) and restarts the service. It rolls back automatically if any check fails. The checks passed:
+
+- The running engine reports the schedule in its speculative config.
+- Authenticated `/v1/models` showed the 409,000-token cap.
+- `live_check.sh` passed: chat answered `95` and the `echo_value` tool call succeeded.
+- C1 decode was 107.0 tok/s short and 90.7 tok/s at +30K, unchanged from before.
+- Unauthenticated `/v1/models` returned 401.
+- A 408,744-token prompt plus 128 generated tokens completed in 248.6 s, with zero preemptions and 100 accepted draft tokens.
+- KV was 8.23 GiB / 412,065 tokens.
+
+Guest artifacts are in `~/inkling-vllm-xpu/sparse-69444/promote-dspark-schedule.QdmtCT/` and `~/cmp/live/20261125-222347-promoted-dspark-schedule/`. The rollback launcher is `~/inkling-vllm-xpu/serve/serve-inkling.sh.pre-dspark-schedule-20261125-222319`, and the live launcher's sha256 is `e8fef2d9…afd29`.
+
 ## Not done
 
-- The live launcher is unchanged; promotion needs explicit approval.
+- No separate live-traffic C8/C32 benchmark after promotion; the gains above come from the matched loopback engines.
 - This is not a publishable-tier result: no BetterBench, no full long-context sweep, and 2 control/candidate pairs.
 - Only greedy (temperature 0) workloads were measured; sampled chat has different acceptance.
 - Schedule boundaries were chosen from static-k sweeps, not tuned per batch size.
