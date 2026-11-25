@@ -33,7 +33,7 @@ def snapshot():
     return metrics
 
 
-def bench(art, model_dir, n, trial):
+def bench(art, model_dir, n, trial, *, timeout_s=100):
     name = f"c{n}-r{trial}"
     result = art / f"{name}.json"
     prompts = max(8, 4 * n)
@@ -57,7 +57,7 @@ def bench(art, model_dir, n, trial):
         subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT) as child,
     ):
         try:
-            deadline = time.monotonic() + 100
+            deadline = time.monotonic() + timeout_s
             while child.poll() is None:
                 peak = max(peak, snapshot()[RUNNING])
                 if time.monotonic() > deadline:
