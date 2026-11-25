@@ -20,8 +20,8 @@ export NEOReadDebugKeys=1 ForcePreemptionMode=3 VLLM_LOGGING_LEVEL=INFO
 exec "$runtime/.venv/bin/python" -B -m vllm.entrypoints.cli.main serve "$weights" \
     --host 0.0.0.0 --port 8080 --served-model-name inkling-2-mini \
     --middleware flint_auth.FlintAuth \
-    --language-model-only --dtype bfloat16 --max-model-len 262144 \
-    --max-num-batched-tokens 2048 --gpu-memory-utilization 0.98 --max-num-seqs 1 \
+    --language-model-only --dtype bfloat16 --max-model-len 327680 \
+    --max-num-batched-tokens 2048 --gpu-memory-utilization 0.98 --max-num-seqs 32 \
     --block-size 64 --enable-prefix-caching --no-async-scheduling --kv-cache-dtype fp8 \
     --generation-config auto --chat-template "$weights/chat_template.jinja" \
     --enable-auto-tool-choice --tool-call-parser inkling --reasoning-parser inkling \

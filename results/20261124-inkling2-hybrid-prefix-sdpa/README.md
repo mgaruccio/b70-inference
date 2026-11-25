@@ -30,7 +30,7 @@ Decode and acceptance vary with the generated trajectory. The experiment isolate
 
 ## Live cutover
 
-The authenticated `inkling-inference` service on `:8080` now serves the tested plugin SHA with FP8 KV, `INK2_HYBRID_PREFIX_SDPA=1`, and CUTLASS still enabled. The live launcher keeps prefix caching enabled and `/v1/models` reports the same 262,144-token cap. The previous launcher is retained on the guest as `serve-inkling.sh.pre-hybrid-20261125-013028`.
+At this cutover, the authenticated `inkling-inference` service on `:8080` started serving the tested plugin SHA with FP8 KV, `INK2_HYBRID_PREFIX_SDPA=1`, and CUTLASS still enabled. Prefix caching stayed enabled and `/v1/models` still reported a 262,144-token cap. The previous launcher was retained on the guest as `serve-inkling.sh.pre-hybrid-20261125-013028`. The [subsequent concurrency rollout](../20261125-inkling2-concurrency/) raised the live cap to 327,680 tokens and 32 active sequences.
 
 `bash ~/cmp/live/live_check.sh before-hybrid-pr3` and `bash ~/cmp/live/live_check.sh after-hybrid-pr3` both passed the model listing, authenticated chat (`95`), and tool call (`echo_value`) checks. After cutover, an unauthenticated `/v1/models` returned 401, and `/health` returned 200. The service's running process confirmed the versioned plugin path, hybrid flag, and FP8 dtype.
 
