@@ -64,9 +64,11 @@ boot() {
     local base='"method":"dspark","num_speculative_tokens":7,"draft_sample_method":"probabilistic"'
     local spec="{$base}"
     local -a extra=()
+    local src=$stage   # tree with sparse/ (vLLM source) and plugin/
     case "$arm" in
         ctl) ;;
         cand) spec="{$base,\"enable_adaptive_verification\":true}" ;;
+        av) spec="{$base,\"enable_adaptive_verification\":true}"; src=$p/av-probe ;;  # adaptive verification enabled in a patched copy
         k[1-6]) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,32,${arm#k}]]}" ;;
         sched) [[ -n ${SCHEDULE:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE}" ;;
         *) return 2 ;;
@@ -76,7 +78,7 @@ boot() {
     # Identical to the live launcher except loopback host/port, no auth middleware,
     # --enable-prompt-tokens-details, and the arm's speculative config/env.
     local -a cmd=(env -u VLLM_API_KEY
-        "PYTHONPATH=$stage/plugin:$stage/sparse:$runtime/serve" "TRITON_CACHE_DIR=$stage/triton"
+        "PYTHONPATH=$src/plugin:$src/sparse:$runtime/serve" "TRITON_CACHE_DIR=$stage/triton"
         "LD_LIBRARY_PATH=$driver/usr/lib/x86_64-linux-gnu:$driver/usr/lib:$driver/usr/local/lib"
         "LIBRARY_PATH=$driver/usr/lib/x86_64-linux-gnu:$driver/usr/lib" "CPATH=$driver/usr/include"
         "OCL_ICD_VENDORS=$runtime/opencl-vendors" HF_HUB_OFFLINE=1 VLLM_NO_USAGE_STATS=1
@@ -84,7 +86,7 @@ boot() {
         INK2_CUTLASS_MOE=1 INK2_HYBRID_PREFIX_SDPA=1 INK2_SPARSE_CONV_HISTORY=1 "${extra[@]}"
         "$py" -B -m vllm.entrypoints.cli.main serve "$weights"
         --host 127.0.0.1 --port 18080 --served-model-name inkling-2-mini
-        --language-model-only --dtype bfloat16 --max-model-len 409000
+        --language-model-only --dtype bfloat16 --max-model-len "${MAXLEN:-409000}"
         --max-num-batched-tokens 2048 --gpu-memory-utilization 0.98 --max-num-seqs 32
         --block-size 64 --enable-prefix-caching --no-async-scheduling --kv-cache-dtype fp8
         --enable-prompt-tokens-details --generation-config auto --chat-template "$weights/chat_template.jinja"

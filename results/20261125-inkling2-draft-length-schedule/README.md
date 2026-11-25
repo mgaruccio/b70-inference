@@ -102,6 +102,35 @@ Other results from the confirmation:
 
 Local copies omit the per-request `--save-detailed` bench JSON and server logs. Full raw evidence stays on the guest under `~/inkling-vllm-xpu/adaptive-verif/run-*/`. Production was restored and passed smoke after every run.
 
+## Adaptive verification probe (rejected)
+
+The patch, in a copied tree on the guest (`~/inkling-vllm-xpu/av-probe`), made three changes:
+
+1. Dropped the `not self.enable_adaptive_verification` assert in `models/inkling2/speculator.py`.
+2. Declared the Inkling sconv metadata builder `AttentionCGSupport.ALWAYS`. It already derives per-token metadata from the device `query_start_loc`.
+3. Added `confidence_head = None` on the DSpark decoder, so vLLM uses its online acceptance estimator.
+
+The run was `QUICK=1 SCHEDULE='[[1,2,7],[3,32,3]]' bash hillclimb.sh av sched av sched` ([run](runs/run-20261125-224634.VsC55j/)).
+
+- **Boot:** it booted at 409,000 tokens with 8.23 GiB / 411,841 KV tokens. Startup took 43–53 s instead of 30 s because of step-cost profiling.
+- **Throughput:** compared with the schedule (mean of 2 arms each):
+
+  | Metric | Change |
+  |---|---:|
+  | Chat C1 | −0.6% |
+  | Chat C8 | −3.0% |
+  | Chat C32 | −2.4% |
+  | Random C1 | −5.4% |
+  | Random C4 | +14.6% |
+  | Random C8 | −1.6% |
+  | Random C16 | +1.6% |
+  | Random C32 | −1.0% |
+
+- **Greedy reproducibility:** outputs were not reproducible. The two schedule arms matched each other on all 8 fixtures. The adaptive arms diverged on the 32,771-token fixture: from the schedule at token 2 (cold) and 35 (warm), and from each other at token 40. Every static-k arm matched exactly despite different verify widths, so the trimmed batch changes the target computation somewhere. That was not investigated.
+- **Logprobs:** vLLM rejects output logprobs with adaptive verification.
+
+**Rejected.** The only gain is at C4, where a single k=3 segment is short. A 3–6 request segment at k=4 or k=5 would cover it, if the extra graphs fit under an optional reduced `--max-model-len`.
+
 ## Production
 
 Promoted on 2026-11-25 with [`promote.sh`](promote.sh), which is the sparse-conv promotion script with its artifact labels renamed. On `b70-dev`:
