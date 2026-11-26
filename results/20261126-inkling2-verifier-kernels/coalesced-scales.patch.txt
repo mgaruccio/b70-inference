@@ -1,0 +1,584 @@
+From 1d10e1c9d783be28c7c361bf22fb15beec659735 Mon Sep 17 00:00:00 2001
+From: Mike Garuccio <mgaruccio@gmail.com>
+Date: Thu, 26 Nov 2026 02:36:07 -0500
+Subject: [PATCH] Opt in to coalesced scale pairs for Xe2 NVFP4 experts
+
+---
+ csrc/nvfp4_xe2_ext.cpp                   |  63 ++++++++++---
+ scripts/bench-nvfp4-scale-layout.py      |  99 +++++++++++++++++++++
+ src/vllm_inkling2_xpu/moe.py             |  27 +++++-
+ src/vllm_inkling2_xpu/ops/moe_cutlass.py |  35 +++++++-
+ tests/test_moe_xpu.py                    | 108 ++++++++++++++++++++++-
+ 5 files changed, 312 insertions(+), 20 deletions(-)
+ create mode 100644 scripts/bench-nvfp4-scale-layout.py
+
+diff --git a/csrc/nvfp4_xe2_ext.cpp b/csrc/nvfp4_xe2_ext.cpp
+index 25c2d64..6cfa294 100644
+--- a/csrc/nvfp4_xe2_ext.cpp
++++ b/csrc/nvfp4_xe2_ext.cpp
+@@ -1,10 +1,13 @@
+ // Vendored from SergiioB/intel-arc-pro-b70-inference-cookbook (patches/inkling2-mini-vllm-xpu/nvfp4_xe2_ext.cpp,
+ // commit f10f6674499e6fdbee0a75b5624cd0cfe8041ce6). MIT License, Copyright (c) 2026 SergiioB; see
+-// THIRD_PARTY_NOTICES.md. Unmodified below this header.
++// THIRD_PARTY_NOTICES.md. Modified to support an optional NVFP4 scale-pair layout.
+ #include "csrc/sycl_first.h"
+ #include <torch/extension.h>
+ #include "csrc/utils.h"
+ 
++#include <cstdint>
++#include <type_traits>
++
+ #include <cute/tensor.hpp>
+ #include <cute/util/compat.hpp>
+ #include <sycl/ext/intel/experimental/grf_size_properties.hpp>
+@@ -37,6 +40,7 @@ CUTE_DEVICE float fast_e4m3_to_f32(uint32_t u) {
+ }
+ 
+ template <
++    bool CoalescedScales,
+     class GmemTiledCopyA,
+     class GmemTiledCopyB,
+     class GmemTiledCopyC,
+@@ -142,8 +146,12 @@ CUTE_DEVICE void xe_gemm_nvfp4_gs16(
+     copy(copy_a, tAgA(_, _, _, k_tile), tArA);
+     copy(copy_b, tBgB(_, _, _, k_tile), tBrB);
+ 
+-    int g0 = k_tile * 2;
+     const uint16_t* Scales16 = reinterpret_cast<const uint16_t*>(Scales);
++    if constexpr (CoalescedScales) {
++      // [K/32, N] pairs for this expert: at fixed k_tile, adjacent N
++      // coordinates addressed by the subgroup are adjacent uint16_t loads.
++      Scales16 += static_cast<int64_t>(k_tile) * get<0>(B.shape());
++    }
+     int group_pairs = group_num >> 1;
+     CUTLASS_PRAGMA_UNROLL
+     for (int n = 0; n < thr_N; ++n) {
+@@ -151,7 +159,8 @@ CUTE_DEVICE void xe_gemm_nvfp4_gs16(
+       for (int c = 0; c < channel_num; ++c) {
+         int real_idx = x_idx + c * (sg_local_range / channel_num);
+         int sg_local_n = n * sg_local_range + real_idx;
+-        uint32_t pair = Scales16[(n_tile_start + n_sg_start + sg_local_n) * group_pairs + k_tile];
++        int col = n_tile_start + n_sg_start + sg_local_n;
++        uint32_t pair = CoalescedScales ? Scales16[col] : Scales16[col * group_pairs + k_tile];
+         scales0[n * channel_num + c] = fast_e4m3_to_f32(pair & 0xFFu);
+         scales1[n * channel_num + c] = fast_e4m3_to_f32((pair >> 8) & 0xFFu);
+       }
+@@ -200,6 +209,9 @@ template <class Policy>
+ class NVFP4GemmName;
+ 
+ template <class Policy>
++class NVFP4CoalescedScalesGemmName;
++
++template <class Policy, bool CoalescedScales>
+ void launch_nvfp4(
+     sycl::queue& stream,
+     const bfloat16_t* activations,
+@@ -215,6 +227,12 @@ void launch_nvfp4(
+   auto op = XE_DPAS_TT<8, float, bfloat16_t>{};
+   using WGTile = typename Policy::WGTile;
+   using SGLayout = typename Policy::SGLayout;
++  if constexpr (CoalescedScales) {
++    // Scale loads are not predicated on N; use the actual selected policy's tile.
++    constexpr int tile_n = get<1>(WGTile{});
++    TORCH_CHECK(gemm_n % tile_n == 0,
++                "Coalesced NVFP4 scales require N divisible by the GEMM N tile (", tile_n, ")");
++  }
+   using MMA = typename TiledMMAHelper<MMA_Atom<decltype(op)>, Layout<WGTile>, SGLayout>::TiledMMA;
+   auto mma = MMA{};
+ 
+@@ -230,9 +248,11 @@ void launch_nvfp4(
+   syclex::properties kernel_props{
+       syclex::sub_group_size<16>, intelex::grf_size<256>};
+ 
++  using KernelName = std::conditional_t<CoalescedScales,
++      NVFP4CoalescedScalesGemmName<Policy>, NVFP4GemmName<Policy>>;
+   stream.submit([&](sycl::handler& cgh) {
+     sycl::local_accessor<int32_t, 1> slm_mem_const(sycl::range<1>(1), cgh);
+-    cgh.parallel_for<NVFP4GemmName<Policy>>(
++    cgh.parallel_for<KernelName>(
+         sycl::nd_range<3>(global * local, local),
+         kernel_props,
+         [=](sycl::nd_item<3> item) {
+@@ -276,7 +296,7 @@ void launch_nvfp4(
+               int m_coord = group_m_id - pre_tiles;
+               auto tile_coord = make_coord(m_coord, n_coord, _, 0);
+ 
+-              xe_gemm_nvfp4_gs16<
++              xe_gemm_nvfp4_gs16<CoalescedScales,
+                   typename Policy::GmemTiledCopyA,
+                   typename Policy::GmemTiledCopyB,
+                   typename Policy::GmemTiledCopyD>(
+@@ -296,6 +316,7 @@ void launch_nvfp4(
+   });
+ }
+ 
++template <bool CoalescedScales>
+ torch::Tensor nvfp4_grouped_gemm_xe2(
+     torch::Tensor ptr_A,
+     torch::Tensor ptr_B,
+@@ -307,6 +328,22 @@ torch::Tensor nvfp4_grouped_gemm_xe2(
+     int64_t K,
+     int64_t num_experts,
+     c10::optional<torch::Tensor> atomic_buf = c10::nullopt) {
++  if constexpr (CoalescedScales) {
++    TORCH_CHECK(num_experts > 0 && N > 0 && K > 0 && K % 32 == 0,
++                "Coalesced NVFP4 scales require positive E, N, K and K divisible by 32");
++    TORCH_CHECK(ptr_scales.dim() == 4 && ptr_scales.size(0) == num_experts &&
++                    ptr_scales.size(1) == K / 32 && ptr_scales.size(2) == N &&
++                    ptr_scales.size(3) == 2,
++                "Coalesced NVFP4 scales must have shape [E, K/32, N, 2]");
++    TORCH_CHECK(ptr_A.device().is_xpu() && ptr_scales.device() == ptr_A.device() &&
++                    ptr_scales.scalar_type() == at::ScalarType::Float8_e4m3fn &&
++                    ptr_scales.is_contiguous(),
++                "Coalesced NVFP4 scales must be contiguous float8_e4m3fn on the input XPU");
++    TORCH_CHECK(reinterpret_cast<std::uintptr_t>(ptr_scales.data_ptr()) % alignof(uint16_t) == 0,
++                "Coalesced NVFP4 scale pairs must be 2-byte aligned");
++  } else {
++    TORCH_CHECK(ptr_scales.dim() == 3, "Stock NVFP4 scales must have shape [E, N, K/16]");
++  }
+   auto& dpcpp_queue = vllm::xpu::vllmGetQueue(ptr_A.device().index());
+   at::Tensor atomic_buffer = atomic_buf.has_value()
+       ? *atomic_buf
+@@ -318,7 +355,7 @@ torch::Tensor nvfp4_grouped_gemm_xe2(
+       : nullptr;
+ 
+   if (A_avg_M <= 4) {
+-    launch_nvfp4<w4a16_policy_m_8>(
++    launch_nvfp4<w4a16_policy_m_8, CoalescedScales>(
+         dpcpp_queue,
+         reinterpret_cast<const bfloat16_t*>(ptr_A.data_ptr()),
+         reinterpret_cast<const uint8_t*>(ptr_B.data_ptr()),
+@@ -328,7 +365,7 @@ torch::Tensor nvfp4_grouped_gemm_xe2(
+         N, K, reinterpret_cast<const int*>(rows_per_expert.data_ptr()),
+         num_experts, static_cast<int32_t*>(atomic_buffer.data_ptr()));
+   } else if (A_avg_M <= 8) {
+-    launch_nvfp4<w4a16_policy_m_16>(
++    launch_nvfp4<w4a16_policy_m_16, CoalescedScales>(
+         dpcpp_queue,
+         reinterpret_cast<const bfloat16_t*>(ptr_A.data_ptr()),
+         reinterpret_cast<const uint8_t*>(ptr_B.data_ptr()),
+@@ -338,7 +375,7 @@ torch::Tensor nvfp4_grouped_gemm_xe2(
+         N, K, reinterpret_cast<const int*>(rows_per_expert.data_ptr()),
+         num_experts, static_cast<int32_t*>(atomic_buffer.data_ptr()));
+   } else if (A_avg_M <= 64) {
+-    launch_nvfp4<w4a16_policy_m_32>(
++    launch_nvfp4<w4a16_policy_m_32, CoalescedScales>(
+         dpcpp_queue,
+         reinterpret_cast<const bfloat16_t*>(ptr_A.data_ptr()),
+         reinterpret_cast<const uint8_t*>(ptr_B.data_ptr()),
+@@ -348,7 +385,7 @@ torch::Tensor nvfp4_grouped_gemm_xe2(
+         N, K, reinterpret_cast<const int*>(rows_per_expert.data_ptr()),
+         num_experts, static_cast<int32_t*>(atomic_buffer.data_ptr()));
+   } else {
+-    launch_nvfp4<w4a16_policy>(
++    launch_nvfp4<w4a16_policy, CoalescedScales>(
+         dpcpp_queue,
+         reinterpret_cast<const bfloat16_t*>(ptr_A.data_ptr()),
+         reinterpret_cast<const uint8_t*>(ptr_B.data_ptr()),
+@@ -540,12 +577,18 @@ torch::Tensor fused_swiglu_interleaved(
+ }  // namespace InklingNVFP4
+ 
+ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+-  m.def("nvfp4_grouped_gemm_xe2", &InklingNVFP4::nvfp4_grouped_gemm_xe2,
++  m.def("nvfp4_grouped_gemm_xe2", &InklingNVFP4::nvfp4_grouped_gemm_xe2<false>,
+         py::arg("ptr_A"), py::arg("ptr_B"), py::arg("ptr_scales"),
+         py::arg("expert_scales"), py::arg("ptr_D"), py::arg("rows_per_expert"),
+         py::arg("N"), py::arg("K"), py::arg("num_experts"),
+         py::arg("atomic_buf") = c10::nullopt,
+         "Native NVFP4 (e2m1 + per-16 e4m3 + expert_scale) CUTLASS Xe2 grouped GEMM");
++  m.def("nvfp4_grouped_gemm_xe2_coalesced_scales", &InklingNVFP4::nvfp4_grouped_gemm_xe2<true>,
++        py::arg("ptr_A"), py::arg("ptr_B"), py::arg("ptr_scales"),
++        py::arg("expert_scales"), py::arg("ptr_D"), py::arg("rows_per_expert"),
++        py::arg("N"), py::arg("K"), py::arg("num_experts"),
++        py::arg("atomic_buf") = c10::nullopt,
++        "Native NVFP4 CUTLASS Xe2 grouped GEMM with [E, K/32, N, 2] scale bytes");
+   m.def("moe_route_sort", &InklingNVFP4::moe_route_sort,
+         "Zero-sync GPU counting sort for MoE routes (returns counts, order, inv_order, atomic2)");
+   m.def("fused_swiglu_interleaved", &InklingNVFP4::fused_swiglu_interleaved,
+diff --git a/scripts/bench-nvfp4-scale-layout.py b/scripts/bench-nvfp4-scale-layout.py
+new file mode 100644
+index 0000000..7d90938
+--- /dev/null
++++ b/scripts/bench-nvfp4-scale-layout.py
+@@ -0,0 +1,99 @@
++# SPDX-License-Identifier: Apache-2.0
++# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++"""Measure scale prepacking and compare isolated NVFP4 Xe2 GEMMs on B70.
++
++After rebuilding the extension with scripts/build-cutlass-xe2.sh, run:
++    python scripts/bench-nvfp4-scale-layout.py --tokens 1 8 32
++
++The shapes are from Inkling 2 Mini; inputs and routes are synthetic. Report median
++XPU event times, excluding host transfers and routing. Both layouts must produce
++bitwise-identical BF16 outputs. This is not a serving benchmark.
++"""
++
++import argparse
++from functools import partial
++from statistics import median
++
++
++def _measure(calls, iterations, *, before=None):
++    import torch
++
++    start = torch.xpu.Event(enable_timing=True)
++    end = torch.xpu.Event(enable_timing=True)
++    names = tuple(calls)
++    samples = {name: [] for name in names}
++    for i in range(5 + iterations):
++        # Alternate A/B order to reduce bias from clocks and warm caches.
++        for name in (names if i % 2 == 0 else reversed(names)):
++            if before is not None:
++                before()
++            start.record()
++            result = calls[name]()
++            end.record()
++            end.synchronize()
++            if i >= 5:
++                samples[name].append(start.elapsed_time(end))
++            del result
++    return {name: median(times) for name, times in samples.items()}
++
++
++def main():
++    parser = argparse.ArgumentParser(
++        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
++    )
++    parser.add_argument("--tokens", type=int, nargs="+", default=[1, 8, 32])
++    parser.add_argument("--iterations", type=int, default=40)
++    args = parser.parse_args()
++    if min(args.tokens) <= 0 or args.iterations <= 0:
++        parser.error("tokens and iterations must be positive")
++
++    import torch
++
++    from vllm_inkling2_xpu.ops.moe_cutlass import nvfp4_ext, prepack_nvfp4_scales
++
++    torch.manual_seed(1039)
++    device = "xpu"
++    e, hidden, inter, topk = 128, 2304, 1152, 8
++    outer = torch.linspace(0.02, 0.04, e, dtype=torch.float32, device=device)
++    atomic = torch.zeros(1, dtype=torch.int32, device=device)
++    kernels = {
++        "stock": nvfp4_ext.nvfp4_grouped_gemm_xe2,
++        "coalesced": nvfp4_ext.nvfp4_grouped_gemm_xe2_coalesced_scales,
++    }
++    for proj, n, k in (("w13", 2 * inter, hidden), ("w2", hidden, inter)):
++        weight = torch.randint(256, (e, n, k // 2), dtype=torch.uint8, device=device)
++        scales = torch.randint(0x7F, (e, n, k // 16), dtype=torch.uint8, device=device)
++        stock = scales.view(torch.float8_e4m3fn)
++        pack = partial(prepack_nvfp4_scales, stock)
++        pack_ms = _measure({"pack": pack}, args.iterations)["pack"]
++        print(f"{proj}: prepack {stock.numel() / 2**20:.2f} MiB, {pack_ms:.3f} ms")
++        layouts = {"stock": stock, "coalesced": pack()}
++        for tokens in args.tokens:
++            ids = torch.rand(tokens, e).argsort(dim=1)[:, :topk]
++            counts = ids.flatten().bincount(minlength=e).to(
++                device=device, dtype=torch.int32
++            )
++            a = torch.randn(tokens * topk, k, dtype=torch.bfloat16, device=device)
++            out = {name: a.new_empty((tokens * topk, n)) for name in kernels}
++            calls = {
++                name: partial(
++                    gemm, a, weight, layouts[name], outer, out[name], counts,
++                    n, k, e, atomic,
++                )
++                for name, gemm in kernels.items()
++            }
++            # Each persistent GEMM consumes a fresh counter; keep reset untimed.
++            ms = _measure(calls, args.iterations, before=atomic.zero_)
++            stock_bits = out["stock"].view(torch.int16)
++            coalesced_bits = out["coalesced"].view(torch.int16)
++            if not torch.equal(stock_bits, coalesced_bits):
++                raise RuntimeError(f"{proj} tokens={tokens}: BF16 outputs differ")
++            print(
++                f"  tokens={tokens:3}: stock {ms['stock'] * 1000:8.1f} us, "
++                f"coalesced {ms['coalesced'] * 1000:8.1f} us, "
++                f"{ms['stock'] / ms['coalesced']:.3f}x, bitwise equal"
++            )
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/src/vllm_inkling2_xpu/moe.py b/src/vllm_inkling2_xpu/moe.py
+index 3d8c15b..dabe90f 100644
+--- a/src/vllm_inkling2_xpu/moe.py
++++ b/src/vllm_inkling2_xpu/moe.py
+@@ -93,22 +93,42 @@ class Inkling2Experts(nn.Module):
+         param.data.copy_(loaded)
+ 
+     def process_weights_after_loading(self) -> None:
+-        # Opt-in CUTLASS Xe2 grouped GEMM (scripts/build-cutlass-xe2.sh): it reads the
+-        # checkpoint NVFP4 layout and [E, K, N] MXFP8 weights instead of our repacks.
++        # Opt-in CUTLASS Xe2 (scripts/build-cutlass-xe2.sh) reads checkpoint NVFP4
++        # weight bytes and [E, K, N] MXFP8 weights instead of our repacks.
+         self.cutlass = os.environ.get("INK2_CUTLASS_MOE", "0") == "1"
+         if self.cutlass:
+             if is_weights_pre_processed():
+                 raise NotImplementedError(
+                     "INK2_CUTLASS_MOE=1 needs checkpoint-format expert weights"
+                 )
+-            from .ops.moe_cutlass import cutlass_experts
++            from .ops.moe_cutlass import (
++                cutlass_experts,
++                nvfp4_ext,
++                prepack_nvfp4_scales,
++            )
+ 
++            coalesced_scales = (
++                self.nvfp4
++                and os.environ.get("INK2_CUTLASS_NVFP4_COALESCED_SCALES") == "1"
++            )
++            if coalesced_scales and not hasattr(
++                nvfp4_ext, "nvfp4_grouped_gemm_xe2_coalesced_scales"
++            ):
++                raise RuntimeError(
++                    "Rebuild the Xe2 extension with scripts/build-cutlass-xe2.sh "
++                    "for INK2_CUTLASS_NVFP4_COALESCED_SCALES=1"
++                )
++            self._coalesced_scales = coalesced_scales
+             self._cutlass_experts = cutlass_experts
+             self._outer = {}
+             for name in ("w13", "w2"):
+                 amax, denominator = self.scales(name)
+                 if self.nvfp4:
+                     self._outer[name] = (amax / denominator).float().contiguous()
++                    if coalesced_scales:
++                        scale = getattr(self, f"{name}_weight_scale")
++                        # Replace the parameter storage; no second layout in serving.
++                        scale.data = prepack_nvfp4_scales(scale.data)
+                 else:
+                     weight = getattr(self, f"{name}_weight")
+                     weight.data = weight.data.transpose(-1, -2).contiguous()
+@@ -158,6 +178,7 @@ class Inkling2Experts(nn.Module):
+                 self.num_experts,
+                 self.gate_cap,
+                 self.up_cap,
++                coalesced_scales=self._coalesced_scales,
+             )
+         return packed_experts(
+             x,
+diff --git a/src/vllm_inkling2_xpu/ops/moe_cutlass.py b/src/vllm_inkling2_xpu/ops/moe_cutlass.py
+index 697d9db..53a0ca6 100644
+--- a/src/vllm_inkling2_xpu/ops/moe_cutlass.py
++++ b/src/vllm_inkling2_xpu/ops/moe_cutlass.py
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # Vendored from SergiioB/intel-arc-pro-b70-inference-cookbook (patches/inkling2-mini-vllm-xpu/moe_cutlass.py,
+-# commit f10f6674499e6fdbee0a75b5624cd0cfe8041ce6); see THIRD_PARTY_NOTICES.md. Unmodified below.
++# commit f10f6674499e6fdbee0a75b5624cd0cfe8041ce6); see THIRD_PARTY_NOTICES.md.
++# Modified to support an optional NVFP4 scale-pair layout.
+ """CUTLASS Xe2 grouped-GEMM MoE path for native NVFP4 and MXFP8 experts on Intel XPU."""
+ 
+ import torch
+@@ -10,6 +11,20 @@ from vllm_xpu_kernels import fused_moe_interface as fmi
+ from . import _inkling_nvfp4_xe2 as nvfp4_ext
+ 
+ 
++def prepack_nvfp4_scales(scales: torch.Tensor) -> torch.Tensor:
++    """Physically transpose [E, N, K/16] E4M3 bytes into [E, K/32, N, 2]."""
++    if (
++        scales.ndim != 3
++        or scales.size(-1) % 2
++        or scales.dtype != torch.float8_e4m3fn
++        or not scales.is_contiguous()
++    ):
++        raise ValueError("Expected contiguous NVFP4 E4M3 scales with complete pairs")
++    experts, n, groups = scales.shape
++    # Copy bytes, not FP8 values; keep the low/high scale within each K tile.
++    pairs = scales.view(torch.uint8).view(experts, n, groups // 2, 2)
++    return pairs.transpose(1, 2).contiguous().view(scales.dtype)
++
+ @triton.jit
+ def _gather_sorted(
+     X,
+@@ -73,8 +88,15 @@ def cutlass_experts(
+     num_experts: int,
+     gate_cap: float,
+     up_cap: float,
++    *,
++    coalesced_scales: bool = False,
+ ) -> torch.Tensor:
+-    """Graph-capture-safe CUTLASS Xe2 grouped-GEMM forward for NVFP4 and MXFP8."""
++    """Graph-capture-safe CUTLASS Xe2 forward; NVFP4 expects stock scales by default.
++
++    Pass coalesced_scales=True only with prepacked [E, K/32, N, 2] NVFP4 scales.
++    """
++    if coalesced_scales and not nvfp4:
++        raise ValueError("Coalesced scale pairs require NVFP4 experts")
+     tokens, hidden = x.shape
+     if tokens == 0:
+         return torch.empty_like(x)
+@@ -109,7 +131,12 @@ def cutlass_experts(
+     inter = n13 // 2
+     gate_up = x.new_empty((routes, n13))
+     if nvfp4:
+-        nvfp4_ext.nvfp4_grouped_gemm_xe2(
++        nvfp4_gemm = (
++            nvfp4_ext.nvfp4_grouped_gemm_xe2_coalesced_scales
++            if coalesced_scales
++            else nvfp4_ext.nvfp4_grouped_gemm_xe2
++        )
++        nvfp4_gemm(
+             sorted_x, w13_w, w13_s, w13_esc, gate_up, counts, n13, hidden, num_experts,
+             atm0,
+         )
+@@ -122,7 +149,7 @@ def cutlass_experts(
+ 
+     down_sorted = x.new_empty((routes, hidden))
+     if nvfp4:
+-        nvfp4_ext.nvfp4_grouped_gemm_xe2(
++        nvfp4_gemm(
+             act, w2_w, w2_s, w2_esc, down_sorted, counts, hidden, inter, num_experts,
+             atm1,
+         )
+diff --git a/tests/test_moe_xpu.py b/tests/test_moe_xpu.py
+index 4c9d371..c0f401c 100644
+--- a/tests/test_moe_xpu.py
++++ b/tests/test_moe_xpu.py
+@@ -1,6 +1,6 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+-"""Inkling 2 Mini's packed XPU experts against a dense FP64 reference."""
++"""Dense-reference and layout-parity tests for Inkling 2 Mini's packed XPU experts."""
+ 
+ import pytest
+ import torch
+@@ -15,6 +15,7 @@ pytestmark = pytest.mark.skipif(
+ # Inkling 2 Mini checkpoint dimensions and activation parameters.
+ EXPERTS, HIDDEN, INTERMEDIATE, TOPK = 128, 2304, 1152, 8
+ GATE_CAP, UP_CAP = 4.0, 25.0
++COALESCED_SCALES_ENV = "INK2_CUTLASS_NVFP4_COALESCED_SCALES"
+ 
+ 
+ @torch.inference_mode()
+@@ -174,9 +175,12 @@ def cutlass_projections(request):
+ 
+ @pytest.mark.parametrize("tokens", [1, 2, 4, 5, 8, 64, 300])
+ @torch.inference_mode()
+-def test_xpu_cutlass_experts(cutlass_projections, tokens):
++def test_xpu_cutlass_experts(cutlass_projections, tokens, monkeypatch):
+     from vllm_inkling2_xpu.ops.moe_cutlass import cutlass_experts
+ 
++    # The environment controls model loading, not the layout of direct calls.
++    monkeypatch.setenv(COALESCED_SCALES_ENV, "1")
++
+     active_ids, w13, w2, ref13, ref2, nvfp4 = cutlass_projections
+     rng = torch.Generator().manual_seed(1801 + tokens)
+     x = torch.randn(tokens, HIDDEN, generator=rng).bfloat16()
+@@ -202,13 +206,111 @@ def test_xpu_cutlass_experts(cutlass_projections, tokens):
+ 
+ 
+ @torch.inference_mode()
+-def test_xpu_nvfp4_repack_skipped_for_processed_weights(dist_init):
++def test_xpu_cutlass_nvfp4_coalesced_scales(monkeypatch):
++    pytest.importorskip(
++        "vllm_inkling2_xpu.ops._inkling_nvfp4_xe2",
++        reason="build with scripts/build-cutlass-xe2.sh",
++    )
++    from vllm.model_executor.utils import weights_already_processed
++    from vllm.models.inkling2.configs import Inkling2ModelConfig
++    from vllm_inkling2_xpu.moe import Inkling2Experts
++
++    config = Inkling2ModelConfig(
++        hidden_size=512,
++        intermediate_size=256,
++        n_routed_experts=16,
++        n_shared_experts=0,
++        num_experts_per_tok=TOPK,
++        route_scale=8.0,
++        mlp_gate_softcap=GATE_CAP,
++        mlp_up_softcap=UP_CAP,
++        use_gate_bias=True,
++    )
++    with torch.device("xpu"):
++        experts = Inkling2Experts(config, "nvfp4")
++    rng = torch.Generator().manual_seed(1039)
++    checkpoint_scales = {}
++    for name in ("w13", "w2"):
++        weight = getattr(experts, f"{name}_weight")
++        weight.copy_(torch.randint(256, weight.shape, dtype=torch.uint8, generator=rng))
++        scale = getattr(experts, f"{name}_weight_scale")
++        codes = torch.randint(0x7F, scale.shape, dtype=torch.uint8, generator=rng)
++        scale.view(torch.uint8).copy_(codes)
++        checkpoint_scales[name] = codes
++        amax, denominator = experts.scales(name)
++        amax.copy_(0.5 + torch.rand(amax.shape, generator=rng))
++        denominator.fill_(32)
++
++    batches = []
++    # Cover both sort paths, all four GEMM M policies, and masked padded rows.
++    for tokens in (1, 8, 17, 33, 130):
++        x = torch.randn(tokens, config.hidden_size, generator=rng).bfloat16()
++        ids = torch.rand(tokens, experts.num_experts, generator=rng).argsort()[:, :TOPK]
++        weights = torch.randn(tokens, TOPK, generator=rng).softmax(-1)
++        padding = torch.arange(tokens) % 7 == 3
++        x[padding] = torch.nan
++        mask = padding.xpu() if tokens > 1 else None
++        batches.append((x.xpu(), (ids.int().contiguous().xpu(), weights.xpu(), mask)))
++
++    monkeypatch.setenv("INK2_CUTLASS_MOE", "1")
++    monkeypatch.delenv(COALESCED_SCALES_ENV, raising=False)
++    experts.process_weights_after_loading()
++    stock = [experts(*batch).cpu() for batch in batches]
++
++    monkeypatch.setenv(COALESCED_SCALES_ENV, "1")
++    with weights_already_processed(), pytest.raises(
++        NotImplementedError, match="needs checkpoint-format expert weights"
++    ):
++        experts.process_weights_after_loading()
++    # Stock Xe2 loading did not mutate checkpoint NVFP4 weights or scales.
++    experts.process_weights_after_loading()
++    for name, codes in checkpoint_scales.items():
++        scale = getattr(experts, f"{name}_weight_scale")
++        assert scale.dtype == torch.float8_e4m3fn and scale.is_contiguous()
++        pairs = scale.view(torch.uint8).cpu()
++        assert torch.equal(pairs[..., 0], codes[..., ::2].transpose(1, 2))
++        assert torch.equal(pairs[..., 1], codes[..., 1::2].transpose(1, 2))
++    # Forward must use the layout chosen at load even after the flag is unset.
++    monkeypatch.delenv(COALESCED_SCALES_ENV)
++    for batch, expected in zip(batches, stock):
++        actual = experts(*batch).cpu()
++        assert torch.equal(actual.view(torch.int16), expected.view(torch.int16))
++
++
++@torch.inference_mode()
++def test_xpu_nvfp4_gemm_rejects_wrong_scale_layouts():
++    ext = pytest.importorskip(
++        "vllm_inkling2_xpu.ops._inkling_nvfp4_xe2",
++        reason="build with scripts/build-cutlass-xe2.sh",
++    )
++    e, n, k = 2, 64, 128
++    a = torch.zeros((e, k), dtype=torch.bfloat16, device="xpu")
++    b = torch.zeros((e, n, k // 2), dtype=torch.uint8, device="xpu")
++    d = a.new_empty((e, n))
++    counts = torch.ones(e, dtype=torch.int32, device="xpu")
++    stock = torch.zeros((e, n, k // 16), dtype=torch.uint8, device="xpu")
++    view = stock.view(e, n, k // 32, 2).transpose(1, 2)
++    packed = view.contiguous().view(torch.float8_e4m3fn)
++    coalesced = ext.nvfp4_grouped_gemm_xe2_coalesced_scales
++    with pytest.raises(RuntimeError, match=r"\[E, K/32, N, 2\]"):
++        coalesced(a, b, stock.view(torch.float8_e4m3fn), None, d, counts, n, k, e)
++    with pytest.raises(RuntimeError, match="must be contiguous"):
++        coalesced(a, b, view.view(torch.float8_e4m3fn), None, d, counts, n, k, e)
++    with pytest.raises(RuntimeError, match=r"\[E, N, K/16\]"):
++        ext.nvfp4_grouped_gemm_xe2(a, b, packed, None, d, counts, n, k, e)
++
++
++@torch.inference_mode()
++def test_xpu_nvfp4_repack_skipped_for_processed_weights(dist_init, monkeypatch):
+     """Kernel-format reloads restore split-half weights; repacking again would
+     corrupt them because the split-half shuffle is not an involution."""
+     from vllm.model_executor.utils import weights_already_processed
+     from vllm.models.inkling2.configs import Inkling2ModelConfig
+     from vllm_inkling2_xpu.moe import Inkling2MoE
+ 
++    monkeypatch.delenv("INK2_CUTLASS_MOE", raising=False)
++    monkeypatch.setenv(COALESCED_SCALES_ENV, "1")
++
+     config = Inkling2ModelConfig(
+         hidden_size=512,
+         intermediate_size=256,
+-- 
+2.56.0
+

@@ -1,0 +1,171 @@
+{
+  "implementation": "/home/mike/inkling-vllm-xpu/verify-kernels/static/plugin/vllm_inkling2_xpu/ops/moe_cutlass.py",
+  "torch_version": "2.15.0+xpu",
+  "device": "xpu:0",
+  "device_name": "Intel(R) Arc(TM) Pro B70 Graphics",
+  "seed": 291,
+  "num_experts": 128,
+  "hidden_size": 2304,
+  "intermediate_size": 1152,
+  "topk": 8,
+  "timing": {
+    "method": "synchronized_xpu_graph_replay_wall",
+    "warmup": 3,
+    "repeats": 7,
+    "replays_per_repeat": 32
+  },
+  "fixtures": [
+    {
+      "fixture": "c1_concentrated",
+      "rows": 8,
+      "routing": "concentrated",
+      "padded_rows": 1,
+      "unique_experts": 8,
+      "logical_bytes": 35906120,
+      "output_sha256": "9a5ee13c20d8d32fc3a436e8d920b3ae0b1b28cbf62299dbf5ed0292781e457a",
+      "median_us": 144.11709375,
+      "samples_us": [
+        231.56340625,
+        218.49040625,
+        218.7414375,
+        144.11709375,
+        123.96471875,
+        123.69578125,
+        123.62940625
+      ]
+    },
+    {
+      "fixture": "c1_spread",
+      "rows": 8,
+      "routing": "spread",
+      "padded_rows": 1,
+      "unique_experts": 56,
+      "logical_bytes": 250897352,
+      "output_sha256": "472fb70916e3e21015c47b540db564be4bfc79e8d526c97c8c8388482b64b746",
+      "median_us": 499.34634375,
+      "samples_us": [
+        499.78409375,
+        498.793375,
+        499.28290625,
+        499.34634375,
+        499.22553125,
+        499.76865625,
+        500.3764375
+      ]
+    },
+    {
+      "fixture": "c8_concentrated",
+      "rows": 32,
+      "routing": "concentrated",
+      "padded_rows": 5,
+      "unique_experts": 8,
+      "logical_bytes": 36128864,
+      "output_sha256": "019c963bc7c07ac6e511711f180e43041d1c578dd0f104d70ccdeb8e7ccd6469",
+      "median_us": 238.2839375,
+      "samples_us": [
+        236.74990625,
+        236.7141875,
+        236.5438125,
+        239.19234375,
+        238.2839375,
+        238.4183125,
+        239.4450625
+      ]
+    },
+    {
+      "fixture": "c8_spread",
+      "rows": 32,
+      "routing": "spread",
+      "padded_rows": 5,
+      "unique_experts": 128,
+      "logical_bytes": 573606944,
+      "output_sha256": "927186955d8bbd64692d8731cd248cdf54b7fa90a75c154de171f0086f511ac6",
+      "median_us": 1075.37034375,
+      "samples_us": [
+        1075.62928125,
+        1077.7885,
+        1078.7129375,
+        1075.37034375,
+        1072.94384375,
+        1075.0620625,
+        1073.535125
+      ]
+    },
+    {
+      "fixture": "r128_concentrated",
+      "rows": 128,
+      "routing": "concentrated",
+      "padded_rows": 18,
+      "unique_experts": 8,
+      "logical_bytes": 37019840,
+      "output_sha256": "1b34602306b8e9585aff9f5ec09c8267bd10a46ef578e4c4c345564d76735870",
+      "median_us": 448.5749375,
+      "samples_us": [
+        438.875875,
+        439.6304375,
+        445.43990625,
+        448.5749375,
+        453.37940625,
+        455.4459375,
+        456.9878125
+      ]
+    },
+    {
+      "fixture": "r128_spread",
+      "rows": 128,
+      "routing": "spread",
+      "padded_rows": 18,
+      "unique_experts": 128,
+      "logical_bytes": 574497920,
+      "output_sha256": "22a4f3fb1d520068c6a03f9199f3aef2abbcc76758e5a1e8480c14670236c731",
+      "median_us": 1221.2225,
+      "samples_us": [
+        1222.68671875,
+        1221.90946875,
+        1220.30403125,
+        1220.681875,
+        1221.096375,
+        1222.14809375,
+        1221.2225
+      ]
+    },
+    {
+      "fixture": "r1_concentrated",
+      "rows": 1,
+      "routing": "concentrated",
+      "padded_rows": 0,
+      "unique_experts": 8,
+      "logical_bytes": 35841152,
+      "output_sha256": "69bc4e468ead7122b502b2f4151593226ae6c1e101ee9a8f5d1c36a10a65bf72",
+      "median_us": 117.6526875,
+      "samples_us": [
+        119.437125,
+        119.02275,
+        118.344375,
+        117.6526875,
+        117.3974375,
+        116.546375,
+        116.82471875
+      ]
+    },
+    {
+      "fixture": "r1_spread",
+      "rows": 1,
+      "routing": "spread",
+      "padded_rows": 0,
+      "unique_experts": 8,
+      "logical_bytes": 35841152,
+      "output_sha256": "97e3c98f9ea840eeebb0c99a3730acec3e8539fd203e1948e9d7f9bd94da3823",
+      "median_us": 118.59425,
+      "samples_us": [
+        120.57884375,
+        119.612625,
+        120.18275,
+        118.22509375,
+        118.34071875,
+        118.59425,
+        118.5565
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+--- a/moe.py
++++ b/moe.py
+@@ -218,1 +218,19 @@
++        # Diagnostic probe only: eager, fixed synthetic requests, no timing claims.
++        # Save a histogram, not token IDs or expert IDs. Exclude padding.
++        from pathlib import Path
++        import os, json
++        cap = Path(os.environ['INK2_ROUTE_SAMPLE_DIR'])
++        visit = self.routing_captures[pass_idx].layer_id
++        label = (cap / 'case').read_text().strip() if (cap / 'case').is_file() else ''
++        if label and ids.shape[0] in (8, 32, 128):
++            key = (label, visit, ids.shape[0])
++            calls = getattr(self, '_route_calls', {})
++            step = calls.get(key, 0)
++            calls[key] = step + 1
++            self._route_calls = calls
++            if 2 <= step < 10:
++                valid = ids if is_padding is None else ids[~is_padding]
++                h = torch.bincount(valid.cpu().long().flatten(), minlength=self.experts.num_experts)
++                with (cap / 'visits.jsonl').open('a') as f:
++                    print(json.dumps([label, visit, step, ids.shape[0], valid.shape[0], h.max().item(), (h > 0).sum().item()]), file=f)
+         return self.experts(x, (ids, weights, is_padding))

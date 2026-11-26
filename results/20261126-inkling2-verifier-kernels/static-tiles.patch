@@ -1,0 +1,11 @@
+--- a/csrc/nvfp4_xe2_ext.cpp
++++ b/csrc/nvfp4_xe2_ext.cpp
+@@ -286,5 +286,3 @@
+-              if (local_id == 0) {
+-                slm_mem[0] = cutlass::atomicAdd(atomic_buffer, 1);
+-              }
+-              item.barrier(sycl::access::fence_space::local_space);
+-              group_id = slm_mem[0] + item.get_group_range(1);
++              // Static grid stride: disjoint exhaustive tiles; no atomic or SLM broadcast.
++              // The next tile index stays monotonic, so the expert prefix scan is unchanged.
++              group_id += item.get_group_range(1);

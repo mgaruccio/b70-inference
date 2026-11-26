@@ -76,8 +76,13 @@ boot() {
                  src=$p/vocab-probe; extra=("INK2_DRAFT_VOCAB=$p/draft-vocab/vocab/draft-vocab-${arm#v}.json")
                  [[ -s ${extra[0]#*=} ]] ;;  # schedule + reduced draft vocabulary (staged plugin)
         profile-graph|profile-eager) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}" ;;
-        pf3|pf6|pf9) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; src=$here/$arm
+        pf3|pf6|pf9|static) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; src=$here/$arm
                      [[ -d $src/plugin && -d $src/sparse ]] ;;
+        layout-ctl|layout-cand) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; src=$here/layout
+                     if [[ $arm == layout-cand ]]; then extra=(INK2_CUTLASS_NVFP4_COALESCED_SCALES=1); else extra=(INK2_CUTLASS_NVFP4_COALESCED_SCALES=0); fi ;;
+        routes) src=$here/routes; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; extra=("INK2_ROUTE_SAMPLE_DIR=$dir") ;;
+        attn-ctl|attn-cand) src=$here/attn; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"
+                     if [[ $arm == attn-cand ]]; then extra=(INK2_VERIFY_BIAS_FREE_PREFIX=1); else extra=(INK2_VERIFY_BIAS_FREE_PREFIX=0); fi ;;
         *) return 2 ;;
     esac
     mkdir -p "$dir"
@@ -104,6 +109,7 @@ boot() {
         cmd+=(--profiler-config "$(printf '{"profiler":"torch","torch_profiler_dir":"%s","torch_profiler_activities":["XPU"],"torch_profiler_with_stack":false,"ignore_frontend":true}' "$dir/trace")")
         if [[ $arm == profile-eager ]]; then cmd+=(--enforce-eager); fi
     fi
+    if [[ $arm == routes ]]; then cmd+=(--enforce-eager); fi
     printf '%q ' "${cmd[@]}" >"$dir/launch.txt"; printf '\n' >>"$dir/launch.txt"
     local t0=$SECONDS
     setsid "${cmd[@]}" >"$dir/server.log" 2>&1 9>&- &
@@ -161,6 +167,11 @@ for arm in "$@"; do
     arm_idx=$((arm_idx + 1))
     dir=$out/$(printf '%02d' "$arm_idx")-$arm
     boot "$arm" "$dir"
+    if [[ $arm == routes ]]; then
+        "$py" -B "$here/sample-routes.py" "$dir"
+        stop_candidate
+        continue
+    fi
     if [[ $arm == profile-* ]]; then
         "$py" -B "$here/profile_cases.py" "$dir" | tee "$dir/profile.log"
         stop_candidate
@@ -174,6 +185,10 @@ for arm in "$@"; do
     "$py" -B "$here/checks.py" parity "$dir" ${ref:+--reference "$ref"} | tee "$dir/parity.log"
     [[ -n $ref ]] || ref=$dir
     "$py" -B "$here/checks.py" chat "$dir" | tee "$dir/chat.log"
+    if [[ $arm == attn-* ]]; then
+        "$py" -B "$here/checks.py" chat "$dir" --depth 32000 --cases 3 | tee -a "$dir/chat.log"
+        "$py" -c 'import json,sys; r=json.load(open(sys.argv[1]))["rows"]; assert len(r)==3 and min(x["prompt_tokens"] for x in r)>=30000, r' "$dir/chat-32000.json"
+    fi
     if [[ ${QUICK:-0} == 1 ]]; then
         bench "$dir" 1 4 8 16 32 | tee "$dir/bench.log"
         for c in 8 32; do "$py" -B "$here/checks.py" chatc "$dir" --concurrency $c | tee -a "$dir/chat.log"; done
