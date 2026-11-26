@@ -9,7 +9,7 @@ driver=$runtime/driver-26.40
 here=$(cd "$(dirname "$0")" && pwd)
 case $1 in
     stock) src=$stage ;;
-    pf6|pf3|pf9|static|layout|attn|router|wide-n|narrow-n|dequant|paged) src=$here/$1 ;;
+    pf6|pf3|pf9|static|layout|attn|router|wide-n|narrow-n|dequant|paged|markov|prefix) src=$here/$1 ;;
     *) exit 2 ;;
 esac
 shift

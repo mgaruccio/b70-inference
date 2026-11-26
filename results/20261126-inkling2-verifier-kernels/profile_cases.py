@@ -23,6 +23,23 @@ def control(path, body=None):
 
 
 def main(root):
+    if root.name.endswith('-profile-prefill'):
+        # 64 cold chunks of 2048 tokens; take four near each end in separate requests.
+        for skip in (4, 56):
+            name = f'cold-p131072-skip{skip}'
+            prompt = fixture(131072, 8110+skip)
+            control('/start_profile', dict(profile_prefix=name, delay_iterations=skip, max_iterations=4))
+            try:
+                data, elapsed = post('/v1/completions', dict(model=MODEL, prompt=prompt, max_tokens=1,
+                                     ignore_eos=True, temperature=0, seed=42))
+            finally:
+                control('/stop_profile')
+            usage = data['usage']
+            assert usage['prompt_tokens'] == 131072 and usage['completion_tokens'] == 1
+            assert usage['prompt_tokens_details']['cached_tokens'] == 0
+            (root / (name + '.json')).write_text(json.dumps(dict(usage=usage, elapsed_s=elapsed))+'\n')
+            print(name, usage, flush=True)
+        return
     cases = ([(1, 131072), (1, 375000)] if root.name.endswith('-profile-deep') else
              [(1, 128), (1, 30080), (8, 128), (32, 128)])
     for n, depth in cases:

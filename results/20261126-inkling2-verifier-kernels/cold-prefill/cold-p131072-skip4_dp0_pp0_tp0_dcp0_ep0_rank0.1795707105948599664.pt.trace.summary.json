@@ -1,0 +1,594 @@
+{
+  "trace": "cold-p131072-skip4_dp0_pp0_tp0_dcp0_ep0_rank0.1795707105948599664.pt.trace.json.gz",
+  "sum_kernel_us": 1981719.9,
+  "rows": [
+    {
+      "name": "InklingNVFP4::NVFP4GemmName<MoE::w4a16_policy>",
+      "grid": "",
+      "calls": 352,
+      "total_us": 680299.33,
+      "mean_us": 1932.67
+    },
+    {
+      "name": "gemm_kernel",
+      "grid": "",
+      "calls": 1264,
+      "total_us": 202606.25,
+      "mean_us": 160.29
+    },
+    {
+      "name": "_qr_rel_kernel",
+      "grid": "",
+      "calls": 192,
+      "total_us": 183131.07,
+      "mean_us": 953.81
+    },
+    {
+      "name": "_rel_attention",
+      "grid": "",
+      "calls": 192,
+      "total_us": 157138.87,
+      "mean_us": 818.43
+    },
+    {
+      "name": "InklingNVFP4::SwiGLUInterleavedName",
+      "grid": "",
+      "calls": 192,
+      "total_us": 138078.68,
+      "mean_us": 719.16
+    },
+    {
+      "name": "_attn_res_kernel",
+      "grid": "",
+      "calls": 484,
+      "total_us": 80684.59,
+      "mean_us": 166.7
+    },
+    {
+      "name": "_blend_rms_norm_kernel",
+      "grid": "",
+      "calls": 192,
+      "total_us": 71437.21,
+      "mean_us": 372.07
+    },
+    {
+      "name": "MoE::GemmCuteName<cutlass::bfloat16_t, cutlass::float_e4m3_t, unsigned char, cutlass::bfloat16_t, (char)82, (char)82, MoE::w8a16_policy, (MoE::A_DTYPE)0, (MoE::B_DTYPE)4>",
+      "grid": "",
+      "calls": 32,
+      "total_us": 69887.49,
+      "mean_us": 2183.98
+    },
+    {
+      "name": "cute::MhaName<cutlass::fmha::kernel::XeFMHAFwdKernel<cutlass::fmha::kernel::FMHAProblemShape<false>, cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<8>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<8>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<8>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<8>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t const*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<long, cute::C<1>, long, long> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t const*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<long, cute::C<1>, long, long> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t const*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, long, long, long> > >, void, void, void>, cutlass::fmha::collective::FMHAFwdEpilogue<cutlass::fmha::collective::FMHAFwdMainloop<cutlass::fmha::XeDefault<2>, false, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<8>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<8>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, cute::TiledMMA<cute::MMA_Atom<cute::XE_DPAS_TT<8, float, cutlass::bfloat16_t, cutlass::bfloat16_t, float> >, cute::Layout<cute::tuple<cute::C<8>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Layout<cute::tuple<cute::C<8>, cute::C<8>, cute::C<2> >, cute::tuple<cute::C<1>, cute::C<16>, cute::C<8> > >, cute::Layout<cute::C<32>, cute::C<1> >, cute::Layout<cute::C<32>, cute::C<1> > > const>, 4, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t const*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<long, cute::C<1>, long, long> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t const*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<long, cute::C<1>, long, long> > >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t const*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<cute::C<1>, long, long, long> > >, void, void, void>, cute::tuple<cute::C<128>, cute::C<128> >, cute::Tensor<cute::ViewEngine<cute::gmem_ptr<cutlass::bfloat16_t*> >, cute::Layout<cute::tuple<int, int, int, int>, cute::tuple<long, cute::C<1>, long, long> > >, void>, cutlass::fmha::kernel::XeFMHAIndividualTileScheduler> >",
+      "grid": "",
+      "calls": 80,
+      "total_us": 67663.09,
+      "mean_us": 845.79
+    },
+    {
+      "name": "_pair_rms_norm_kernel",
+      "grid": "",
+      "calls": 192,
+      "total_us": 37977.32,
+      "mean_us": 197.8
+    },
+    {
+      "name": "_sconv_kernel",
+      "grid": "",
+      "calls": 384,
+      "total_us": 35830.57,
+      "mean_us": 93.31
+    },
+    {
+      "name": "_scatter_weighted_combine",
+      "grid": "",
+      "calls": 192,
+      "total_us": 33266.49,
+      "mean_us": 173.26
+    },
+    {
+      "name": "at::native::xpu::ScatterGatherElementwiseKernelFunctor<at::native::xpu::ScatterGatherInternalKernelLoopFunctor<false, at::native::xpu::OpaqueType<1>, OffsetCalculator<3, unsigned int, false>, at::native::xpu::TensorAssign, long> >",
+      "grid": "",
+      "calls": 272,
+      "total_us": 32033.54,
+      "mean_us": 117.77
+    },
+    {
+      "name": "_gather_sorted",
+      "grid": "",
+      "calls": 192,
+      "total_us": 29548.25,
+      "mean_us": 153.9
+    },
+    {
+      "name": "at::native::xpu::ScatterGatherElementwiseKernelFunctor<at::native::xpu::ScatterGatherInternalKernelLoopFunctor<true, int, OffsetCalculator<3, unsigned int, false>, at::native::xpu::ReduceAdd, long> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 21423.36,
+      "mean_us": 111.58
+    },
+    {
+      "name": "_gate_sink_kernel",
+      "grid": "",
+      "calls": 192,
+      "total_us": 19861.27,
+      "mean_us": 103.44
+    },
+    {
+      "name": "_attn_prologue_kernel",
+      "grid": "",
+      "calls": 192,
+      "total_us": 17432.21,
+      "mean_us": 90.79
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<float, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::MulFunctor<float> > > >",
+      "grid": "",
+      "calls": 172,
+      "total_us": 16262.64,
+      "mean_us": 94.55
+    },
+    {
+      "name": "at::native::xpu::SegmentedGroupRadixSortPairsFunctor<at::native::xpu::GroupRadixSort<float, 64, 32, 4, true, long, unsigned short, unsigned int, 4>, float, long>",
+      "grid": "",
+      "calls": 192,
+      "total_us": 14557.83,
+      "mean_us": 75.82
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::Float8_e4m3fn>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 14167.73,
+      "mean_us": 73.79
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::AddFunctor<float> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "grid": "",
+      "calls": 400,
+      "total_us": 12173.24,
+      "mean_us": 30.43
+    },
+    {
+      "name": "at::native::xpu::SegmentedRadixSortPairsDownsweepFunctor<at::native::xpu::GroupRadixSort<long, 512, 32, 2, false, long, unsigned short, unsigned int, 4>, long, long>",
+      "grid": "",
+      "calls": 3072,
+      "total_us": 8668.66,
+      "mean_us": 2.82
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGroupRangeKernel<4, at::native::xpu::LegacyKernelWithCastScalarFunctor<c10::Float8_e4m3fn, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<c10::Float8_e4m3fn> > >",
+      "grid": "",
+      "calls": 160,
+      "total_us": 7432.02,
+      "mean_us": 46.45
+    },
+    {
+      "name": "at::native::xpu::SegmentedRadixSortPairsUpsweepFunctor<at::native::xpu::RadixSortUpsweep<long, 512, 32, 2, false, long, unsigned char, unsigned int, 4>, long, long>",
+      "grid": "",
+      "calls": 3072,
+      "total_us": 7165.17,
+      "mean_us": 2.33
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<c10::BFloat16>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "grid": "",
+      "calls": 104,
+      "total_us": 5903.39,
+      "mean_us": 56.76
+    },
+    {
+      "name": "at::native::xpu::SegmentedRadixSortPairsScanFunctor<at::native::xpu::RadixSortScanBins<512, 2, 32> >",
+      "grid": "",
+      "calls": 3072,
+      "total_us": 3123.52,
+      "mean_us": 1.02
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<int>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "grid": "",
+      "calls": 468,
+      "total_us": 1887.14,
+      "mean_us": 4.03
+    },
+    {
+      "name": "_mix_rmsnorm_kernel",
+      "grid": "",
+      "calls": 12,
+      "total_us": 1423.95,
+      "mean_us": 118.66
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<int>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "grid": "",
+      "calls": 968,
+      "total_us": 825.47,
+      "mean_us": 0.85
+    },
+    {
+      "name": "_zero_kv_blocks_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 793.64,
+      "mean_us": 198.41
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGroupRangeKernel<2, at::native::xpu::LegacyKernelWithCastScalarFunctor<long, 2, OffsetCalculator<2, unsigned int, false>, at::native::xpu::CopyScalarFunc<long> > >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 614.14,
+      "mean_us": 3.2
+    },
+    {
+      "name": "at::native::xpu::CatArrayBatchedCopy_vectorized<at::native::xpu::OpaqueType<2u>, unsigned int, 64, 1, 16>",
+      "grid": "",
+      "calls": 4,
+      "total_us": 586.14,
+      "mean_us": 146.54
+    },
+    {
+      "name": "at::native::xpu::ScatterGatherElementwiseKernelFunctor<at::native::xpu::ScatterGatherInternalKernelLoopFunctor<false, at::native::xpu::OpaqueType<4>, OffsetCalculator<3, unsigned int, false>, at::native::xpu::TensorAssign, long> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 506.94,
+      "mean_us": 2.64
+    },
+    {
+      "name": "at::native::xpu::ScatterGatherElementwiseKernelFunctor<at::native::xpu::ScatterGatherInternalKernelLoopFunctor<true, at::native::xpu::OpaqueType<8>, OffsetCalculator<3, unsigned int, false>, at::native::xpu::TensorAssign, long> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 495.37,
+      "mean_us": 2.58
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::SigmoidFunctor<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 473.35,
+      "mean_us": 2.47
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::AddFunctor<float> >, at::detail::Array<char*, 3>, OffsetCalculator<2, unsigned int, false> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 458.35,
+      "mean_us": 2.39
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::LogSigmoidForwardFunctor<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 404.93,
+      "mean_us": 2.11
+    },
+    {
+      "name": "at::native::xpu::impl::DispatchSoftmaxForwardKernelFunctor<8, 4, 16, float, float, float, unsigned int, false, 1, false, at::native::xpu::impl::DummyFunctor, at::native::memory::aligned_vector<float, 4>, false, true>",
+      "grid": "",
+      "calls": 192,
+      "total_us": 402.54,
+      "mean_us": 2.1
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::DivFunctor<float> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "grid": "",
+      "calls": 160,
+      "total_us": 328.88,
+      "mean_us": 2.06
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<long, 4, OffsetCalculator<4, unsigned int, false>, at::native::xpu::WhereFunctor<long> > >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 312.93,
+      "mean_us": 1.63
+    },
+    {
+      "name": "at::native::xpu::ElementwiseGlobalRangeKernel<at::native::xpu::LegacyKernelScalarFunctor<int, 3, OffsetCalculator<3, unsigned int, false>, at::native::xpu::MaskedFillFunctor<int> > >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 307.42,
+      "mean_us": 1.6
+    },
+    {
+      "name": "at::native::xpu::ReduceKernel<1, at::native::xpu::ReduceOp<float, at::native::xpu::MeanOps<float, float, float, float>, unsigned int, float, 4> >",
+      "grid": "",
+      "calls": 12,
+      "total_us": 305.41,
+      "mean_us": 25.45
+    },
+    {
+      "name": "vllm::reshape_and_cache_flash_strided_kernel<c10::BFloat16, c10::BFloat16, (vllm::Fp8KVCacheDataType)0>",
+      "grid": "",
+      "calls": 12,
+      "total_us": 264.99,
+      "mean_us": 22.08
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::CompareScalarFunctor<long, at::native::xpu::CompareFunctor<long> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 192,
+      "total_us": 248.63,
+      "mean_us": 1.29
+    },
+    {
+      "name": "sycl::_V1::ext::oneapi::experimental::detail::NdRangeFreeFunctionKernelWrapper<&(void at::native::xpu::element_wise_with_index_kernel_impl<int, at::native::xpu::ArangeFunctor<int, long>, int>(int, at::native::xpu::ArangeFunctor<int, long>, int*)), 1, 1, int, at::native::xpu::ArangeFunctor<int, long>, int*>",
+      "grid": "",
+      "calls": 196,
+      "total_us": 245.92,
+      "mean_us": 1.25
+    },
+    {
+      "name": "at::native::xpu::UnrolledElementwiseKernel<at::native::xpu::CopyScalarFunc<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >",
+      "grid": "",
+      "calls": 12,
+      "total_us": 228.12,
+      "mean_us": 19.01
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<2, at::native::xpu::FillFunctor<long>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "grid": "",
+      "calls": 196,
+      "total_us": 225.8,
+      "mean_us": 1.15
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::WhereFunctor<float>, at::detail::Array<char*, 4>, TrivialOffsetCalculator<3, unsigned int> >",
+      "grid": "",
+      "calls": 240,
+      "total_us": 217.73,
+      "mean_us": 0.91
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::AUnaryFunctor<float, float, float, at::native::xpu::MulFunctor<float> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 196,
+      "total_us": 197.39,
+      "mean_us": 1.01
+    },
+    {
+      "name": "_qk_norm_rope_kernel",
+      "grid": "",
+      "calls": 12,
+      "total_us": 189.79,
+      "mean_us": 15.82
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::AUnaryFunctor<float, float, bool, at::native::xpu::CompareEqFunctor<float> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 240,
+      "total_us": 188.16,
+      "mean_us": 0.78
+    },
+    {
+      "name": "sycl::_V1::ext::oneapi::experimental::detail::NdRangeFreeFunctionKernelWrapper<&(void at::native::xpu::element_wise_with_index_kernel_impl<int, at::native::xpu::ArangeFunctor<long, long>, long>(int, at::native::xpu::ArangeFunctor<long, long>, long*)), 1, 1, int, at::native::xpu::ArangeFunctor<long, long>, long*>",
+      "grid": "",
+      "calls": 192,
+      "total_us": 181.57,
+      "mean_us": 0.95
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::FillFunctor<float>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "grid": "",
+      "calls": 240,
+      "total_us": 165.99,
+      "mean_us": 0.69
+    },
+    {
+      "name": "_rms_norm_kernel",
+      "grid": "",
+      "calls": 8,
+      "total_us": 160.2,
+      "mean_us": 20.03
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::ExpFunctor<float, float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 160,
+      "total_us": 156.31,
+      "mean_us": 0.98
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::MaximumFunctor<float> >, at::detail::Array<char*, 3>, TrivialOffsetCalculator<2, unsigned int> >",
+      "grid": "",
+      "calls": 80,
+      "total_us": 152.47,
+      "mean_us": 1.91
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::LogFunctor<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 80,
+      "total_us": 120.59,
+      "mean_us": 1.51
+    },
+    {
+      "name": "at::native::xpu::VectorizedGatherKernel<16, long>",
+      "grid": "",
+      "calls": 4,
+      "total_us": 116.98,
+      "mean_us": 29.24
+    },
+    {
+      "name": "_seq_metadata_kernel",
+      "grid": "",
+      "calls": 192,
+      "total_us": 110.62,
+      "mean_us": 0.58
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::AbsFunctor<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 80,
+      "total_us": 101.44,
+      "mean_us": 1.27
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::PowImplUnaryFunctor1<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 12,
+      "total_us": 86.66,
+      "mean_us": 7.22
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BinaryFunctor<float, float, float, at::native::xpu::MulFunctor<float> >, at::detail::Array<char*, 3>, OffsetCalculator<2, unsigned int, false> >",
+      "grid": "",
+      "calls": 12,
+      "total_us": 82.18,
+      "mean_us": 6.85
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<8, at::native::xpu::CopyScalarFunc<c10::BFloat16>, at::detail::Array<char*, 2>, OffsetCalculator<1, unsigned int, false> >",
+      "grid": "",
+      "calls": 12,
+      "total_us": 59.27,
+      "mean_us": 4.94
+    },
+    {
+      "name": "_prepare_dflash_inputs_kernel",
+      "grid": "",
+      "calls": 12,
+      "total_us": 49.37,
+      "mean_us": 4.11
+    },
+    {
+      "name": "_compute_slot_mappings_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 35.1,
+      "mean_us": 8.78
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<8> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "grid": "",
+      "calls": 8,
+      "total_us": 28.75,
+      "mean_us": 3.59
+    },
+    {
+      "name": "_apply_write_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 22.92,
+      "mean_us": 5.73
+    },
+    {
+      "name": "_prepare_prefill_inputs_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 19.89,
+      "mean_us": 4.97
+    },
+    {
+      "name": "_gumbel_sample_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 19.37,
+      "mean_us": 4.84
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::TanhFunctor<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 4,
+      "total_us": 16.56,
+      "mean_us": 4.14
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexPutFunctor<at::native::xpu::OpaqueType<8> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "grid": "",
+      "calls": 4,
+      "total_us": 16.45,
+      "mean_us": 4.11
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<2> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "grid": "",
+      "calls": 4,
+      "total_us": 15.42,
+      "mean_us": 3.85
+    },
+    {
+      "name": "at::native::xpu::IndexKernelFunctor<at::native::xpu::IndexFunctor<at::native::xpu::OpaqueType<4> >, char*, OffsetCalculator<3, unsigned int, false> >",
+      "grid": "",
+      "calls": 4,
+      "total_us": 14.27,
+      "mean_us": 3.57
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<16, at::native::xpu::FillFunctor<bool>, at::detail::Array<char*, 1>, TrivialOffsetCalculator<0, unsigned int> >",
+      "grid": "",
+      "calls": 4,
+      "total_us": 13.75,
+      "mean_us": 3.44
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::RsqrtFunctor<float>, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 12,
+      "total_us": 12.39,
+      "mean_us": 1.03
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<float, float, float, at::native::xpu::MulFunctor<float> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 4,
+      "total_us": 12.29,
+      "mean_us": 3.07
+    },
+    {
+      "name": "_gather_block_tables_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 12.29,
+      "mean_us": 3.07
+    },
+    {
+      "name": "at::native::xpu::VectorizedElementwiseKernel<4, at::native::xpu::BUnaryFunctor<float, float, float, at::native::xpu::AddFunctor<float> >, at::detail::Array<char*, 2>, TrivialOffsetCalculator<1, unsigned int> >",
+      "grid": "",
+      "calls": 12,
+      "total_us": 10.31,
+      "mean_us": 0.86
+    },
+    {
+      "name": "_post_update_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 9.37,
+      "mean_us": 2.34
+    },
+    {
+      "name": "_get_num_sampled_and_rejected_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 8.02,
+      "mean_us": 2.0
+    },
+    {
+      "name": "_combine_sampled_and_draft_tokens_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 6.46,
+      "mean_us": 1.61
+    },
+    {
+      "name": "_gumbel_combine_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 6.35,
+      "mean_us": 1.59
+    },
+    {
+      "name": "_log_scaling_tau_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 5.0,
+      "mean_us": 1.25
+    },
+    {
+      "name": "_prepare_pos_seq_lens_kernel",
+      "grid": "",
+      "calls": 4,
+      "total_us": 4.37,
+      "mean_us": 1.09
+    }
+  ]
+}
