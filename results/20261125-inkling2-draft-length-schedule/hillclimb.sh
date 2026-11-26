@@ -75,6 +75,9 @@ boot() {
         v[0-9]*) [[ -n ${SCHEDULE:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE}"
                  src=$p/vocab-probe; extra=("INK2_DRAFT_VOCAB=$p/draft-vocab/vocab/draft-vocab-${arm#v}.json")
                  [[ -s ${extra[0]#*=} ]] ;;  # schedule + reduced draft vocabulary (staged plugin)
+        profile-graph|profile-eager) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}" ;;
+        pf3|pf6|pf9) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; src=$here/$arm
+                     [[ -d $src/plugin && -d $src/sparse ]] ;;
         *) return 2 ;;
     esac
     mkdir -p "$dir"
@@ -97,6 +100,10 @@ boot() {
         --enable-auto-tool-choice --tool-call-parser inkling --reasoning-parser inkling
         -cc.mode=none -cc.cudagraph_mode=FULL_DECODE_ONLY
         --speculative-config "$spec")
+    if [[ $arm == profile-* ]]; then
+        cmd+=(--profiler-config "$(printf '{"profiler":"torch","torch_profiler_dir":"%s","torch_profiler_activities":["XPU"],"torch_profiler_with_stack":false,"ignore_frontend":true}' "$dir/trace")")
+        if [[ $arm == profile-eager ]]; then cmd+=(--enforce-eager); fi
+    fi
     printf '%q ' "${cmd[@]}" >"$dir/launch.txt"; printf '\n' >>"$dir/launch.txt"
     local t0=$SECONDS
     setsid "${cmd[@]}" >"$dir/server.log" 2>&1 9>&- &
@@ -145,13 +152,20 @@ curl -fsS --max-time 5 http://127.0.0.1:8080/metrics | awk '/^vllm:num_requests_
 restore=1
 sudo -n systemctl stop "$svc"
 if [[ -n ${PRETEST:-} ]]; then  # e.g. on-device unit tests that need the GPU free
+    export PRETEST_DIR="$out"
     bash -c "$PRETEST" 2>&1 | tee "$out/pretest.log"
+    if [[ $* == pretest-only ]]; then exit 0; fi
 fi
 ref= arm_idx=0 full_needle_done=0
 for arm in "$@"; do
     arm_idx=$((arm_idx + 1))
     dir=$out/$(printf '%02d' "$arm_idx")-$arm
     boot "$arm" "$dir"
+    if [[ $arm == profile-* ]]; then
+        "$py" -B "$here/profile_cases.py" "$dir" | tee "$dir/profile.log"
+        stop_candidate
+        continue
+    fi
     if [[ ${NEEDLE_ONLY:-0} == 1 ]]; then  # ~100% context gate only (375K requested ≈ 388K rendered)
         "$py" -B "$here/checks.py" needle "$dir" --tokens 375000 | tee "$dir/needle.log" || echo "NEEDLE FAILED 375000" | tee -a "$dir/needle.log"
         stop_candidate
