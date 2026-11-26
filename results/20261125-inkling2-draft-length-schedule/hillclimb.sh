@@ -71,6 +71,9 @@ boot() {
         av) spec="{$base,\"enable_adaptive_verification\":true}"; src=$p/av-probe ;;  # adaptive verification enabled in a patched copy
         k[1-6]) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,32,${arm#k}]]}" ;;
         sched) [[ -n ${SCHEDULE:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE}" ;;
+        v[0-9]*) [[ -n ${SCHEDULE:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE}"
+                 src=$p/vocab-probe; extra=("INK2_DRAFT_VOCAB=$p/draft-vocab/vocab/draft-vocab-${arm#v}.json")
+                 [[ -s ${extra[0]#*=} ]] ;;  # schedule + reduced draft vocabulary (staged plugin)
         *) return 2 ;;
     esac
     mkdir -p "$dir"
@@ -140,6 +143,9 @@ cp -p "$live" "$out/saved-launcher.sh"
 curl -fsS --max-time 5 http://127.0.0.1:8080/metrics | awk '/^vllm:num_requests_(running|waiting)\{/ { seen++; if ($NF != 0) busy=1 } END { exit(seen < 2 || busy) }'
 restore=1
 sudo -n systemctl stop "$svc"
+if [[ -n ${PRETEST:-} ]]; then  # e.g. on-device unit tests that need the GPU free
+    bash -c "$PRETEST" 2>&1 | tee "$out/pretest.log"
+fi
 ref= arm_idx=0 full_needle_done=0
 for arm in "$@"; do
     arm_idx=$((arm_idx + 1))
