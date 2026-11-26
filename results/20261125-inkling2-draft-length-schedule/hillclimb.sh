@@ -92,6 +92,10 @@ boot() {
                      if [[ $arm == prefix-cand ]]; then extra=(INK2_FUSED_PREFIX_KV_GATHER=1); else extra=(INK2_FUSED_PREFIX_KV_GATHER=0); fi ;;
         merge-ctl|merge-cand) src=$here/merge; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"
                      if [[ $arm == merge-cand ]]; then extra=(INK2_FUSED_PREFIX_MERGE=1); else extra=(INK2_FUSED_PREFIX_MERGE=0); fi ;;
+        paired-stock) src=$here/paired; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"
+                     extra=(INK2_FUSED_PREFIX_MERGE=0 INK2_FUSED_PREFIX_KV_GATHER=0) ;;
+        paired-ctl|paired-cand) src=$here/paired; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"
+                     extra=(INK2_FUSED_PREFIX_MERGE=1); if [[ $arm == paired-cand ]]; then extra+=(INK2_FUSED_PREFIX_KV_GATHER=1); else extra+=(INK2_FUSED_PREFIX_KV_GATHER=0); fi ;;
         *) return 2 ;;
     esac
     mkdir -p "$dir"
@@ -181,14 +185,14 @@ for arm in "$@"; do
     dir=$out/$(printf '%02d' "$arm_idx")-$arm
     boot "$arm" "$dir"
     if [[ ${C8_DIAG:-0} == 1 || ${C8_DIAG:-0} == sandwich ]]; then
-        [[ $arm == prefix-* || $arm == merge-* ]]
+        [[ $arm == prefix-* || $arm == merge-* || $arm == paired-* ]]
         phases=(fresh)
         if [[ $C8_DIAG == sandwich ]]; then phases+=(post); fi
         for phase in "${phases[@]}"; do
             if [[ $phase == post ]]; then
                 "$py" -B "$here/serve-cold.py" "$dir" | tee "$dir/cold.log"
             fi
-            if [[ $arm == merge-* ]]; then
+            if [[ $arm == merge-* || $arm == paired-* ]]; then
                 mkdir "$dir/$phase-c1"
                 "$py" -B "$here/checks.py" chat "$dir/$phase-c1" | tee -a "$dir/chat.log"
             fi
@@ -219,7 +223,7 @@ for arm in "$@"; do
     "$py" -B "$here/checks.py" parity "$dir" ${ref:+--reference "$ref"} | tee "$dir/parity.log"
     [[ -n $ref ]] || ref=$dir
     "$py" -B "$here/checks.py" chat "$dir" | tee "$dir/chat.log"
-    if [[ $arm == prefix-* || $arm == merge-* ]]; then
+    if [[ $arm == prefix-* || $arm == merge-* || $arm == paired-* ]]; then
         "$py" -B "$here/serve-cold.py" "$dir" | tee "$dir/cold.log"
     fi
     if [[ $arm == paged-* ]]; then
@@ -240,7 +244,7 @@ for arm in "$@"; do
     for c in 8 32; do "$py" -B "$here/checks.py" chatc "$dir" --concurrency $c | tee -a "$dir/chat.log"; done
     # Needle gate failures are recorded (needle-*.json "passed") but do not abort the A/B.
     "$py" -B "$here/checks.py" needle "$dir" --tokens 200000 | tee "$dir/needle.log" || echo "NEEDLE FAILED 200000" | tee -a "$dir/needle.log"
-    if [[ $arm != ctl && $arm != prefix-ctl && $arm != merge-ctl && $full_needle_done == 0 ]]; then
+    if [[ $arm != ctl && $arm != prefix-ctl && $arm != merge-ctl && $arm != paired-ctl && $arm != paired-stock && $full_needle_done == 0 ]]; then
         "$py" -B "$here/checks.py" needle "$dir" --tokens 375000 | tee -a "$dir/needle.log" || echo "NEEDLE FAILED 375000" | tee -a "$dir/needle.log"
         full_needle_done=1
     fi
