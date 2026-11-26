@@ -1,0 +1,142 @@
+[
+  {
+    "scope": "ink2/attention/Inkling2Attention._project",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 6552]]",
+    "calls": 112,
+    "total_us": 6555.37
+  },
+  {
+    "scope": "ink2/model/Inkling2ForConditionalGeneration.compute_logits",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 201024], []]",
+    "calls": 4,
+    "total_us": 6387.71
+  },
+  {
+    "scope": "unlabeled",
+    "op": "aten::mm",
+    "shapes": "[[7, 2304], [2304, 201024]]",
+    "calls": 4,
+    "total_us": 6282.08
+  },
+  {
+    "scope": "ink2/attention/Inkling2Attention._project",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 8600]]",
+    "calls": 80,
+    "total_us": 5829.45
+  },
+  {
+    "scope": "ink2/attention/Inkling2Attention.forward",
+    "op": "aten::mm",
+    "shapes": "[[8, 3072], [3072, 2304]]",
+    "calls": 192,
+    "total_us": 5614.08
+  },
+  {
+    "scope": "ink2/dspark/Inkling2DSparkModel.markov_step",
+    "op": "aten::addmm",
+    "shapes": "[[201024], [1, 256], [256, 201024], [], []]",
+    "calls": 28,
+    "total_us": 5030.61
+  },
+  {
+    "scope": "ink2/attention/Inkling2Attention._project",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 1024]]",
+    "calls": 224,
+    "total_us": 2460.12
+  },
+  {
+    "scope": "ink2/dspark/Inkling2DSparkModel.forward",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 18432]]",
+    "calls": 12,
+    "total_us": 1827.08
+  },
+  {
+    "scope": "ink2/dspark/Inkling2DSparkModel.forward",
+    "op": "aten::mm",
+    "shapes": "[[8, 9216], [9216, 2304]]",
+    "calls": 12,
+    "total_us": 930.2
+  },
+  {
+    "scope": "ink2/moe/Inkling2MoE._select_experts",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 128], []]",
+    "calls": 192,
+    "total_us": 664.91
+  },
+  {
+    "scope": "ink2/loop/Inkling2LoopDecoderLayer.blend",
+    "op": "aten::bmm",
+    "shapes": "[[3, 8, 4608], [3, 4608, 64]]",
+    "calls": 96,
+    "total_us": 642.15
+  },
+  {
+    "scope": "ink2/loop/Inkling2LoopDecoderLayer.blend",
+    "op": "aten::bmm",
+    "shapes": "[[3, 8, 64], [3, 64, 4608], []]",
+    "calls": 96,
+    "total_us": 559.44
+  },
+  {
+    "scope": "ink2/dspark/Inkling2DSparkModel.forward",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 5120]]",
+    "calls": 12,
+    "total_us": 539.68
+  },
+  {
+    "scope": "ink2/loop/Inkling2LoopDecoderLayer.blend",
+    "op": "aten::bmm",
+    "shapes": "[[1, 8, 4608], [1, 4608, 64]]",
+    "calls": 96,
+    "total_us": 383.93
+  },
+  {
+    "scope": "unlabeled",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 2048]]",
+    "calls": 12,
+    "total_us": 347.18
+  },
+  {
+    "scope": "ink2/dspark/Inkling2DSparkModel.forward",
+    "op": "aten::mm",
+    "shapes": "[[8, 3072], [3072, 2304]]",
+    "calls": 12,
+    "total_us": 343.85
+  },
+  {
+    "scope": "ink2/loop/Inkling2LoopDecoderLayer.blend",
+    "op": "aten::bmm",
+    "shapes": "[[1, 8, 64], [1, 64, 4608], []]",
+    "calls": 96,
+    "total_us": 312.68
+  },
+  {
+    "scope": "ink2/sconv/Inkling2ShortConv.dynamic_taps",
+    "op": "aten::mm",
+    "shapes": "[[8, 2304], [2304, 32]]",
+    "calls": 64,
+    "total_us": 224.98
+  },
+  {
+    "scope": "ink2/dspark/Inkling2DSparkModel.markov_step",
+    "op": "aten::addmm",
+    "shapes": "[[1, 768], [1, 512], [512, 768], [], [], []]",
+    "calls": 28,
+    "total_us": 125.09
+  },
+  {
+    "scope": "unlabeled",
+    "op": "aten::addmm",
+    "shapes": "[[768], [7, 4608], [4608, 768], [], [], []]",
+    "calls": 4,
+    "total_us": 65.83
+  }
+]

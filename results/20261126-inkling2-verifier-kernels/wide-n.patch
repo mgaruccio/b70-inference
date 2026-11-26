@@ -1,0 +1,14 @@
+--- a/csrc/nvfp4_xe2_ext.cpp
++++ b/csrc/nvfp4_xe2_ext.cpp
+@@ -27,1 +27,8 @@
+ using namespace MoE;
++
++// Double workgroup N coverage, retaining 16 N columns per subgroup and
++// preserving each output's 32-element K traversal and reduction order.
++struct wide_n_m8 : public w4a16_policy_m_8 {
++  using WGTile = Shape<_8, _128, _32>;
++  using SGLayout = Layout<Shape<_1, _8, _1>, Stride<_8, _1, _0>>;
++};
+@@ -320,1 +327,1 @@
+-    launch_nvfp4<w4a16_policy_m_8>(
++    launch_nvfp4<wide_n_m8>(

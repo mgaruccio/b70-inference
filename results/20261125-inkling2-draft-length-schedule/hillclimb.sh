@@ -83,6 +83,7 @@ boot() {
         routes) src=$here/routes; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; extra=("INK2_ROUTE_SAMPLE_DIR=$dir") ;;
         attn-ctl|attn-cand) src=$here/attn; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"
                      if [[ $arm == attn-cand ]]; then extra=(INK2_VERIFY_BIAS_FREE_PREFIX=1); else extra=(INK2_VERIFY_BIAS_FREE_PREFIX=0); fi ;;
+        profile-dense) src=$here/dense; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}" ;;
         *) return 2 ;;
     esac
     mkdir -p "$dir"
@@ -106,8 +107,12 @@ boot() {
         -cc.mode=none -cc.cudagraph_mode=FULL_DECODE_ONLY
         --speculative-config "$spec")
     if [[ $arm == profile-* ]]; then
+        if [[ $arm == profile-dense ]]; then
+            cmd+=(--enforce-eager --profiler-config "$(printf '{"profiler":"torch","torch_profiler_dir":"%s","torch_profiler_activities":["CPU","XPU"],"torch_profiler_record_shapes":true,"torch_profiler_with_stack":false,"ignore_frontend":true}' "$dir/trace")")
+        else
         cmd+=(--profiler-config "$(printf '{"profiler":"torch","torch_profiler_dir":"%s","torch_profiler_activities":["XPU"],"torch_profiler_with_stack":false,"ignore_frontend":true}' "$dir/trace")")
         if [[ $arm == profile-eager ]]; then cmd+=(--enforce-eager); fi
+        fi
     fi
     if [[ $arm == routes ]]; then cmd+=(--enforce-eager); fi
     printf '%q ' "${cmd[@]}" >"$dir/launch.txt"; printf '\n' >>"$dir/launch.txt"

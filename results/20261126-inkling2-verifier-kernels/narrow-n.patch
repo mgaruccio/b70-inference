@@ -1,0 +1,14 @@
+--- a/csrc/nvfp4_xe2_ext.cpp
++++ b/csrc/nvfp4_xe2_ext.cpp
+@@ -27,1 +27,8 @@
+ using namespace MoE;
++
++// Half the N coverage and subgroup count, maintaining 16 columns per subgroup.
++// All K loads, dequantization, and accumulation keep their original order.
++struct narrow_n_m8 : public w4a16_policy_m_8 {
++  using WGTile = Shape<_8, _32, _32>;
++  using SGLayout = Layout<Shape<_1, _2, _1>, Stride<_2, _1, _0>>;
++};
+@@ -320,1 +327,1 @@
+-    launch_nvfp4<w4a16_policy_m_8>(
++    launch_nvfp4<narrow_n_m8>(
