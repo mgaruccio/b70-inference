@@ -71,6 +71,7 @@ boot() {
         av) spec="{$base,\"enable_adaptive_verification\":true}"; src=$p/av-probe ;;  # adaptive verification enabled in a patched copy
         k[1-6]) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,32,${arm#k}]]}" ;;
         sched) [[ -n ${SCHEDULE:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE}" ;;
+        sched2) [[ -n ${SCHEDULE2:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE2}" ;;
         v[0-9]*) [[ -n ${SCHEDULE:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE}"
                  src=$p/vocab-probe; extra=("INK2_DRAFT_VOCAB=$p/draft-vocab/vocab/draft-vocab-${arm#v}.json")
                  [[ -s ${extra[0]#*=} ]] ;;  # schedule + reduced draft vocabulary (staged plugin)

@@ -131,6 +131,28 @@ The run was `QUICK=1 SCHEDULE='[[1,2,7],[3,32,3]]' bash hillclimb.sh av sched av
 
 **Rejected.** The only gain is at C4, where a single k=3 segment is short. A 3–6 request segment at k=4 or k=5 would cover it, if the extra graphs fit under an optional reduced `--max-model-len`.
 
+## Three-segment refinement (2026-11-26)
+
+Both runs used `QUICK=1 MAXLEN=400000 SCHEDULE='[[1,2,7],[3,32,3]]' SCHEDULE2=<candidate> bash hillclimb.sh sched2 sched sched2 sched`. Changes are the mean of 2 arms against the live two-segment schedule, with the worst neighbour pair in parentheses.
+
+| Metric | `[[1,2,7],[3,8,4],[9,32,3]]` ([run](runs/run-20261126-024223.oE82M8/)) | **`[[1,2,7],[3,5,4],[6,32,3]]`** ([run](runs/run-20261126-032133.47dA86/)) |
+|---|---:|---:|
+| Chat C1 | +0.1% (+0.0) | +0.1% (+0.1) |
+| Chat C8 aggregate | −3.8% (−6.0) | **+2.9% (+2.3)** |
+| Chat C32 aggregate | +0.8% (+0.2) | +0.6% (+0.1) |
+| Random C4 | +13.5% (+13.0) | **+6.9% (+4.3)** |
+| Random C8 | −1.8% (−4.1) | +2.7% (−0.4) |
+| Random C16 | −0.1% (−0.8) | +1.2% (+0.5) |
+| Random C32 | −0.8% (−1.0) | +0.3% (+0.1) |
+| KV available / tokens | 8.18 GiB / 409,603 | 8.20 GiB / 410,387 |
+
+Two things explain the difference:
+
+- With k=4 up to 8 running requests, chat C8 fell outside the 3% limit.
+- Stopping k=4 at 5 requests keeps most of the C4 gain, and nothing regresses beyond noise.
+
+Greedy parity was 8/8 in every arm. **`[[1,2,7],[3,5,4],[6,32,3]]` is accepted under §10.1.** Its 410,387-token pool is above one 409,000-token request (8.17 GiB), but it has not been booted at 409,000 yet. It is not promoted.
+
 ## Production
 
 Promoted on 2026-11-25 with [`promote.sh`](promote.sh), which is the sparse-conv promotion script with its artifact labels renamed. On `b70-dev`:
