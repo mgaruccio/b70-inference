@@ -75,7 +75,7 @@ boot() {
         v[0-9]*) [[ -n ${SCHEDULE:-} ]]; spec="{$base,\"num_speculative_tokens_per_batch_size\":$SCHEDULE}"
                  src=$p/vocab-probe; extra=("INK2_DRAFT_VOCAB=$p/draft-vocab/vocab/draft-vocab-${arm#v}.json")
                  [[ -s ${extra[0]#*=} ]] ;;  # schedule + reduced draft vocabulary (staged plugin)
-        profile-graph|profile-eager) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}" ;;
+        profile-graph|profile-eager|profile-deep) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}" ;;
         pf3|pf6|pf9|static) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; src=$here/$arm
                      [[ -d $src/plugin && -d $src/sparse ]] ;;
         layout-ctl|layout-cand) spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"; src=$here/layout
@@ -84,6 +84,8 @@ boot() {
         attn-ctl|attn-cand) src=$here/attn; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"
                      if [[ $arm == attn-cand ]]; then extra=(INK2_VERIFY_BIAS_FREE_PREFIX=1); else extra=(INK2_VERIFY_BIAS_FREE_PREFIX=0); fi ;;
         profile-dense) src=$here/dense; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}" ;;
+        paged-ctl|paged-cand) src=$here/paged; spec="{$base,\"num_speculative_tokens_per_batch_size\":[[1,2,7],[3,32,3]]}"
+                     if [[ $arm == paged-cand ]]; then extra=(INK2_VERIFY_SCALAR_PAGE=1); else extra=(INK2_VERIFY_SCALAR_PAGE=0); fi ;;
         *) return 2 ;;
     esac
     mkdir -p "$dir"
@@ -190,6 +192,9 @@ for arm in "$@"; do
     "$py" -B "$here/checks.py" parity "$dir" ${ref:+--reference "$ref"} | tee "$dir/parity.log"
     [[ -n $ref ]] || ref=$dir
     "$py" -B "$here/checks.py" chat "$dir" | tee "$dir/chat.log"
+    if [[ $arm == paged-* ]]; then
+        "$py" -B "$here/serve-deep.py" "$dir" | tee "$dir/deep.log"
+    fi
     if [[ $arm == attn-* ]]; then
         "$py" -B "$here/checks.py" chat "$dir" --depth 32000 --cases 3 | tee -a "$dir/chat.log"
         "$py" -c 'import json,sys; r=json.load(open(sys.argv[1]))["rows"]; assert len(r)==3 and min(x["prompt_tokens"] for x in r)>=30000, r' "$dir/chat-32000.json"

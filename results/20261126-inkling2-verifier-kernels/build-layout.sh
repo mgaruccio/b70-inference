@@ -3,7 +3,7 @@
 set -eo pipefail
 source /opt/intel/oneapi/setvars.sh --force >/dev/null
 set -u
-cd "$(dirname "$0")/layout"
+case ${1:-layout} in layout|dequant) cd "$(dirname "$0")/${1:-layout}" ;; *) exit 2 ;; esac
 stage=$HOME/inkling-vllm-xpu/sparse-69444
 D=$HOME/flint-vllm-spike/driver-26.40
 export PATH="$HOME/ck-inkling/bin:$PATH" LD_LIBRARY_PATH="$D/usr/lib/x86_64-linux-gnu:$D/usr/local/lib:${LD_LIBRARY_PATH:-}"

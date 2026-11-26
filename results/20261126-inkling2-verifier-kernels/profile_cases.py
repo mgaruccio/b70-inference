@@ -23,7 +23,9 @@ def control(path, body=None):
 
 
 def main(root):
-    for n, depth in [(1, 128), (1, 30080), (8, 128), (32, 128)]:
+    cases = ([(1, 131072), (1, 375000)] if root.name.endswith('-profile-deep') else
+             [(1, 128), (1, 30080), (8, 128), (32, 128)])
+    for n, depth in cases:
         name = f'c{n}-p{depth}'
         prompts = [fixture(depth, depth + i) for i in range(n)]
         def run(tokens):
