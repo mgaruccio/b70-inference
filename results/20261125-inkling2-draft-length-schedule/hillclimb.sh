@@ -226,7 +226,7 @@ for arm in "$@"; do
     if [[ $arm == prefix-* || $arm == merge-* || $arm == paired-* ]]; then
         "$py" -B "$here/serve-cold.py" "$dir" | tee "$dir/cold.log"
     fi
-    if [[ $arm == paged-* ]]; then
+    if [[ $arm == paged-* || ( $arm == attn-* && ${ATTN_DEEP:-0} == 1 ) ]]; then
         "$py" -B "$here/serve-deep.py" "$dir" | tee "$dir/deep.log"
     fi
     if [[ $arm == attn-* ]]; then
@@ -244,7 +244,7 @@ for arm in "$@"; do
     for c in 8 32; do "$py" -B "$here/checks.py" chatc "$dir" --concurrency $c | tee -a "$dir/chat.log"; done
     # Needle gate failures are recorded (needle-*.json "passed") but do not abort the A/B.
     "$py" -B "$here/checks.py" needle "$dir" --tokens 200000 | tee "$dir/needle.log" || echo "NEEDLE FAILED 200000" | tee -a "$dir/needle.log"
-    if [[ $arm != ctl && $arm != prefix-ctl && $arm != merge-ctl && $arm != paired-ctl && $arm != paired-stock && $full_needle_done == 0 ]]; then
+    if [[ $arm != ctl && $arm != prefix-ctl && $arm != merge-ctl && $arm != paired-ctl && $arm != paired-stock && $arm != attn-ctl && $full_needle_done == 0 ]]; then
         "$py" -B "$here/checks.py" needle "$dir" --tokens 375000 | tee -a "$dir/needle.log" || echo "NEEDLE FAILED 375000" | tee -a "$dir/needle.log"
         full_needle_done=1
     fi
