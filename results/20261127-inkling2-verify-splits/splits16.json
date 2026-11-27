@@ -1,0 +1,330 @@
+{
+  "implementation": "/home/mike/inkling-vllm-xpu/sparse-69444/plugin/vllm_inkling2_xpu/ops/attention.py",
+  "device": "Intel(R) Arc(TM) Pro B70 Graphics",
+  "torch_version": "2.15.0+xpu",
+  "seed": 71,
+  "shape": {
+    "requests": 1,
+    "query_len": 8,
+    "query_heads": 24,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "page_size": 64,
+    "rel_extent": 1024,
+    "kv_dtype": "float8_e4m3fn",
+    "kv_layout": "LBNHC"
+  },
+  "stock_splits": 32,
+  "candidate_splits": 16,
+  "scratch_bytes_by_splits": {
+    "32": {
+      "o_part": 3145728,
+      "lse_part": 24576,
+      "total": 3170304
+    },
+    "16": {
+      "o_part": 1572864,
+      "lse_part": 12288,
+      "total": 1585152
+    }
+  },
+  "kv_allocation_bytes": 768081920,
+  "reference_bandwidth_GB_s": 560,
+  "fp64_sample_rows_token_head": [
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      23
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      4,
+      12
+    ],
+    [
+      4,
+      23
+    ],
+    [
+      7,
+      0
+    ],
+    [
+      7,
+      2
+    ],
+    [
+      7,
+      3
+    ],
+    [
+      7,
+      12
+    ],
+    [
+      7,
+      23
+    ]
+  ],
+  "fp64_sample_elements": 1920,
+  "determinism": "bitwise eager matches for validation replay and batch endpoints",
+  "timing": {
+    "method": "synchronized_xpu_graph_replay_wall",
+    "order": "stock, (candidate, stock) repeated",
+    "warmup_replays_per_arm": 3,
+    "candidate_batches": 10,
+    "replays_per_batch": 32
+  },
+  "fixtures": [
+    {
+      "kv_len": 30080,
+      "compulsory_kv_bytes": 61603840,
+      "kv_only_floor_us": 110.00685714285714,
+      "arms_by_splits": {
+        "32": {
+          "samples_us": [
+            507.292,
+            342.72059375,
+            342.8633125,
+            342.63053125,
+            343.2141875,
+            342.89959375,
+            342.70246875,
+            342.92584375,
+            342.78796875,
+            342.92628125,
+            342.5831875
+          ],
+          "median_us": 342.8633125,
+          "effective_kv_GB_s": 179.67463345906978,
+          "sampled_error_vs_fp64": {
+            "max_abs": 1.1731376302949806e-05,
+            "mean_abs": 1.434847134521248e-06
+          }
+        },
+        "16": {
+          "samples_us": [
+            1170.16325,
+            1090.71190625,
+            1091.838625,
+            1091.9525625,
+            1091.46496875,
+            1091.85675,
+            1092.4668125,
+            1091.73540625,
+            1093.53503125,
+            1091.822125
+          ],
+          "median_us": 1091.8476875000001,
+          "effective_kv_GB_s": 56.42164260205019,
+          "sampled_error_vs_fp64": {
+            "max_abs": 1.1731376302949806e-05,
+            "mean_abs": 1.4408286255507667e-06
+          }
+        }
+      },
+      "median_latency_reduction_pct": -218.4498450822148,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_split_bf16_differing_elements": 9900,
+      "cross_split_total_elements": 24576,
+      "cross_split_error": {
+        "max_abs": 1.52587890625e-05,
+        "mean_abs": 9.449743269366687e-07
+      }
+    },
+    {
+      "kv_len": 65536,
+      "compulsory_kv_bytes": 134217728,
+      "kv_only_floor_us": 239.67451428571428,
+      "arms_by_splits": {
+        "32": {
+          "samples_us": [
+            710.6269375,
+            709.4565,
+            709.4433125,
+            709.61771875,
+            710.1940625,
+            710.16153125,
+            709.81359375,
+            710.69528125,
+            709.7763125,
+            709.73971875,
+            710.0875625
+          ],
+          "median_us": 709.81359375,
+          "effective_kv_GB_s": 189.0886976268197,
+          "sampled_error_vs_fp64": {
+            "max_abs": 5.731629397039183e-06,
+            "mean_abs": 9.184561346409589e-07
+          }
+        },
+        "16": {
+          "samples_us": [
+            2364.92009375,
+            2367.9265,
+            2367.007,
+            2365.49278125,
+            2367.2190625,
+            2365.67615625,
+            2363.84309375,
+            2366.0344375,
+            2367.0019375,
+            2363.94778125
+          ],
+          "median_us": 2365.855296875,
+          "effective_kv_GB_s": 56.731165332590244,
+          "sampled_error_vs_fp64": {
+            "max_abs": 6.230376024256301e-06,
+            "mean_abs": 9.149295621699805e-07
+          }
+        }
+      },
+      "median_latency_reduction_pct": -233.3065635410001,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_split_bf16_differing_elements": 10285,
+      "cross_split_total_elements": 24576,
+      "cross_split_error": {
+        "max_abs": 1.52587890625e-05,
+        "mean_abs": 6.505129555023359e-07
+      }
+    },
+    {
+      "kv_len": 131072,
+      "compulsory_kv_bytes": 268435456,
+      "kv_only_floor_us": 479.34902857142856,
+      "arms_by_splits": {
+        "32": {
+          "samples_us": [
+            1392.07090625,
+            1392.2479375,
+            1391.86603125,
+            1391.7718125,
+            1391.76740625,
+            1391.551,
+            1392.0670625,
+            1392.70671875,
+            1392.78084375,
+            1393.18384375,
+            1392.78634375
+          ],
+          "median_us": 1392.07090625,
+          "effective_kv_GB_s": 192.8317406784393,
+          "sampled_error_vs_fp64": {
+            "max_abs": 4.732075922052846e-06,
+            "mean_abs": 6.423646821001364e-07
+          }
+        },
+        "16": {
+          "samples_us": [
+            4704.98846875,
+            4697.3841875,
+            4699.00796875,
+            4698.916375,
+            4701.53484375,
+            4698.20096875,
+            4700.16421875,
+            4707.3384375,
+            4697.44159375,
+            4699.7585625
+          ],
+          "median_us": 4699.383265625,
+          "effective_kv_GB_s": 57.12142228610058,
+          "sampled_error_vs_fp64": {
+            "max_abs": 5.71200042784911e-06,
+            "mean_abs": 6.72087237153274e-07
+          }
+        }
+      },
+      "median_latency_reduction_pct": -237.58217663526432,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_split_bf16_differing_elements": 10432,
+      "cross_split_total_elements": 24576,
+      "cross_split_error": {
+        "max_abs": 1.52587890625e-05,
+        "mean_abs": 4.6490669092236203e-07
+      }
+    },
+    {
+      "kv_len": 375000,
+      "compulsory_kv_bytes": 768000000,
+      "kv_only_floor_us": 1371.4285714285713,
+      "arms_by_splits": {
+        "32": {
+          "samples_us": [
+            3936.37475,
+            3932.506,
+            3934.4508125,
+            3936.13746875,
+            3936.3695,
+            3934.35375,
+            3934.10275,
+            3935.90915625,
+            3935.5991875,
+            3935.02575,
+            3935.473375
+          ],
+          "median_us": 3935.473375,
+          "effective_kv_GB_s": 195.148061445086,
+          "sampled_error_vs_fp64": {
+            "max_abs": 3.124862550481309e-06,
+            "mean_abs": 3.8396178392140817e-07
+          }
+        },
+        "16": {
+          "samples_us": [
+            13391.0443125,
+            13392.598875,
+            13397.36503125,
+            13384.94159375,
+            13395.25659375,
+            13390.48003125,
+            13403.65528125,
+            13404.70728125,
+            13387.0314375,
+            13402.011
+          ],
+          "median_us": 13393.927734375,
+          "effective_kv_GB_s": 57.3394164303991,
+          "sampled_error_vs_fp64": {
+            "max_abs": 3.124862550481309e-06,
+            "mean_abs": 3.7912539884102e-07
+          }
+        }
+      },
+      "median_latency_reduction_pct": -240.33841568995499,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_split_bf16_differing_elements": 10369,
+      "cross_split_total_elements": 24576,
+      "cross_split_error": {
+        "max_abs": 7.62939453125e-06,
+        "mean_abs": 2.7424274288515943e-07
+      }
+    }
+  ]
+}
