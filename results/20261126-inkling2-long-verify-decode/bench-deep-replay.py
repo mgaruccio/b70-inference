@@ -13,7 +13,7 @@ from statistics import median
 from time import perf_counter_ns
 
 
-def _run(repeats, replays):
+def _run(repeats, replays, crossover=False):
     import torch
 
     if not torch.xpu.is_available():
@@ -25,6 +25,8 @@ def _run(repeats, replays):
     )
 
     lengths = (128, 30_080, 131_072, 375_000)
+    if crossover:
+        lengths = (128, 30_080, 32_768, 40_960, 49_152, 65_536, 98_304, 131_072)
     q_len, heads, kv_heads, dim, page, extent = 8, 24, 8, 128, 64, 1024
     pages = (max(lengths) + page - 1) // page
     rng = torch.Generator().manual_seed(71)
@@ -124,10 +126,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     parser.add_argument("--repeats", type=int, default=7)
     parser.add_argument("--replays", type=int, default=32)
+    parser.add_argument('--crossover', action='store_true', help='sample mid-range KV lengths')
     args = parser.parse_args()
     if min(args.repeats, args.replays) < 1:
         parser.error("--repeats and --replays must be positive")
-    print(json.dumps(_run(args.repeats, args.replays), indent=2))
+    print(json.dumps(_run(args.repeats, args.replays, args.crossover), indent=2))
 
 
 if __name__ == "__main__":
