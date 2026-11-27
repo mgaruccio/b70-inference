@@ -1,0 +1,324 @@
+{
+  "implementation": "/home/mike/inkling-vllm-xpu/sparse-69444/plugin/vllm_inkling2_xpu/ops/attention.py",
+  "device": "Intel(R) Arc(TM) Pro B70 Graphics",
+  "torch_version": "2.15.0+xpu",
+  "seed": 71,
+  "shape": {
+    "requests": 1,
+    "query_len": 8,
+    "query_heads": 24,
+    "kv_heads": 8,
+    "head_dim": 128,
+    "page_size": 64,
+    "rel_extent": 1024,
+    "kv_dtype": "float8_e4m3fn",
+    "kv_layout": "LBNHC"
+  },
+  "num_splits": 32,
+  "stock_block_n": 32,
+  "candidate_block_n": 64,
+  "scratch_bytes_per_arm": {
+    "o_part": 3145728,
+    "lse_part": 24576,
+    "total": 3170304
+  },
+  "kv_allocation_bytes": 768081920,
+  "reference_bandwidth_GB_s": 560,
+  "fp64_sample_rows_token_head": [
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      23
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      4,
+      12
+    ],
+    [
+      4,
+      23
+    ],
+    [
+      7,
+      0
+    ],
+    [
+      7,
+      2
+    ],
+    [
+      7,
+      3
+    ],
+    [
+      7,
+      12
+    ],
+    [
+      7,
+      23
+    ]
+  ],
+  "fp64_sample_elements": 1920,
+  "determinism": "bitwise eager matches for validation replay and batch endpoints",
+  "timing": {
+    "method": "synchronized_xpu_graph_replay_wall",
+    "order": "stock, (candidate, stock) repeated",
+    "warmup_replays_per_arm": 3,
+    "candidate_batches": 10,
+    "replays_per_batch": 32
+  },
+  "fixtures": [
+    {
+      "kv_len": 30080,
+      "compulsory_kv_bytes": 61603840,
+      "kv_only_floor_us": 110.00685714285714,
+      "arms_by_block_n": {
+        "32": {
+          "samples_us": [
+            574.78946875,
+            343.4075625,
+            342.54765625,
+            343.1145,
+            343.13575,
+            343.242125,
+            343.16375,
+            343.07428125,
+            343.3033125,
+            342.93478125,
+            343.22784375
+          ],
+          "median_us": 343.16375,
+          "effective_kv_GB_s": 179.51732955476794,
+          "sampled_error_vs_fp64": {
+            "max_abs": 1.1731376302949806e-05,
+            "mean_abs": 1.434847134521248e-06
+          }
+        },
+        "64": {
+          "samples_us": [
+            1400.51028125,
+            1402.6808125,
+            1400.825375,
+            1400.19378125,
+            1401.91996875,
+            1401.24846875,
+            1401.98059375,
+            1400.8716875,
+            1400.53259375,
+            1399.5793125
+          ],
+          "median_us": 1400.84853125,
+          "effective_kv_GB_s": 43.976089224314556,
+          "sampled_error_vs_fp64": {
+            "max_abs": 1.1731376302949806e-05,
+            "mean_abs": 1.404713116672088e-06
+          }
+        }
+      },
+      "median_latency_reduction_pct": -308.21576616119853,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_tile_bf16_differing_elements": 10895,
+      "cross_tile_total_elements": 24576,
+      "cross_tile_error": {
+        "max_abs": 1.52587890625e-05,
+        "mean_abs": 1.1338092965236986e-06
+      }
+    },
+    {
+      "kv_len": 65536,
+      "compulsory_kv_bytes": 134217728,
+      "kv_only_floor_us": 239.67451428571428,
+      "arms_by_block_n": {
+        "32": {
+          "samples_us": [
+            710.712625,
+            711.0343125,
+            710.5035625,
+            710.962,
+            710.67640625,
+            711.77921875,
+            710.95696875,
+            710.825375,
+            710.95834375,
+            710.8971875,
+            710.93653125
+          ],
+          "median_us": 710.93653125,
+          "effective_kv_GB_s": 188.7900285050938,
+          "sampled_error_vs_fp64": {
+            "max_abs": 5.731629397039183e-06,
+            "mean_abs": 9.184561346409589e-07
+          }
+        },
+        "64": {
+          "samples_us": [
+            2994.54853125,
+            3000.825125,
+            3001.26428125,
+            2998.015,
+            2990.95796875,
+            2999.26140625,
+            3003.14915625,
+            3001.63921875,
+            3003.6005625,
+            2999.86778125
+          ],
+          "median_us": 3000.346453125,
+          "effective_kv_GB_s": 44.73407657979165,
+          "sampled_error_vs_fp64": {
+            "max_abs": 5.487249322249353e-06,
+            "mean_abs": 9.105889677497361e-07
+          }
+        }
+      },
+      "median_latency_reduction_pct": -322.0273289163603,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_tile_bf16_differing_elements": 11222,
+      "cross_tile_total_elements": 24576,
+      "cross_tile_error": {
+        "max_abs": 1.52587890625e-05,
+        "mean_abs": 7.654644669230493e-07
+      }
+    },
+    {
+      "kv_len": 131072,
+      "compulsory_kv_bytes": 268435456,
+      "kv_only_floor_us": 479.34902857142856,
+      "arms_by_block_n": {
+        "32": {
+          "samples_us": [
+            1392.872625,
+            1394.0105625,
+            1393.23546875,
+            1393.19528125,
+            1392.74225,
+            1393.29646875,
+            1393.688875,
+            1393.16678125,
+            1393.49534375,
+            1392.4310625,
+            1392.54803125
+          ],
+          "median_us": 1393.19528125,
+          "effective_kv_GB_s": 192.67611627219614,
+          "sampled_error_vs_fp64": {
+            "max_abs": 4.732075922052846e-06,
+            "mean_abs": 6.423646821001364e-07
+          }
+        },
+        "64": {
+          "samples_us": [
+            5924.70778125,
+            5956.809375,
+            5947.70365625,
+            5952.10740625,
+            5963.861625,
+            5939.28178125,
+            5929.72528125,
+            5933.56775,
+            5939.10234375,
+            5942.097
+          ],
+          "median_us": 5940.689390625,
+          "effective_kv_GB_s": 45.185909975973146,
+          "sampled_error_vs_fp64": {
+            "max_abs": 4.286677593653325e-06,
+            "mean_abs": 6.373944208950473e-07
+          }
+        }
+      },
+      "median_latency_reduction_pct": -326.40751591513475,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_tile_bf16_differing_elements": 11516,
+      "cross_tile_total_elements": 24576,
+      "cross_tile_error": {
+        "max_abs": 7.62939453125e-06,
+        "mean_abs": 5.452975292049208e-07
+      }
+    },
+    {
+      "kv_len": 375000,
+      "compulsory_kv_bytes": 768000000,
+      "kv_only_floor_us": 1371.4285714285713,
+      "arms_by_block_n": {
+        "32": {
+          "samples_us": [
+            3936.03796875,
+            3935.645375,
+            3934.59471875,
+            3934.2496875,
+            3933.34140625,
+            3936.1214375,
+            3934.5956875,
+            3933.63534375,
+            3934.59371875,
+            3936.71446875,
+            3934.75825
+          ],
+          "median_us": 3934.5956875,
+          "effective_kv_GB_s": 195.19159298626155,
+          "sampled_error_vs_fp64": {
+            "max_abs": 3.124862550481309e-06,
+            "mean_abs": 3.8396178392140817e-07
+          }
+        },
+        "64": {
+          "samples_us": [
+            16931.16071875,
+            16902.71428125,
+            16928.277375,
+            16876.57140625,
+            16899.9661875,
+            16868.033625,
+            16897.1243125,
+            16905.53478125,
+            16933.682875,
+            16932.1873125
+          ],
+          "median_us": 16904.12453125,
+          "effective_kv_GB_s": 45.43269890021386,
+          "sampled_error_vs_fp64": {
+            "max_abs": 3.124862550481309e-06,
+            "mean_abs": 3.7834643088406106e-07
+          }
+        }
+      },
+      "median_latency_reduction_pct": -329.6279941787538,
+      "candidate_batches_faster_than_both_neighbors": 0,
+      "cross_tile_bf16_differing_elements": 11285,
+      "cross_tile_total_elements": 24576,
+      "cross_tile_error": {
+        "max_abs": 7.62939453125e-06,
+        "mean_abs": 3.2313074408799974e-07
+      }
+    }
+  ]
+}
